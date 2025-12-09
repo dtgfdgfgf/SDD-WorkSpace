@@ -56,11 +56,13 @@ Final Rules = Studio Constitution + Project Constitution (additive only)
 ```
 
 Project Constitution CAN:
+
 - Add project-specific terminology
 - Define stricter coding standards
 - Add extra review checklists
 
 Project Constitution CANNOT:
+
 - Skip any SDD stage
 - Relax quality requirements
 - Override AI collaboration principles
@@ -70,6 +72,7 @@ Project Constitution CANNOT:
 **Studio Constitution:** `studio/constitution/constitution.md`
 
 This file defines:
+
 - SDD workflow stages and requirements
 - Document standards (spec.md, plan.md, tasks.md)
 - AI collaboration rules
@@ -114,6 +117,7 @@ Each project follows this structure:
 Different content types require different languages for optimal AI understanding and human readability:
 
 #### MUST Use English (AI-critical files)
+
 - Constitution files (`constitution.md`, `copilot-instructions.md`)
 - SDD documents (`spec.md`, `plan.md`, `tasks.md`)
 - Code (variables, functions, classes)
@@ -122,6 +126,7 @@ Different content types require different languages for optimal AI understanding
 - Branch names
 
 #### MAY Use Traditional Chinese (zh-TW)
+
 - Business logic comments (explaining "why" from business perspective)
 - User-facing documentation (`README.md` zh-TW version)
 - Commit message descriptions (after the type prefix)
@@ -129,6 +134,46 @@ Different content types require different languages for optimal AI understanding
 - Internal notes and reflections
 
 ### Git Conventions
+
+#### AI-Assisted Git Workflow
+
+**Principle:** AI assists with version control, but human retains final approval authority.
+
+**AI Responsibilities:**
+
+- Generate code and documentation
+- Suggest commit messages following Conventional Commits format
+- Explain what changes were made and why
+- Group related changes logically before suggesting commit
+
+**Human Responsibilities:**
+
+- Review all changes before committing (use `git diff` or VS Code Source Control)
+- Approve or modify suggested commit messages
+- Execute commit after review
+- Decide when to push to remote
+
+**AI MUST NOT:**
+
+- Execute `git commit` without explicit user confirmation
+- Execute `git push` automatically
+- Amend or rebase commits without user instruction
+- Make commits with vague messages like "fix" or "update"
+
+**Recommended Workflow:**
+
+1. AI generates/modifies code
+2. Human reviews changes (`git diff`)
+3. AI suggests commit message
+4. Human confirms or modifies message
+5. Human approves → AI executes `git commit`
+6. After accumulating meaningful commits → Human decides to push
+
+**Commit Frequency Guideline:**
+
+- One commit per completed task (from tasks.md)
+- Don't commit every single line change
+- Group related changes into logical commits
 
 #### Commit Message Format (Conventional Commits + zh-TW)
 
@@ -139,6 +184,7 @@ Different content types require different languages for optimal AI understanding
 ```
 
 **Types (English, required):**
+
 - `feat` — New feature
 - `fix` — Bug fix
 - `docs` — Documentation changes
@@ -148,6 +194,7 @@ Different content types require different languages for optimal AI understanding
 - `style` — Code style (formatting, no logic change)
 
 **Examples:**
+
 ```
 feat: 新增使用者登入功能
 fix: 修正購物車數量計算錯誤
@@ -161,12 +208,14 @@ refactor: 重構訂單處理邏輯
 Format: `<type>/<short-description>`
 
 Examples:
+
 - `feature/user-login`
 - `fix/cart-calculation`
 - `docs/readme-update`
 - `refactor/order-processing`
 
 ### Code Style Guidelines
+
 - JavaScript/TypeScript: camelCase for variables/functions, PascalCase for classes
 - Python: snake_case for variables/functions, PascalCase for classes
 - Always include meaningful comments for complex logic
@@ -175,13 +224,16 @@ Examples:
 ## Critical Constraints
 
 ### NEVER Do
+
 - Skip any SDD stage or suggest skipping
 - Assume requirements not explicitly written in spec
 - Add features not included in the specification
 - Hallucinate API endpoints, data structures, or business logic
 - Modify constitution rules without explicit instruction
+- Use ASCII art or text-based diagrams (low information density, wastes tokens, LLM unfriendly)
 
 ### ALWAYS Do
+
 - Ask for clarification when requirements are ambiguous
 - Reference spec/plan/tasks when implementing
 - Suggest updating related documents when scope changes
@@ -201,6 +253,7 @@ When encountering issues or friction points:
 No unified build system — each project is independent.
 
 For project-specific build instructions, check:
+
 1. Project's `README.md`
 2. Project's `package.json` or equivalent
 3. Project's `.specify/memory/constitution.md`
@@ -215,10 +268,10 @@ For project-specific build instructions, check:
 
 ## Quick Reference
 
-| Item | Location |
-|------|----------|
+| Item                | Location                              |
+| ------------------- | ------------------------------------- |
 | Studio Constitution | `studio/constitution/constitution.md` |
-| Learnings | `studio/knowledge-base/learnings.md` |
-| Prompt Library | `studio/prompts/<stage>/` |
-| Project Templates | `studio/templates/project-init/` |
-| Practice Projects | `learning/` |
+| Learnings           | `studio/knowledge-base/learnings.md`  |
+| Prompt Library      | `studio/prompts/<stage>/`             |
+| Project Templates   | `studio/templates/project-init/`      |
+| Practice Projects   | `learning/`                           |
