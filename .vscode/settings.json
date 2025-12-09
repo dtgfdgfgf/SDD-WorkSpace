@@ -1,0 +1,118 @@
+{
+  // ========================================
+  // SDD Studio - VS Code Workspace Settings
+  // ========================================
+
+  // === Editor Settings ===
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.rulers": [100],
+  "editor.wordWrap": "on",
+  "editor.minimap.enabled": false,
+
+  // === File Associations ===
+  "files.associations": {
+    "*.agent.md": "markdown",
+    "*.prompt.md": "markdown",
+    "constitution.md": "markdown",
+    "spec.md": "markdown",
+    "plan.md": "markdown",
+    "tasks.md": "markdown",
+    "learnings.md": "markdown",
+    "retrospective.md": "markdown"
+  },
+
+  // === Search Exclusions ===
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/archive": true,
+    "**/.git": true,
+    "**/coverage": true,
+    "**/*.min.js": true,
+    "**/*.min.css": true
+  },
+
+  // === File Exclusions (Explorer) ===
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true
+  },
+
+  // === Markdown Settings ===
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+    "editor.formatOnSave": false,
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": false
+    }
+  },
+
+  // === markdownlint Configuration ===
+  // 停用所有 .md 檔案的 markdownlint 檢查
+  "markdownlint.ignore": ["**/*.md"],
+
+  // === Code Spell Checker Configuration ===
+  "cSpell.enabled": true,
+  "cSpell.words": ["speckit", "SDD", "NFR", "chatagent", "handoffs"],
+  "cSpell.languageSettings": [
+    {
+      "languageId": "markdown",
+      "enabled": false
+    }
+  ],
+  "cSpell.ignorePaths": [
+    "**/.github/**",
+    "**/studio/**",
+    "**/projects/duotify-*/**",
+    "**/archive/**",
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**"
+  ],
+
+  // === PowerShell Settings ===
+  "[powershell]": {
+    "editor.defaultFormatter": "ms-vscode.powershell",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+
+  // === Git Settings ===
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.autofetch": true,
+
+  // === Terminal Settings ===
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+  // === Explorer Settings ===
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "explorer.sortOrder": "type",
+
+  // === GitHub Copilot Settings ===
+  "github.copilot.enable": {
+    "*": true,
+    "markdown": true,
+    "plaintext": true,
+    "yaml": true,
+    "json": true
+  },
+
+  // === File Nesting (Optional - cleaner view) ===
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "spec.md": "plan.md, tasks.md",
+    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml",
+    "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.js.map",
+    "README.md": "README-*.md, CHANGELOG.md, LICENSE*"
+  }
+}
