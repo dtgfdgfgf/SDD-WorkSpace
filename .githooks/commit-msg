@@ -1,0 +1,129 @@
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Commit message hook for Conventional Commits validation.
+
+.DESCRIPTION
+    Validates that commit messages follow the Conventional Commits format:
+    <type>: <description>
+    
+    Where type is one of: feat, fix, docs, refactor, chore, test, style
+
+.NOTES
+    To enable: git config core.hooksPath .githooks
+    To bypass: git commit --no-verify
+#>
+
+param(
+    [Parameter(Position = 0)]
+    [string]$CommitMsgFile
+)
+
+$ErrorActionPreference = "Continue"
+
+function Write-HookError {
+    param([string]$Message)
+    Write-Host "❌ $Message" -ForegroundColor Red
+}
+
+function Write-HookSuccess {
+    param([string]$Message)
+    Write-Host "✓ $Message" -ForegroundColor Green
+}
+
+function Write-HookInfo {
+    param([string]$Message)
+    Write-Host "ℹ️  $Message" -ForegroundColor Cyan
+}
+
+# Get commit message file path
+if (-not $CommitMsgFile) {
+    $CommitMsgFile = $args[0]
+}
+
+if (-not $CommitMsgFile -or -not (Test-Path $CommitMsgFile)) {
+    Write-HookError "Commit message file not found"
+    exit 1
+}
+
+$commitMsg = Get-Content $CommitMsgFile -Raw -ErrorAction SilentlyContinue
+if (-not $commitMsg) {
+    Write-HookError "Empty commit message"
+    exit 1
+}
+
+# Get first line (subject)
+$subject = ($commitMsg -split "`n")[0].Trim()
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Commit Message Validation" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+# ========================================
+# Conventional Commits Validation
+# ========================================
+
+# Valid types (from constitution)
+$validTypes = @(
+    "feat",      # New feature
+    "fix",       # Bug fix
+    "docs",      # Documentation changes
+    "refactor",  # Code refactoring (no feature change)
+    "chore",     # Build, config, tooling changes
+    "test",      # Test-related changes
+    "style"      # Code style (formatting, no logic change)
+)
+
+$typePattern = "^($($validTypes -join '|'))(\(.+\))?:\s+.+"
+
+# Check format
+if ($subject -notmatch $typePattern) {
+    Write-HookError "Commit message does not follow Conventional Commits format"
+    Write-Host ""
+    Write-Host "Expected format:" -ForegroundColor Yellow
+    Write-Host '  <type>: <description>' -ForegroundColor Yellow
+    Write-Host '  <type>(<scope>): <description>' -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Valid types:" -ForegroundColor Yellow
+    Write-Host "  feat     - New feature" -ForegroundColor Gray
+    Write-Host "  fix      - Bug fix" -ForegroundColor Gray
+    Write-Host "  docs     - Documentation changes" -ForegroundColor Gray
+    Write-Host "  refactor - Code refactoring (no feature change)" -ForegroundColor Gray
+    Write-Host "  chore    - Build, config, tooling changes" -ForegroundColor Gray
+    Write-Host "  test     - Test-related changes" -ForegroundColor Gray
+    Write-Host "  style    - Code style (formatting, no logic change)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Examples:" -ForegroundColor Yellow
+    Write-Host '  feat: 新增使用者登入功能' -ForegroundColor Gray
+    Write-Host '  fix: 修正購物車數量計算錯誤' -ForegroundColor Gray
+    Write-Host '  docs: 更新 README 安裝說明' -ForegroundColor Gray
+    Write-Host '  chore(deps): 升級相依套件版本' -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Your message: $subject" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Use 'git commit --no-verify' to bypass" -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
+# Extract type for additional validation
+$type = ($subject -replace '^(\w+)(\(.+\))?:.*', '$1')
+
+# Check subject length (recommended max 72 characters)
+if ($subject.Length -gt 72) {
+    Write-Host "⚠️  Subject line is $($subject.Length) characters (recommended: ≤72)" -ForegroundColor Yellow
+}
+
+# Check for period at end (should not have)
+if ($subject -match '\.$') {
+    Write-Host "⚠️  Subject line should not end with a period" -ForegroundColor Yellow
+}
+
+Write-HookSuccess "Commit message format valid"
+Write-Host "  Type: $type" -ForegroundColor Gray
+Write-Host "  Subject: $subject" -ForegroundColor Gray
+Write-Host ""
+
+exit 0

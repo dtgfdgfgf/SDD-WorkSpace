@@ -1,0 +1,231 @@
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Pre-commit hook for SDD document validation and commit message format checking.
+
+.DESCRIPTION
+    This hook validates:
+    1. spec.md files contain required sections
+    2. plan.md files contain required sections
+    3. tasks.md files follow checklist format
+    4. Commit messages follow Conventional Commits format
+
+.NOTES
+    To enable: git config core.hooksPath .githooks
+    To bypass: git commit --no-verify
+#>
+
+$ErrorActionPreference = "Continue"
+$script:hasErrors = $false
+
+function Write-HookError {
+    param([string]$Message)
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
+    $script:hasErrors = $true
+}
+
+function Write-HookWarning {
+    param([string]$Message)
+    Write-Host "[WARN] $Message" -ForegroundColor Yellow
+}
+
+function Write-HookSuccess {
+    param([string]$Message)
+    Write-Host "[OK] $Message" -ForegroundColor Green
+}
+
+function Write-HookInfo {
+    param([string]$Message)
+    Write-Host "[INFO] $Message" -ForegroundColor Cyan
+}
+
+# ========================================
+# Get staged files
+# ========================================
+$stagedFiles = git diff --cached --name-only --diff-filter=ACM 2>$null
+if (-not $stagedFiles) {
+    Write-HookInfo "No staged files to validate"
+    exit 0
+}
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  SDD Pre-Commit Validation" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+# ========================================
+# 1. Validate spec.md files
+# ========================================
+$specFiles = $stagedFiles | Where-Object { $_ -match "spec\.md$" }
+
+if ($specFiles) {
+    Write-HookInfo "Validating spec.md files..."
+    
+    $requiredSections = @(
+        "Problem|Goal|Overview",
+        "Actor|User|Stakeholder",
+        "Scenario|User Flow|Use Case",
+        "Functional Requirement|FR\b",
+        "Non-Functional Requirement|NFR\b",
+        "Edge Case|Boundary|Exception",
+        "Success Criteria|Acceptance Criteria",
+        "Out of Scope|Exclusion|Not Included"
+    )
+    
+    foreach ($file in $specFiles) {
+        if (Test-Path $file) {
+            $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+            if ($content) {
+                $missingSections = @()
+                
+                foreach ($section in $requiredSections) {
+                    if ($content -notmatch $section) {
+                        $sectionName = ($section -split '\|')[0]
+                        $missingSections += $sectionName
+                    }
+                }
+                
+                # Check for at least 3 edge cases
+                $edgeCaseMatches = [regex]::Matches($content, "(?m)^[-*]\s+.*(edge|boundary|exception|error|invalid|empty|null|overflow|timeout)", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                if ($edgeCaseMatches.Count -lt 3) {
+                    $missingSections += "At least 3 Edge Cases (found: $($edgeCaseMatches.Count))"
+                }
+                
+                if ($missingSections.Count -gt 0) {
+                    Write-HookError "[$file] Missing required sections:"
+                    foreach ($missing in $missingSections) {
+                        Write-Host "    - $missing" -ForegroundColor Red
+                    }
+                }
+                else {
+                    Write-HookSuccess "[$file] All required sections present"
+                }
+            }
+        }
+    }
+    Write-Host ""
+}
+
+# ========================================
+# 2. Validate plan.md files
+# ========================================
+$planFiles = $stagedFiles | Where-Object { $_ -match "plan\.md$" }
+
+if ($planFiles) {
+    Write-HookInfo "Validating plan.md files..."
+    
+    $requiredSections = @(
+        "Architecture|System Design|Overview",
+        "Tech|Technology|Stack|Language|Framework",
+        "Integration|API|Endpoint",
+        "Data Flow|Data Model|Schema",
+        "Risk|Constraint|Limitation",
+        "Why Not|Alternative|Decision|Rejected"
+    )
+    
+    foreach ($file in $planFiles) {
+        if (Test-Path $file) {
+            $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+            if ($content) {
+                $missingSections = @()
+                
+                foreach ($section in $requiredSections) {
+                    if ($content -notmatch $section) {
+                        $sectionName = ($section -split '\|')[0]
+                        $missingSections += $sectionName
+                    }
+                }
+                
+                if ($missingSections.Count -gt 0) {
+                    Write-HookError "[$file] Missing required sections:"
+                    foreach ($missing in $missingSections) {
+                        Write-Host "    - $missing" -ForegroundColor Red
+                    }
+                }
+                else {
+                    Write-HookSuccess "[$file] All required sections present"
+                }
+            }
+        }
+    }
+    Write-Host ""
+}
+
+# ========================================
+# 3. Validate tasks.md files
+# ========================================
+$tasksFiles = $stagedFiles | Where-Object { $_ -match "tasks\.md$" }
+
+if ($tasksFiles) {
+    Write-HookInfo "Validating tasks.md files..."
+    
+    foreach ($file in $tasksFiles) {
+        if (Test-Path $file) {
+            $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+            if ($content) {
+                $validationErrors = @()
+                
+                # Check for task ID format (T001, T002, etc.)
+                $taskMatches = [regex]::Matches($content, "- \[[ xX]\] T\d{3}")
+                if ($taskMatches.Count -eq 0) {
+                    $validationErrors += "No tasks found with proper ID format (T001, T002, ...)"
+                }
+                
+                # Check for Definition of Done indicators
+                if ($content -notmatch "Definition of Done|DoD|Done when|Acceptance") {
+                    $validationErrors += "Missing Definition of Done section"
+                }
+                
+                # Check for priority markers
+                if ($content -notmatch "\[P[123]\]|P1|P2|P3|Priority") {
+                    $validationErrors += "Missing priority markers (P1/P2/P3)"
+                }
+                
+                # Check for risk level
+                if ($content -notmatch "Risk|Low|Medium|High") {
+                    Write-HookWarning "[$file] Consider adding Risk Level indicators"
+                }
+                
+                if ($validationErrors.Count -gt 0) {
+                    Write-HookError "[$file] Validation failed:"
+                    foreach ($err in $validationErrors) {
+                        Write-Host "    - $err" -ForegroundColor Red
+                    }
+                }
+                else {
+                    Write-HookSuccess "[$file] Checklist format valid"
+                }
+            }
+        }
+    }
+    Write-Host ""
+}
+
+# ========================================
+# 4. Validate Conventional Commits (if commit message exists)
+# ========================================
+# Note: This validation happens in commit-msg hook, not pre-commit
+# But we can check if the user is about to make a commit
+
+Write-HookInfo "Commit message will be validated by commit-msg hook"
+Write-Host ""
+
+# ========================================
+# Final Result
+# ========================================
+Write-Host "========================================" -ForegroundColor Cyan
+
+if ($script:hasErrors) {
+    Write-Host ""
+    Write-Host "[ERROR] Pre-commit validation FAILED" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Fix the issues above or use 'git commit --no-verify' to bypass" -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+else {
+    Write-Host "[OK] Pre-commit validation PASSED" -ForegroundColor Green
+    Write-Host ""
+    exit 0
+}
