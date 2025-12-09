@@ -1,0 +1,6 @@
+@DuotifyMembership.Api_HostAddress = http://localhost:5083
+
+GET {{DuotifyMembership.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

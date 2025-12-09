@@ -1,0 +1,420 @@
+openapi: "3.0.3"
+info:
+  title: 會員註冊 API
+  description: |
+    會員註冊流程 REST API，提供會員註冊、E-Mail 驗證及驗證碼重送功能。
+    
+    ## 功能分支
+    `001-member-registration`
+    
+    ## 技術規格
+    - ASP.NET Core 8.0 Web API
+    - SQL Server (EF Core Code First)
+    - 純後端 API，無前端
+  version: "1.0.0"
+  contact:
+    name: Duotify Membership Team
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://api-staging.example.com/v1
+    description: Staging
+  - url: http://localhost:5000/v1
+    description: Local Development
+
+tags:
+  - name: Members
+    description: 會員相關操作
+  - name: Verification
+    description: E-Mail 驗證相關操作
+
+paths:
+  /members/register:
+    post:
+      tags:
+        - Members
+      summary: 會員註冊
+      description: |
+        建立新會員帳號並發送 E-Mail 驗證碼。
+        
+        **對應需求**: FR-001 ~ FR-005, FR-001a, FR-001b, FR-004a, FR-004b
+        
+        **處理流程**:
+        1. 驗證 CAPTCHA (FR-004b)
+        2. 標準化輸入 (FR-001a)
+        3. 驗證身分證字號格式 (FR-002)
+        4. 檢查身分證字號唯一性 (FR-003)
+        5. 檢查 E-Mail 唯一性 (FR-003a)
+        6. 驗證密碼規則 (FR-004)
+        7. 驗證密碼確認 (FR-004a)
+        8. 建立會員並發送驗證碼 (FR-005)
+      operationId: registerMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterMemberRequest"
+            examples:
+              valid:
+                summary: 有效註冊請求
+                value:
+                  idNumber: "A123456789"
+                  name: "王小明"
+                  email: "xiaoming.wang@example.com"
+                  password: "Password123"
+                  confirmPassword: "Password123"
+                  captchaToken: "03AGdBq24PBCbwiDRaS_MJ7Z..."
+      responses:
+        "201":
+          description: 註冊成功，驗證碼已發送
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterMemberResponse"
+              example:
+                memberId: "550e8400-e29b-41d4-a716-446655440000"
+                email: "xiaoming.wang@example.com"
+                message: "註冊成功，請查收驗證信件"
+                verificationCodeExpiresAt: "2025-12-01T10:05:00Z"
+        "400":
+          description: 請求格式錯誤或驗證失敗
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ValidationProblemDetails"
+              examples:
+                invalidIdNumber:
+                  summary: 身分證格式錯誤
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "驗證錯誤"
+                    status: 400
+                    errors:
+                      idNumber:
+                        - "身分證字號格式不正確"
+                invalidPassword:
+                  summary: 密碼規則錯誤
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "驗證錯誤"
+                    status: 400
+                    errors:
+                      password:
+                        - "密碼需為 8-20 碼，並包含英文大小寫及數字"
+                passwordMismatch:
+                  summary: 密碼確認不符
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "驗證錯誤"
+                    status: 400
+                    errors:
+                      confirmPassword:
+                        - "密碼確認與密碼不符"
+                captchaFailed:
+                  summary: CAPTCHA 驗證失敗
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "驗證錯誤"
+                    status: 400
+                    errors:
+                      captchaToken:
+                        - "CAPTCHA 驗證失敗，請重試"
+        "409":
+          description: 身分證字號或 E-Mail 已被註冊
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              examples:
+                duplicateIdNumber:
+                  summary: 身分證已註冊
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "此身分證字號已註冊"
+                    status: 409
+                    detail: "此身分證字號已被其他帳號使用，請使用其他身分證字號或登入現有帳號"
+                duplicateEmail:
+                  summary: E-Mail 已註冊
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "此 E-Mail 已註冊"
+                    status: 409
+                    detail: "此 E-Mail 已被其他帳號使用，請使用其他 E-Mail 或登入現有帳號"
+        "500":
+          description: 伺服器錯誤
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /members/{memberId}/verify-email:
+    post:
+      tags:
+        - Verification
+      summary: 驗證 E-Mail
+      description: |
+        驗證 E-Mail 驗證碼，成功後帳號狀態變更為已驗證。
+        
+        **對應需求**: FR-006 ~ FR-008
+      operationId: verifyEmail
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          description: 會員 ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+            example:
+              code: "123456"
+      responses:
+        "200":
+          description: 驗證成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyEmailResponse"
+              example:
+                success: true
+                message: "E-Mail 驗證成功，您的帳號已完全啟用"
+        "400":
+          description: 驗證碼錯誤或格式不正確
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              examples:
+                invalidCode:
+                  summary: 驗證碼錯誤
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "驗證碼錯誤"
+                    status: 400
+                    detail: "您輸入的驗證碼不正確，請重新輸入"
+                expiredCode:
+                  summary: 驗證碼已過期
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "驗證碼已過期"
+                    status: 400
+                    detail: "驗證碼已超過 5 分鐘有效期限，請重新發送驗證碼"
+        "404":
+          description: 會員不存在
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /members/{memberId}/resend-verification:
+    post:
+      tags:
+        - Verification
+      summary: 重新發送驗證碼
+      description: |
+        重新發送 E-Mail 驗證碼，舊驗證碼會失效。
+        需遵守 60 秒冷卻時間。
+        
+        **對應需求**: FR-009, FR-010
+      operationId: resendVerification
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          description: 會員 ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 驗證碼已重新發送
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResendVerificationResponse"
+              example:
+                success: true
+                message: "驗證碼已發送至您的 E-Mail"
+                verificationCodeExpiresAt: "2025-12-01T10:10:00Z"
+        "400":
+          description: 會員已驗證或帳號狀態不允許
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                type: "https://tools.ietf.org/html/rfc7807"
+                title: "無法發送驗證碼"
+                status: 400
+                detail: "此帳號已完成 E-Mail 驗證"
+        "404":
+          description: 會員不存在
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: 冷卻時間內重複請求
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                type: "https://tools.ietf.org/html/rfc7807"
+                title: "請稍後再試"
+                status: 429
+                detail: "請等待 60 秒後再重新發送驗證碼"
+          headers:
+            Retry-After:
+              description: 冷卻剩餘秒數
+              schema:
+                type: integer
+                example: 45
+
+components:
+  schemas:
+    RegisterMemberRequest:
+      type: object
+      required:
+        - idNumber
+        - name
+        - email
+        - password
+        - confirmPassword
+        - captchaToken
+      properties:
+        idNumber:
+          type: string
+          description: 身分證字號（會自動轉大寫）
+          example: "A123456789"
+          minLength: 10
+          maxLength: 10
+          pattern: "^[A-Za-z][12][0-9]{8}$"
+        name:
+          type: string
+          description: 會員姓名
+          example: "王小明"
+          minLength: 1
+          maxLength: 50
+        email:
+          type: string
+          format: email
+          description: E-Mail（會自動轉小寫）
+          example: "xiaoming.wang@example.com"
+          maxLength: 256
+        password:
+          type: string
+          format: password
+          description: 密碼（8-20 碼，含英文大小寫及數字）
+          example: "Password123"
+          minLength: 8
+          maxLength: 20
+        confirmPassword:
+          type: string
+          format: password
+          description: 密碼確認
+          example: "Password123"
+          minLength: 8
+          maxLength: 20
+        captchaToken:
+          type: string
+          description: CAPTCHA 驗證 Token
+          example: "03AGdBq24PBCbwiDRaS_MJ7Z..."
+
+    RegisterMemberResponse:
+      type: object
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: 新建立的會員 ID
+        email:
+          type: string
+          format: email
+          description: 已註冊的 E-Mail（小寫）
+        message:
+          type: string
+          description: 成功訊息
+        verificationCodeExpiresAt:
+          type: string
+          format: date-time
+          description: 驗證碼到期時間 (UTC)
+
+    VerifyEmailRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: 6 位數驗證碼
+          example: "123456"
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+
+    VerifyEmailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: 驗證是否成功
+        message:
+          type: string
+          description: 結果訊息
+
+    ResendVerificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: 發送是否成功
+        message:
+          type: string
+          description: 結果訊息
+        verificationCodeExpiresAt:
+          type: string
+          format: date-time
+          description: 新驗證碼到期時間 (UTC)
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details 格式
+      properties:
+        type:
+          type: string
+          format: uri
+          description: 問題類型 URI
+        title:
+          type: string
+          description: 簡短問題標題
+        status:
+          type: integer
+          description: HTTP 狀態碼
+        detail:
+          type: string
+          description: 詳細問題說明
+        instance:
+          type: string
+          format: uri
+          description: 發生問題的 URI
+
+    ValidationProblemDetails:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetails"
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+              description: 欄位驗證錯誤清單

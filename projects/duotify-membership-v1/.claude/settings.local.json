@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(copilot:*)",
+      "Bash(Get-Content PROMPT.txt)",
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
