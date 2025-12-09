@@ -1,0 +1,34 @@
+{
+  "name": "commercial-line-bot",
+  "version": "1.1.0",
+  "description": "LINE Bot x Notion x Claude AI - Business Thinking Coach System",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "init:db": "node scripts/init.js",
+    "test:db": "node scripts/test.js",
+    "test:db-all": "node scripts/test-all.js",
+    "check:db": "node scripts/check-db.js",
+    "test:signature": "node scripts/test-signature-verification.js",
+    "test:signature:local": "node scripts/test-signature-verification.js --local",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "line-bot",
+    "notion",
+    "claude-ai",
+    "business-coaching"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@line/bot-sdk": "^10.3.0",
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}
+
