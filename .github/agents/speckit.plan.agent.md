@@ -1,6 +1,7 @@
 ---
 description: Execute the implementation planning workflow using the plan template to generate design artifacts.
 model: claude-opus-4-5
+infer: true
 handoffs: 
   - label: Create Tasks
     agent: speckit.tasks
@@ -10,6 +11,10 @@ handoffs:
     agent: speckit.checklist
     prompt: Create a checklist for the following domain...
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 

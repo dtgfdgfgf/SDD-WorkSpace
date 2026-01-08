@@ -1,6 +1,7 @@
 ---
 description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
 model: claude-opus-4-5
+infer: true
 handoffs: 
   - label: Analyze For Consistency
     agent: speckit.analyze
@@ -11,6 +12,10 @@ handoffs:
     prompt: Start the implementation in phases
     send: true
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 

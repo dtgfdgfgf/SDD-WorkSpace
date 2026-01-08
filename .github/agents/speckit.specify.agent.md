@@ -1,15 +1,20 @@
 ---
 description: Create or update the feature specification from a natural language feature description.
 model: claude-opus-4-5
+infer: true
 handoffs: 
   - label: Build Technical Plan
     agent: speckit.plan
-    prompt: Create a plan for the spec. I am building with...
+    prompt: Create a plan for the spec. 
   - label: Clarify Spec Requirements
     agent: speckit.clarify
     prompt: Clarify specification requirements
     send: true
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 
