@@ -107,6 +107,41 @@
     "json": true
   },
 
+  // === VS Code 1.107+ Agent & Chat Settings (SDD Optimized) ===
+
+  // [1] Custom Agents 可被主 Agent 自動呼叫為 Subagent
+  // SDD 用途：讓你的 .github/agents/ 中的 custom agents 可以被自動委派處理特定 SDD 階段任務
+  "chat.customAgentInSubagent.enabled": true,
+
+  // [2] Background Agents 支援 Custom Agents
+  // SDD 用途：讓 SDD 專用 agents 可以在背景自主執行長時間任務（如 analyze 階段的跨文件檢查）
+  "github.copilot.chat.cli.customAgents.enabled": true,
+
+  // [3] 重用 Claude Skills
+  // SDD 用途：如果有使用 Claude Code，可重用現有的 skills 定義，與 SDD prompts 互補
+  "chat.useClaudeSkills": true,
+
+  // [4] 摺疊 Agent 的 Tool Calls 輸出
+  // SDD 用途：analyze/implement 階段時，agent 執行大量工具呼叫，摺疊後對話更清晰
+  // 可選值：off（不摺疊）、withThinking（配合 thinking 摺疊）、always（總是摺疊）
+  "chat.agent.thinking.collapsedTools": "always",
+
+  // [5] 啟用 Agent Sessions 整合視圖
+  // SDD 用途：在 Chat view 中直接管理所有 agent sessions，方便追蹤不同 feature 的進度
+  "chat.viewSessions.enabled": true,
+
+  // [6] 啟用新版 Inline Chat（優化為單檔編輯）
+  // SDD 用途：implement 階段的快速程式碼修改更順暢，複雜任務自動升級到 Chat view
+  "inlineChat.enableV2": true,
+
+  // [7] 重啟後自動恢復上一個 Chat Session
+  // SDD 用途：保持 SDD 工作脈絡，避免重啟後遺失對話歷史
+  "chat.viewRestorePreviousSession": true,
+
+  // [8] 啟用 GitHub MCP Server（內建）
+  // SDD 用途：直接在 chat 中查詢 GitHub issues/PRs，方便追蹤需求來源
+  "github.copilot.chat.githubMcpServer.enabled": true,
+
   // === File Nesting (Optional - cleaner view) ===
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.patterns": {
