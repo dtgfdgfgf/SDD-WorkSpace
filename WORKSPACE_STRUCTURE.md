@@ -22,69 +22,51 @@ This document defines the workspace directory structure for a solo AI engineerin
 
 ## Directory Structure
 
-```
-workspace/
-│
-├── .github/
-│   └── copilot-instructions.md      # AI collaboration rules for GitHub Copilot
-│
-├── agents/                           # GitHub Copilot Agents (root level)
-│   └── [agent-name].md              # Custom agent definitions
-│
-├── studio/                           # Studio-level resources (SINGLE SOURCE OF TRUTH)
-│   │
-│   ├── constitution/
-│   │   └── constitution.md           # Studio Constitution (HIGHEST AUTHORITY)
-│   │
-│   ├── knowledge-base/
-│   │   ├── learnings.md              # Cumulative learnings from all projects
-│   │   └── pain-points/              # Categorized pain point records
-│   │       └── [category].md         # e.g., sdd-workflow.md, ai-collaboration.md
-│   │
-│   ├── prompts/                      # SDD Stage Prompt Library
-│   │   ├── specify/                  # Specification prompts
-│   │   ├── clarify/                  # Clarification prompts
-│   │   ├── plan/                     # Planning prompts
-│   │   ├── tasks/                    # Task decomposition prompts
-│   │   ├── analyze/                  # Consistency analysis prompts
-│   │   └── implement/                # Implementation prompts
-│   │
-│   ├── templates/
-│   │   │
-│   │   ├── project-init/             # Project skeleton (copy entire folder)
-│   │   │   ├── .specify/
-│   │   │   │   └── memory/           # Location for project constitution
-│   │   │   ├── specs/                # Feature specifications go here
-│   │   │   ├── src/                  # Source code
-│   │   │   └── README.md             # Project template usage guide
-│   │   │
-│   │   ├── sdd-docs/                 # SDD document templates (copy to project, then customize)
-│   │   │   ├── spec-template.md      # Specification template
-│   │   │   ├── plan-template.md      # Technical plan template
-│   │   │   ├── tasks-template.md     # Task decomposition template
-│   │   │   ├── checklist-template.md # Quality checklist template
-│   │   │   └── agent-file-template.md # AI agent context template
-│   │   │
-│   │   ├── project-constitution-template.md  # Project constitution example
-│   │   │
-│   │   └── feature-packs/            # [NOT ACTIVE] Reusable service templates
-│   │
-│   └── tools/                        # Studio automation scripts
-│
-├── learning/                         # Practice projects (current focus)
-│   └── [project-name]/               # Each project follows project-init structure
-│
-├── projects/                         # Production projects
-│   ├── [client-project]/             # Client work (future)
-│   └── [internal-project]/           # Internal tools
-│
-├── archive/                          # Deprecated/completed items
-│
-├── resources/                        # Shared resources (configs, images, etc.)
-│
-├── WORKSPACE_STRUCTURE.md            # This file
-└── features.txt                      # Current development goals
-```
+### Root Level
+
+| Path | Purpose |
+|------|---------|
+| `.github/copilot-instructions.md` | AI collaboration rules for GitHub Copilot |
+| `agents/[agent-name].md` | GitHub Copilot custom agent definitions |
+| `learning/[project-name]/` | Practice projects (current focus) |
+| `projects/[client-project]/` | Client work (future) |
+| `projects/[internal-project]/` | Internal tools |
+| `archive/` | Deprecated/completed items |
+| `resources/` | Shared resources (configs, images, etc.) |
+| `WORKSPACE_STRUCTURE.md` | This file |
+| `features.txt` | Current development goals |
+
+### Studio (Single Source of Truth)
+
+| Path | Purpose |
+|------|---------|
+| `studio/constitution/constitution.md` | Studio Constitution (HIGHEST AUTHORITY) |
+| `studio/knowledge-base/learnings.md` | Cumulative learnings from all projects |
+| `studio/knowledge-base/pain-points/[category].md` | Categorized pain point records |
+| `studio/prompts/specify/` | Specification prompts |
+| `studio/prompts/clarify/` | Clarification prompts |
+| `studio/prompts/plan/` | Planning prompts |
+| `studio/prompts/tasks/` | Task decomposition prompts |
+| `studio/prompts/analyze/` | Consistency analysis prompts |
+| `studio/prompts/implement/` | Implementation prompts |
+| `studio/tools/` | Studio automation scripts |
+
+### Studio Templates
+
+| Path | Purpose |
+|------|---------|
+| `studio/templates/project-init/` | Project skeleton (copy entire folder) |
+| `studio/templates/project-init/.specify/memory/` | Location for project constitution |
+| `studio/templates/project-init/specs/` | Feature specifications go here |
+| `studio/templates/project-init/src/` | Source code |
+| `studio/templates/project-init/README.md` | Project template usage guide |
+| `studio/templates/sdd-docs/spec-template.md` | Specification template |
+| `studio/templates/sdd-docs/plan-template.md` | Technical plan template |
+| `studio/templates/sdd-docs/tasks-template.md` | Task decomposition template |
+| `studio/templates/sdd-docs/checklist-template.md` | Quality checklist template |
+| `studio/templates/sdd-docs/agent-file-template.md` | AI agent context template |
+| `studio/templates/project-constitution-template.md` | Project constitution example |
+| `studio/templates/feature-packs/` | [NOT ACTIVE] Reusable service templates |
 
 ---
 
@@ -116,24 +98,10 @@ workspace/
 
 **Workflow:**
 
-```
-studio/templates/sdd-docs/          # (1) Studio initial version (generic)
-        │
-        │ Copy when creating project
-        ▼
-project/.specify/templates/         # (2) Project version (customizable)
-        │
-        │ AI customizes based on project constitution
-        ▼
-project/.specify/templates/         # (3) Project-specific templates
-        │
-        │ Use to generate feature documents
-        ▼
-project/specs/NNN-feature/
-├── spec.md
-├── plan.md
-└── tasks.md                        # (4) Actual feature documents
-```
+1. `studio/templates/sdd-docs/` (Studio initial version - generic)
+2. Copy to `project/.specify/templates/` when creating project
+3. AI customizes based on project constitution
+4. Use to generate feature documents in `project/specs/NNN-feature/`
 
 **Why Copy Then Customize?**
 
@@ -172,17 +140,13 @@ project/specs/NNN-feature/
 
 ### 5. Knowledge Feedback System Design
 
-```
-Pain Point Discovered
-        ↓
-Document in learnings.md (lightweight)
-        ↓
-If pattern emerges → Extract to prompts/<stage>/
-        ↓
-Reference in copilot-instructions.md
-        ↓
-Future projects benefit automatically
-```
+**Process Flow:**
+
+1. Pain Point Discovered during development
+2. Document in `learnings.md` (lightweight)
+3. If pattern emerges, extract to `prompts/<stage>/`
+4. Reference in `copilot-instructions.md`
+5. Future projects benefit automatically
 
 **Files:**
 
@@ -196,17 +160,14 @@ Future projects benefit automatically
 
 **Pattern from duotify-membership-v1:**
 
-```
-project/
-├── specs/
-│   └── 001-feature-name/
-│       ├── spec.md
-│       ├── plan.md
-│       ├── tasks.md
-│       └── checklists/
-├── src/
-└── tests/
-```
+| Path | Purpose |
+|------|--------|
+| `project/specs/001-feature-name/spec.md` | Feature specification |
+| `project/specs/001-feature-name/plan.md` | Technical plan |
+| `project/specs/001-feature-name/tasks.md` | Task decomposition |
+| `project/specs/001-feature-name/checklists/` | Quality checklists |
+| `project/src/` | Source code |
+| `project/tests/` | Tests |
 
 **Why Not Separate `plan/` and `tasks/` Folders?**
 
