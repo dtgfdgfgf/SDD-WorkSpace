@@ -2,7 +2,7 @@
 
 **Project Type:** [PROJECT_TYPE]  
 **Created:** [CREATED_DATE]  
-**Status:** 🟡 In Progress
+**Status:** In Progress
 
 ## Description
 
@@ -20,20 +20,15 @@ cd <path-to-this-project>
 
 ## Project Structure
 
-```
-.
-├── .specify/
-│   └── memory/
-│       └── constitution.md    # Project-level rules (optional)
-├── specs/
-│   └── <feature>/
-│       ├── spec.md
-│       ├── plan.md
-│       └── tasks.md
-├── src/
-├── docs/
-└── README.md
-```
+| Path | Purpose |
+|------|--------|
+| `.specify/memory/constitution.md` | Project-level rules (optional) |
+| `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/plan.md` | Technical plan |
+| `specs/<feature>/tasks.md` | Task breakdown |
+| `src/` | Source code |
+| `docs/` | Documentation |
+| `README.md` | This file |
 
 ## SDD Workflow Progress
 
