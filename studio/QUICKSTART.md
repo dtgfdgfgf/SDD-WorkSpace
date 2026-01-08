@@ -1,4 +1,4 @@
-# 🚀 SDD 工作室快速開始指南
+# SDD 工作室快速開始指南
 
 本指南幫助你快速上手 Specification-Driven Development (SDD) 工作流程。
 
@@ -46,10 +46,14 @@
 
 ## SDD 六階段工作流程
 
-```
-specify → clarify → plan → tasks → analyze → implement
-   ①        ②        ③       ④        ⑤          ⑥
-```
+SDD 流程必須依序執行：
+
+1. **specify** — Create initial specification
+2. **clarify** — Resolve ambiguities
+3. **plan** — Produce technical plan
+4. **tasks** — Create task decomposition
+5. **analyze** — Validate cross-document consistency
+6. **implement** — Execute implementation
 
 ### ① Specify（規格撰寫）
 
@@ -155,21 +159,16 @@ specify → clarify → plan → tasks → analyze → implement
 
 ## 專案結構說明
 
-```
-<project>/
-├── .specify/
-│   └── memory/
-│       └── constitution.md    # 專案層級憲章（選用，只能比 Studio 更嚴格）
-├── specs/
-│   └── <feature>/
-│       ├── spec.md            # 規格文件
-│       ├── plan.md            # 技術計畫
-│       └── tasks.md           # 任務分解
-├── src/                       # 原始碼
-├── docs/                      # 文件
-├── README.md                  # 專案說明（含專案類型宣告）
-└── retrospective.md           # 回顧文件（Internal/Client 必要）
-```
+| Path | Purpose |
+|------|--------|
+| `.specify/memory/constitution.md` | 專案層級憲章（選用，只能比 Studio 更嚴格） |
+| `specs/<feature>/spec.md` | 規格文件 |
+| `specs/<feature>/plan.md` | 技術計畫 |
+| `specs/<feature>/tasks.md` | 任務分解 |
+| `src/` | 原始碼 |
+| `docs/` | 文件 |
+| `README.md` | 專案說明（含專案類型宣告） |
+| `retrospective.md` | 回顧文件（Internal/Client 必要） |
 
 ---
 
@@ -207,13 +206,7 @@ specify → clarify → plan → tasks → analyze → implement
 
 ## 雙層憲章系統
 
-```
-Studio Constitution (最高權限)
-        ↓
-    不可放寬
-        ↓
-Project Constitution (選用，只能更嚴格)
-```
+**優先順序**：Studio Constitution (最高權限) > Project Constitution (選用，只能更嚴格)
 
 - **Studio Constitution**：`studio/constitution/constitution.md`
 - **Project Constitution**：`<project>/.specify/memory/constitution.md`
@@ -258,4 +251,4 @@ git config core.hooksPath .githooks
 3. 跟隨 SDD 六階段完成開發
 4. 完成後更新 `learnings.md`
 
-Happy SDD! 🚀
+Happy SDD!
