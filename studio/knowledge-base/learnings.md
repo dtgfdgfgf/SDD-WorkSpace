@@ -1,4 +1,4 @@
-# 📚 Studio Learnings
+# Studio Learnings
 
 Cumulative learnings from all projects. Updated after each project completion.
 
