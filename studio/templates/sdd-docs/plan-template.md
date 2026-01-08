@@ -77,21 +77,18 @@
   Describe how data moves through the system.
 -->
 
-```
-[User/Input] → [Component A] → [Component B] → [Storage/Output]
-```
+Data flow: [User/Input] to [Component A] to [Component B] to [Storage/Output]
 
 ## Project Structure
 
 ### Feature Documentation
 
-```text
-specs/[NNN-feature-name]/
-├── spec.md              # Feature specification
-├── plan.md              # This file
-├── tasks.md             # Task decomposition
-└── checklists/          # Quality checklists (optional)
-```
+| Path | Purpose |
+|------|--------|
+| `specs/[NNN-feature-name]/spec.md` | Feature specification |
+| `specs/[NNN-feature-name]/plan.md` | This file |
+| `specs/[NNN-feature-name]/tasks.md` | Task decomposition |
+| `specs/[NNN-feature-name]/checklists/` | Quality checklists (optional) |
 
 ### Source Code
 
@@ -101,36 +98,30 @@ specs/[NNN-feature-name]/
 -->
 
 **Option 1: Single project (DEFAULT)**
-```text
-src/
-├── models/
-├── services/
-└── lib/
 
-tests/
-├── unit/
-└── integration/
-```
+| Path | Purpose |
+|------|--------|
+| `src/models/` | Data models |
+| `src/services/` | Business logic |
+| `src/lib/` | Utilities |
+| `tests/unit/` | Unit tests |
+| `tests/integration/` | Integration tests |
 
 **Option 2: Web application (frontend + backend)**
-```text
-backend/
-├── src/
-└── tests/
 
-frontend/
-├── src/
-└── tests/
-```
+| Path | Purpose |
+|------|--------|
+| `backend/src/` | Backend source |
+| `backend/tests/` | Backend tests |
+| `frontend/src/` | Frontend source |
+| `frontend/tests/` | Frontend tests |
 
 **Option 3: Mobile + API**
-```text
-api/
-└── src/
 
-ios/ or android/
-└── [platform-specific structure]
-```
+| Path | Purpose |
+|------|--------|
+| `api/src/` | API source |
+| `ios/` or `android/` | Platform-specific structure |
 
 **Structure Decision**: [Document which structure was selected and why]
 
@@ -143,10 +134,10 @@ ios/ or android/
 
 | Requirement | Status | Notes |
 |-------------|--------|-------|
-| Architecture follows established patterns | ⏳ | |
-| Technology decisions documented | ⏳ | |
-| Integration points identified | ⏳ | |
-| Constraints and risks documented | ⏳ | |
+| Architecture follows established patterns | PENDING | |
+| Technology decisions documented | PENDING | |
+| Integration points identified | PENDING | |
+| Constraints and risks documented | PENDING | |
 
 ## Constraints and Risks
 
