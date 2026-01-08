@@ -2,7 +2,12 @@
 description: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts.
 tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'runSubagent']
 model: claude-opus-4-5
+infer: true
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 

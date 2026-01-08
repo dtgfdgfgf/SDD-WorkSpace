@@ -67,7 +67,7 @@
 
 ---
 
-## Phase 3: User Story 1 - 新會員完成基本資料填寫 (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 - 新會員完成基本資料填寫 (Priority: P1) MVP
 
 **Goal**: 使用者可填寫身分證字號、姓名、E-Mail 及密碼完成註冊，系統建立待驗證帳號並發送驗證碼
 
@@ -214,7 +214,7 @@
 ### Within Each User Story
 
 - 測試 MUST 先撰寫並確認 FAIL
-- Entity → Repository → Service → Controller
+- 實作順序: Entity, then Repository, then Service, then Controller
 - 核心實作完成後再處理整合
 
 ### Parallel Opportunities
@@ -257,12 +257,12 @@ Task: T020 建立 ICaptchaValidator [P]
 
 ### Incremental Delivery
 
-1. Setup + Foundational → 基礎就緒
-2. User Story 1 → 測試 → 部署 (MVP - 可註冊)
-3. User Story 2 → 測試 → 部署 (可驗證)
-4. User Story 3 → 測試 → 部署 (可重送)
-5. User Story 4 → 測試 → 部署 (登入受限)
-6. Phase 7 → 背景清理上線
+1. Setup + Foundational: 基礎就緒
+2. User Story 1: 測試, 部署 (MVP - 可註冊)
+3. User Story 2: 測試, 部署 (可驗證)
+4. User Story 3: 測試, 部署 (可重送)
+5. User Story 4: 測試, 部署 (登入受限)
+6. Phase 7: 背景清理上線
 
 ---
 

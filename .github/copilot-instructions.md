@@ -11,16 +11,17 @@ This is a solo AI engineering studio workspace using **Specification-Driven Deve
 
 ## Workspace Layout
 
-| Path                                  | Purpose                                                                                     |
-| ------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `studio/constitution/constitution.md` | Studio-level governance rules (HIGHEST AUTHORITY)                                           |
-| `studio/prompts/<stage>/`             | Reusable prompts organized by SDD stage (specify, clarify, plan, tasks, analyze, implement) |
-| `studio/templates/project-init/`      | New project skeleton                                                                        |
-| `studio/templates/feature-packs/`     | Reusable service templates [NOT ACTIVE]                                                     |
-| `studio/knowledge-base/learnings.md`  | Cumulative learnings from all projects                                                      |
-| `learning/`                           | Practice projects (current focus)                                                           |
-| `projects/`                           | Internal/Client projects (future)                                                           |
-| `.github/copilot-instructions.md`     | GitHub Copilot AI collaboration rules                                                       |
+| Path                                  | Purpose                                                           |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| `studio/constitution/constitution.md` | Studio-level governance rules (HIGHEST AUTHORITY)                 |
+| `studio/templates/project-init/`      | New project skeleton                                              |
+| `studio/templates/sdd-agents/`        | SDD workflow agents (copy to projects)                            |
+| `studio/templates/feature-packs/`     | Reusable service templates [NOT ACTIVE]                           |
+| `studio/knowledge-base/learnings.md`  | Cumulative learnings from all projects                            |
+| `learning/`                           | Practice projects (current focus)                                 |
+| `projects/`                           | Internal/Client projects (future)                                 |
+| `.github/agents/`                     | Studio-level agents (constitution, taskstoissues, spec-kit entry) |
+| `.github/copilot-instructions.md`     | GitHub Copilot AI collaboration rules                             |
 
 ## Dual-Layer Governance
 

@@ -1,7 +1,12 @@
 ---
 description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation.
 model: claude-opus-4-5
+infer: true
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 

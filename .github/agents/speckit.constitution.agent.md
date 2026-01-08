@@ -1,11 +1,16 @@
 ---
 description: Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync.
 model: claude-opus-4-5
+infer: true
 handoffs: 
   - label: Build Specification
     agent: speckit.specify
     prompt: Implement the feature specification based on the updated constitution. I want to build...
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 

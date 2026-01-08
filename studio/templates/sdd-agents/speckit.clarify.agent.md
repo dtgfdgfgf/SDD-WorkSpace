@@ -1,10 +1,16 @@
 ---
 description: Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec.
+model: claude-opus-4-5
+infer: true
 handoffs: 
   - label: Build Technical Plan
     agent: speckit.plan
-    prompt: Create a plan for the spec. I am building with...
+    prompt: Create a plan for the spec. 
 ---
+
+## Output Language
+
+**Default: Traditional Chinese (zh-TW)**. Keep technical terms in English (API, OAuth2, design tokens, etc.). See `copilot-instructions.md` Language Strategy for details.
 
 ## User Input
 
