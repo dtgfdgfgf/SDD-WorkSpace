@@ -51,7 +51,7 @@
 
 **Purpose**: Core infrastructure that MUST be complete before user story work
 
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
+**CRITICAL**: No user story work can begin until this phase is complete
 
 | ID | Task | Priority | Risk | Definition of Done |
 |----|------|----------|------|-------------------|
@@ -64,7 +64,7 @@
 
 ---
 
-## Phase 3: User Story 1 - [Title] (P1) 🎯 MVP
+## Phase 3: User Story 1 - [Title] (P1) MVP
 
 **Goal**: [Brief description of what this story delivers]
 
