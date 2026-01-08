@@ -11,27 +11,16 @@ This is a solo AI engineering studio workspace using **Specification-Driven Deve
 
 ## Workspace Layout
 
-```
-studio/
-├── constitution/          # Studio-level governance rules (HIGHEST AUTHORITY)
-│   └── constitution.md
-├── prompts/               # Reusable prompts organized by SDD stage
-│   ├── specify/
-│   ├── clarify/
-│   ├── plan/
-│   ├── tasks/
-│   ├── analyze/
-│   └── implement/
-├── templates/             # Project templates and feature packs
-│   ├── project-init/      # New project skeleton
-│   └── feature-packs/     # [NOT ACTIVE] Reusable service templates
-└── knowledge-base/        # Learnings and pain points
-    └── learnings.md       # Cumulative learnings from all projects
-
-learning/                  # Practice projects (current focus)
-projects/                  # Internal/Client projects (future)
-.github/                   # GitHub Copilot configurations
-```
+| Path                                  | Purpose                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `studio/constitution/constitution.md` | Studio-level governance rules (HIGHEST AUTHORITY)                                           |
+| `studio/prompts/<stage>/`             | Reusable prompts organized by SDD stage (specify, clarify, plan, tasks, analyze, implement) |
+| `studio/templates/project-init/`      | New project skeleton                                                                        |
+| `studio/templates/feature-packs/`     | Reusable service templates [NOT ACTIVE]                                                     |
+| `studio/knowledge-base/learnings.md`  | Cumulative learnings from all projects                                                      |
+| `learning/`                           | Practice projects (current focus)                                                           |
+| `projects/`                           | Internal/Client projects (future)                                                           |
+| `.github/copilot-instructions.md`     | GitHub Copilot AI collaboration rules                                                       |
 
 ## Dual-Layer Governance
 
@@ -93,40 +82,137 @@ All work MUST follow this sequence without skipping:
 
 ## Project Structure
 
-Each project follows this structure:
+Each project contains these paths:
+
+| Path                                        | Purpose                        |
+| ------------------------------------------- | ------------------------------ |
+| `<project>/.specify/memory/constitution.md` | Project-level rules (optional) |
+| `<project>/specs/<feature>/spec.md`         | Feature specification          |
+| `<project>/specs/<feature>/plan.md`         | Technical plan                 |
+| `<project>/specs/<feature>/tasks.md`        | Task breakdown                 |
+| `<project>/src/`                            | Source code                    |
+| `<project>/docs/`                           | Documentation                  |
+| `<project>/README.md`                       | Project overview               |
+
+## LLM-Friendly Markdown Formatting
+
+All `.md` files generated in this workspace MUST follow these formatting rules to maximize LLM comprehension and minimize token waste.
+
+### MUST Use (LLM-Friendly)
+
+| Format                  | Use Case                                | Example                       |
+| ----------------------- | --------------------------------------- | ----------------------------- |
+| Markdown tables         | Structured data, comparisons, mappings  | See Workspace Layout section  |
+| Numbered lists          | Sequential steps, workflows, priorities | `1. First step`               |
+| Bullet lists            | Non-sequential items, features, options | `- Item one`                  |
+| Inline code             | File paths, commands, identifiers       | `` `path/to/file.md` ``       |
+| Headers                 | Document structure, sections            | `## Section Name`             |
+| Plain text descriptions | Explaining relationships, data flow     | "Data flows from A to B to C" |
+
+### MUST NOT Use (LLM-Unfriendly)
+
+| Format                         | Problem                                  | Alternative                            |
+| ------------------------------ | ---------------------------------------- | -------------------------------------- |
+| ASCII art diagrams             | Low information density, wastes tokens   | Use tables or text descriptions        |
+| Box-drawing characters         | Poor LLM parsing                         | Use Markdown tables                    |
+| Tree structures (`├──`, `└──`) | Ambiguous parsing, token-heavy           | Use path tables with Purpose column    |
+| Arrow symbols (`→`, `←`, `⇒`)  | Inconsistent encoding, unclear semantics | Use "to", "from", "--", or text        |
+| Emoji in AI-critical files     | Unpredictable tokenization               | Use text markers like `[OK]`, `[WARN]` |
+
+### File Type Classification
+
+| File Type                                                | Emoji Allowed | Reason                             |
+| -------------------------------------------------------- | ------------- | ---------------------------------- |
+| `constitution.md`, `copilot-instructions.md`             | NO            | AI governance, must be unambiguous |
+| `spec.md`, `plan.md`, `tasks.md`                         | NO            | SDD documents, AI-processed        |
+| `README.md`, `CHANGELOG.md`                              | YES           | Human-facing documentation         |
+| `learnings.md`, `retrospective.md`                       | YES           | Human reflection records           |
+| Status tracking files (e.g., `IMPLEMENTATION_STATUS.md`) | YES           | Visual scanning aids               |
+
+### Data Flow Description
+
+Instead of arrow diagrams:
 
 ```
-<project>/
-├── .specify/
-│   └── memory/
-│       └── constitution.md    # Project-level rules (optional)
-├── specs/
-│   └── <feature>/
-│       ├── spec.md
-│       ├── plan.md
-│       └── tasks.md
-├── src/
-├── docs/
-└── README.md
+[Input] → [Process A] → [Process B] → [Output]   ❌ BAD
 ```
+
+Use text description:
+
+```
+Data flow: Input to Process A to Process B to Output   ✅ GOOD
+```
+
+Or use a table:
+
+| Step | Component | Description              |
+| ---- | --------- | ------------------------ |
+| 1    | Input     | Receives user data       |
+| 2    | Process A | Validates and transforms |
+| 3    | Process B | Applies business logic   |
+| 4    | Output    | Returns result           |
+
+### Folder Structure Description
+
+Instead of tree diagrams:
+
+```
+project/           ❌ BAD
+├── src/
+│   └── index.js
+└── tests/
+```
+
+Use path tables:
+
+| Path                   | Purpose     | ✅ GOOD |
+| ---------------------- | ----------- | ------- |
+| `project/src/`         | Source code |
+| `project/src/index.js` | Entry point |
+| `project/tests/`       | Test files  |
+
+---
 
 ## Coding Conventions
 
 ### Language Strategy
 
-Different content types require different languages for optimal AI understanding and human readability:
+#### Default Language: Traditional Chinese (zh-TW)
 
-#### MUST Use English (AI-critical files)
+All generated documents use Traditional Chinese unless otherwise specified.
 
-- Constitution files (`constitution.md`, `copilot-instructions.md`)
-- SDD documents (`spec.md`, `plan.md`, `tasks.md`)
-- Code (variables, functions, classes)
-- Technical comments (algorithm logic, data structures)
-- Error messages (for searchability)
-- Branch names
+#### MUST Use English (Non-translatable)
 
-#### MAY Use Traditional Chinese (zh-TW)
+- Code identifiers (variables, functions, classes)
+- Branch names, commit type prefixes (feat, fix, docs, etc.)
+- Requirement IDs (FR-001, NFR-002, US-1, T001)
+- Normative keywords (MUST, SHOULD, MAY, NOT)
+- International standards and protocols (REST, OAuth2, JWT, WCAG, HTTP)
+- Tools and frameworks (.NET, React, Docker, Astro, etc.)
+- Constitution files (`constitution.md`, `copilot-instructions.md`) - maintain English for cross-project consistency
+- Agent instruction files (`.github/agents/*.md`) - system-level, maintain English
 
+#### AI Judgment Principle for Technical Terms
+
+When encountering technical terms, AI should determine:
+
+1. Does the term have a widely accepted translation in the Chinese tech community?
+2. Would translation lose precision or searchability?
+3. If uncertain, keep English and add parenthetical explanation if needed
+
+Examples:
+
+| Term             | Decision                  | Reason                                       |
+| ---------------- | ------------------------- | -------------------------------------------- |
+| API              | Keep English              | Universal, no good translation               |
+| design tokens    | Keep English              | Technical term, "設計權杖" not commonly used |
+| state file       | Keep English              | Code-related concept                         |
+| audit            | Can translate to 稽核     | Common business term                         |
+| batch processing | Can translate to 批次處理 | Widely understood                            |
+
+#### Files That CAN Use Chinese
+
+- `spec.md`, `plan.md`, `tasks.md` - SDD documents (primary audience is human operator)
 - Business logic comments (explaining "why" from business perspective)
 - User-facing documentation (`README.md` zh-TW version)
 - Commit message descriptions (after the type prefix)
