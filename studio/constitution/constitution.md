@@ -1,4 +1,4 @@
-# 📄 《Studio Constitution》 (Optimized English Version)
+# Studio Constitution
 
 **File name:** constitution.md  
 **Version:** 1.2.0  
@@ -143,32 +143,59 @@ AI agents MUST operate under the following principles:
 
 - Studio Constitution is the highest context source
 - Role expectations per SDD stage:
-  - specify → express requirements, define boundaries
-  - clarify → identify ambiguities and missing information
-  - plan → assist in technical reasoning
-  - tasks → propose decompositions and acceptance criteria
-  - implement → assist in generation of code/comments/docs
+  - specify: express requirements, define boundaries
+  - clarify: identify ambiguities and missing information
+  - plan: assist in technical reasoning
+  - tasks: propose decompositions and acceptance criteria
+  - implement: assist in generation of code/comments/docs
 - AI MUST follow spec/plan/tasks and MAY NOT hallucinate or assume missing requirements
 - All AI-generated content MUST be manually reviewed
 - AI MAY NOT skip SDD stages or suggest skipping stages
 
+### 10.1 LLM-Friendly Document Formatting
+
+All AI-generated `.md` files MUST follow these formatting rules:
+
+**MUST Use:**
+
+| Format | Use Case |
+|--------|----------|
+| Markdown tables | Structured data, comparisons, path listings |
+| Numbered/bullet lists | Sequential or non-sequential items |
+| Inline code backticks | File paths, commands, identifiers |
+| Plain text descriptions | Explaining relationships and data flow |
+
+**MUST NOT Use:**
+
+| Format | Problem | Alternative |
+|--------|---------|------------|
+| ASCII art / box diagrams | Low information density, wastes tokens | Tables or text |
+| Tree structures (`├──`, `└──`) | Ambiguous LLM parsing | Path tables |
+| Arrow symbols (`→`, `←`, `⇒`) | Inconsistent encoding | "to", "from", or dashes |
+| Emoji in SDD documents | Unpredictable tokenization | Text markers `[OK]`, `[WARN]` |
+
+**Emoji Policy by File Type:**
+
+| File Type | Emoji Allowed |
+|-----------|---------------|
+| `constitution.md`, `copilot-instructions.md` | NO |
+| `spec.md`, `plan.md`, `tasks.md` | NO |
+| `README.md`, human-facing docs | YES |
+| `learnings.md`, `retrospective.md` | YES |
+
 ## 11. Required Project Structure
 
-Each project MUST follow the structure:
+Each project MUST contain these paths:
 
-```
-/.specify/
-    /memory/
-        constitution.md     ← Project-level constitution (optional)
-/specs/
-    /<feature>/
-        spec.md
-        plan.md
-        tasks.md
-/src/
-docs/
-README.md
-```
+| Path | Purpose |
+|------|--------|
+| `.specify/memory/constitution.md` | Project-level constitution (optional) |
+| `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/plan.md` | Technical plan |
+| `specs/<feature>/tasks.md` | Task breakdown |
+| `src/` | Source code |
+| `docs/` | Documentation |
+| `README.md` | Project overview |
 
 ## 12. Governance Rules
 
@@ -257,11 +284,10 @@ If recurring friction points are found:
 
 ### 13.5 Knowledge Base Structure
 
-```
-studio/knowledge-base/
-    learnings.md          ← Cumulative learnings (all projects)
-    pain-points/          ← Detailed pain point analysis (optional)
-```
+| Path | Purpose |
+|------|--------|
+| `studio/knowledge-base/learnings.md` | Cumulative learnings (all projects) |
+| `studio/knowledge-base/pain-points/` | Detailed pain point analysis (optional) |
 
 ### Enforcement
 
