@@ -42,21 +42,16 @@
 
 ## Project Structure
 
-```text
-[ACTUAL STRUCTURE FROM PLANS]
+| Path | Purpose |
+|------|--------|
+| `project/.specify/memory/constitution.md` | Project constitution |
+| `project/specs/NNN-feature/spec.md` | Feature specification |
+| `project/specs/NNN-feature/plan.md` | Technical plan |
+| `project/specs/NNN-feature/tasks.md` | Task decomposition |
+| `project/src/` | Source code |
+| `project/tests/` | Tests |
 
-project/
-├── .specify/
-│   └── memory/
-│       └── constitution.md
-├── specs/
-│   └── NNN-feature/
-│       ├── spec.md
-│       ├── plan.md
-│       └── tasks.md
-├── src/
-└── tests/
-```
+<!-- Update with actual structure from plan.md files -->
 
 ---
 
