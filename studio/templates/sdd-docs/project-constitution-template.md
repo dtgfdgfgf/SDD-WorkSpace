@@ -18,6 +18,23 @@ This document can only ADD stricter rules, never relax Studio Constitution rules
 
 ---
 
+## Studio Reference Paths
+
+This project follows the SDD methodology defined at workspace level.
+
+| Resource | Path (from multi-root workspace) | Purpose |
+|----------|----------------------------------|--------|
+| Studio Constitution | `studio/constitution/constitution.md` | Highest authority rules |
+| SDD Agents | `studio/templates/sdd-agents/` | Workflow agents |
+| SDD Doc Templates | `studio/templates/sdd-docs/` | Document templates |
+| Scripts | `studio/scripts/powershell/` | Automation scripts |
+| Prompts | `studio/prompts/<stage>/` | Stage-specific prompts |
+| Learnings | `studio/knowledge-base/learnings.md` | Cumulative learnings |
+
+**Note**: Open this project using `<project-name>.code-workspace` to ensure all studio paths are accessible as read-only folders.
+
+---
+
 ## Project Context
 
 ### Domain

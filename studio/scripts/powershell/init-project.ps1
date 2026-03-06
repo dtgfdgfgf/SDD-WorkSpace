@@ -45,7 +45,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir 'common.ps1')
 
 # Find workspace and studio roots
-$workspaceRoot = Get-WorkspaceRoot
+$workspaceRoot = Find-WorkspaceRoot
 $studioRoot = Find-StudioRoot -StartDir $scriptDir
 
 if (-not $workspaceRoot) {
@@ -138,6 +138,50 @@ try {
 "@
     Set-Content -Path $retroPath -Value $retroContent -NoNewline
 
+    # Create .code-workspace file for multi-root workspace support
+    $workspaceFile = Join-Path $targetDir "$Name.code-workspace"
+    $workspaceContent = @{
+        folders  = @(
+            @{
+                name = $Name
+                path = "."
+            },
+            @{
+                name = "studio (read-only)"
+                path = "../../studio"
+            },
+            @{
+                name = "agents (read-only)"
+                path = "../../.github/agents"
+            }
+        )
+        settings = @{
+            "files.readonlyInclude" = @{
+                "**/studio/**"         = $true
+                "**/.github/agents/**" = $true
+            }
+        }
+    } | ConvertTo-Json -Depth 4
+    Set-Content -Path $workspaceFile -Value $workspaceContent -Encoding UTF8
+
+    # Create .github/agents Junction for VS Code agent discovery
+    $githubDir = Join-Path $targetDir '.github'
+    $agentsJunction = Join-Path $githubDir 'agents'
+    $agentsSource = Join-Path $workspaceRoot '.github/agents'
+    
+    if (-not (Test-Path $githubDir)) {
+        New-Item -ItemType Directory -Path $githubDir -Force | Out-Null
+    }
+    
+    if (Test-Path $agentsSource) {
+        # Create Junction (directory symbolic link) to workspace agents
+        New-Item -ItemType Junction -Path $agentsJunction -Target $agentsSource -Force | Out-Null
+        Write-Host "Created agents junction: .github/agents -> $agentsSource" -ForegroundColor Gray
+    }
+    else {
+        Write-Warning "Agents source not found at: $agentsSource - skipping junction creation"
+    }
+
     # Remove .gitkeep files if directories have content
     Get-ChildItem -Path $targetDir -Recurse -Filter '.gitkeep' | ForEach-Object {
         $parentDir = $_.DirectoryName
@@ -151,10 +195,12 @@ try {
     Write-Host "✓ $Type project created successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
-    Write-Host "  1. cd projects/$Name"
+    Write-Host "  1. Open project with multi-root workspace:"
+    Write-Host "     code projects/$Name/$Name.code-workspace" -ForegroundColor White
     Write-Host "  2. Start SDD workflow with: /speckit.specify <your feature description>"
     Write-Host ""
     Write-Host "Project Type: $Type" -ForegroundColor Cyan
+    Write-Host "Workspace File: $Name.code-workspace (includes studio & agents as read-only)" -ForegroundColor Cyan
     Write-Host "Knowledge Capture: retrospective.md (required) + learnings.md (if applicable)"
     Write-Host ""
 
@@ -165,7 +211,8 @@ try {
         Write-Host ""
     }
 
-} catch {
+}
+catch {
     Write-Error "Failed to create project: $_"
     # Cleanup on failure
     if (Test-Path $targetDir) {

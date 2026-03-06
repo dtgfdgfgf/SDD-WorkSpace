@@ -183,17 +183,48 @@ This document defines the workspace directory structure for a solo AI engineerin
 ### Creating a New Project
 
 ```powershell
-# 1. Copy project skeleton
-Copy-Item -Recurse studio/templates/project-init learning/my-new-project
+# Use init-project.ps1 to create a new project
+.\studio\scripts\powershell\init-project.ps1 -Name "my-project" -Type Internal
 
-# 2. Copy SDD templates to project
-New-Item -ItemType Directory -Path learning/my-new-project/.specify/templates -Force
-Copy-Item studio/templates/sdd-docs/* learning/my-new-project/.specify/templates/
+# Or for client projects
+.\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client -Description "Project description"
+```
 
-# 3. (Optional) Create project constitution
-Copy-Item studio/templates/project-constitution-template.md learning/my-new-project/.specify/memory/constitution.md
+This script will:
+1. Copy project skeleton from `studio/templates/project-init/`
+2. Generate `README.md` with project info
+3. Create `retrospective.md` template
+4. **Generate `<project-name>.code-workspace`** for multi-root workspace support
 
-# 4. Ask AI to customize templates based on project needs
+### Opening a Project (Multi-Root Workspace)
+
+```powershell
+# Open project using the generated .code-workspace file
+code projects/my-project/my-project.code-workspace
+```
+
+The `.code-workspace` file includes:
+
+| Folder | Access | Purpose |
+|--------|--------|--------|
+| `<project-name>` | Editable | Project source and docs |
+| `studio (read-only)` | Read-only | Constitution, templates, prompts |
+| `agents (read-only)` | Read-only | GitHub Copilot agents |
+
+**Why Multi-Root Workspace?**
+- Agents and studio files are accessible without copying
+- Read-only protection prevents accidental modification
+- Single source of truth maintained
+- Project can be worked on independently
+
+### (Alternative) Copy SDD Templates to Project
+
+```powershell
+# Optional: Copy SDD templates for project-specific customization
+New-Item -ItemType Directory -Path projects/my-project/.specify/templates -Force
+Copy-Item studio/templates/sdd-docs/* projects/my-project/.specify/templates/
+
+# Ask AI to customize templates based on project needs
 # "請根據這個專案的技術棧和 constitution 調整 .specify/templates/ 內的模板"
 ```
 

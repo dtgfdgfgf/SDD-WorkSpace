@@ -34,6 +34,36 @@
 .\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client -Description "電商平台開發"
 ```
 
+### 開啟專案（Multi-Root Workspace）
+
+建立專案後，使用產生的 `.code-workspace` 檔案開啟：
+
+```powershell
+# 開啟 Internal/Client 專案
+code projects/studio-automation/studio-automation.code-workspace
+
+# 開啟 Practice 專案
+code learning/my-demo/my-demo.code-workspace
+```
+
+**為什麼用 .code-workspace？**
+
+| 資料夾 | 存取權限 | 用途 |
+|--------|----------|------|
+| `<project-name>` | 可編輯 | 專案程式碼和文件 |
+| `studio (read-only)` | 唯讀 | Constitution、templates、prompts |
+| `agents (read-only)` | 唯讀 | GitHub Copilot agents（參考用） |
+
+**Junction 機制**
+
+每個專案會自動建立 `.github/agents/` Junction（指向 workspace），讓 VS Code 能正常發現所有 agents：
+
+```
+<project>/.github/agents/  →  Junction  →  workspace/.github/agents/
+```
+
+所有 SDD agents（speckit.specify, clarify, plan 等）都集中在 `workspace/.github/agents/`，專案可直接使用 `/speckit.*` 指令。
+
 ### 專案類型比較
 
 | 類型 | 目標目錄 | SDD 嚴謹度 | 知識記錄 |
@@ -251,4 +281,4 @@ git config core.hooksPath .githooks
 3. 跟隨 SDD 六階段完成開發
 4. 完成後更新 `learnings.md`
 
-Happy SDD!
+

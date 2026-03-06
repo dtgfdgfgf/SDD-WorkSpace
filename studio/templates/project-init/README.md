@@ -11,8 +11,8 @@
 ## Quick Start
 
 ```bash
-# Navigate to project
-cd <path-to-this-project>
+# Open project with multi-root workspace (recommended)
+code <project-name>.code-workspace
 
 # Start SDD workflow
 /speckit.specify <your feature description>
@@ -45,6 +45,11 @@ This project follows the dual-layer constitution system:
 
 1. **Studio Constitution** (highest authority): `studio/constitution/constitution.md`
 2. **Project Constitution** (optional): `.specify/memory/constitution.md`
+
+**Note**: Use `<project-name>.code-workspace` to open the project. This multi-root workspace includes:
+- Project folder (editable)
+- Studio folder (read-only)
+- Agents folder (read-only)
 
 ## Knowledge Capture
 
