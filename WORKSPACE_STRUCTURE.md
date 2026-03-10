@@ -1,278 +1,176 @@
 # Workspace Structure Design
 
-**Version:** 1.0.0  
+**Version:** 1.3.0  
 **Created:** 2025-12-08  
+**Updated:** 2026-03-08  
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
 ## Overview
 
-This document defines the workspace directory structure for a solo AI engineering studio. The design prioritizes:
+This workspace is a studio-first Spec Kit variant. Governance, runtime agents, prompts, templates,
+extensions, and generated exports are centralized at the workspace level. Projects consume those
+shared assets without turning each repo into a fully self-contained upstream Spec Kit clone.
 
-- **Single Source of Truth**: Templates and governance files are centralized at studio level
-- **Dual-Layer Governance**: Studio constitution (highest authority) + Project constitution (additive rules)
-- **Knowledge Feedback Loop**: Systematic capture of learnings and pain points during practice phase
-- **Scalability**: Structure supports growth from practice projects to client work
+Design priorities:
 
-### Current Phase
+- Single source of truth for governance and runtime agents
+- Dual-layer constitutions with additive project rules
+- Predictable initialization for Practice, Internal, and Client projects
+- Controlled template customization without losing studio defaults
+- Additive upstream alignment through shared-layer capabilities instead of repo-local migration
 
-**Practice** (as of 2025-12) — Focus on learning SDD workflow through demo projects and MVPs.
-
----
-
-## Directory Structure
-
-### Root Level
+## Root Layout
 
 | Path | Purpose |
 |------|---------|
-| `.github/copilot-instructions.md` | AI collaboration rules for GitHub Copilot |
-| `agents/[agent-name].md` | GitHub Copilot custom agent definitions |
-| `learning/[project-name]/` | Practice projects (current focus) |
-| `projects/[client-project]/` | Client work (future) |
-| `projects/[internal-project]/` | Internal tools |
-| `archive/` | Deprecated/completed items |
-| `resources/` | Shared resources (configs, images, etc.) |
-| `WORKSPACE_STRUCTURE.md` | This file |
+| `.github/copilot-instructions.md` | Workspace-level Copilot rules |
+| `.github/agents/` | Runtime source for shared SDD agents |
+| `.github/prompts/` | Runtime source for shared prompt assets |
+| `learning/<project>/` | Practice projects |
+| `projects/<project>/` | Internal, Client, and historical sample projects |
+| `archive/` | Archived or deprecated items |
+| `resources/` | Shared resources |
+| `resources/agent-skill-packs/` | Generated AI skill packs exported from shared runtime sources |
+| `WORKSPACE_STRUCTURE.md` | This document |
 | `features.txt` | Current development goals |
 
-### Studio (Single Source of Truth)
+## Studio Canonical Sources
 
 | Path | Purpose |
 |------|---------|
-| `studio/constitution/constitution.md` | Studio Constitution (HIGHEST AUTHORITY) |
-| `studio/knowledge-base/learnings.md` | Cumulative learnings from all projects |
-| `studio/knowledge-base/pain-points/[category].md` | Categorized pain point records |
-| `studio/prompts/specify/` | Specification prompts |
-| `studio/prompts/clarify/` | Clarification prompts |
-| `studio/prompts/plan/` | Planning prompts |
-| `studio/prompts/tasks/` | Task decomposition prompts |
-| `studio/prompts/analyze/` | Consistency analysis prompts |
-| `studio/prompts/implement/` | Implementation prompts |
-| `studio/tools/` | Studio automation scripts |
+| `studio/constitution/constitution.md` | Highest-authority studio governance |
+| `studio/extensions/` | Canonical shared extension source, manifest schema, catalog, and state |
+| `studio/templates/project-init/` | Project bootstrap skeleton |
+| `studio/templates/sdd-docs/` | Canonical document templates |
+| `studio/templates/sdd-agents/` | Mirror of runtime agents; update from `.github/agents/` |
+| `studio/knowledge-base/learnings.md` | Cross-project learning capture |
+| `studio/prompts/<stage>/` | Stage-specific reusable prompts |
+| `studio/scripts/powershell/` | Studio automation scripts |
 
-### Studio Templates
+## Project-Level Structure
+
+Each project is expected to contain:
 
 | Path | Purpose |
 |------|---------|
-| `studio/templates/project-init/` | Project skeleton (copy entire folder) |
-| `studio/templates/project-init/.specify/memory/` | Location for project constitution |
-| `studio/templates/project-init/specs/` | Feature specifications go here |
-| `studio/templates/project-init/src/` | Source code |
-| `studio/templates/project-init/README.md` | Project template usage guide |
-| `studio/templates/sdd-docs/spec-template.md` | Specification template |
-| `studio/templates/sdd-docs/plan-template.md` | Technical plan template |
-| `studio/templates/sdd-docs/tasks-template.md` | Task decomposition template |
-| `studio/templates/sdd-docs/checklist-template.md` | Quality checklist template |
-| `studio/templates/sdd-docs/agent-file-template.md` | AI agent context template |
-| `studio/templates/project-constitution-template.md` | Project constitution example |
-| `studio/templates/feature-packs/` | [NOT ACTIVE] Reusable service templates |
-
----
+| `.specify/memory/constitution.md` | Project-level canonical constitution |
+| `.github/agents/` | Junction to workspace `.github/agents/` |
+| `.github/copilot-instructions.md` | GitHub Copilot project context |
+| `CLAUDE.md` | Claude project context |
+| `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/plan.md` | Technical plan |
+| `specs/<feature>/tasks.md` | Task decomposition |
+| `specs/<feature>/contracts/` | Markdown or machine-readable service contracts |
+| `src/` | Source code |
+| `docs/` | Documentation |
+| `README.md` | Project overview and project type declaration |
 
 ## Design Decisions
 
-### 1. Dual-Layer Constitution (Independent, Not Inherited)
+### 1. Dual-Layer Constitutions
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Studio | `studio/constitution/constitution.md` | Universal rules, SDD workflow, quality gates |
-| Project | `<project>/.specify/memory/constitution.md` | Project-specific terminology, stricter standards |
+| Studio | `studio/constitution/constitution.md` | Universal methodology and quality gates |
+| Project | `<project>/.specify/memory/constitution.md` | Additive domain rules and stricter standards |
 
-**Why Independent?**
+Notes:
 
-- Studio constitution defines **methodology and process** (how to do SDD)
-- Project constitution defines **domain-specific rules** (what this project requires)
-- Low content correlation — project rules don't extend studio rules, they add orthogonal constraints
-- Priority is clear: Studio wins on conflict, but content rarely overlaps
+- Project constitutions can only add stricter rules.
+- `.github/copilot-instructions.md` and `CLAUDE.md` are context files, not constitutions.
 
-**Template Location:** `studio/templates/project-constitution-template.md` (not inside `project-init/`)
+### 2. Runtime Agent Source
 
-### 2. Templates: Studio Initial → Copy to Project → AI Customize
+The runtime source of truth is:
 
-| Template Type | Location | Usage |
-|---------------|----------|-------|
-| Project skeleton | `project-init/` | Copy entire folder to start new project |
-| SDD documents | `sdd-docs/` | Copy to `project/.specify/templates/`, then AI customizes |
-| Project constitution | `project-constitution-template.md` | Copy to project if needed |
+- `.github/agents/`
+- `.github/prompts/`
 
-**Workflow:**
+`studio/templates/sdd-agents/` is retained as a mirror for scaffolding and auditability. It should
+be updated from the runtime source, not edited independently as a competing authority.
 
-1. `studio/templates/sdd-docs/` (Studio initial version - generic)
-2. Copy to `project/.specify/templates/` when creating project
-3. AI customizes based on project constitution
-4. Use to generate feature documents in `project/specs/NNN-feature/`
+### 3. Extension Registry
 
-**Why Copy Then Customize?**
+`studio/extensions/` is the canonical shared extension registry for this workspace. Manifests live
+under `studio/extensions/<extension-id>/manifest.json`, while `catalog.json` and `state.json`
+control curated visibility and enable/disable state at the workspace level.
 
-- Each project may have different tech stacks, conventions, and requirements
-- AI can adapt templates based on project constitution
-- Project templates are version-controlled with the project
-- Studio templates remain as the "starting point" for new projects
+Rules:
 
-### 3. Prompts at Studio Level (Not Project Level)
+- Extensions are workspace-level shared capabilities, not project-local customization dumps.
+- `catalog.json` controls curated registration metadata.
+- `state.json` controls enable/disable state.
+- No extension registry data belongs under `<project>/.specify/` or `<project>/.github/`.
 
-**Location:** `studio/prompts/<stage>/`
+### 4. Generated Skill Packs
 
-**Why Studio Level?**
+`resources/agent-skill-packs/<agent>/` stores generated skill pack exports for skill-based agent
+ecosystems. These exports are mirrors built from `.github/agents/` and `.github/prompts/`; they are
+not a new source of truth and should be regenerated rather than edited by hand.
 
-- Prompts encode **reusable patterns** discovered during practice
-- Same prompts apply across all projects (methodology consistency)
-- Extracted from pain points and learnings over time
-- Unlike large teams, solo developer doesn't need per-project prompt customization
+### 5. Template Strategy
 
-**Population Strategy:**
+Studio templates are the default baseline. Projects may add local overrides under
+`.specify/templates/`, but scripts must continue to work when only studio templates exist.
 
-1. Start empty (current state)
-2. During practice, identify friction points
-3. Extract recurring prompt patterns into `studio/prompts/<stage>/`
-4. Reference in `copilot-instructions.md` or use directly
-
-### 4. Agents at Root Level
-
-**Location:** `workspace/agents/`
-
-**Why Root Level?**
-
-- GitHub Copilot agent discovery works from workspace root
-- Agents are workspace-wide, not project-specific
-- Keeps `.github/` clean (only `copilot-instructions.md`)
-
-### 5. Knowledge Feedback System Design
-
-**Process Flow:**
-
-1. Pain Point Discovered during development
-2. Document in `learnings.md` (lightweight)
-3. If pattern emerges, extract to `prompts/<stage>/`
-4. Reference in `copilot-instructions.md`
-5. Future projects benefit automatically
-
-**Files:**
-
-| File | When to Update | Content |
-|------|----------------|---------|
-| `learnings.md` | After each project/feature | What worked, what didn't |
-| `pain-points/<category>.md` | When friction occurs | Specific issue + resolution |
-| `prompts/<stage>/*.md` | When pattern solidifies | Reusable prompt template |
-
-### 6. Project Structure: specs/ Contains Everything
-
-**Pattern from duotify-membership-v1:**
+Key template paths:
 
 | Path | Purpose |
-|------|--------|
-| `project/specs/001-feature-name/spec.md` | Feature specification |
-| `project/specs/001-feature-name/plan.md` | Technical plan |
-| `project/specs/001-feature-name/tasks.md` | Task decomposition |
-| `project/specs/001-feature-name/checklists/` | Quality checklists |
-| `project/src/` | Source code |
-| `project/tests/` | Tests |
+|------|---------|
+| `studio/templates/sdd-docs/spec-template.md` | Specification template |
+| `studio/templates/sdd-docs/plan-template.md` | Plan template |
+| `studio/templates/sdd-docs/tasks-template.md` | Checklist-first task template |
+| `studio/templates/sdd-docs/checklist-template.md` | Checklist template |
+| `studio/templates/sdd-docs/agent-file-template.md` | Project agent context template |
+| `studio/templates/sdd-docs/project-constitution-template.md` | Project constitution template |
 
-**Why Not Separate `plan/` and `tasks/` Folders?**
+### 6. Project Classification
 
-- Feature cohesion: All SDD documents for a feature stay together
-- Easier navigation: One folder per feature
-- Clear numbering: `001-`, `002-` prefix for ordering
-- Matches mature project structure (duotify reference)
+| Type | Primary Location | Notes |
+|------|------------------|-------|
+| Practice | `learning/` | New learning projects |
+| Internal | `projects/` | Studio tooling and internal delivery |
+| Client | `projects/` | Client work |
 
----
+`projects/japanese-learning/` remains a historical sample and regression fixture. It is not part of
+the new project classification scheme for fresh practice work.
 
-## Usage Guide
+## Initialization Behavior
 
-### Creating a New Project
+`init-practice.ps1` and `init-project.ps1` must:
 
-```powershell
-# Use init-project.ps1 to create a new project
-.\studio\scripts\powershell\init-project.ps1 -Name "my-project" -Type Internal
+1. Copy `studio/templates/project-init/`
+2. Generate a project `README.md`
+3. Preserve or create `.specify/memory/constitution.md`
+4. Create a project `.code-workspace`
+5. Create a `.github/agents/` junction to workspace runtime agents
 
-# Or for client projects
-.\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client -Description "Project description"
-```
-
-This script will:
-1. Copy project skeleton from `studio/templates/project-init/`
-2. Generate `README.md` with project info
-3. Create `retrospective.md` template
-4. **Generate `<project-name>.code-workspace`** for multi-root workspace support
-
-### Opening a Project (Multi-Root Workspace)
-
-```powershell
-# Open project using the generated .code-workspace file
-code projects/my-project/my-project.code-workspace
-```
-
-The `.code-workspace` file includes:
-
-| Folder | Access | Purpose |
-|--------|--------|--------|
-| `<project-name>` | Editable | Project source and docs |
-| `studio (read-only)` | Read-only | Constitution, templates, prompts |
-| `agents (read-only)` | Read-only | GitHub Copilot agents |
-
-**Why Multi-Root Workspace?**
-- Agents and studio files are accessible without copying
-- Read-only protection prevents accidental modification
-- Single source of truth maintained
-- Project can be worked on independently
-
-### (Alternative) Copy SDD Templates to Project
-
-```powershell
-# Optional: Copy SDD templates for project-specific customization
-New-Item -ItemType Directory -Path projects/my-project/.specify/templates -Force
-Copy-Item studio/templates/sdd-docs/* projects/my-project/.specify/templates/
-
-# Ask AI to customize templates based on project needs
-# "請根據這個專案的技術棧和 constitution 調整 .specify/templates/ 內的模板"
-```
-
-### Creating a New Feature Specification
-
-```powershell
-# 1. Create feature directory
-New-Item -ItemType Directory learning/my-project/specs/001-feature-name
-
-# 2. Reference template and create spec
-# Open studio/templates/sdd-docs/spec-template.md as reference
-# Create learning/my-project/specs/001-feature-name/spec.md
-
-# 3. Follow SDD workflow: specify → clarify → plan → tasks → analyze → implement
-```
-
-### Recording a Learning
-
-1. Open `studio/knowledge-base/learnings.md`
-2. Add entry with date, context, and insight
-3. If it's a recurring pattern, consider extracting to `prompts/`
-
----
-
-## File Naming Conventions
+## Naming Conventions
 
 | Type | Convention | Example |
 |------|------------|---------|
 | Feature directory | `NNN-kebab-case` | `001-user-registration` |
-| SDD documents | `lowercase.md` | `spec.md`, `plan.md`, `tasks.md` |
+| SDD docs | `lowercase.md` | `spec.md`, `plan.md`, `tasks.md` |
 | Templates | `kebab-case-template.md` | `spec-template.md` |
-| Pain points | `kebab-case.md` | `sdd-workflow.md` |
-| Prompts | `stage-name.md` or descriptive | `specify-clarify-ambiguity.md` |
-
----
+| Prompts | descriptive kebab-case | `clarify-ambiguity.md` |
+| Extensions | `kebab-case` | `security-gates`, `client-review` |
 
 ## Related Documents
 
-| Document | Purpose | Location |
-|----------|---------|----------|
-| Studio Constitution | Governance rules | `studio/constitution/constitution.md` |
-| Copilot Instructions | AI collaboration rules | `.github/copilot-instructions.md` |
-| Learnings | Knowledge capture | `studio/knowledge-base/learnings.md` |
-
----
+| Document | Purpose |
+|----------|---------|
+| `studio/constitution/constitution.md` | Governance baseline |
+| `.github/copilot-instructions.md` | Workspace AI collaboration rules |
+| `studio/QUICKSTART.md` | Fast-start instructions |
+| `studio/SDD-QUICKSTART-GUIDE.md` | Full workflow guide |
+| `spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3.0 | 2026-03-08 | Add shared extension registry foundations under `studio/extensions/` |
+| 1.2.0 | 2026-03-08 | Add generated AI skill pack export path as a non-canonical shared artifact |
+| 1.1.0 | 2026-03-07 | Align studio-first runtime sources, constitution paths, and project initialization rules |
 | 1.0.0 | 2025-12-08 | Initial structure design |

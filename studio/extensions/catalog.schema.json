@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/studio/extensions/catalog.schema.json",
+  "title": "Studio Extension Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated", "policy", "extensions"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "curatedOnly", "autoEnableNewExtensions", "reviewStatuses", "trustLevels", "stateSources"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "studio-first"
+        },
+        "curatedOnly": {
+          "type": "boolean"
+        },
+        "autoEnableNewExtensions": {
+          "type": "boolean"
+        },
+        "reviewStatuses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["draft", "approved", "experimental", "deprecated", "rejected"]
+          },
+          "uniqueItems": true
+        },
+        "trustLevels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["core", "curated", "experimental"]
+          },
+          "uniqueItems": true
+        },
+        "stateSources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["default", "manual", "sync"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "version",
+          "title",
+          "sourcePath",
+          "reviewStatus",
+          "trustLevel",
+          "defaultEnabled",
+          "owner",
+          "approvedBy",
+          "approvedAt",
+          "runtimeScopes",
+          "capabilities",
+          "notes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "sourcePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reviewStatus": {
+            "type": "string",
+            "enum": ["draft", "approved", "experimental", "deprecated", "rejected"]
+          },
+          "trustLevel": {
+            "type": "string",
+            "enum": ["core", "curated", "experimental"]
+          },
+          "defaultEnabled": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "approvedBy": {
+            "type": ["string", "null"]
+          },
+          "approvedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "runtimeScopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["agents", "prompts", "scripts", "templates", "docs"]
+            },
+            "uniqueItems": true
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "mode": "studio-first",
+  "mappings": [
+    {
+      "source": ".github/agents",
+      "target": ".github/agents",
+      "kind": "directory",
+      "prune": false
+    },
+    {
+      "source": ".github/prompts",
+      "target": ".github/prompts",
+      "kind": "directory",
+      "prune": false
+    },
+    {
+      "source": "studio/scripts/powershell",
+      "target": "studio/scripts/powershell",
+      "kind": "directory",
+      "prune": false
+    },
+    {
+      "source": "studio/templates",
+      "target": "studio/templates",
+      "kind": "directory",
+      "prune": false
+    },
+    {
+      "source": "studio/extensions/manifest.schema.json",
+      "target": "studio/extensions/manifest.schema.json",
+      "kind": "file",
+      "prune": false
+    },
+    {
+      "source": "studio/extensions/catalog.schema.json",
+      "target": "studio/extensions/catalog.schema.json",
+      "kind": "file",
+      "prune": false
+    },
+    {
+      "source": "studio/extensions/state.schema.json",
+      "target": "studio/extensions/state.schema.json",
+      "kind": "file",
+      "prune": false
+    },
+    {
+      "source": "studio/extensions/POLICY.md",
+      "target": "studio/extensions/POLICY.md",
+      "kind": "file",
+      "prune": false
+    }
+  ],
+  "blockedRoots": [
+    "projects",
+    "learning",
+    ".specify",
+    "studio/extensions/catalog.json",
+    "studio/extensions/state.json"
+  ]
+}

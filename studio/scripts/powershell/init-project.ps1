@@ -98,6 +98,10 @@ try {
         Set-Content -Path $readmePath -Value $readmeContent -NoNewline
     }
 
+    # Ensure project constitution exists
+    $projectConstPath = Initialize-ProjectConstitution -ProjectRoot $targetDir -ProjectName $Name -ProjectType $Type -StudioRoot $studioRoot
+    Write-Host "Project constitution ready: $projectConstPath" -ForegroundColor Gray
+
     # Create retrospective.md template for Internal/Client projects
     $retroPath = Join-Path $targetDir 'retrospective.md'
     $retroContent = @"

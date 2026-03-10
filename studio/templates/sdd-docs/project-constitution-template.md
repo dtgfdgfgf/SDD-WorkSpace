@@ -1,7 +1,7 @@
 # Project Constitution: [PROJECT NAME]
 
 **Version:** 1.0.0  
-**Project Type:** Practice | Internal | Client  
+**Project Type:** [PROJECT TYPE]  
 **Created:** [DATE]
 
 ---
@@ -16,6 +16,9 @@ This constitution defines project-specific rules that ADD to the Studio Constitu
 
 This document can only ADD stricter rules, never relax Studio Constitution rules.
 
+Agent context files such as `.github/copilot-instructions.md` and `CLAUDE.md` are not
+constitutions. They may reference this file, but they do not replace it.
+
 ---
 
 ## Studio Reference Paths
@@ -25,7 +28,8 @@ This project follows the SDD methodology defined at workspace level.
 | Resource | Path (from multi-root workspace) | Purpose |
 |----------|----------------------------------|--------|
 | Studio Constitution | `studio/constitution/constitution.md` | Highest authority rules |
-| SDD Agents | `studio/templates/sdd-agents/` | Workflow agents |
+| Runtime Agents | `.github/agents/` | Shared runtime SDD agents |
+| Runtime Prompts | `.github/prompts/` | Shared prompt assets |
 | SDD Doc Templates | `studio/templates/sdd-docs/` | Document templates |
 | Scripts | `studio/scripts/powershell/` | Automation scripts |
 | Prompts | `studio/prompts/<stage>/` | Stage-specific prompts |

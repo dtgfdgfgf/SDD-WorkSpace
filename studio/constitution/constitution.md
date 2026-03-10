@@ -1,7 +1,7 @@
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects, feature packs, and SDD workflows
 
@@ -42,6 +42,12 @@ All projects MUST follow the SDD sequence below without skipping steps:
 - /speckit.implement — Execute implementation
 
 A stage MAY NOT begin until the previous stage is finalized.
+
+`/speckit.discover` is an optional pre-spec aid for messy or incomplete inputs. It can inform
+`/speckit.specify`, but it is not mandatory and it is not the only valid input source.
+
+`/speckit.checklist`, `/speckit.constitution`, and `/speckit.taskstoissues` are auxiliary
+commands. They support the workflow but are not part of the six mandatory delivery stages.
 
 ## 3. Specification Requirements (spec.md)
 
@@ -88,6 +94,7 @@ A technical plan MUST include:
 
 Tasks MUST follow:
 
+- Canonical checklist line format: `- [ ] T### [P#] [Risk: X] [Story: ...] Description`
 - Granularity: 0.5–2 days per task
 - Each task MUST map to items in spec/plan
 - Each task MUST include a Definition of Done
@@ -99,9 +106,9 @@ Tasks MUST follow:
 
 Interpretation rules:
 
-- Critical findings → MUST be fixed before implementation
-- Major findings → SHOULD be fixed
-- Minor findings → Optional at engineer’s discretion
+- Critical findings must be fixed before implementation
+- Major findings should be fixed before implementation whenever feasible
+- Minor findings are optional at the engineer's discretion
 
 ## 8. Implementation Rules
 
@@ -189,7 +196,9 @@ Each project MUST contain these paths:
 
 | Path | Purpose |
 |------|--------|
-| `.specify/memory/constitution.md` | Project-level constitution (optional) |
+| .specify/memory/constitution.md | Project-level canonical constitution when project-specific rules exist |
+| .github/copilot-instructions.md | GitHub Copilot project context only; not a constitution |
+| CLAUDE.md | Claude project context only; not a constitution |
 | `specs/<feature>/spec.md` | Feature specification |
 | `specs/<feature>/plan.md` | Technical plan |
 | `specs/<feature>/tasks.md` | Task breakdown |
@@ -204,7 +213,7 @@ Each project MUST contain these paths:
 Projects MUST comply with BOTH:
 
 1. **Studio Constitution** — Universal rules, non-negotiable
-2. **Project Constitution** — Project-specific additions (located at `/.specify/memory/constitution.md`)
+2. **Project Constitution** — Project-specific additions (located at `<project>/.specify/memory/constitution.md`)
 
 ### What Project Constitution CAN Do
 
@@ -224,6 +233,10 @@ Projects MUST comply with BOTH:
 ### Conflict Resolution
 
 If ambiguity exists between Studio and Project constitutions, Studio Constitution takes precedence.
+
+Project agent context files such as .github/copilot-instructions.md and CLAUDE.md MAY
+summarize or reference the governing rules, but they MUST NOT be treated as the project
+constitution.
 
 ### Versioning
 
@@ -251,7 +264,7 @@ Format:
 ### Pain Points
 - ...
 ### Prompt Candidates
-- [ ] <description> → target: studio/prompts/<stage>/
+- [ ] <description> (target: `studio/prompts/<stage>/`)
 ```
 
 `retrospective.md` is OPTIONAL for Practice projects.
@@ -271,9 +284,9 @@ Additionally, update `studio/knowledge-base/learnings.md` if significant learnin
 
 After each project (all types), ask:
 
-- Any reusable prompt? → Extract to `studio/prompts/<stage>/`
-- Any reusable template section? → Extract to `studio/templates/`
-- Any pattern worth documenting? → Already in `learnings.md`
+- Any reusable prompt? Extract it to `studio/prompts/<stage>/`
+- Any reusable template section? Extract it to `studio/templates/`
+- Any pattern worth documenting? Record it in `learnings.md`
 
 ### 13.4 Constitution Review
 
@@ -296,3 +309,5 @@ If recurring friction points are found:
 | Practice | `learnings.md` updated |
 | Internal | `retrospective.md` exists + `learnings.md` updated (if applicable) |
 | Client | `retrospective.md` exists + `learnings.md` updated (if applicable) |
+
+

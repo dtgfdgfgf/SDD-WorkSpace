@@ -1,0 +1,49 @@
+{
+  "version": "1.1.0",
+  "updated": "2026-03-08T15:47:12.8652979+08:00",
+  "policy": {
+    "mode": "studio-first",
+    "curatedOnly": true,
+    "autoEnableNewExtensions": false,
+    "reviewStatuses": [
+      "draft",
+      "approved",
+      "experimental",
+      "deprecated",
+      "rejected"
+    ],
+    "trustLevels": [
+      "core",
+      "curated",
+      "experimental"
+    ],
+    "stateSources": [
+      "default",
+      "manual",
+      "sync"
+    ]
+  },
+  "extensions": [
+    {
+      "id": "extension-smoke",
+      "version": "1.0.0",
+      "title": "Extension Smoke",
+      "sourcePath": "extensions/extension-smoke",
+      "reviewStatus": "approved",
+      "trustLevel": "curated",
+      "defaultEnabled": false,
+      "owner": "studio",
+      "approvedBy": "studio",
+      "approvedAt": "2026-03-08T00:00:00+08:00",
+      "runtimeScopes": [
+        "scripts",
+        "docs"
+      ],
+      "capabilities": [
+        "extension-lifecycle-smoke",
+        "registry-validation"
+      ],
+      "notes": "Internal smoke extension for validating governance and runtime export."
+    }
+  ]
+}

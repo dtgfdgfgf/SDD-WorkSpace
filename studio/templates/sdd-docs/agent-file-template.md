@@ -1,35 +1,33 @@
-# [PROJECT NAME] Development Guidelines
+# [PROJECT NAME] Agent Context
 
-<!-- 
-  STUDIO TEMPLATE v1.0.0
-  Based on: duotify-membership-v1 agent-file-template
-  Usage: Copy to project/.specify/templates/ and customize if needed
-  
-  This file provides AI agents (Copilot, Claude, etc.) with project-specific context.
-  It is auto-generated from feature plans and manually maintained sections.
-  
-  Location in project: Place at project root as AGENTS.md or in .specify/
+<!--
+  STUDIO TEMPLATE v1.1.0
+  This file provides project-specific agent context.
+  Canonical project constitution: .specify/memory/constitution.md
+  Target locations may include .github/copilot-instructions.md, CLAUDE.md, AGENTS.md, or similar.
 -->
 
 **Auto-generated from feature plans**  
 **Last updated**: [DATE]
 
----
+## Governance Reference
+
+Apply rules in this order:
+
+1. `studio/constitution/constitution.md`
+2. `.specify/memory/constitution.md`
+3. This agent context file
+
+This file is not the project constitution. It should summarize and operationalize the governing
+rules, not replace them.
 
 ## Project Overview
 
 **Name**: [PROJECT NAME]  
-**Type**: Practice | Internal | Client  
+**Type**: [PROJECT TYPE]  
 **Description**: [Brief project description]
 
----
-
 ## Active Technologies
-
-<!--
-  Extracted from plan.md files of all features.
-  Update when adding new features or changing tech stack.
--->
 
 | Category | Technology | Version |
 |----------|------------|---------|
@@ -38,28 +36,21 @@
 | Database | [e.g., PostgreSQL] | [e.g., 16] |
 | Testing | [e.g., Jest] | [e.g., 29] |
 
----
-
 ## Project Structure
 
 | Path | Purpose |
-|------|--------|
-| `project/.specify/memory/constitution.md` | Project constitution |
+|------|---------|
+| `project/.specify/memory/constitution.md` | Canonical project constitution |
+| `project/.github/copilot-instructions.md` | Copilot project context |
+| `project/CLAUDE.md` | Claude project context |
 | `project/specs/NNN-feature/spec.md` | Feature specification |
 | `project/specs/NNN-feature/plan.md` | Technical plan |
 | `project/specs/NNN-feature/tasks.md` | Task decomposition |
+| `project/specs/NNN-feature/contracts/` | Markdown or machine-readable contracts |
 | `project/src/` | Source code |
 | `project/tests/` | Tests |
 
-<!-- Update with actual structure from plan.md files -->
-
----
-
 ## Commands
-
-<!--
-  Only include commands for technologies actually in use.
--->
 
 ### Development
 
@@ -84,14 +75,7 @@
 [command]
 ```
 
----
-
 ## Code Style
-
-<!--
-  Language-specific conventions.
-  Only include for languages actually in use.
--->
 
 ### [Language]
 
@@ -99,68 +83,39 @@
 - [File organization]
 - [Import order]
 
-### Comments
+### Comments and Communication
 
-- Use English for code comments
-- Use Traditional Chinese (zh-TW) for business logic explanations
-- Include "why" not just "what"
-
----
+- Use the project's established language rules for comments
+- Use Traditional Chinese for operator communication unless the project requires otherwise
+- Explain why when the reasoning is non-obvious
 
 ## AI Agent Instructions
 
 ### Do
 
-- Follow spec/plan/tasks exactly
+- Follow spec, plan, tasks, and constitutions exactly
 - Ask for clarification when ambiguous
-- Reference specific documents when making decisions
-- Flag potential consistency issues
+- Reference the specific document that supports a decision
+- Flag document drift and consistency issues
 
-### Don't
+### Do Not
 
-- Add features not in specification
+- Add features not in the specification
 - Skip SDD stages
-- Assume requirements not explicitly written
-- Hallucinate APIs or data structures
-
-### Context Priority
-
-1. Studio Constitution (`studio/constitution/constitution.md`)
-2. Project Constitution (`.specify/memory/constitution.md`)
-3. Feature Spec (`specs/NNN-feature/spec.md`)
-4. Feature Plan (`specs/NNN-feature/plan.md`)
-5. Feature Tasks (`specs/NNN-feature/tasks.md`)
-
----
+- Treat this file as the project constitution
+- Hallucinate APIs, data structures, or business logic
 
 ## Recent Changes
 
-<!--
-  Last 3-5 features and what they added.
-  Helps AI understand current project state.
--->
-
 | Feature | Date | Summary |
 |---------|------|---------|
-| [NNN-feature-name] | [DATE] | [What was added/changed] |
-
----
+| [NNN-feature-name] | [DATE] | [What was added or changed] |
 
 ## Known Issues / TODOs
 
-<!--
-  Track items that AI should be aware of.
--->
-
 - [ ] [Issue or TODO item]
 - [ ] [Issue or TODO item]
-
----
 
 <!-- MANUAL ADDITIONS START -->
-<!--
-  Add project-specific notes here.
-  This section is preserved when regenerating the file.
--->
-
+<!-- Add project-specific notes here. This section is preserved when regenerating the file. -->
 <!-- MANUAL ADDITIONS END -->

@@ -21,8 +21,10 @@ code <project-name>.code-workspace
 ## Project Structure
 
 | Path | Purpose |
-|------|--------|
-| `.specify/memory/constitution.md` | Project-level rules (optional) |
+|------|---------|
+| `.specify/memory/constitution.md` | Project-level canonical constitution |
+| `.github/copilot-instructions.md` | Copilot project context if generated later |
+| `CLAUDE.md` | Claude project context if generated later |
 | `specs/<feature>/spec.md` | Feature specification |
 | `specs/<feature>/plan.md` | Technical plan |
 | `specs/<feature>/tasks.md` | Task breakdown |
@@ -33,7 +35,7 @@ code <project-name>.code-workspace
 ## SDD Workflow Progress
 
 - [ ] Specify — Create specification
-- [ ] Clarify — Resolve ambiguities  
+- [ ] Clarify — Resolve ambiguities
 - [ ] Plan — Technical planning
 - [ ] Tasks — Task decomposition
 - [ ] Analyze — Consistency check
@@ -44,12 +46,15 @@ code <project-name>.code-workspace
 This project follows the dual-layer constitution system:
 
 1. **Studio Constitution** (highest authority): `studio/constitution/constitution.md`
-2. **Project Constitution** (optional): `.specify/memory/constitution.md`
+2. **Project Constitution** (project canonical file): `.specify/memory/constitution.md`
 
 **Note**: Use `<project-name>.code-workspace` to open the project. This multi-root workspace includes:
 - Project folder (editable)
 - Studio folder (read-only)
 - Agents folder (read-only)
+
+Project agent context files such as `.github/copilot-instructions.md` and `CLAUDE.md` may be
+generated later, but they do not replace `.specify/memory/constitution.md`.
 
 ## Knowledge Capture
 
@@ -58,10 +63,10 @@ This project follows the dual-layer constitution system:
 **For Practice projects:** Update `studio/knowledge-base/learnings.md`
 
 **For Internal/Client projects:** Complete `retrospective.md` in project root
-6. `/implement` → Execute implementation
 
 ## Related Documents
 
 - Studio Constitution: `studio/constitution/constitution.md`
 - Workspace Structure: `WORKSPACE_STRUCTURE.md`
-- AI Collaboration: `.github/copilot-instructions.md`
+- Project Constitution: `.specify/memory/constitution.md`
+- AI Collaboration Context: `.github/copilot-instructions.md`

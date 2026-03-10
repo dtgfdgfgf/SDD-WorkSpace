@@ -36,7 +36,7 @@ Follow this execution flow:
 
 2. If `$PROJECT_ROOT/.specify/memory/constitution.md` exists, load it.
    - Identify every placeholder token of the form `[ALL_CAPS_IDENTIFIER]`.
-   - If it doesn't exist, create from template at `studio/templates/sdd-docs/constitution-template.md` (if available) or generate a minimal scaffold.
+   - If it doesn't exist, create from template at `studio/templates/sdd-docs/project-constitution-template.md` (if available) or generate a minimal scaffold.
    **IMPORTANT**: The user might require less or more principles than the ones used in the template. If a number is specified, respect that - follow the general template. You will update the doc accordingly.
 
 2. Collect/derive values for placeholders:
@@ -60,7 +60,7 @@ Follow this execution flow:
    - Read `studio/templates/sdd-docs/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
    - Read `studio/templates/sdd-docs/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.
    - Read `studio/templates/sdd-docs/tasks-template.md` and ensure task categorization reflects new or removed principle-driven task types (e.g., observability, versioning, testing discipline).
-   - Read any runtime guidance docs (e.g., `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present). Update references to principles changed.
+   - Read any runtime guidance docs (e.g., `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present). Update references to principles changed. Ensure project agent context files treat `.specify/memory/constitution.md` as canonical.
 
 5. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
    - Version change: old → new
@@ -98,3 +98,4 @@ If critical info missing (e.g., ratification date truly unknown), insert `TODO(<
 Do not create a new template; always operate on the existing project constitution file at `$PROJECT_ROOT/.specify/memory/constitution.md`.
 
 **Remember**: Project constitution can only ADD stricter rules, NEVER relax Studio Constitution rules.
+

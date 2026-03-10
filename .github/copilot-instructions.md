@@ -2,363 +2,177 @@
 
 ## Overview
 
-This is a solo AI engineering studio workspace using **Specification-Driven Development (SDD)** methodology.
+This workspace is a studio-first Specification-Driven Development (SDD) environment for a solo AI
+engineering practice.
 
 - **Owner:** Solo AI engineer
 - **Current Phase:** Practice (as of 2025-12)
-- **Project Types:** Demo projects, MVPs, skill-building exercises
-- **Governance:** Dual-layer constitution system (Studio + Project level)
+- **Project Types:** Practice, Internal, Client
+- **Governance Model:** Dual-layer constitutions with centralized studio governance
 
-## Workspace Layout
+## Canonical Sources
 
-| Path                                  | Purpose                                                           |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| `studio/constitution/constitution.md` | Studio-level governance rules (HIGHEST AUTHORITY)                 |
-| `studio/templates/project-init/`      | New project skeleton                                              |
-| `studio/templates/sdd-agents/`        | SDD workflow agents (copy to projects)                            |
-| `studio/templates/feature-packs/`     | Reusable service templates [NOT ACTIVE]                           |
-| `studio/knowledge-base/learnings.md`  | Cumulative learnings from all projects                            |
-| `learning/`                           | Practice projects (current focus)                                 |
-| `projects/`                           | Internal/Client projects (future)                                 |
-| `.github/agents/`                     | Studio-level agents (constitution, taskstoissues, spec-kit entry) |
-| `.github/copilot-instructions.md`     | GitHub Copilot AI collaboration rules                             |
+| Path | Role |
+|------|------|
+| `studio/constitution/constitution.md` | Studio-level governance and highest authority |
+| `<project>/.specify/memory/constitution.md` | Project-level canonical constitution when project rules exist |
+| `.github/agents/` | Runtime source for shared SDD agents |
+| `.github/prompts/` | Runtime source for shared prompt assets |
+| `studio/extensions/` | Canonical shared extension registry and workspace-level extension state |
+| `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
+| `studio/templates/sdd-agents/` | Mirrored agent templates; sync from `.github/agents/` only |
+| `studio/templates/sdd-docs/` | Canonical studio document templates |
+| `<project>/.github/copilot-instructions.md` | GitHub Copilot project context only |
+| `<project>/CLAUDE.md` | Claude project context only |
 
-## Dual-Layer Governance
+## Governance Order
 
-### Lookup Order
+When working in a project, load rules in this order:
 
-When entering a project, check for governance files in this order:
+1. `studio/constitution/constitution.md`
+2. `<project>/.specify/memory/constitution.md` if present
+3. Agent context files such as `.github/copilot-instructions.md` or `CLAUDE.md`
 
-1. **Studio Constitution** (ALWAYS applies): `studio/constitution/constitution.md`
-2. **Project Constitution** (if exists): `<project>/.specify/memory/constitution.md`
+Priority rules:
 
-### Priority Rules
+- Studio Constitution is non-negotiable.
+- Project Constitution can add stricter rules only.
+- Agent context files summarize or operationalize the rules; they are not constitutions.
+- If any conflict exists, Studio Constitution wins.
 
-- Studio Constitution is the **highest authority** — non-negotiable
-- Project Constitution can only **add stricter rules**, never relax Studio rules
-- If conflict exists, Studio Constitution wins
-- Both constitutions apply simultaneously when Project Constitution exists
+## Mandatory Workflow
 
-### Merge Logic
+All delivery work MUST follow this sequence:
 
-```
-Final Rules = Studio Constitution + Project Constitution (additive only)
-```
+1. `/speckit.specify`
+2. `/speckit.clarify`
+3. `/speckit.plan`
+4. `/speckit.tasks`
+5. `/speckit.analyze`
+6. `/speckit.implement`
 
-Project Constitution CAN:
+Workflow support:
 
-- Add project-specific terminology
-- Define stricter coding standards
-- Add extra review checklists
-
-Project Constitution CANNOT:
-
-- Skip any SDD stage
-- Relax quality requirements
-- Override AI collaboration principles
-
-## Governance Reference
-
-**Studio Constitution:** `studio/constitution/constitution.md`
-
-This file defines:
-
-- SDD workflow stages and requirements
-- Document standards (spec.md, plan.md, tasks.md)
-- AI collaboration rules
-- Quality gates and constraints
-
-Always check the constitution before making architectural decisions.
-
-## SDD Workflow (Mandatory Sequence)
-
-All work MUST follow this sequence without skipping:
-
-1. **specify** → Create specification (spec.md)
-2. **clarify** → Resolve ambiguities
-3. **plan** → Produce technical plan (plan.md)
-4. **tasks** → Create task decomposition (tasks.md)
-5. **analyze** → Validate cross-document consistency
-6. **implement** → Execute implementation
+- `/speckit.discover` is an optional pre-spec aid for messy or incomplete inputs.
+- `/speckit.checklist`, `/speckit.constitution`, and `/speckit.taskstoissues` are auxiliary commands.
 
 ## Project Structure
 
-Each project contains these paths:
+| Path | Purpose |
+|------|---------|
+| `<project>/.specify/memory/constitution.md` | Project-level canonical constitution |
+| `<project>/.github/copilot-instructions.md` | Copilot-specific project context |
+| `<project>/CLAUDE.md` | Claude-specific project context |
+| `<project>/specs/<feature>/spec.md` | Feature specification |
+| `<project>/specs/<feature>/plan.md` | Technical plan |
+| `<project>/specs/<feature>/tasks.md` | Task decomposition |
+| `<project>/specs/<feature>/contracts/` | Markdown or machine-readable service contracts |
+| `<project>/src/` | Source code |
+| `<project>/docs/` | Documentation |
+| `<project>/README.md` | Project overview and project type declaration |
 
-| Path                                        | Purpose                        |
-| ------------------------------------------- | ------------------------------ |
-| `<project>/.specify/memory/constitution.md` | Project-level rules (optional) |
-| `<project>/specs/<feature>/spec.md`         | Feature specification          |
-| `<project>/specs/<feature>/plan.md`         | Technical plan                 |
-| `<project>/specs/<feature>/tasks.md`        | Task breakdown                 |
-| `<project>/src/`                            | Source code                    |
-| `<project>/docs/`                           | Documentation                  |
-| `<project>/README.md`                       | Project overview               |
+## Markdown Rules
 
-## LLM-Friendly Markdown Formatting
+All AI-authored Markdown in this workspace should favor formats that are easy for both humans and
+LLMs to parse.
 
-All `.md` files generated in this workspace MUST follow these formatting rules to maximize LLM comprehension and minimize token waste.
+Preferred formats:
 
-### MUST Use (LLM-Friendly)
+- Markdown tables for paths, mappings, comparisons, and structured data.
+- Numbered lists for ordered procedures.
+- Bullet lists for unordered requirements or constraints.
+- Inline code for commands, paths, identifiers, and file names.
+- Plain text descriptions for architecture and data flow.
 
-| Format                  | Use Case                                | Example                       |
-| ----------------------- | --------------------------------------- | ----------------------------- |
-| Markdown tables         | Structured data, comparisons, mappings  | See Workspace Layout section  |
-| Numbered lists          | Sequential steps, workflows, priorities | `1. First step`               |
-| Bullet lists            | Non-sequential items, features, options | `- Item one`                  |
-| Inline code             | File paths, commands, identifiers       | `` `path/to/file.md` ``       |
-| Headers                 | Document structure, sections            | `## Section Name`             |
-| Plain text descriptions | Explaining relationships, data flow     | "Data flows from A to B to C" |
+Avoid:
 
-### MUST NOT Use (LLM-Unfriendly)
+- ASCII art and box-drawing diagrams.
+- Tree diagrams.
+- Directional symbols used as flow notation.
+- Emoji in constitutions, SDD documents, and agent-facing instructions.
 
-| Format                         | Problem                                  | Alternative                            |
-| ------------------------------ | ---------------------------------------- | -------------------------------------- |
-| ASCII art diagrams             | Low information density, wastes tokens   | Use tables or text descriptions        |
-| Box-drawing characters         | Poor LLM parsing                         | Use Markdown tables                    |
-| Tree structures (`├──`, `└──`) | Ambiguous parsing, token-heavy           | Use path tables with Purpose column    |
-| Arrow symbols (`→`, `←`, `⇒`)  | Inconsistent encoding, unclear semantics | Use "to", "from", "--", or text        |
-| Emoji in AI-critical files     | Unpredictable tokenization               | Use text markers like `[OK]`, `[WARN]` |
+Good patterns:
 
-### File Type Classification
+- Describe flow in text, for example: "Data moves from input validation to persistence to response."
+- Represent structures with path tables rather than visual trees.
 
-| File Type                                                | Emoji Allowed | Reason                             |
-| -------------------------------------------------------- | ------------- | ---------------------------------- |
-| `constitution.md`, `copilot-instructions.md`             | NO            | AI governance, must be unambiguous |
-| `spec.md`, `plan.md`, `tasks.md`                         | NO            | SDD documents, AI-processed        |
-| `README.md`, `CHANGELOG.md`                              | YES           | Human-facing documentation         |
-| `learnings.md`, `retrospective.md`                       | YES           | Human reflection records           |
-| Status tracking files (e.g., `IMPLEMENTATION_STATUS.md`) | YES           | Visual scanning aids               |
+## Language Strategy
 
-### Data Flow Description
+Default human-facing document language is Traditional Chinese unless a project chooses otherwise.
 
-Instead of arrow diagrams:
+Keep these in English:
 
-```
-[Input] → [Process A] → [Process B] → [Output]   ❌ BAD
-```
+- Code identifiers
+- Branch names and commit type prefixes
+- Requirement IDs such as `FR-001`, `NFR-002`, `T001`
+- Normative keywords such as `MUST`, `SHOULD`, `MAY`, `NOT`
+- Standards, protocols, tool names, and framework names
+- Studio constitutions and shared agent instruction files unless a file is already established in another language
 
-Use text description:
+Use Chinese where it improves operator clarity:
 
-```
-Data flow: Input to Process A to Process B to Output   ✅ GOOD
-```
+- `spec.md`, `plan.md`, `tasks.md`
+- User-facing documentation
+- Learning records and retrospectives
+- Business-context comments
 
-Or use a table:
+## Git Conventions
 
-| Step | Component | Description              |
-| ---- | --------- | ------------------------ |
-| 1    | Input     | Receives user data       |
-| 2    | Process A | Validates and transforms |
-| 3    | Process B | Applies business logic   |
-| 4    | Output    | Returns result           |
+AI assists with version control, but the human retains final approval.
 
-### Folder Structure Description
-
-Instead of tree diagrams:
-
-```
-project/           ❌ BAD
-├── src/
-│   └── index.js
-└── tests/
-```
-
-Use path tables:
-
-| Path                   | Purpose     | ✅ GOOD |
-| ---------------------- | ----------- | ------- |
-| `project/src/`         | Source code |
-| `project/src/index.js` | Entry point |
-| `project/tests/`       | Test files  |
-
----
-
-## Coding Conventions
-
-### Language Strategy
-
-#### Default Language: Traditional Chinese (zh-TW)
-
-All generated documents use Traditional Chinese unless otherwise specified.
-
-#### MUST Use English (Non-translatable)
-
-- Code identifiers (variables, functions, classes)
-- Branch names, commit type prefixes (feat, fix, docs, etc.)
-- Requirement IDs (FR-001, NFR-002, US-1, T001)
-- Normative keywords (MUST, SHOULD, MAY, NOT)
-- International standards and protocols (REST, OAuth2, JWT, WCAG, HTTP)
-- Tools and frameworks (.NET, React, Docker, Astro, etc.)
-- Constitution files (`constitution.md`, `copilot-instructions.md`) - maintain English for cross-project consistency
-- Agent instruction files (`.github/agents/*.md`) - system-level, maintain English
-
-#### AI Judgment Principle for Technical Terms
-
-When encountering technical terms, AI should determine:
-
-1. Does the term have a widely accepted translation in the Chinese tech community?
-2. Would translation lose precision or searchability?
-3. If uncertain, keep English and add parenthetical explanation if needed
-
-Examples:
-
-| Term             | Decision                  | Reason                                       |
-| ---------------- | ------------------------- | -------------------------------------------- |
-| API              | Keep English              | Universal, no good translation               |
-| design tokens    | Keep English              | Technical term, "設計權杖" not commonly used |
-| state file       | Keep English              | Code-related concept                         |
-| audit            | Can translate to 稽核     | Common business term                         |
-| batch processing | Can translate to 批次處理 | Widely understood                            |
-
-#### Files That CAN Use Chinese
-
-- `spec.md`, `plan.md`, `tasks.md` - SDD documents (primary audience is human operator)
-- Business logic comments (explaining "why" from business perspective)
-- User-facing documentation (`README.md` zh-TW version)
-- Commit message descriptions (after the type prefix)
-- Learning records (`learnings.md`, `retrospective.md`)
-- Internal notes and reflections
-
-### Git Conventions
-
-#### AI-Assisted Git Workflow
-
-**Principle:** AI assists with version control, but human retains final approval authority.
-
-**AI Responsibilities:**
+AI may:
 
 - Generate code and documentation
-- Suggest commit messages following Conventional Commits format
-- Explain what changes were made and why
-- Group related changes logically before suggesting commit
+- Explain changes and their rationale
+- Suggest Conventional Commits messages
 
-**Human Responsibilities:**
+AI must not:
 
-- Review all changes before committing (use `git diff` or VS Code Source Control)
-- Approve or modify suggested commit messages
-- Execute commit after review
-- Decide when to push to remote
+- Run `git commit` without explicit approval
+- Run `git push` automatically
+- Amend, rebase, or rewrite history without instruction
 
-**AI MUST NOT:**
+Commit format:
 
-- Execute `git commit` without explicit user confirmation
-- Execute `git push` automatically
-- Amend or rebase commits without user instruction
-- Make commits with vague messages like "fix" or "update"
-
-**Recommended Workflow:**
-
-1. AI generates/modifies code
-2. Human reviews changes (`git diff`)
-3. AI suggests commit message
-4. Human confirms or modifies message
-5. Human approves → AI executes `git commit`
-6. After accumulating meaningful commits → Human decides to push
-
-**Commit Frequency Guideline:**
-
-- One commit per completed task (from tasks.md)
-- Don't commit every single line change
-- Group related changes into logical commits
-
-#### Commit Message Format (Conventional Commits + zh-TW)
-
-```
-<type>: <中文描述>
-
-[optional body in zh-TW]
+```text
+<type>: <zh-TW summary>
 ```
 
-**Types (English, required):**
+Recommended types:
 
-- `feat` — New feature
-- `fix` — Bug fix
-- `docs` — Documentation changes
-- `refactor` — Code refactoring (no feature change)
-- `chore` — Build, config, tooling changes
-- `test` — Test-related changes
-- `style` — Code style (formatting, no logic change)
-
-**Examples:**
-
-```
-feat: 新增使用者登入功能
-fix: 修正購物車數量計算錯誤
-docs: 更新 README 安裝說明
-chore: 升級相依套件版本
-refactor: 重構訂單處理邏輯
-```
-
-#### Branch Naming (English only)
-
-Format: `<type>/<short-description>`
-
-Examples:
-
-- `feature/user-login`
-- `fix/cart-calculation`
-- `docs/readme-update`
-- `refactor/order-processing`
-
-### Code Style Guidelines
-
-- JavaScript/TypeScript: camelCase for variables/functions, PascalCase for classes
-- Python: snake_case for variables/functions, PascalCase for classes
-- Always include meaningful comments for complex logic
-- Prefer explicit over implicit
+- `feat`
+- `fix`
+- `docs`
+- `refactor`
+- `chore`
+- `test`
+- `style`
 
 ## Critical Constraints
 
-### NEVER Do
+Never:
 
-- Skip any SDD stage or suggest skipping
-- Assume requirements not explicitly written in spec
-- Add features not included in the specification
-- Hallucinate API endpoints, data structures, or business logic
-- Modify constitution rules without explicit instruction
-- Use ASCII art or text-based diagrams (low information density, wastes tokens, LLM unfriendly)
+- Skip an SDD stage
+- Treat `.github/copilot-instructions.md` or `CLAUDE.md` as the project constitution
+- Invent requirements that are not in the spec or clarified outputs
+- Add features outside the approved scope
+- Change governance files without explicit reason
+- Treat `resources/agent-skill-packs/` as a canonical source of truth
+- Create project-local extension registries that compete with `studio/extensions/`
 
-### ALWAYS Do
+Always:
 
-- Ask for clarification when requirements are ambiguous
-- Reference spec/plan/tasks when implementing
-- Suggest updating related documents when scope changes
-- Flag potential consistency issues between documents
-- Respect the dual-layer governance (Studio > Project)
+- Resolve ambiguity before planning or implementation
+- Reference spec, plan, tasks, and constitutions when making changes
+- Flag document drift and missing updates
+- Preserve the studio-first centralized runtime model
+- Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources
+- Treat `studio/extensions/` as the only shared extension registry authority
 
-## Knowledge Feedback System
+## Knowledge Feedback
 
-When encountering issues or friction points:
+When recurring friction appears:
 
-1. **Document in context** — Note what caused the problem
-2. **Suggest prompt candidates** — If a pattern emerges, suggest extracting to `studio/prompts/<stage>/`
-3. **Flag for learnings.md** — Remind to update `studio/knowledge-base/learnings.md` after project completion
-
-## Build & Validation
-
-No unified build system — each project is independent.
-
-For project-specific build instructions, check:
-
-1. Project's `README.md`
-2. Project's `package.json` or equivalent
-3. Project's `.specify/memory/constitution.md`
-
-## Response Style
-
-- Be concise and direct
-- Use tables and bullet points for clarity
-- Show code examples when helpful
-- Explain "why" for architectural decisions
-- When uncertain, state assumptions explicitly
-
-## Quick Reference
-
-| Item                | Location                              |
-| ------------------- | ------------------------------------- |
-| Studio Constitution | `studio/constitution/constitution.md` |
-| Learnings           | `studio/knowledge-base/learnings.md`  |
-| Prompt Library      | `studio/prompts/<stage>/`             |
-| Project Templates   | `studio/templates/project-init/`      |
-| Practice Projects   | `learning/`                           |
+1. Record the issue in project context or retrospective notes.
+2. Suggest prompt extraction into `studio/prompts/<stage>/` when the pattern is reusable.
+3. Update `studio/knowledge-base/learnings.md` after project completion when the learning matters beyond one task.

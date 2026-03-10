@@ -37,7 +37,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir 'common.ps1')
 
 # Find workspace and studio roots
-$workspaceRoot = Get-WorkspaceRoot
+$workspaceRoot = Find-WorkspaceRoot
 $studioRoot = Find-StudioRoot -StartDir $scriptDir
 
 if (-not $workspaceRoot) {
@@ -81,6 +81,10 @@ try {
         $readmeContent = $readmeContent -replace '\[CREATED_DATE\]', (Get-Date -Format 'yyyy-MM-dd')
         Set-Content -Path $readmePath -Value $readmeContent -NoNewline
     }
+
+    # Ensure project constitution exists
+    $projectConstPath = Initialize-ProjectConstitution -ProjectRoot $targetDir -ProjectName $Name -ProjectType 'Practice' -StudioRoot $studioRoot
+    Write-Host "Project constitution ready: $projectConstPath" -ForegroundColor Gray
 
     # Remove .gitkeep files if directories have content
     Get-ChildItem -Path $targetDir -Recurse -Filter '.gitkeep' | ForEach-Object {

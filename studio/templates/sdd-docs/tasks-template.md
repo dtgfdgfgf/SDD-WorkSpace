@@ -1,198 +1,132 @@
 # Tasks: [FEATURE NAME]
 
-<!-- 
-  STUDIO TEMPLATE v1.0.0
-  Based on: duotify-membership-v1 tasks-template
-  Usage: Copy to project/.specify/templates/ and customize if needed
+<!--
+  STUDIO TEMPLATE v1.1.0
+  Canonical task line format:
+  - [ ] T### [P#] [Risk: X] [Story: ...] Description
 -->
 
 **Feature ID**: `[NNN-feature-name]`  
 **Date**: [DATE]  
-**Prerequisites**: spec.md (required), plan.md (required)  
-**Version**: 1.0.0
+**Prerequisites**: `spec.md`, `plan.md`  
+**Version**: 1.1.0
 
-## Task Format
+## Canonical Format
 
+Every task entry MUST begin with a checklist line in this format:
+
+```text
+- [ ] T001 [P1] [Risk: Low] [Story: Foundation] 建立專案基礎結構
 ```
-[ID] [P?] [Story?] Description
-```
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2)
-- Include exact file paths in descriptions
+Rules:
 
-## Task Requirements
+- `T###` is the stable task ID.
+- `[P1]`, `[P2]`, `[P3]` indicates priority.
+- `[Risk: Low|Medium|High]` is required.
+- `[Story: ...]` is required when the task maps to a user story or cross-cutting theme.
+- Use exact file paths inside descriptions when useful.
+- Put dependencies and Definition of Done on the lines immediately following the task.
 
-<!--
-  Per Studio Constitution:
-  - Granularity: 0.5–2 days per task
-  - Each task MUST map to items in spec/plan
-  - Each task MUST include Definition of Done
-  - Dependencies MUST be explicit
-  - Risk level: Low / Medium / High
-  - Priority: P1 / P2 / P3
--->
+## Summary (Optional)
 
----
+| Phase | Focus | Estimated |
+|------|-------|-----------|
+| Setup | 專案初始化與開發環境 | 0.5 day |
+| Foundation | 核心基礎能力 | 1 day |
+| Story Delivery | 使用者故事實作 | 1.5 days |
+| Polish | 文件、驗證、收尾 | 0.5 day |
 
 ## Phase 1: Setup
 
-**Purpose**: Project initialization and basic structure
+- [ ] T001 [P1] [Risk: Low] [Story: Foundation] 建立 `src/`、`tests/`、設定檔與基礎專案結構
+  Definition of Done:
+  - [ ] 必要資料夾與基礎設定檔已建立
+  - [ ] 專案可執行最小建置或測試命令
+  Depends on: None
 
-| ID | Task | Priority | Risk | Definition of Done |
-|----|------|----------|------|-------------------|
-| T001 | Create project structure per plan.md | P1 | Low | All directories exist |
-| T002 | Initialize project with dependencies | P1 | Low | `npm install` / equivalent succeeds |
-| T003 | [P] Configure linting and formatting | P2 | Low | Linter runs without errors |
+- [ ] T002 [P1] [Risk: Low] [Story: Foundation] 安裝核心相依並確認本地開發環境
+  Definition of Done:
+  - [ ] 相依安裝成功
+  - [ ] 本地啟動命令或測試命令可通過
+  Depends on: T001
 
----
+## Phase 2: Foundation
 
-## Phase 2: Foundation (Blocking)
+- [ ] T010 [P1] [Risk: Medium] [Story: Foundation] 建立共用資料模型、錯誤處理與設定管理
+  Definition of Done:
+  - [ ] 基礎模型與設定可被應用程式載入
+  - [ ] 錯誤回應與日誌格式已定義
+  Depends on: T002
 
-**Purpose**: Core infrastructure that MUST be complete before user story work
+- [ ] T011 [P1] [Risk: Medium] [Story: Foundation] 建立資料存取與測試基礎設施
+  Definition of Done:
+  - [ ] Repository 或 data access layer 可運作
+  - [ ] 測試環境可執行最小 smoke test
+  Depends on: T010
 
-**CRITICAL**: No user story work can begin until this phase is complete
+## Phase 3: Story Delivery
 
-| ID | Task | Priority | Risk | Definition of Done |
-|----|------|----------|------|-------------------|
-| T004 | Setup database schema/migrations | P1 | Medium | Migrations run successfully |
-| T005 | [P] Implement base models/entities | P1 | Low | Models compile, basic CRUD works |
-| T006 | [P] Setup error handling infrastructure | P1 | Low | Errors return proper format |
-| T007 | Configure environment management | P1 | Low | Can switch dev/prod configs |
+### User Story 1
 
-**Checkpoint**: Foundation ready — user story implementation can begin
+- [ ] T020 [P1] [Risk: Medium] [Story: US-001] 實作第一個使用者故事的核心服務
+  Definition of Done:
+  - [ ] 服務行為符合 `spec.md`
+  - [ ] 對應測試通過
+  Depends on: T011
 
----
+- [ ] T021 [P1] [Risk: Medium] [Story: US-001] 串接對外介面或應用層入口
+  Definition of Done:
+  - [ ] 入口層可呼叫核心服務
+  - [ ] 成功與錯誤情境皆被覆蓋
+  Depends on: T020
 
-## Phase 3: User Story 1 - [Title] (P1) MVP
+### User Story 2
 
-**Goal**: [Brief description of what this story delivers]
+- [ ] T030 [P2] [Risk: Medium] [Story: US-002] 實作第二個使用者故事的核心能力
+  Definition of Done:
+  - [ ] 使用者故事可獨立驗證
+  - [ ] 與既有故事整合不破壞既有行為
+  Depends on: T021
 
-**Spec Reference**: US1 in spec.md
+## Phase 4: Polish
 
-**Independent Test**: [How to verify this story works on its own]
+- [ ] T090 [P2] [Risk: Low] [Story: Polish] 更新 README、quickstart、運維或交付文件
+  Definition of Done:
+  - [ ] 文件與實際行為一致
+  - [ ] 主要操作流程已可被新成員重現
+  Depends on: T030
 
-| ID | Task | Priority | Risk | Depends On | Definition of Done |
-|----|------|----------|------|------------|-------------------|
-| T010 | [P] [US1] Create [Entity] model | P1 | Low | T005 | Model with validations |
-| T011 | [US1] Implement [Service] logic | P1 | Medium | T010 | Service methods work |
-| T012 | [US1] Implement [endpoint/feature] | P1 | Medium | T011 | API returns expected data |
-| T013 | [US1] Add validation and error handling | P1 | Low | T012 | Invalid input rejected |
-| T014 | [US1] Write unit tests | P2 | Low | T012 | Tests pass, coverage met |
+- [ ] T091 [P2] [Risk: Low] [Story: Polish] 執行最終驗證並整理剩餘風險
+  Definition of Done:
+  - [ ] 測試、lint 或既定驗證已執行
+  - [ ] 已知風險已記錄
+  Depends on: T090
 
-**Checkpoint**: User Story 1 fully functional and independently testable
+## Dependency Summary
 
----
-
-## Phase 4: User Story 2 - [Title] (P2)
-
-**Goal**: [Brief description of what this story delivers]
-
-**Spec Reference**: US2 in spec.md
-
-**Independent Test**: [How to verify this story works on its own]
-
-| ID | Task | Priority | Risk | Depends On | Definition of Done |
-|----|------|----------|------|------------|-------------------|
-| T020 | [P] [US2] Create [Entity] model | P1 | Low | T005 | Model with validations |
-| T021 | [US2] Implement [Service] logic | P1 | Medium | T020 | Service methods work |
-| T022 | [US2] Implement [endpoint/feature] | P1 | Medium | T021 | API returns expected data |
-| T023 | [US2] Write unit tests | P2 | Low | T022 | Tests pass |
-
-**Checkpoint**: User Story 2 independently testable, integrates with US1
-
----
-
-## Phase 5: User Story 3 - [Title] (P3)
-
-**Goal**: [Brief description of what this story delivers]
-
-**Spec Reference**: US3 in spec.md
-
-| ID | Task | Priority | Risk | Depends On | Definition of Done |
-|----|------|----------|------|------------|-------------------|
-| T030 | [P] [US3] Create [Entity] model | P1 | Low | T005 | Model with validations |
-| T031 | [US3] Implement [Service] logic | P1 | Medium | T030 | Service methods work |
-| T032 | [US3] Implement [endpoint/feature] | P1 | Medium | T031 | API returns expected data |
-
-**Checkpoint**: All user stories independently functional
-
----
-
-## Phase N: Polish & Cross-Cutting
-
-**Purpose**: Improvements that affect multiple user stories
-
-| ID | Task | Priority | Risk | Definition of Done |
-|----|------|----------|------|-------------------|
-| TXXX | [P] Update documentation | P2 | Low | README complete |
-| TXXX | Code cleanup and refactoring | P3 | Low | No linter warnings |
-| TXXX | Performance optimization | P3 | Medium | Meets NFR targets |
-| TXXX | Security review | P2 | Medium | No known vulnerabilities |
-
----
-
-## Dependencies Summary
-
-### Phase Dependencies
-
-```
-Phase 1 (Setup) 
-    ↓
-Phase 2 (Foundation) ← BLOCKS all user stories
-    ↓
-Phase 3-N (User Stories) ← Can run in parallel if resources allow
-    ↓
-Final Phase (Polish)
-```
-
-### User Story Independence
-
-- **US1 (P1)**: Start after Phase 2 — No dependencies on other stories
-- **US2 (P2)**: Start after Phase 2 — May integrate with US1 but independently testable
-- **US3 (P3)**: Start after Phase 2 — May integrate with US1/US2 but independently testable
-
-### Parallel Opportunities
-
-Tasks marked **[P]** can run in parallel when:
-- They modify different files
-- They have no data dependencies
-- Their prerequisite tasks are complete
-
----
-
-## Implementation Strategy
-
-### MVP First (Recommended for Solo)
-
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundation
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test US1 independently
-5. Deploy/demo if ready
-6. Continue to US2, US3 incrementally
-
-### Incremental Delivery
-
-Each user story adds value without breaking previous stories:
-
-```
-Setup → Foundation → US1 (MVP!) → US2 → US3 → Polish
-```
-
----
+| Task | Depends on |
+|------|------------|
+| `T001` | None |
+| `T002` | `T001` |
+| `T010` | `T002` |
+| `T011` | `T010` |
+| `T020` | `T011` |
+| `T021` | `T020` |
+| `T030` | `T021` |
+| `T090` | `T030` |
+| `T091` | `T090` |
 
 ## Notes
 
-- Commit after each task or logical group
-- Stop at any checkpoint to validate independently
-- If blocked, document blocker and move to parallel task
-- Update this file as tasks complete: `- [x]` or strikethrough
-
----
+- Keep task size in the 0.5 to 2 day range.
+- Keep each task traceable to `spec.md` and `plan.md`.
+- Update status by switching `- [ ]` to `- [x]`.
+- If blocked, record the blocker instead of silently skipping the task.
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | [DATE] | Switch to checklist-first canonical task format |
 | 1.0.0 | [DATE] | Initial task decomposition |

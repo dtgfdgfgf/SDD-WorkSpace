@@ -192,21 +192,30 @@ function ConvertTo-CleanBranchName {
     
     return $Name.ToLower() -replace '[^a-z0-9]', '-' -replace '-{2,}', '-' -replace '^-', '' -replace '-$', ''
 }
-$fallbackRoot = (Find-RepositoryRoot -StartDir $PSScriptRoot)
+$startDir = (Get-Location).Path
+$fallbackRoot = Find-RepositoryRoot -StartDir $startDir
 if (-not $fallbackRoot) {
     Write-Error "Error: Could not determine repository root. Please run this script from within the repository."
     exit 1
 }
 
 try {
-    $repoRoot = git rev-parse --show-toplevel 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $hasGit = $true
+    $gitRoot = git rev-parse --show-toplevel 2>$null
+    if ($LASTEXITCODE -eq 0 -and $gitRoot) {
+        $resolvedGitRoot = (Resolve-Path $gitRoot).Path
+        $resolvedFallbackRoot = (Resolve-Path $fallbackRoot).Path
+        if ($resolvedGitRoot -eq $resolvedFallbackRoot) {
+            $repoRoot = $resolvedGitRoot
+            $hasGit = $true
+        } else {
+            $repoRoot = $resolvedFallbackRoot
+            $hasGit = $false
+        }
     } else {
         throw "Git not available"
     }
 } catch {
-    $repoRoot = $fallbackRoot
+    $repoRoot = (Resolve-Path $fallbackRoot).Path
     $hasGit = $false
 }
 
@@ -351,4 +360,5 @@ if ($Json) {
     Write-Output "HAS_GIT: $hasGit"
     Write-Output "SPECIFY_FEATURE environment variable set to: $branchName"
 }
+
 

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/studio/extensions/state.schema.json",
+  "title": "Studio Extension State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated", "states"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "states": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["enabled", "pinnedVersion", "changedAt", "source"],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "pinnedVersion": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["default", "manual", "sync"]
+          }
+        }
+      }
+    }
+  }
+}

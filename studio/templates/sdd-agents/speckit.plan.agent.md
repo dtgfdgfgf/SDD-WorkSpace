@@ -50,9 +50,9 @@ You **MUST** consider the user input before proceeding (if not empty).
 ### Phase 0: Outline & Research
 
 1. **Extract unknowns from Technical Context** above:
-   - For each NEEDS CLARIFICATION → research task
-   - For each dependency → best practices task
-   - For each integration → patterns task
+   - For each NEEDS CLARIFICATION, create a research task.
+   - For each dependency, create a best-practices task.
+   - For each integration, create a patterns task.
 
 2. **Generate and dispatch research agents**:
 
@@ -74,15 +74,15 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 **Prerequisites:** `research.md` complete
 
-1. **Extract entities from feature spec** → `data-model.md`:
+1. **Extract entities from feature spec** into `data-model.md`:
    - Entity name, fields, relationships
    - Validation rules from requirements
    - State transitions if applicable
 
-2. **Generate API contracts** from functional requirements:
-   - For each user action → endpoint
-   - Use standard REST/GraphQL patterns
-   - Output OpenAPI/GraphQL schema to `/contracts/`
+2. **Generate service contracts** from functional requirements:
+   - Map each user action to one contract entry.
+   - Use Markdown service contracts by default in `/contracts/`.
+   - Use OpenAPI or GraphQL schema only when external APIs or machine validation require it.
 
 3. **Agent context update**:
    - Run `studio/scripts/powershell/update-agent-context.ps1 -AgentType copilot`
@@ -97,3 +97,5 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 - Use absolute paths
 - ERROR on gate failures or unresolved clarifications
+
+

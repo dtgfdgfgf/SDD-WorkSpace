@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/studio/extensions/manifest.schema.json",
+  "title": "Studio Extension Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "title",
+    "description",
+    "kind",
+    "status",
+    "compatibility"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["workflow", "agent-pack", "prompt-pack", "tooling", "policy", "integration"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "deprecated"]
+    },
+    "owner": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "runtimeScopes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["agents", "prompts", "scripts", "templates", "docs"]
+      },
+      "uniqueItems": true
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "studio-first"
+        },
+        "minStudioConstitutionVersion": {
+          "type": "string"
+        },
+        "minWorkspaceStructureVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "entryPoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scripts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "docs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

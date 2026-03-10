@@ -30,7 +30,7 @@ Its purpose is to:
 - Transform unstructured, real-world consultation transcripts into a structured discovery artifact
 - Bridge human business language with SDD-compatible specification thinking
 - Prevent premature specification, solution bias, and commercially irrelevant systems
-- Serve as the only approved input generator for `/speckit.specify`
+- Provide one valid input source for `/speckit.specify`, but not the only one
 
 This agent does not interact with end clients directly.
 
@@ -284,3 +284,4 @@ Otherwise, the output must be used to reframe or terminate the effort.
 The purpose of this agent is not to produce a perfect discovery document.
 
 Its purpose is to ensure that any subsequent specification is grounded in commercial reality rather than narrative comfort.
+

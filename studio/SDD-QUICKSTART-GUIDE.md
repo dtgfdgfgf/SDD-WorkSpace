@@ -42,11 +42,14 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 
 ### 1.2 SDD 六階段流程
 
-```
-specify → clarify → plan → tasks → analyze → implement
-   ↓         ↓        ↓       ↓        ↓          ↓
- spec.md  更新spec  plan.md  tasks.md  分析報告   src/
-```
+| 階段 | 主要輸出 |
+|------|----------|
+| `specify` | `spec.md` |
+| `clarify` | 更新後的 `spec.md` |
+| `plan` | `plan.md` |
+| `tasks` | `tasks.md` |
+| `analyze` | 分析報告 |
+| `implement` | `src/` 與 `tests/` |
 
 **關鍵規則**：每個階段必須完成後才能進入下一階段，不可跳過。
 
@@ -158,19 +161,11 @@ specify → clarify → plan → tasks → analyze → implement
 
 ### 3.3 雙層憲章系統
 
-```
-┌─────────────────────────────────────────┐
-│     Studio Constitution (最高權限)        │
-│     studio/constitution/constitution.md  │
-└─────────────────────────────────────────┘
-                    ↓ 繼承
-┌─────────────────────────────────────────┐
-│     Project Constitution (可選)          │
-│     $PROJECT/.specify/memory/           │
-│     constitution.md                      │
-│     (只能新增更嚴格的規則)                 │
-└─────────────────────────────────────────┘
-```
+| 層級 | 位置 | 說明 |
+|------|------|------|
+| Studio Constitution | `studio/constitution/constitution.md` | 所有專案都必須遵守的最高權限規則 |
+| Project Constitution | `<project>/.specify/memory/constitution.md` | 專案層級補充規則，只能加嚴不能放寬 |
+| Agent Context | `<project>/.github/copilot-instructions.md`、`<project>/CLAUDE.md` | AI 協作脈絡檔，不是 constitution |
 
 **合併邏輯**：
 - Project Constitution 可以：新增專案特定術語、定義更嚴格的編碼標準、新增額外的審查清單
@@ -484,66 +479,32 @@ Constitution 要求至少 3 個 edge cases：
 **Feature**: [功能簡稱]
 **Branch**: [branch name]
 **Generated**: YYYY-MM-DD
+**Plan Reference**: [plan.md 路徑]
 
-## Summary
+## Task List
 
-| Phase | Tasks | Estimated |
-|-------|-------|-----------|
-| Phase 1: Setup | 3 | 0.5 day |
-| Phase 2: Core | 5 | 2 days |
-| Phase 3: Polish | 2 | 0.5 day |
-| **Total** | **10** | **3 days** |
+- [ ] T001 [P1] [Risk: Low] [Story: N/A] 初始化專案結構
+  - Depends on: None
+  - DoD: 專案可編譯；測試框架可執行；linter 無錯誤
 
-## Phase 1: Setup
+- [ ] T002 [P1] [Risk: Medium] [Story: US-001] 實作使用者註冊 API
+  - Depends on: T001
+  - DoD: 註冊流程通過驗收；失敗案例有明確錯誤處理；相關測試通過
 
-### [T001] 初始化專案結構
-
-- **Story**: N/A (基礎建設)
-- **Dependencies**: None
-- **Risk**: Low
-- **Priority**: P1
-- **Parallel**: No
-- **Estimated**: 2 hours
-
-**Description**:
-建立專案基本結構，包含資料夾、設定檔、相依套件。
-
-**Definition of Done**:
-- [ ] 專案可編譯
-- [ ] 測試框架可執行
-- [ ] Linter 無錯誤
-
-**Checklist**:
-- [ ] 建立資料夾結構
-- [ ] 設定 package.json / csproj
-- [ ] 設定 linter 和 formatter
-- [ ] 建立 .gitignore
-
----
-
-## Phase 2: Core Implementation
-
-### [T002] 實作使用者註冊 API
-
-- **Story**: US-001 (P1)
-- **Dependencies**: T001
-- **Risk**: Medium
-- **Priority**: P1
-- **Parallel**: [P] 可與 T003 平行
-- **Estimated**: 4 hours
-
-...
+- [ ] T003 [P2] [Risk: Low] [Story: US-001] 補齊註冊流程文件與操作說明
+  - Depends on: T002
+  - DoD: README 或 quickstart 已更新；驗收步驟可重現
 ```
 
 ### 8.4 任務標記說明
 
 | 標記 | 意義 |
 |------|------|
-| `[T001]` | 任務編號 |
-| `[P]` | 可平行執行 |
+| `T001` | 任務編號 |
+| `[P1]` | 優先順序 |
 | `[Story: US-001]` | 對應的 User Story |
 | `[Risk: High]` | 風險等級 |
-| `[Deps: T001, T002]` | 前置相依 |
+| `Depends on: T001, T002` | 前置相依 |
 
 ### 8.5 Definition of Done (DoD) 要求
 
@@ -631,23 +592,13 @@ Constitution 要求至少 3 個 edge cases：
 
 ### 10.2 執行流程
 
-```
-1. 檢查 checklists 狀態（如有）
-   - 全部 PASS → 繼續
-   - 有 FAIL → 詢問是否繼續
-
-2. 載入 tasks.md
-
-3. 依序執行每個 task
-   - 讀取 task 描述和 DoD
-   - 產生程式碼
-   - 等待人工審查
-   - 標記 task 完成
-
-4. 每完成一個 task → 建議 commit
-
-5. 所有 task 完成 → 準備 PR
-```
+1. 檢查 `checklists/` 狀態（如有）。
+   - 全部 PASS：繼續。
+   - 有 FAIL：先決定是否補文件或接受風險，再開始實作。
+2. 載入 `tasks.md`。
+3. 依序執行每個 task，包含讀取描述與 DoD、產生程式碼、等待人工審查、標記完成。
+4. 每完成一個 task 後建議 commit。
+5. 所有 task 完成後準備 PR。
 
 ### 10.3 Checklist 檢查
 
@@ -670,10 +621,7 @@ Constitution 要求至少 3 個 edge cases：
 | 解釋程式碼 | 自動合併 PR |
 | 產生測試 | 跳過人工審查 |
 
-**工作流程**：
-```
-AI 產生程式碼 → 人工審查 → 人工執行 git add/commit → 人工決定是否 push
-```
+**工作流程**：AI 產生程式碼草稿與說明，人工負責審查、執行 `git add/commit`，以及決定是否 push。
 
 ### 10.5 實作品質要求
 
@@ -923,7 +871,7 @@ project-root/
     [ ] 確認每個 task 有 DoD
     [ ] 確認任務粒度在 0.5-2 天
 
-[ ] 執行 /speckit.analyze（可選）
+[ ] 執行 /speckit.analyze
     [ ] 確認無 CRITICAL 問題
     [ ] 修復所有 WARNING（或記錄為已知風險）
 
@@ -1101,70 +1049,38 @@ project-root/
 
 ## Summary
 
-| Phase | Tasks | Estimated |
-|-------|-------|-----------|
-| Phase 1: Setup | X | X days |
-| Phase 2: Core | X | X days |
-| Phase 3: Polish | X | X days |
-| **Total** | **X** | **X days** |
+| Metric | Value |
+|--------|-------|
+| Total tasks | X |
+| Estimated duration | X days |
+| Highest priority | P1 |
+| Highest risk | High |
 
 ---
 
-## Phase 1: Setup
+## Canonical Task List
 
-### [T001] [任務標題]
+- [ ] T001 [P1] [Risk: Low] [Story: N/A] [任務標題]
+  - Depends on: None
+  - DoD: [完成條件1]；[完成條件2]
 
-- **Story**: [US-XXX] 或 N/A
-- **Dependencies**: None 或 [T00X, T00Y]
-- **Risk**: Low / Medium / High
-- **Priority**: P1 / P2 / P3
-- **Parallel**: Yes [P] / No
-- **Estimated**: X hours
+- [ ] T002 [P1] [Risk: Medium] [Story: US-001] [任務標題]
+  - Depends on: T001
+  - DoD: [完成條件1]；[完成條件2]
 
-**Description**:
-[任務描述]
-
-**Definition of Done**:
-- [ ] [完成條件1]
-- [ ] [完成條件2]
-
-**Checklist**:
-- [ ] [步驟1]
-- [ ] [步驟2]
+- [ ] T003 [P2] [Risk: High] [Story: US-002] [任務標題]
+  - Depends on: T001, T002
+  - DoD: [完成條件1]；[完成條件2]
 
 ---
 
-## Phase 2: Core Implementation
+## Dependency Guide
 
-### [T002] [任務標題]
-
-...
-
----
-
-## Phase 3: Polish
-
-### [T00X] [任務標題]
-
-...
-
----
-
-## Dependency Graph
-
-```
-T001 → T002 → T004
-         ↘
-T003 ────→ T005 → T006
-```
-
-## Parallel Execution Guide
-
-| Batch | Tasks | Dependencies |
-|-------|-------|--------------|
-| 1 | T001 | None |
-| 2 | T002, T003 | T001 |
-| 3 | T004, T005 | T002, T003 |
+| Task | Depends on | Notes |
+|------|------------|-------|
+| T001 | None | 基礎建設或前置準備 |
+| T002 | T001 | 第一個功能任務 |
+| T003 | T001, T002 | 需要前一批功能完成後再做 |
 ```
 
 ---
@@ -1178,3 +1094,7 @@ T003 ────→ T005 → T006
 ---
 
 > **注意**：本指南會隨著 SDD 實踐經驗持續更新。如有建議或發現問題，請更新 `studio/knowledge-base/learnings.md`。
+
+
+
+
