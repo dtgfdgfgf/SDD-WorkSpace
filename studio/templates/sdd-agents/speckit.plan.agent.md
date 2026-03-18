@@ -1,5 +1,5 @@
 ---
-description: Execute the implementation planning workflow using the plan template to generate design artifacts.
+description: Execute the implementation planning workflow after readiness gate clearance using the plan template to generate design artifacts.
 model: claude-opus-4-6
 infer: true
 handoffs: 
@@ -26,15 +26,37 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-1. **Setup**: Run `studio/scripts/powershell/setup-plan.ps1 -Json` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, SPECS_DIR, BRANCH, STUDIO_ROOT, CONSTITUTIONS. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Read feature paths**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root once and parse `FEATURE_DIR`, `FEATURE_SPEC`, `STUDIO_ROOT`, and `CONSTITUTIONS`. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. **Load context (Dual-Layer Constitution)**:
+2. **Enforce readiness gate before any planning work**:
+   - Derive `READINESS_DIR = FEATURE_DIR/readiness`
+   - Derive `READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`
+   - Derive `ECI_DIR = READINESS_DIR/eci`
+   - Derive `ECI_AUTHORIZATION = ECI_DIR/authorization-record.md`
+   - Derive `ECI_ADOPTION = ECI_DIR/adoption-record.md`
+   - Derive `ECI_SOURCE_MANIFEST = ECI_DIR/source-manifest.md`
+   - If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`
+   - Load `READINESS_ASSESSMENT` and locate the declared `Primary Status`
+   - If `Primary Status` is absent or ambiguous: ERROR and instruct the user to re-run `/speckit.readiness`
+   - If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR, report the status, and instruct the user to complete the remediation identified by readiness before attempting `/speckit.plan` again
+   - If `ECI_AUTHORIZATION` exists:
+     - Load `Authorization Outcome`
+     - If it is absent or ambiguous: ERROR and instruct the user to reconcile `/speckit.eci` outputs before planning
+     - If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR, report the authorization outcome, and instruct the user to re-run `/speckit.readiness` after reconciling the ECI boundary
+
+3. **Setup plan workspace**: Run `studio/scripts/powershell/setup-plan.ps1 -Json` from repo root and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH`, `STUDIO_ROOT`, and `CONSTITUTIONS`.
+
+4. **Load context (Dual-Layer Constitution)**:
    - Read FEATURE_SPEC for requirements
+   - Read READINESS_ASSESSMENT for scope guardrails, secondary observations, and any readiness-imposed constraints
+   - If present, read `ECI_AUTHORIZATION` for allowed/prohibited implementation scope
+   - If present, read `ECI_ADOPTION` for adoption boundary and prohibited modes
+   - If present, read `ECI_SOURCE_MANIFEST` for governed source basis and version anchors
    - Read Studio Constitution from CONSTITUTIONS (Type: "Studio") - **HIGHEST AUTHORITY**
    - Read Project Constitution from CONSTITUTIONS (Type: "Project") if exists - **Additive rules only**
    - Load IMPL_PLAN template (already copied)
 
-3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
+5. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
    - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
    - Fill Constitution Check section from constitution
    - Evaluate gates (ERROR if violations unjustified)
@@ -43,7 +65,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Phase 1: Update agent context by running the agent script
    - Re-evaluate Constitution Check post-design
 
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, and generated artifacts.
+6. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, generated artifacts, and the readiness assessment path used to authorize planning.
 
 ## Phases
 
@@ -96,6 +118,9 @@ You **MUST** consider the user input before proceeding (if not empty).
 ## Key rules
 
 - Use absolute paths
+- Never bypass the readiness gate
 - ERROR on gate failures or unresolved clarifications
+- ERROR if `readiness-assessment.md` is missing or its primary status is not `READY_FOR_PLAN`
+- ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`
 
 

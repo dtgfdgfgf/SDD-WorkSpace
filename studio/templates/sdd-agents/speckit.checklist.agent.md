@@ -44,7 +44,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Clarify intent (dynamic)**: Derive up to THREE initial contextual clarifying questions (no pre-baked catalog). They MUST:
-   - Be generated from the user's phrasing + extracted signals from spec/plan/tasks
+   - Be generated from the user's phrasing + extracted signals from spec/readiness/eci/plan/tasks
    - Only ask about information that materially changes checklist content
    - Be skipped individually if already unambiguous in `$ARGUMENTS`
    - Prefer precision over breadth
@@ -79,7 +79,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Derive checklist theme (e.g., security, review, deploy, ux)
    - Consolidate explicit must-have items mentioned by user
    - Map focus selections to category scaffolding
-   - Infer any missing context from spec/plan/tasks (do NOT hallucinate)
+   - Infer any missing context from spec/readiness/eci/plan/tasks (do NOT hallucinate)
 
 4. **Load feature context**: Read from FEATURE_DIR:
    - spec.md: Feature requirements and scope

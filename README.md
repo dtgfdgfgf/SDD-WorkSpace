@@ -8,7 +8,7 @@
 
 這個 workspace 的設計重點是：
 
-- 用一套固定的 SDD 六階段流程管理所有專案
+- 用一套固定的 SDD 七階段流程管理所有專案
 - 將 studio-level 規則與 project-level 規則拆成雙層憲章
 - 把共享 agent、prompt、template、extension 與初始化腳本集中管理
 - 讓練習專案與正式專案都能吃到同一套 studio 能力
@@ -79,17 +79,23 @@
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
-3. `/speckit.plan`
-4. `/speckit.tasks`
-5. `/speckit.analyze`
-6. `/speckit.implement`
+3. `/speckit.readiness`
+4. `/speckit.plan`
+5. `/speckit.tasks`
+6. `/speckit.analyze`
+7. `/speckit.implement`
 
 補充：
 
 - `/speckit.discover` 是可選的 pre-spec discovery 階段
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令
+- `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段
+- `/speckit.readiness` 是 `clarify` 與 `plan` 之間的前置治理閘門；只有 `READY_FOR_PLAN` 才能進入 `/speckit.plan`
+- 當 readiness 判為 `ROUTE_TO_ECI` 時，必須先執行 `/speckit.eci`，由 `eci-trigger.md` 啟動並在 `readiness/eci/` 產出正式 dossier，之後再回跑 `/speckit.readiness`
+- 完成 `/speckit.eci` 不等於可以直接進 `/speckit.plan`；只有最新的 `readiness-assessment.md` 明確變成 `READY_FOR_PLAN` 才能進入規劃
+- 若 ECI 的授權結果仍是 `READY_FOR_SANDBOX_ONLY` 或 `READY_FOR_SPIKE_ONLY`，下一步應由 `/speckit.readiness` 轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，而不是機械式重做 ECI
 
-這個 repo 的治理假設是：spec 決定行為、plan 決定技術方向、tasks 決定落地順序，implement 不應跳過前置文件直接做事。
+這個 repo 的治理假設是：spec 決定行為邊界、readiness 判斷前提是否足夠、plan 決定技術方向、tasks 決定落地順序，implement 不應跳過前置文件直接做事。
 
 ## 快速開始
 
@@ -141,6 +147,15 @@ code projects/studio-automation/studio-automation.code-workspace
 
 其中 `studio/templates/sdd-agents/` 是 mirror，不應與 `.github/agents/` 競爭成第二個權威來源。`resources/agent-skill-packs/` 是產生物，不是手動維護的主要來源。
 
+## Shared-Layer Convergence
+
+- shared-layer convergence 的主要驗收方式是 `check-speckit-runtime.ps1`
+- shared-layer convergence 的 DOD 只看 studio runtime、templates、docs、hooks 與 shared scripts
+- `projects/` 與 `learning/` 是 consumer spaces，不是 shared-layer acceptance surface
+- `readiness / eci` 的最終 shared-layer 收斂，以 `check-speckit-runtime.ps1 -Json` 為唯一 machine-verifiable acceptance source
+- `docs/readiness_source/` 保留為 design reference，不屬於 canonical runtime acceptance surface
+- studio runtime 變更的主要驗收方式是 studio runtime audit，而不是要求同步治理 consumer project artifacts
+
 ## 常用腳本
 
 | Script | Purpose |
@@ -148,6 +163,7 @@ code projects/studio-automation/studio-automation.code-workspace
 | `studio/scripts/powershell/init-practice.ps1` | 建立 Practice 專案 |
 | `studio/scripts/powershell/init-project.ps1` | 建立 Internal / Client 專案 |
 | `studio/scripts/powershell/create-new-feature.ps1` | 建立新 feature 工作區與文件骨架 |
+| `studio/scripts/powershell/check-speckit-runtime.ps1` | 驗證 shared runtime contract、mirror parity、templates、hooks 與 canonical docs |
 | `studio/scripts/powershell/update-agent-context.ps1` | 更新 agent context / runtime 對齊 |
 | `setup-copilot-agents.ps1` | 安裝或更新 GitHub Copilot custom agents |
 
@@ -160,6 +176,8 @@ code projects/studio-automation/studio-automation.code-workspace
 | `.specify/memory/constitution.md` | 專案層級憲章 |
 | `.github/copilot-instructions.md` | 專案 AI context |
 | `specs/<feature>/spec.md` | 規格 |
+| `specs/<feature>/readiness/` | readiness assessment 與 route packet |
+| `specs/<feature>/readiness/eci/` | ECI dossier |
 | `specs/<feature>/plan.md` | 技術計畫 |
 | `specs/<feature>/tasks.md` | 任務分解 |
 | `src/` | 原始碼 |

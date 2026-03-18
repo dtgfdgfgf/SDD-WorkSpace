@@ -26,6 +26,8 @@ code <project-name>.code-workspace
 | `.github/copilot-instructions.md` | Copilot project context if generated later |
 | `CLAUDE.md` | Claude project context if generated later |
 | `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/readiness/` | Readiness assessment and route packets (created on first readiness run) |
+| `specs/<feature>/readiness/eci/` | ECI dossier (created only for `ROUTE_TO_ECI` features) |
 | `specs/<feature>/plan.md` | Technical plan |
 | `specs/<feature>/tasks.md` | Task breakdown |
 | `src/` | Source code |
@@ -36,6 +38,7 @@ code <project-name>.code-workspace
 
 - [ ] Specify — Create specification
 - [ ] Clarify — Resolve ambiguities
+- [ ] Readiness — Confirm planning safety and emit remediation packets when needed
 - [ ] Plan — Technical planning
 - [ ] Tasks — Task decomposition
 - [ ] Analyze — Consistency check

@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Configures Git to use the .githooks directory for hooks.
-    This enables SDD document validation and Conventional Commits checking.
+    This enables shared runtime audit enforcement, SDD document validation, and Conventional Commits checking.
 
 .EXAMPLE
     .\setup-hooks.ps1
@@ -62,7 +62,7 @@ try {
     Write-Host "✓ Git hooks path configured: .githooks" -ForegroundColor Green
     Write-Host ""
     Write-Host "Hooks enabled:" -ForegroundColor Cyan
-    Write-Host "  • pre-commit  - Validates SDD documents (spec.md, plan.md, tasks.md)" -ForegroundColor Gray
+    Write-Host "  • pre-commit  - Runs shared runtime audit and validates SDD governance docs (spec.md, readiness/**/*.md, plan.md, tasks.md)" -ForegroundColor Gray
     Write-Host "  • commit-msg  - Validates Conventional Commits format" -ForegroundColor Gray
     Write-Host ""
     Write-Host "To bypass hooks temporarily:" -ForegroundColor Yellow

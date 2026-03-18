@@ -11,7 +11,7 @@
 #   -Json               Output in JSON format
 #   -RequireTasks       Require tasks.md to exist (for implementation phase)
 #   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
-#   -PathsOnly          Only output path variables (no validation)
+#   -PathsOnly          Only output path variables (no validation; used by readiness/eci/plan gate checks)
 #   -Help, -h           Show help message
 
 [CmdletBinding()]
@@ -36,17 +36,17 @@ OPTIONS:
   -Json               Output in JSON format
   -RequireTasks       Require tasks.md to exist (for implementation phase)
   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
-  -PathsOnly          Only output path variables (no prerequisite validation)
+  -PathsOnly          Only output path variables (no prerequisite validation; used by readiness/eci/plan gate checks)
   -Help, -h           Show this help message
 
 EXAMPLES:
-  # Check task prerequisites (plan.md required)
+  # Check downstream planning/task prerequisites after readiness gate clearance (plan.md required)
   .\check-prerequisites.ps1 -Json
   
-  # Check implementation prerequisites (plan.md + tasks.md required)
+  # Check implementation/analyze prerequisites (plan.md + tasks.md required)
   .\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
   
-  # Get feature paths only (no validation)
+  # Get feature paths only (used by clarify/readiness/eci/plan gate logic)
   .\check-prerequisites.ps1 -PathsOnly
 
 "@

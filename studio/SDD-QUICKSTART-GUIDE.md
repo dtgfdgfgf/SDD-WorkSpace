@@ -14,16 +14,17 @@
 4. [階段 0：需求發掘 (Discover)](#4-階段-0需求發掘-discover)
 5. [階段 1：規格撰寫 (Specify)](#5-階段-1規格撰寫-specify)
 6. [階段 2：需求釐清 (Clarify)](#6-階段-2需求釐清-clarify)
-7. [階段 3：技術規劃 (Plan)](#7-階段-3技術規劃-plan)
-8. [階段 4：任務分解 (Tasks)](#8-階段-4任務分解-tasks)
-9. [階段 5：一致性分析 (Analyze)](#9-階段-5一致性分析-analyze)
-10. [階段 6：實作執行 (Implement)](#10-階段-6實作執行-implement)
-11. [Git 工作流程](#11-git-工作流程)
-12. [專案資料夾結構](#12-專案資料夾結構)
-13. [常見陷阱與解決方案](#13-常見陷阱與解決方案)
-14. [給初階 AI 工程師的建議](#14-給初階-ai-工程師的建議)
-15. [快速啟動 Checklist](#15-快速啟動-checklist)
-16. [附錄：文件模板](#16-附錄文件模板)
+7. [階段 3：Implementation Readiness Triage (Readiness)](#7-階段-3implementation-readiness-triage-readiness)
+8. [階段 4：技術規劃 (Plan)](#8-階段-4技術規劃-plan)
+9. [階段 5：任務分解 (Tasks)](#9-階段-5任務分解-tasks)
+10. [階段 6：一致性分析 (Analyze)](#10-階段-6一致性分析-analyze)
+11. [階段 7：實作執行 (Implement)](#11-階段-7實作執行-implement)
+12. [Git 工作流程](#12-git-工作流程)
+13. [專案資料夾結構](#13-專案資料夾結構)
+14. [常見陷阱與解決方案](#14-常見陷阱與解決方案)
+15. [給初階 AI 工程師的建議](#15-給初階-ai-工程師的建議)
+16. [快速啟動 Checklist](#16-快速啟動-checklist)
+17. [附錄：文件模板](#17-附錄文件模板)
 
 ---
 
@@ -40,12 +41,13 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 | Code 決定行為 | Spec 決定行為，Code 只是實現 |
 | 返工成本高 | 前期投資換取後期穩定 |
 
-### 1.2 SDD 六階段流程
+### 1.2 SDD 七階段流程
 
 | 階段 | 主要輸出 |
 |------|----------|
 | `specify` | `spec.md` |
 | `clarify` | 更新後的 `spec.md` |
+| `readiness` | `readiness/readiness-assessment.md` |
 | `plan` | `plan.md` |
 | `tasks` | `tasks.md` |
 | `analyze` | 分析報告 |
@@ -117,6 +119,23 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 | Copilot Instructions | `.github/copilot-instructions.md` | AI 協作規則，影響所有 agent 行為 |
 | 本指南 | `studio/SDD-QUICKSTART-GUIDE.md` | SDD 完整流程說明 |
 
+### 2.4 Shared-Layer 驗收邊界
+
+當你修改的是 workspace / studio shared layer，而不是某個 consumer project 時，主要驗收面只看：
+
+- studio runtime
+- shared templates
+- canonical docs
+- shared hooks
+- shared PowerShell scripts
+
+此時 `projects/` 與 `learning/` 只是 consumer spaces，不是 shared-layer convergence 的預設驗收面。
+主要機器驗證入口是：
+
+```powershell
+.\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
+```
+
 **為何這麼做**：Constitution 定義了「什麼可以做、什麼不能做」。不了解規則就開始，會導致後續大量返工。
 
 ### 2.4 可用的 Custom Agents
@@ -126,12 +145,16 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 | Speckit-Discover | `/speckit.discover` | 需求發掘教練 |
 | speckit.specify | `/speckit.specify` | 規格撰寫 |
 | speckit.clarify | `/speckit.clarify` | 需求釐清 |
+| speckit.readiness | `/speckit.readiness` | 前規劃 readiness triage |
+| speckit.eci | `/speckit.eci` | `ROUTE_TO_ECI` 的 external capability governance |
 | speckit.plan | `/speckit.plan` | 技術規劃 |
 | speckit.tasks | `/speckit.tasks` | 任務分解 |
 | speckit.analyze | `/speckit.analyze` | 一致性分析 |
 | speckit.implement | `/speckit.implement` | 實作執行 |
 | speckit.checklist | `/speckit.checklist` | 品質檢查清單 |
 | speckit.constitution | `/speckit.constitution` | 專案憲章管理 |
+
+> `/speckit.eci` 已是 shared runtime command，但只在 `/speckit.readiness` 判定 `ROUTE_TO_ECI` 時啟動。`eci-trigger.md` 是 intake seed，不是最終治理終點；ECI 完成後仍必須回到 `/speckit.readiness` 重新判定下一個 blocker。
 
 ---
 
@@ -141,10 +164,10 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 
 | 規則 | 說明 | 違反後果 |
 |------|------|----------|
-| 遵循六階段順序 | 不可跳過任何階段 | 後續文件不一致 |
+| 遵循七階段順序 | 不可跳過任何階段 | 後續文件不一致 |
 | spec.md 至少 3 個 Edge Cases | 邊界情況分析是必要的 | 上線後發現漏洞 |
 | 避免模糊用語 | 禁止 "smart"、"fast"、"good UI" | 需求無法驗證 |
-| 高風險模糊性必須在 clarify 解決 | 否則不能進入 plan | plan 做錯方向 |
+| 高風險模糊性必須在 clarify 解決 | 否則不能進入 readiness / plan | 前提不足下做出錯誤規劃 |
 | 所有 AI 產出需人工審查 | AI 不能自動 git commit/push | 品質失控 |
 | 使用 LLM-friendly 格式 | 表格、清單優先，禁止 ASCII art | AI 無法正確解析 |
 | 專案完成後更新 learnings.md | 知識捕獲是強制性的 | 團隊無法學習 |
@@ -354,7 +377,7 @@ Constitution 要求至少 3 個 edge cases：
 
 | 風險等級 | 描述 | 範例 | 處理要求 |
 |----------|------|------|----------|
-| **Critical** | 無法理解需求核心 | 「快速」但未定義時間 | 必須釐清才能進入 plan |
+| **Critical** | 無法理解需求核心 | 「快速」但未定義時間 | 必須釐清才能進入 readiness |
 | **High** | 可能導致重大返工 | 「部分功能受限」但未列清單 | 強烈建議釐清 |
 | **Medium** | 可能遺漏功能 | 缺少某個 edge case | 可在 plan 階段補充 |
 | **Low** | 影響較小 | 格式不一致 | 可延後處理 |
@@ -382,7 +405,7 @@ Constitution 要求至少 3 個 edge cases：
 
 ### 6.5 為何不能跳過
 
-> Constitution 規定：「高風險模糊性必須在 clarify 階段解決，否則不能進入 plan 階段」
+> Constitution 規定：「高風險模糊性必須在 clarify 階段解決，否則不能進入 readiness / plan 流程」
 
 **跳過 clarify 的後果**：
 - plan 做到一半發現需求不清楚
@@ -391,18 +414,72 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
-## 7. 階段 3：技術規劃 (Plan)
+## 7. 階段 3：Implementation Readiness Triage (Readiness)
 
 ### 7.1 概述
 
 | 項目 | 內容 |
 |------|------|
+| 觸發命令 | `/speckit.readiness` |
+| 狀態 | 必要 |
+| 前置條件 | `clarify` 已完成，且 `spec.md` 沒有高風險模糊性 |
+| 輸出 | `readiness/readiness-assessment.md` + 視 status 而定的 remediation packet |
+
+### 7.2 核心目的
+
+`readiness` 不負責重寫 spec，也不負責直接產出 `plan.md`。
+
+它要回答的是：
+
+1. 目前 spec 是否已具備進入 `plan` 的前提。
+2. 若尚未具備，主阻塞屬於哪一類。
+3. 最小補救包是什麼。
+4. 現在允許做什麼、不允許做什麼。
+
+### 7.3 正式狀態
+
+| Status | 意義 |
+|--------|------|
+| `READY_FOR_PLAN` | 可以安全進入 `/speckit.plan` |
+| `ROUTE_TO_ECI` | 主阻塞是 external capability，需先寫 `eci-trigger.md`，再執行 `/speckit.eci` |
+| `ROUTE_TO_REPO_CONTEXT` | 主阻塞是 repo-specific context 不足 |
+| `ROUTE_TO_DECISION` | 主阻塞是關鍵 owner decision 尚未拍板 |
+| `ROUTE_TO_VALIDATION` | 主阻塞是 done / evidence / evaluation 尚未定義 |
+| `ROUTE_TO_ACCESS` | 主阻塞是 access / credential / runtime 條件未備妥 |
+| `EXPLORATORY_ONLY` | 只允許 spike / sandbox，不得直接進 mainline 規劃 |
+| `NOT_READY` | 存在高風險前提缺口，必須暫停往下 |
+
+### 7.4 輸出與回流規則
+
+- `READY_FOR_PLAN`：產出 `readiness-assessment.md`，然後進入 `/speckit.plan`
+- `ROUTE_TO_ECI`：額外產出 `eci-trigger.md`，執行 `/speckit.eci` 產出 `readiness/eci/*.md` dossier，補完後回跑 `/speckit.readiness`
+- 若 ECI 的結果仍是 `READY_FOR_SANDBOX_ONLY` 或 `READY_FOR_SPIKE_ONLY`：回流 readiness 後應轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，不得直接進 `/speckit.plan`
+- `ROUTE_TO_REPO_CONTEXT`：額外產出 `repo-context-packet.md`，補讀後回跑 `/speckit.readiness`
+- `ROUTE_TO_DECISION`：額外產出 `decision-record.md`，owner 拍板後回跑 `/speckit.readiness`
+- `ROUTE_TO_VALIDATION`：額外產出 `validation-contract.md`，定義驗證方式後回跑 `/speckit.readiness`
+- `ROUTE_TO_ACCESS`：額外產出 `access-setup-checklist.md`，補齊環境後回跑 `/speckit.readiness`
+- `EXPLORATORY_ONLY` / `NOT_READY`：不得直接進入 `/speckit.plan`
+
+### 7.5 為何不能跳過
+
+- spec 清楚，不代表 implementation 前提已經充足
+- readiness 的作用是阻止 LLM 在前提不足時仍產生看似合理的 plan
+- 真正的 blocker 可能不是 ambiguity，而是 external capability、repo context、decision、validation 或 access
+
+---
+
+## 8. 階段 4：技術規劃 (Plan)
+
+### 8.1 概述
+
+| 項目 | 內容 |
+|------|------|
 | 觸發命令 | `/speckit.plan` |
 | 狀態 | 必要 |
-| 前置條件 | 釐清後的 `spec.md` |
+| 前置條件 | `readiness/readiness-assessment.md` 存在，且主狀態為 `READY_FOR_PLAN` |
 | 輸出 | `plan.md` + 可選的設計文件 |
 
-### 7.2 plan.md 必要章節
+### 8.2 plan.md 必要章節
 
 | 章節 | 內容 | 說明 |
 |------|------|------|
@@ -416,7 +493,7 @@ Constitution 要求至少 3 個 edge cases：
 | Estimated Timeline | 預估時程 | 各階段預估天數 |
 | Changelog | 變更紀錄 | 追蹤 plan 的修改歷史 |
 
-### 7.3 可選的設計文件
+### 8.3 可選的設計文件
 
 | 文件 | 路徑 | 用途 |
 |------|------|------|
@@ -425,7 +502,7 @@ Constitution 要求至少 3 個 edge cases：
 | contracts/ | `specs/<feature>/contracts/` | API 契約定義 |
 | quickstart.md | `specs/<feature>/quickstart.md` | 快速開始指南 |
 
-### 7.4 Technology Decisions 格式
+### 8.4 Technology Decisions 格式
 
 ```markdown
 ### TD-001: 使用 PostgreSQL 作為主資料庫
@@ -443,7 +520,7 @@ Constitution 要求至少 3 個 edge cases：
 - SQLite: 不適合多使用者並發
 ```
 
-### 7.5 "Why Not" 的重要性
+### 8.5 "Why Not" 的重要性
 
 **為何要記錄被拒絕的方案**：
 - 未來維護者不用重複評估
@@ -452,9 +529,9 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
-## 8. 階段 4：任務分解 (Tasks)
+## 9. 階段 5：任務分解 (Tasks)
 
-### 8.1 概述
+### 9.1 概述
 
 | 項目 | 內容 |
 |------|------|
@@ -463,7 +540,7 @@ Constitution 要求至少 3 個 edge cases：
 | 前置條件 | `spec.md` + `plan.md` |
 | 輸出 | `specs/<feature>/tasks.md` |
 
-### 8.2 任務粒度規則
+### 9.2 任務粒度規則
 
 | 粒度 | 狀態 | 處理方式 |
 |------|------|----------|
@@ -471,7 +548,7 @@ Constitution 要求至少 3 個 edge cases：
 | < 0.5 天 | 太細 | 合併相關任務 |
 | > 2 天 | 太粗 | 拆分為子任務 |
 
-### 8.3 tasks.md 結構
+### 9.3 tasks.md 結構
 
 ```markdown
 # Tasks: [功能名稱]
@@ -496,7 +573,7 @@ Constitution 要求至少 3 個 edge cases：
   - DoD: README 或 quickstart 已更新；驗收步驟可重現
 ```
 
-### 8.4 任務標記說明
+### 9.4 任務標記說明
 
 | 標記 | 意義 |
 |------|------|
@@ -506,7 +583,7 @@ Constitution 要求至少 3 個 edge cases：
 | `[Risk: High]` | 風險等級 |
 | `Depends on: T001, T002` | 前置相依 |
 
-### 8.5 Definition of Done (DoD) 要求
+### 9.5 Definition of Done (DoD) 要求
 
 每個 task 必須有明確的 DoD，且 DoD 必須：
 - 可驗證（不是「做完了」）
@@ -515,28 +592,29 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
-## 9. 階段 5：一致性分析 (Analyze)
+## 10. 階段 6：一致性分析 (Analyze)
 
-### 9.1 概述
+### 10.1 概述
 
 | 項目 | 內容 |
 |------|------|
 | 觸發命令 | `/speckit.analyze` |
 | 狀態 | 可選（但強烈建議） |
-| 前置條件 | `spec.md` + `plan.md` + `tasks.md` |
+| 前置條件 | `spec.md` + `readiness/readiness-assessment.md` + `plan.md` + `tasks.md` |
 | 輸出 | 分析報告（顯示在 chat，不修改檔案） |
 
-### 9.2 分析項目
+### 10.2 分析項目
 
 | 類別 | 檢查內容 | 範例問題 |
 |------|----------|----------|
 | **Coverage** | 每個 FR/NFR 是否都有對應 task | FR-003 沒有任何 task 實作 |
+| **Governance Gate** | readiness assessment 是否仍允許目前的 plan/tasks 狀態 | readiness 是 `ROUTE_TO_ECI`，但已直接進入 plan/tasks |
 | **Consistency** | 三份文件的術語是否一致 | spec 說「使用者」，plan 說「會員」 |
 | **Completeness** | 是否有遺漏的 edge case | EC-002 沒有對應的錯誤處理 task |
 | **Contradiction** | 是否有衝突的描述 | spec 說 3 個例外，tasks 列 4 個 |
 | **Constitution** | 是否違反憲章規則 | plan 用了被禁止的技術 |
 
-### 9.3 分析報告格式
+### 10.3 分析報告格式
 
 ```markdown
 ## Analyze Report: [功能名稱]
@@ -568,7 +646,7 @@ Constitution 要求至少 3 個 edge cases：
 2. 在 T002 中加入後端密碼強度驗證
 ```
 
-### 9.4 為何要做 Analyze
+### 10.4 為何要做 Analyze
 
 | 情境 | 沒有 Analyze 的後果 |
 |------|---------------------|
@@ -579,9 +657,9 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
-## 10. 階段 6：實作執行 (Implement)
+## 11. 階段 7：實作執行 (Implement)
 
-### 10.1 概述
+### 11.1 概述
 
 | 項目 | 內容 |
 |------|------|
@@ -590,7 +668,7 @@ Constitution 要求至少 3 個 edge cases：
 | 前置條件 | 所有前置文件 + `tasks.md` |
 | 輸出 | `src/` 程式碼 + `tests/` 測試 |
 
-### 10.2 執行流程
+### 11.2 執行流程
 
 1. 檢查 `checklists/` 狀態（如有）。
    - 全部 PASS：繼續。
@@ -600,7 +678,7 @@ Constitution 要求至少 3 個 edge cases：
 4. 每完成一個 task 後建議 commit。
 5. 所有 task 完成後準備 PR。
 
-### 10.3 Checklist 檢查
+### 11.3 Checklist 檢查
 
 如果 `specs/<feature>/checklists/` 存在，implement 會先檢查：
 
@@ -612,7 +690,7 @@ Constitution 要求至少 3 個 edge cases：
 | security.md  | 6     | 6         | 0          | PASS   |
 ```
 
-### 10.4 AI 協作規則（重要）
+### 11.4 AI 協作規則（重要）
 
 | AI 可以做 | AI 不可以做 |
 |-----------|-------------|
@@ -623,7 +701,7 @@ Constitution 要求至少 3 個 edge cases：
 
 **工作流程**：AI 產生程式碼草稿與說明，人工負責審查、執行 `git add/commit`，以及決定是否 push。
 
-### 10.5 實作品質要求
+### 11.5 實作品質要求
 
 | 項目 | 要求 |
 |------|------|
@@ -634,9 +712,9 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
-## 11. Git 工作流程
+## 12. Git 工作流程
 
-### 11.1 Branch Naming
+### 12.1 Branch Naming
 
 格式：`<type>/<short-description>`
 
@@ -648,7 +726,7 @@ Constitution 要求至少 3 個 edge cases：
 | `refactor/` | 重構 | `refactor/payment-service` |
 | `chore/` | 雜項 | `chore/update-dependencies` |
 
-### 11.2 Commit Message Convention
+### 12.2 Commit Message Convention
 
 格式（Conventional Commits + 繁體中文）：
 ```
@@ -667,7 +745,7 @@ Constitution 要求至少 3 個 edge cases：
 | `chore` | 雜項 | `chore: 升級相依套件` |
 | `style` | 格式 | `style: 修正縮排` |
 
-### 11.3 Commit 頻率
+### 12.3 Commit 頻率
 
 | 情境 | 建議 |
 |------|------|
@@ -676,7 +754,7 @@ Constitution 要求至少 3 個 edge cases：
 | 修復 typo | 可與下一個 commit 合併 |
 | 大型重構 | 拆分為多個小 commit |
 
-### 11.4 PR 流程
+### 12.4 PR 流程
 
 ```
 1. 完成所有 tasks
@@ -689,14 +767,16 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
-## 12. 專案資料夾結構
+## 13. 專案資料夾結構
 
-### 12.1 標準結構
+### 13.1 標準結構
 
 | Path | Purpose |
 |------|---------|
 | `.specify/memory/constitution.md` | 專案憲章（可選） |
 | `specs/<feature>/spec.md` | 功能規格 |
+| `specs/<feature>/readiness/` | readiness assessment 與 remediation packet |
+| `specs/<feature>/readiness/eci/` | ECI dossier |
 | `specs/<feature>/plan.md` | 技術計畫 |
 | `specs/<feature>/tasks.md` | 任務分解 |
 | `specs/<feature>/research.md` | 技術調研（可選） |
@@ -709,7 +789,7 @@ Constitution 要求至少 3 個 edge cases：
 | `docs/` | 文件 |
 | `README.md` | 專案說明 |
 
-### 12.2 實際範例（參考 duotify-membership-v1）
+### 13.2 實際範例（參考 duotify-membership-v1）
 
 | Path | Purpose |
 |------|---------|
@@ -723,7 +803,7 @@ Constitution 要求至少 3 個 edge cases：
 | `tests/DuotifyMembership.UnitTests/` | 單元測試 |
 | `tests/DuotifyMembership.IntegrationTests/` | 整合測試 |
 
-### 12.3 多功能專案結構
+### 13.3 多功能專案結構
 
 ```
 project-root/
@@ -735,10 +815,24 @@ project-root/
       user-auth-discovery.md
     001-user-registration/   # 第一個功能
       spec.md
+      readiness/
+        readiness-assessment.md
+        eci/
+          eci-assessment.md
+          source-manifest.md
+          adoption-record.md
+          authorization-record.md
       plan.md
       tasks.md
     002-payment-flow/        # 第二個功能
       spec.md
+      readiness/
+        readiness-assessment.md
+        eci/
+          eci-assessment.md
+          source-manifest.md
+          adoption-record.md
+          authorization-record.md
       plan.md
       tasks.md
   src/
@@ -750,9 +844,9 @@ project-root/
 
 ---
 
-## 13. 常見陷阱與解決方案
+## 14. 常見陷阱與解決方案
 
-### 13.1 需求階段陷阱
+### 14.1 需求階段陷阱
 
 | 陷阱 | 症狀 | 解決方案 |
 |------|------|----------|
@@ -761,7 +855,7 @@ project-root/
 | Edge cases 太少 | 上線後 bug 不斷 | 強制至少 3 個 edge cases |
 | Out of scope 不明確 | 範圍蔓延 | 明確列出「不做什麼」 |
 
-### 13.2 規劃階段陷阱
+### 14.2 規劃階段陷阱
 
 | 陷阱 | 症狀 | 解決方案 |
 |------|------|----------|
@@ -770,7 +864,7 @@ project-root/
 | 不記錄 Why Not | 重複評估被拒絕的方案 | 記錄考慮過但不採用的原因 |
 | 忽略風險 | 專案延期 | 主動識別並記錄風險 |
 
-### 13.3 實作階段陷阱
+### 14.3 實作階段陷阱
 
 | 陷阱 | 症狀 | 解決方案 |
 |------|------|----------|
@@ -779,7 +873,7 @@ project-root/
 | 跳過測試 | 上線後 bug | 每個 FR 至少一個測試 |
 | 累積大量改動 | commit 太大無法 review | 每個 task 完成就 commit |
 
-### 13.4 協作階段陷阱
+### 14.4 協作階段陷阱
 
 | 陷阱 | 症狀 | 解決方案 |
 |------|------|----------|
@@ -790,9 +884,9 @@ project-root/
 
 ---
 
-## 14. 給初階 AI 工程師的建議
+## 15. 給初階 AI 工程師的建議
 
-### 14.1 心態調整
+### 15.1 心態調整
 
 | 錯誤心態 | 正確心態 |
 |----------|----------|
@@ -801,16 +895,16 @@ project-root/
 | 趕時間就跳過 clarify | clarify 的時間投資會省下 10 倍返工 |
 | 文件寫越詳細越好 | 文件寫剛好夠用，太多反而是負擔 |
 
-### 14.2 時間分配建議
+### 15.2 時間分配建議
 
 | 階段 | 時間佔比 | 說明 |
 |------|----------|------|
 | Discover + Specify | 25% | 需求做對比做快重要 |
-| Clarify + Plan | 25% | 設計決定實作品質 |
+| Clarify + Readiness + Plan | 25% | 先確認前提充足，再做技術設計 |
 | Tasks + Analyze | 10% | 規劃可平行執行 |
 | Implement | 40% | 有好的前置工作，實作會很快 |
 
-### 14.3 與 AI Agent 協作技巧
+### 15.3 與 AI Agent 協作技巧
 
 | 技巧 | 說明 |
 |------|------|
@@ -820,7 +914,7 @@ project-root/
 | 善用 handoffs | Agent 之間可以傳遞 context |
 | 質疑不合理的建議 | 如果 AI 的建議看起來怪怪的，追問原因 |
 
-### 14.4 持續改進
+### 15.4 持續改進
 
 專案完成後：
 1. 更新 `studio/knowledge-base/learnings.md`
@@ -830,9 +924,9 @@ project-root/
 
 ---
 
-## 15. 快速啟動 Checklist
+## 16. 快速啟動 Checklist
 
-### 15.1 專案啟動前
+### 16.1 專案啟動前
 
 ```
 [ ] VS Code 1.107+ 已安裝
@@ -843,7 +937,7 @@ project-root/
 [ ] 已閱讀本指南
 ```
 
-### 15.2 SDD 流程
+### 16.2 SDD 流程
 
 ```
 [ ] 執行 /speckit.discover（可選）
@@ -860,6 +954,12 @@ project-root/
 [ ] 執行 /speckit.clarify
     [ ] 回答所有 Critical/High 問題
     [ ] 確認 spec.md 已更新
+
+[ ] 執行 /speckit.readiness
+    [ ] 確認 readiness/readiness-assessment.md 已產生
+    [ ] 若 status = READY_FOR_PLAN，才進入 /speckit.plan
+    [ ] 若 status = ROUTE_TO_ECI，完成 eci-trigger.md、執行 /speckit.eci 產出 dossier 後回跑 /speckit.readiness
+    [ ] 若 ECI 僅授權 sandbox / spike，補對應的 validation/access/decision packet 後再回跑 /speckit.readiness，不得直接進 /speckit.plan
 
 [ ] 執行 /speckit.plan
     [ ] 確認 plan.md 已產生
@@ -882,7 +982,7 @@ project-root/
     [ ] 建立 PR
 ```
 
-### 15.3 專案完成後
+### 16.3 專案完成後
 
 ```
 [ ] 更新 studio/knowledge-base/learnings.md
@@ -893,9 +993,14 @@ project-root/
 
 ---
 
-## 16. 附錄：文件模板
+## 17. 附錄：文件模板
 
-### 16.1 spec.md 模板
+除了本附錄中的三個主模板片段外，`studio/templates/sdd-docs/` 也提供
+`readiness-assessment`、`eci-trigger`、`eci-assessment`、`eci-source-manifest`、
+`eci-adoption-record`、`eci-authorization-record`、`repo-context-packet`、`decision-record`、
+`validation-contract`、`access-setup-checklist` 與 `exploration-boundary` 模板。
+
+### 17.1 spec.md 模板
 
 ```markdown
 # Specification: [功能名稱]
@@ -967,7 +1072,7 @@ project-root/
 | 1.0.0 | YYYY-MM-DD | Initial version |
 ```
 
-### 16.2 plan.md 模板
+### 17.2 plan.md 模板
 
 ```markdown
 # Implementation Plan: [功能名稱]
@@ -1037,7 +1142,7 @@ project-root/
 | 1.0.0 | YYYY-MM-DD | Initial version |
 ```
 
-### 16.3 tasks.md 模板
+### 17.3 tasks.md 模板
 
 ```markdown
 # Tasks: [功能名稱]
