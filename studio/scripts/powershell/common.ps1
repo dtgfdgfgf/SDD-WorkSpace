@@ -204,9 +204,9 @@ This constitution defines project-specific rules that add to the Studio Constitu
 
 ### Delivery Rules
 
-- Follow the mandatory six-stage workflow: specify, clarify, plan, tasks, analyze, implement.
+- Follow the mandatory seven-stage workflow: specify, clarify, readiness, plan, tasks, analyze, implement.
 - Keep `tasks.md` in checklist-first format using `- [ ] T### [P#] [Risk: X] [Story: ...] Description`.
-- Update `spec.md`, `plan.md`, and `tasks.md` together when approved scope changes.
+- Update `spec.md`, readiness artifacts, `plan.md`, and `tasks.md` together when approved scope changes.
 
 ### Documentation Rules
 
@@ -657,6 +657,7 @@ function Get-StudioSharedLayerPaths {
         SHARED_SKILLS_DIR          = Join-Path $workspaceRoot '.github/skills'
         SHARED_SCRIPTS_DIR         = Join-Path $studioRoot 'scripts/powershell'
         SHARED_TEMPLATES_DIR       = Join-Path $studioRoot 'templates'
+        SHARED_RUNTIME_CONTRACT    = Join-Path $studioRoot 'runtime/shared-runtime-contract.json'
         RUNTIME_ROOT               = $runtimeRoot
         RUNTIME_MIRROR_ROOT        = Join-Path $runtimeRoot 'merged'
         SKILL_PACKS_ROOT           = Join-Path $workspaceRoot 'resources/agent-skill-packs'
@@ -719,6 +720,56 @@ function Invoke-JsonScript {
     }
 
     return ($output -join [Environment]::NewLine) | ConvertFrom-Json -AsHashtable
+}
+
+function Invoke-JsonScriptDetailed {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptPath,
+        [string[]]$Arguments = @()
+    )
+
+    $namedParameters = @{}
+    $positionalArguments = @()
+
+    for ($i = 0; $i -lt $Arguments.Count; $i++) {
+        $token = [string]$Arguments[$i]
+        if ($token.StartsWith('-')) {
+            $name = $token.TrimStart('-')
+            if (($i + 1) -lt $Arguments.Count -and -not ([string]$Arguments[$i + 1]).StartsWith('-')) {
+                $namedParameters[$name] = $Arguments[$i + 1]
+                $i++
+            } else {
+                $namedParameters[$name] = $true
+            }
+        } else {
+            $positionalArguments += $token
+        }
+    }
+
+    $output = if ($positionalArguments.Count -gt 0) {
+        & $ScriptPath @namedParameters @positionalArguments
+    } else {
+        & $ScriptPath @namedParameters
+    }
+
+    $exitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
+    $rawOutput = if ($output) { $output -join [Environment]::NewLine } else { $null }
+    $parsedOutput = $null
+
+    if (-not [string]::IsNullOrWhiteSpace($rawOutput)) {
+        try {
+            $parsedOutput = $rawOutput | ConvertFrom-Json -AsHashtable
+        } catch {
+            $parsedOutput = $null
+        }
+    }
+
+    return [ordered]@{
+        EXIT_CODE = $exitCode
+        RAW       = $rawOutput
+        OUTPUT    = $parsedOutput
+    }
 }
 
 function Get-ExtensionAwareRuntimeSources {

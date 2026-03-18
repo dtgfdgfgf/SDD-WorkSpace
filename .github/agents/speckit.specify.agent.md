@@ -3,12 +3,13 @@ description: Create or update the feature specification from a natural language 
 model: claude-opus-4-6
 infer: true
 handoffs: 
-  - label: Build Technical Plan
-    agent: speckit.plan
-    prompt: Create a plan for the spec. 
   - label: Clarify Spec Requirements
     agent: speckit.clarify
     prompt: Clarify specification requirements
+    send: true
+  - label: Assess Implementation Readiness
+    agent: speckit.readiness
+    prompt: Assess whether the current spec is ready for planning.
     send: true
 ---
 
@@ -99,7 +100,7 @@ Given that feature description, do this:
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
        Each criterion must be verifiable without implementation details
     7. Identify Key Entities (if data involved)
-    8. Return: SUCCESS (spec ready for planning)
+    8. Return: SUCCESS (spec ready for clarification and subsequent readiness triage)
 
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
 
@@ -141,7 +142,7 @@ Given that feature description, do this:
       
       ## Notes
       
-      - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`
+       - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.readiness`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
@@ -195,7 +196,7 @@ Given that feature description, do this:
 
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.plan`).
+7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.readiness`).
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

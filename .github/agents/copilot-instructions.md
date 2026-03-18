@@ -6,12 +6,12 @@
   Usage: Copy to project/.specify/templates/ and customize if needed
   
   This file provides AI agents (Copilot, Claude, etc.) with project-specific context.
-  It is auto-generated from feature plans and manually maintained sections.
+  It is auto-generated from feature governance artifacts and manually maintained sections.
   
   Location in project: Place at project root as AGENTS.md or in .specify/
 -->
 
-**Auto-generated from feature plans**  
+**Auto-generated from feature governance artifacts**
 **Last updated**: 2026-01-27
 
 ---
@@ -27,7 +27,7 @@
 ## Active Technologies
 
 <!--
-  Extracted from plan.md files of all features.
+  Extracted from plan.md files and related governance artifacts of all features.
   Update when adding new features or changing tech stack.
 -->
 
@@ -46,12 +46,14 @@
 |------|--------|
 | `project/.specify/memory/constitution.md` | Project constitution |
 | `project/specs/NNN-feature/spec.md` | Feature specification |
+| `project/specs/NNN-feature/readiness/` | Readiness assessment and remediation packets |
+| `project/specs/NNN-feature/readiness/eci/` | ECI dossier artifacts |
 | `project/specs/NNN-feature/plan.md` | Technical plan |
 | `project/specs/NNN-feature/tasks.md` | Task decomposition |
 | `project/src/` | Source code |
 | `project/tests/` | Tests |
 
-<!-- Update with actual structure from plan.md files -->
+<!-- Update with actual structure from feature governance artifacts -->
 
 ---
 
@@ -111,7 +113,8 @@
 
 ### Do
 
-- Follow spec/plan/tasks exactly
+- Follow spec/readiness/eci/plan/tasks exactly
+- Treat ECI dossier files as governed input during readiness re-entry
 - Ask for clarification when ambiguous
 - Reference specific documents when making decisions
 - Flag potential consistency issues
@@ -120,6 +123,7 @@
 
 - Add features not in specification
 - Skip SDD stages
+- Treat sandbox-only or spike-only ECI authorization as permission to plan
 - Assume requirements not explicitly written
 - Hallucinate APIs or data structures
 
@@ -128,8 +132,10 @@
 1. Studio Constitution (`studio/constitution/constitution.md`)
 2. Project Constitution (`.specify/memory/constitution.md`)
 3. Feature Spec (`specs/NNN-feature/spec.md`)
-4. Feature Plan (`specs/NNN-feature/plan.md`)
-5. Feature Tasks (`specs/NNN-feature/tasks.md`)
+4. Feature Readiness (`specs/NNN-feature/readiness/*.md`)
+5. Feature ECI Dossier (`specs/NNN-feature/readiness/eci/*.md`)
+6. Feature Plan (`specs/NNN-feature/plan.md`)
+7. Feature Tasks (`specs/NNN-feature/tasks.md`)
 
 ---
 

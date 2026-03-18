@@ -1,7 +1,7 @@
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.3.0  
+**Version:** 1.4.1
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects, feature packs, and SDD workflows
 
@@ -36,6 +36,7 @@ All projects MUST follow the SDD sequence below without skipping steps:
 
 - /speckit.specify — Create initial specification
 - /speckit.clarify — Resolve ambiguities
+- /speckit.readiness — Triage implementation readiness and emit the minimum remediation packet
 - /speckit.plan — Produce the technical plan
 - /speckit.tasks — Create task decomposition
 - /speckit.analyze — Validate cross-document consistency
@@ -47,7 +48,12 @@ A stage MAY NOT begin until the previous stage is finalized.
 `/speckit.specify`, but it is not mandatory and it is not the only valid input source.
 
 `/speckit.checklist`, `/speckit.constitution`, and `/speckit.taskstoissues` are auxiliary
-commands. They support the workflow but are not part of the six mandatory delivery stages.
+commands. They support the workflow but are not part of the seven mandatory delivery stages.
+
+`/speckit.eci` is a specialized shared runtime command for `ROUTE_TO_ECI` cases. It is not one of
+the seven mandatory delivery stages, but when readiness identifies an external capability blocker,
+teams MUST run `/speckit.eci` with `readiness/eci-trigger.md` before returning to
+`/speckit.readiness`.
 
 ## 3. Specification Requirements (spec.md)
 
@@ -75,9 +81,56 @@ Clarification output MUST:
 - Complete business logic
 - Align expectations with the client
 
-If high-risk ambiguities remain, the project MAY NOT proceed to the planning stage.
+If high-risk ambiguities remain, the project MAY NOT proceed to the readiness or planning stage.
 
-## 5. Technical Plan Requirements (plan.md)
+## 5. Implementation Readiness Requirements (/speckit.readiness)
+
+Readiness output MUST:
+
+- Classify exactly one primary status from:
+  - `READY_FOR_PLAN`
+  - `ROUTE_TO_ECI`
+  - `ROUTE_TO_REPO_CONTEXT`
+  - `ROUTE_TO_DECISION`
+  - `ROUTE_TO_VALIDATION`
+  - `ROUTE_TO_ACCESS`
+  - `EXPLORATORY_ONLY`
+  - `NOT_READY`
+- Write `specs/<feature>/readiness/readiness-assessment.md`
+- Write only the minimum route-specific remediation packet required by the chosen status
+- Explicitly state allowed next actions and prohibited next actions
+- Recommend `/speckit.plan` only when the primary status is `READY_FOR_PLAN`
+
+If readiness status is not `READY_FOR_PLAN`, the project MAY NOT proceed to `/speckit.plan`.
+
+If readiness routes to ECI, the project MUST continue through `/speckit.eci`. `eci-trigger.md`
+remains the intake seed, and the resulting ECI dossier MUST be written under `readiness/eci/`
+before returning to `/speckit.readiness`.
+
+When readiness re-enters after a coherent ECI dossier exists:
+
+- the dossier MUST be treated as governed input, not ignored as if ECI never happened
+- `READY_FOR_MAINLINE_IMPLEMENTATION` means external capability adoption is no longer the primary blocker by itself
+- `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` means readiness MUST route to the next blocker needed to upgrade authorization, typically validation, access, or an owner decision
+- the project MUST NOT fall back to `ROUTE_TO_ECI` again unless the dossier is stale, contradictory, misrouted, or no longer matches current external capability scope
+
+## 5.1 External Capability Intake Requirements (/speckit.eci)
+
+ECI output MUST:
+
+- Accept only features whose readiness primary status is `ROUTE_TO_ECI`
+- Write `specs/<feature>/readiness/eci/eci-assessment.md`
+- Write `specs/<feature>/readiness/eci/source-manifest.md`
+- Write `specs/<feature>/readiness/eci/adoption-record.md`
+- Write `specs/<feature>/readiness/eci/authorization-record.md`
+- Classify exactly one `ECI Level`
+- Classify exactly one `Authorization Outcome`
+- Make readiness re-entry expectations explicit, including what readiness should inspect next and what would require another ECI run
+- Recommend re-running `/speckit.readiness`
+
+`/speckit.eci` MAY NOT directly authorize `/speckit.plan`.
+
+## 6. Technical Plan Requirements (plan.md)
 
 A technical plan MUST include:
 
@@ -90,7 +143,7 @@ A technical plan MUST include:
 - Estimated timeline and effort
 - Document version history
 
-## 6. Task Decomposition Requirements (tasks.md)
+## 7. Task Decomposition Requirements (tasks.md)
 
 Tasks MUST follow:
 
@@ -102,7 +155,7 @@ Tasks MUST follow:
 - Risk level: Low / Medium / High
 - Priority: P1 / P2 / P3
 
-## 7. Consistency Checking (/speckit.analyze)
+## 8. Consistency Checking (/speckit.analyze)
 
 Interpretation rules:
 
@@ -110,16 +163,16 @@ Interpretation rules:
 - Major findings should be fixed before implementation whenever feasible
 - Minor findings are optional at the engineer's discretion
 
-## 8. Implementation Rules
+## 9. Implementation Rules
 
 During implementation:
 
 - Work MUST follow the task list exactly
 - No feature MAY be added unless included in the spec
 - Small-scope TDD MAY be used where beneficial
-- Any specification change MUST update spec/plan/tasks with version bumps
+- Any specification change MUST update spec, readiness artifacts, plan, and tasks with version bumps when those artifacts are affected
 
-## 9. Feature Packs [NOT ACTIVE]
+## 10. Feature Packs [NOT ACTIVE]
 
 > **Status:** This section is NOT ACTIVE. It will be activated when the studio has established reusable service templates from completed projects.
 
@@ -144,7 +197,7 @@ New projects SHOULD start from an appropriate Feature Pack when:
 
 Until Feature Packs are established, projects start from `templates/project-init/` skeleton.
 
-## 10. AI Agent Collaboration Rules
+## 11. AI Agent Collaboration Rules
 
 AI agents MUST operate under the following principles:
 
@@ -152,10 +205,12 @@ AI agents MUST operate under the following principles:
 - Role expectations per SDD stage:
   - specify: express requirements, define boundaries
   - clarify: identify ambiguities and missing information
+  - readiness: classify planning safety, identify the primary blocker, and emit the next-safe packet
+  - eci: govern external capability adoption, source basis, adoption boundary, and authorization
   - plan: assist in technical reasoning
   - tasks: propose decompositions and acceptance criteria
   - implement: assist in generation of code/comments/docs
-- AI MUST follow spec/plan/tasks and MAY NOT hallucinate or assume missing requirements
+- AI MUST follow spec/readiness/eci/plan/tasks and MAY NOT hallucinate or assume missing requirements
 - All AI-generated content MUST be manually reviewed
 - AI MAY NOT skip SDD stages or suggest skipping stages
 
@@ -186,11 +241,11 @@ All AI-generated `.md` files MUST follow these formatting rules:
 | File Type | Emoji Allowed |
 |-----------|---------------|
 | `constitution.md`, `copilot-instructions.md` | NO |
-| `spec.md`, `plan.md`, `tasks.md` | NO |
+| `spec.md`, `readiness/**/*.md`, `plan.md`, `tasks.md` | NO |
 | `README.md`, human-facing docs | YES |
 | `learnings.md`, `retrospective.md` | YES |
 
-## 11. Required Project Structure
+## 12. Required Project Structure
 
 Each project MUST contain these paths:
 
@@ -200,13 +255,15 @@ Each project MUST contain these paths:
 | .github/copilot-instructions.md | GitHub Copilot project context only; not a constitution |
 | CLAUDE.md | Claude project context only; not a constitution |
 | `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/readiness/` | Readiness assessment and route-specific packets |
+| `specs/<feature>/readiness/eci/` | ECI dossier artifacts for external capability governance |
 | `specs/<feature>/plan.md` | Technical plan |
 | `specs/<feature>/tasks.md` | Task breakdown |
 | `src/` | Source code |
 | `docs/` | Documentation |
 | `README.md` | Project overview |
 
-## 12. Governance Rules
+## 13. Governance Rules
 
 ### Dual-Layer Compliance
 
@@ -227,7 +284,7 @@ Projects MUST comply with BOTH:
 
 - Relax or skip any Studio Constitution rules
 - Skip any SDD stage
-- Remove mandatory document sections (spec/plan/tasks)
+- Remove mandatory document sections or required governance artifacts (spec/readiness/eci/plan/tasks)
 - Override AI collaboration principles
 
 ### Conflict Resolution
@@ -243,7 +300,15 @@ constitution.
 - Versioning MUST follow Semantic Versioning
 - Updates to Studio Constitution SHOULD trigger review of related templates
 
-## 13. Knowledge Capture (Mandatory)
+### Shared-Layer Verification
+
+- Shared-layer convergence MUST be validated against studio runtime artifacts, templates, docs, hooks, and shared scripts.
+- `projects/` and `learning/` are consumer spaces and MUST NOT be treated as the default acceptance surface for shared-layer convergence.
+- The primary machine-verifiable shared-layer audit entrypoint is `studio/scripts/powershell/check-speckit-runtime.ps1 -Json`.
+- The final shared-layer closure for readiness / eci MUST treat `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the only machine-verifiable acceptance source.
+- `docs/readiness_source/` MAY remain as design reference material, but it MUST NOT be treated as the canonical runtime acceptance surface.
+
+## 14. Knowledge Capture (Mandatory)
 
 Every completed project MUST include a knowledge capture phase. Requirements vary by project type (see Section 1.1).
 

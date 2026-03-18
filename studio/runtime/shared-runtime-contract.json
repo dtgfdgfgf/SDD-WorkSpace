@@ -1,0 +1,366 @@
+{
+  "requiredCommands": [
+    "speckit.analyze",
+    "speckit.checklist",
+    "speckit.clarify",
+    "speckit.constitution",
+    "speckit.discover",
+    "speckit.eci",
+    "speckit.implement",
+    "speckit.plan",
+    "speckit.readiness",
+    "speckit.specify",
+    "speckit.tasks",
+    "speckit.taskstoissues",
+    "speckit.version"
+  ],
+  "requiredPromptStubs": [
+    "speckit.analyze.prompt.md",
+    "speckit.checklist.prompt.md",
+    "speckit.clarify.prompt.md",
+    "speckit.constitution.prompt.md",
+    "speckit.eci.prompt.md",
+    "speckit.implement.prompt.md",
+    "speckit.plan.prompt.md",
+    "speckit.readiness.prompt.md",
+    "speckit.specify.prompt.md",
+    "speckit.tasks.prompt.md",
+    "speckit.taskstoissues.prompt.md",
+    "speckit.version.prompt.md"
+  ],
+  "requiredMirrorPairs": [
+    {
+      "runtime": ".github/agents/speckit.analyze.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.analyze.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.checklist.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.checklist.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.clarify.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.clarify.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.constitution.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.constitution.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.discover.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.discover.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.eci.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.eci.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.implement.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.implement.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.plan.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.plan.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.readiness.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.readiness.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.specify.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.specify.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.tasks.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.tasks.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.taskstoissues.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.taskstoissues.agent.md"
+    },
+    {
+      "runtime": ".github/agents/speckit.version.agent.md",
+      "mirror": "studio/templates/sdd-agents/speckit.version.agent.md"
+    },
+    {
+      "runtime": ".github/agents/spec-kit.agent.md",
+      "mirror": "studio/templates/sdd-agents/spec-kit.agent.md"
+    },
+    {
+      "runtime": ".github/agents/copilot-instructions.md",
+      "mirror": "studio/templates/sdd-agents/copilot-instructions.md"
+    }
+  ],
+  "requiredDocTemplates": [
+    "agent-file-template.md",
+    "access-setup-checklist-template.md",
+    "checklist-template.md",
+    "decision-record-template.md",
+    "eci-adoption-record-template.md",
+    "eci-assessment-template.md",
+    "eci-authorization-record-template.md",
+    "eci-source-manifest-template.md",
+    "eci-trigger-template.md",
+    "exploration-boundary-template.md",
+    "plan-template.md",
+    "project-constitution-template.md",
+    "readiness-assessment-template.md",
+    "repo-context-packet-template.md",
+    "spec-template.md",
+    "tasks-template.md",
+    "validation-contract-template.md"
+  ],
+  "requiredHooks": [
+    {
+      "id": "pre-commit-wrapper",
+      "path": ".githooks/pre-commit",
+      "mustContainAll": [
+        "pre-commit.ps1"
+      ]
+    },
+    {
+      "id": "pre-commit-script",
+      "path": ".githooks/pre-commit.ps1",
+      "mustContainAll": [
+        "check-speckit-runtime.ps1",
+        "shared runtime audit"
+      ]
+    }
+  ],
+  "docInvariants": [
+    {
+      "id": "readme-seven-stage-sequence",
+      "path": "README.md",
+      "mustContainAll": [
+        "1. `/speckit.specify`",
+        "2. `/speckit.clarify`",
+        "3. `/speckit.readiness`",
+        "4. `/speckit.plan`",
+        "5. `/speckit.tasks`",
+        "6. `/speckit.analyze`",
+        "7. `/speckit.implement`"
+      ]
+    },
+    {
+      "id": "readme-shared-layer-audit",
+      "path": "README.md",
+      "mustContainAll": [
+        "shared-layer convergence 的主要驗收方式是 `check-speckit-runtime.ps1`",
+        "`projects/` 與 `learning/` 是 consumer spaces，不是 shared-layer acceptance surface"
+      ]
+    },
+    {
+      "id": "readme-readiness-closure",
+      "path": "README.md",
+      "mustContainAll": [
+        "`readiness / eci` 的最終 shared-layer 收斂，以 `check-speckit-runtime.ps1 -Json` 為唯一 machine-verifiable acceptance source",
+        "`docs/readiness_source/` 保留為 design reference，不屬於 canonical runtime acceptance surface"
+      ]
+    },
+    {
+      "id": "workspace-structure-contract",
+      "path": "WORKSPACE_STRUCTURE.md",
+      "mustContainAll": [
+        "`studio/runtime/shared-runtime-contract.json`",
+        "`projects/` 與 `learning/` 是 consumer spaces，不是 shared-layer convergence 的預設驗收面",
+        "`check-speckit-runtime.ps1 -Json` 是 shared runtime 的主要機器驗證入口"
+      ]
+    },
+    {
+      "id": "workspace-structure-readiness-closure",
+      "path": "WORKSPACE_STRUCTURE.md",
+      "mustContainAll": [
+        "`readiness / eci` 的最終 shared-layer 收斂，以 `check-speckit-runtime.ps1 -Json` 為唯一 machine-verifiable acceptance source",
+        "`docs/readiness_source/` 保留為 design reference，不屬於 canonical runtime acceptance surface"
+      ]
+    },
+    {
+      "id": "constitution-shared-layer-verification",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "Shared-layer convergence MUST be validated against studio runtime artifacts, templates, docs, hooks, and shared scripts.",
+        "`projects/` and `learning/` are consumer spaces and MUST NOT be treated as the default acceptance surface for shared-layer convergence.",
+        "The primary machine-verifiable shared-layer audit entrypoint is `studio/scripts/powershell/check-speckit-runtime.ps1 -Json`."
+      ]
+    },
+    {
+      "id": "constitution-readiness-closure",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "The final shared-layer closure for readiness / eci MUST treat `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the only machine-verifiable acceptance source.",
+        "`docs/readiness_source/` MAY remain as design reference material, but it MUST NOT be treated as the canonical runtime acceptance surface."
+      ]
+    },
+    {
+      "id": "copilot-shared-layer-audit",
+      "path": ".github/copilot-instructions.md",
+      "mustContainAll": [
+        "For shared-layer convergence work, use `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the primary audit entrypoint.",
+        "Treat `projects/` and `learning/` as consumer spaces, not as the default acceptance surface for shared runtime convergence."
+      ]
+    },
+    {
+      "id": "quickstart-shared-runtime-audit",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "`check-speckit-runtime.ps1`",
+        "shared-layer convergence 的主要驗收方式是 studio runtime audit，不是要求同步治理 consumer project artifacts"
+      ]
+    },
+    {
+      "id": "sdd-guide-eci-runtime",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "`/speckit.eci` 已是 shared runtime command",
+        "`eci-trigger.md` 是 intake seed，不是最終治理終點",
+        "ECI 完成後仍必須回到 `/speckit.readiness` 重新判定下一個 blocker"
+      ]
+    }
+  ],
+  "agentInvariants": [
+    {
+      "id": "readiness-agent-semantics",
+      "path": ".github/agents/speckit.readiness.agent.md",
+      "mustContainAll": [
+        "1. `READY_FOR_PLAN`",
+        "2. `ROUTE_TO_ECI`",
+        "3. `ROUTE_TO_REPO_CONTEXT`",
+        "4. `ROUTE_TO_DECISION`",
+        "5. `ROUTE_TO_VALIDATION`",
+        "6. `ROUTE_TO_ACCESS`",
+        "7. `EXPLORATORY_ONLY`",
+        "8. `NOT_READY`",
+        "write `readiness-assessment.md`",
+        "`eci-trigger.md` is the mandatory intake seed for `/speckit.eci`.",
+        "If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.",
+        "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope."
+      ]
+    },
+    {
+      "id": "eci-agent-semantics",
+      "path": ".github/agents/speckit.eci.agent.md",
+      "mustContainAll": [
+        "`READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`",
+        "`ECI_TRIGGER = READINESS_DIR/eci-trigger.md`",
+        "`Primary Status` is anything other than `ROUTE_TO_ECI`",
+        "`eci-assessment.md`",
+        "`source-manifest.md`",
+        "`adoption-record.md`",
+        "`authorization-record.md`",
+        "### ECI Level",
+        "### Authorization Outcome",
+        "Always recommend `/speckit.readiness` as the next command.",
+        "Never recommend `/speckit.plan` directly from `/speckit.eci`."
+      ]
+    },
+    {
+      "id": "plan-agent-readiness-gate",
+      "path": ".github/agents/speckit.plan.agent.md",
+      "mustContainAll": [
+        "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`",
+        "If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR",
+        "If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR",
+        "ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`"
+      ]
+    },
+    {
+      "id": "analyze-agent-governance-scope",
+      "path": ".github/agents/speckit.analyze.agent.md",
+      "mustContainAll": [
+        "Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, and document drift across the core execution artifacts (`spec.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`)",
+        "Missing `readiness-assessment.md`",
+        "`Primary Status` other than `READY_FOR_PLAN` while `plan.md` or `tasks.md` exists",
+        "Latest readiness status is `ROUTE_TO_VALIDATION`, `ROUTE_TO_ACCESS`, or `ROUTE_TO_DECISION` after ECI re-entry, but `plan.md` or `tasks.md` already exists",
+        "Plan/tasks assumptions that violate ECI `Allowed Implementation Scope`, `Explicit Prohibitions`, or adoption boundary",
+        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality"
+      ]
+    }
+  ],
+  "templateInvariants": [
+    {
+      "id": "readiness-assessment-template-semantics",
+      "path": "studio/templates/sdd-docs/readiness-assessment-template.md",
+      "mustContainAll": [
+        "Create under specs/<feature>/readiness/readiness-assessment.md",
+        "**Primary Status**: `READY_FOR_PLAN | ROUTE_TO_ECI | ROUTE_TO_REPO_CONTEXT | ROUTE_TO_DECISION | ROUTE_TO_VALIDATION | ROUTE_TO_ACCESS | EXPLORATORY_ONLY | NOT_READY`",
+        "If this is a post-ECI rerun, distinguish what is already governed from what still blocks planning",
+        "If this is a post-ECI rerun, explain why external capability governance is no longer the primary blocker or why it still is"
+      ]
+    },
+    {
+      "id": "eci-assessment-template-semantics",
+      "path": "studio/templates/sdd-docs/eci-assessment-template.md",
+      "mustContainAll": [
+        "**Linked Trigger**: [path to readiness/eci-trigger.md]",
+        "**ECI Level**: `NO_ECI | LIGHT_ECI | STANDARD_ECI | CRITICAL_ECI`",
+        "**Recommended Authorization**: `READY_FOR_MAINLINE_IMPLEMENTATION | READY_FOR_SPIKE_ONLY | READY_FOR_SANDBOX_ONLY | NOT_READY`",
+        "## Return To Readiness"
+      ]
+    },
+    {
+      "id": "eci-authorization-template-semantics",
+      "path": "studio/templates/sdd-docs/eci-authorization-record-template.md",
+      "mustContainAll": [
+        "**Authorization Outcome**: `READY_FOR_MAINLINE_IMPLEMENTATION | READY_FOR_SPIKE_ONLY | READY_FOR_SANDBOX_ONLY | NOT_READY`",
+        "## Explicit Prohibitions",
+        "## Evidence Required To Upgrade Authorization",
+        "## Return To Readiness"
+      ]
+    },
+    {
+      "id": "validation-contract-template-semantics",
+      "path": "studio/templates/sdd-docs/validation-contract-template.md",
+      "mustContainAll": [
+        "## Claims That Require Evidence",
+        "If this contract follows an ECI sandbox/spike authorization",
+        "## Return Condition"
+      ]
+    },
+    {
+      "id": "eci-trigger-template-semantics",
+      "path": "studio/templates/sdd-docs/eci-trigger-template.md",
+      "mustContainAll": [
+        "This file is the intake seed for /speckit.eci and should be created before running that command",
+        "After the ECI dossier exists, the latest authoritative state lives in readiness-assessment.md plus readiness/eci/*.md, not in this trigger alone.",
+        "Mainline implementation MUST NOT begin until `/speckit.eci` has produced the dossier and readiness is re-run."
+      ]
+    }
+  ],
+  "scriptInvariants": [
+    {
+      "id": "check-prerequisites-readiness-awareness",
+      "path": "studio/scripts/powershell/check-prerequisites.ps1",
+      "mustContainAll": [
+        "-PathsOnly          Only output path variables (no validation; used by readiness/eci/plan gate checks)",
+        "# Get feature paths only (used by clarify/readiness/eci/plan gate logic)"
+      ]
+    },
+    {
+      "id": "setup-hooks-readiness-awareness",
+      "path": "studio/scripts/powershell/setup-hooks.ps1",
+      "mustContainAll": [
+        "shared runtime audit",
+        "readiness/**/*.md"
+      ]
+    }
+  ],
+  "sharedGatePaths": [
+    ".github/agents/",
+    ".github/prompts/",
+    ".github/copilot-instructions.md",
+    ".githooks/pre-commit",
+    ".githooks/pre-commit.ps1",
+    "studio/constitution/",
+    "studio/runtime/shared-runtime-contract.json",
+    "studio/templates/project-init/README.md",
+    "studio/templates/sdd-agents/",
+    "studio/templates/sdd-docs/",
+    "studio/QUICKSTART.md",
+    "studio/SDD-QUICKSTART-GUIDE.md",
+    "WORKSPACE_STRUCTURE.md",
+    "README.md",
+    "studio/scripts/powershell/check-prerequisites.ps1",
+    "studio/scripts/powershell/check-speckit-runtime.ps1",
+    "studio/scripts/powershell/setup-hooks.ps1",
+    "studio/scripts/powershell/upgrade-studio-runtime.ps1"
+  ]
+}

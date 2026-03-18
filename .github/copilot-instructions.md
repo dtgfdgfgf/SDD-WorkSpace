@@ -40,21 +40,30 @@ Priority rules:
 - Agent context files summarize or operationalize the rules; they are not constitutions.
 - If any conflict exists, Studio Constitution wins.
 
+## Shared-Layer Audit
+
+- For shared-layer convergence work, use `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the primary audit entrypoint.
+- Treat `projects/` and `learning/` as consumer spaces, not as the default acceptance surface for shared runtime convergence.
+
 ## Mandatory Workflow
 
 All delivery work MUST follow this sequence:
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
-3. `/speckit.plan`
-4. `/speckit.tasks`
-5. `/speckit.analyze`
-6. `/speckit.implement`
+3. `/speckit.readiness`
+4. `/speckit.plan`
+5. `/speckit.tasks`
+6. `/speckit.analyze`
+7. `/speckit.implement`
 
 Workflow support:
 
 - `/speckit.discover` is an optional pre-spec aid for messy or incomplete inputs.
 - `/speckit.checklist`, `/speckit.constitution`, and `/speckit.taskstoissues` are auxiliary commands.
+- `/speckit.eci` is the specialized shared runtime command for `ROUTE_TO_ECI` cases. It consumes `readiness/eci-trigger.md`, writes `readiness/eci/*.md`, and then returns control to `/speckit.readiness`.
+- Completing `/speckit.eci` does not authorize planning by itself. Only the latest `readiness-assessment.md` can authorize `/speckit.plan`.
+- If ECI authorization remains sandbox-only or spike-only, readiness should shift to the next blocker such as validation, access, or a real owner decision instead of repeating `ROUTE_TO_ECI`.
 
 ## Project Structure
 
@@ -64,6 +73,8 @@ Workflow support:
 | `<project>/.github/copilot-instructions.md` | Copilot-specific project context |
 | `<project>/CLAUDE.md` | Claude-specific project context |
 | `<project>/specs/<feature>/spec.md` | Feature specification |
+| `<project>/specs/<feature>/readiness/` | Readiness assessment and remediation packets |
+| `<project>/specs/<feature>/readiness/eci/` | ECI dossier artifacts for governed external capabilities |
 | `<project>/specs/<feature>/plan.md` | Technical plan |
 | `<project>/specs/<feature>/tasks.md` | Task decomposition |
 | `<project>/specs/<feature>/contracts/` | Markdown or machine-readable service contracts |
@@ -111,7 +122,7 @@ Keep these in English:
 
 Use Chinese where it improves operator clarity:
 
-- `spec.md`, `plan.md`, `tasks.md`
+- `spec.md`, `readiness/**/*.md`, `plan.md`, `tasks.md`
 - User-facing documentation
 - Learning records and retrospectives
 - Business-context comments
@@ -153,6 +164,9 @@ Recommended types:
 Never:
 
 - Skip an SDD stage
+- Run `/speckit.plan` without a `READY_FOR_PLAN` readiness assessment
+- Treat `/speckit.eci` as direct authorization for planning without re-running `/speckit.readiness`
+- Treat `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` ECI authorization as sufficient for planning
 - Treat `.github/copilot-instructions.md` or `CLAUDE.md` as the project constitution
 - Invent requirements that are not in the spec or clarified outputs
 - Add features outside the approved scope
@@ -162,8 +176,8 @@ Never:
 
 Always:
 
-- Resolve ambiguity before planning or implementation
-- Reference spec, plan, tasks, and constitutions when making changes
+- Resolve ambiguity before readiness, planning, or implementation
+- Reference spec, readiness, plan, tasks, and constitutions when making changes
 - Flag document drift and missing updates
 - Preserve the studio-first centralized runtime model
 - Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources

@@ -7,7 +7,7 @@
   Target locations may include .github/copilot-instructions.md, CLAUDE.md, AGENTS.md, or similar.
 -->
 
-**Auto-generated from feature plans**  
+**Auto-generated from feature governance artifacts**
 **Last updated**: [DATE]
 
 ## Governance Reference
@@ -44,6 +44,8 @@ rules, not replace them.
 | `project/.github/copilot-instructions.md` | Copilot project context |
 | `project/CLAUDE.md` | Claude project context |
 | `project/specs/NNN-feature/spec.md` | Feature specification |
+| `project/specs/NNN-feature/readiness/` | Readiness assessment and remediation packets |
+| `project/specs/NNN-feature/readiness/eci/` | ECI dossier artifacts |
 | `project/specs/NNN-feature/plan.md` | Technical plan |
 | `project/specs/NNN-feature/tasks.md` | Task decomposition |
 | `project/specs/NNN-feature/contracts/` | Markdown or machine-readable contracts |
@@ -93,7 +95,8 @@ rules, not replace them.
 
 ### Do
 
-- Follow spec, plan, tasks, and constitutions exactly
+- Follow spec, readiness, ECI dossier, plan, tasks, and constitutions exactly
+- Treat ECI dossier files as governed input during readiness re-entry
 - Ask for clarification when ambiguous
 - Reference the specific document that supports a decision
 - Flag document drift and consistency issues
@@ -102,6 +105,7 @@ rules, not replace them.
 
 - Add features not in the specification
 - Skip SDD stages
+- Treat sandbox-only or spike-only ECI authorization as permission to plan
 - Treat this file as the project constitution
 - Hallucinate APIs, data structures, or business logic
 

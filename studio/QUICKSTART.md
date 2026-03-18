@@ -42,25 +42,31 @@ code projects/studio-automation/studio-automation.code-workspace
 
 | 類型 | 目標目錄 | SDD 嚴謹度 | 知識記錄 |
 |------|----------|------------|----------|
-| `Practice` | `learning/` | 完整六階段 | 更新 `studio/knowledge-base/learnings.md` |
-| `Internal` | `projects/` | 完整六階段 | `retrospective.md` 必要 |
-| `Client` | `projects/` | 完整六階段加審核門檻 | `retrospective.md` 必要 |
+| `Practice` | `learning/` | 完整七階段 | 更新 `studio/knowledge-base/learnings.md` |
+| `Internal` | `projects/` | 完整七階段 | `retrospective.md` 必要 |
+| `Client` | `projects/` | 完整七階段加審核門檻 | `retrospective.md` 必要 |
 
-## 六階段工作流程
+## 七階段工作流程
 
 所有交付工作都必須依序執行：
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
-3. `/speckit.plan`
-4. `/speckit.tasks`
-5. `/speckit.analyze`
-6. `/speckit.implement`
+3. `/speckit.readiness`
+4. `/speckit.plan`
+5. `/speckit.tasks`
+6. `/speckit.analyze`
+7. `/speckit.implement`
 
 補充規則：
 
 - `/speckit.discover` 是可選的 pre-spec 輔助步驟。
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令。
+- `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段。
+- `/speckit.readiness` 是 plan 前的治理閘門；沒有 `READY_FOR_PLAN` 就不得進入 `/speckit.plan`。
+- external capability 問題在 `ROUTE_TO_ECI` 時必須透過 `/speckit.eci` 處理，`eci-trigger.md` 是 intake seed，正式 dossier 會寫入 `readiness/eci/`。
+- `/speckit.eci` 完成後仍必須回到 `/speckit.readiness`；只有最新 readiness 狀態是 `READY_FOR_PLAN` 才能進 `/speckit.plan`。
+- 若 ECI 只授權 sandbox / spike，readiness 應轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，而不是重複 `ROUTE_TO_ECI`。
 
 各階段主要產物：
 
@@ -68,6 +74,7 @@ code projects/studio-automation/studio-automation.code-workspace
 |------|----------|------|
 | `specify` | `spec.md` | 需求、邊界、edge cases、success criteria |
 | `clarify` | 更新後的 `spec.md` | 消除模糊與缺口 |
+| `readiness` | `readiness/readiness-assessment.md` | 判斷是否可安全進入規劃，必要時輸出 remediation packet |
 | `plan` | `plan.md` | 技術決策、風險、contracts、data flow |
 | `tasks` | `tasks.md` | checklist-first 任務分解 |
 | `analyze` | 分析結果 | 驗證 spec、plan、tasks 是否一致 |
@@ -88,6 +95,8 @@ code projects/studio-automation/studio-automation.code-workspace
 | 初始化 | `init-project.ps1 -Name <name> -Type Client` | 建立 Client 專案 |
 | 主流程 | `/speckit.specify <描述>` | 建立規格 |
 | 主流程 | `/speckit.clarify` | 釐清需求 |
+| 主流程 | `/speckit.readiness` | 進行前規劃 readiness triage |
+| 支線 | `/speckit.eci` | 處理 `ROUTE_TO_ECI` 的 external capability governance |
 | 主流程 | `/speckit.plan` | 產生技術計畫 |
 | 主流程 | `/speckit.tasks` | 產生任務分解 |
 | 主流程 | `/speckit.analyze` | 一致性分析 |
@@ -105,6 +114,8 @@ code projects/studio-automation/studio-automation.code-workspace
 | `.github/copilot-instructions.md` | GitHub Copilot 專案 context，不是 constitution |
 | `CLAUDE.md` | Claude 專案 context，不是 constitution |
 | `specs/<feature>/spec.md` | 規格文件 |
+| `specs/<feature>/readiness/` | readiness assessment 與 route packet |
+| `specs/<feature>/readiness/eci/` | ECI dossier |
 | `specs/<feature>/plan.md` | 技術計畫 |
 | `specs/<feature>/tasks.md` | 任務分解 |
 | `specs/<feature>/contracts/` | Markdown 或 machine-readable contracts |
@@ -161,11 +172,11 @@ Internal / Client 專案完成後：
 
 ### 我可以跳過某個 SDD 階段嗎？
 
-不行。六階段是強制流程。
+不行。七階段是強制流程。
 
 ### 如果需求中途變更怎麼辦？
 
-依序更新 `spec.md`、`plan.md`、`tasks.md`，並遞增版本號。
+依序更新 `spec.md`、`readiness/*.md`、`readiness/eci/*.md`、`plan.md`、`tasks.md`，並在受影響文件上遞增版本號。
 
 ### 如何啟用 Git hooks？
 
@@ -173,9 +184,20 @@ Internal / Client 專案完成後：
 git config core.hooksPath .githooks
 ```
 
+### 如何驗證 shared runtime？
+
+使用 `check-speckit-runtime.ps1` 作為 shared-layer 的主要驗證腳本：
+
+```powershell
+.\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
+```
+
+shared-layer convergence 的主要驗收方式是 studio runtime audit，不是要求同步治理 consumer project artifacts。
+
 ## 下一步
 
 1. 建立一個新專案。
 2. 準備 feature 描述。
 3. 從 `/speckit.specify` 開始。
-4. 完成後更新 learnings 或 retrospective。
+4. 完成 `/speckit.clarify` 後執行 `/speckit.readiness`。
+5. 完成後更新 learnings 或 retrospective。

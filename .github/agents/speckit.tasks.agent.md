@@ -52,7 +52,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Phase 3+: One phase per user story (in priority order from spec.md)
    - Each phase includes: story goal, independent test criteria, tests (if requested), implementation tasks
    - Final Phase: Polish & cross-cutting concerns
-   - All tasks must follow the strict checklist format (see Task Generation Rules below)
+   - All tasks must follow the strict checklist format from `studio/templates/sdd-docs/tasks-template.md` and any stricter project constitution rules (see Task Generation Rules below)
    - Clear file paths for each task
    - Dependencies section showing story completion order
    - Parallel execution examples per story
@@ -64,7 +64,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Parallel opportunities identified
    - Independent test criteria for each story
    - Suggested MVP scope (typically just User Story 1)
-   - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
+   - Format validation: Confirm ALL tasks follow the checklist format (checkbox, task ID, priority label, risk label, story label, file paths)
 
 Context for task generation: $ARGUMENTS
 
@@ -78,35 +78,43 @@ The tasks.md should be immediately executable - each task must be specific enoug
 
 ### Checklist Format (REQUIRED)
 
+If the project constitution or `studio/templates/sdd-docs/tasks-template.md` defines stricter task metadata than this generic workflow, follow the constitution/template as the canonical source.
+
 Every task MUST strictly follow this format:
 
 ```text
-- [ ] [TaskID] [P?] [Story?] Description with file path
+- [ ] T### [P#] [Risk: X] [Story: ...] Description with file path
 ```
 
 **Format Components**:
 
 1. **Checkbox**: ALWAYS start with `- [ ]` (markdown checkbox)
 2. **Task ID**: Sequential number (T001, T002, T003...) in execution order
-3. **[P] marker**: Include ONLY if task is parallelizable (different files, no dependencies on incomplete tasks)
-4. **[Story] label**: REQUIRED for user story phase tasks only
-   - Format: [US1], [US2], [US3], etc. (maps to user stories from spec.md)
-   - Setup phase: NO story label
-   - Foundational phase: NO story label  
-   - User Story phases: MUST have story label
-   - Polish phase: NO story label
-5. **Description**: Clear action with exact file path
+3. **Priority label**: REQUIRED on every task
+   - Format: `[P1]`, `[P2]`, `[P3]`
+   - Represents delivery priority, not parallelism
+4. **Risk label**: REQUIRED on every task
+   - Format: `[Risk: Low]`, `[Risk: Medium]`, `[Risk: High]`
+5. **Story label**: REQUIRED on every task
+   - Format: `[Story: Foundation]`, `[Story: US1]`, `[Story: US2]`, `[Story: US3]`, `[Story: Polish]`
+   - Setup / Foundational tasks should typically use `Foundation`
+   - User Story phases must map to the corresponding user story ID from `spec.md`
+   - Final Phase tasks should typically use `Polish`
+6. **Description**: Clear action with exact file path
+7. **Parallelism**: DO NOT encode parallel execution in the checklist line
+   - Capture it in `Dependencies`, `Parallel Execution Examples`, or an optional follow-up line such as `Parallel with: T0xx, T0yy`
 
 **Examples**:
 
-- ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
-- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py`
-- ✅ CORRECT: `- [ ] T012 [P] [US1] Create User model in src/models/user.py`
-- ✅ CORRECT: `- [ ] T014 [US1] Implement UserService in src/services/user_service.py`
-- ❌ WRONG: `- [ ] Create User model` (missing ID and Story label)
-- ❌ WRONG: `T001 [US1] Create model` (missing checkbox)
-- ❌ WRONG: `- [ ] [US1] Create User model` (missing Task ID)
-- ❌ WRONG: `- [ ] T001 [US1] Create model` (missing file path)
+- ✅ CORRECT: `- [ ] T001 [P1] [Risk: Low] [Story: Foundation] Create project structure per implementation plan in src/ and tests/`
+- ✅ CORRECT: `- [ ] T005 [P1] [Risk: Medium] [Story: Foundation] Implement authentication middleware in src/middleware/auth.py`
+- ✅ CORRECT: `- [ ] T012 [P1] [Risk: Medium] [Story: US1] Create User model in src/models/user.py`
+- ✅ CORRECT: `- [ ] T014 [P1] [Risk: Medium] [Story: US1] Implement UserService in src/services/user_service.py`
+- ❌ WRONG: `- [ ] Create User model` (missing task ID, priority, risk, story label)
+- ❌ WRONG: `T001 [US1] Create model` (missing checkbox, priority, risk, story label)
+- ❌ WRONG: `- [ ] T001 [US1] Create User model` (missing priority, risk, canonical story label prefix)
+- ❌ WRONG: `- [ ] T001 [P] [US1] Create model` (uses parallel marker instead of priority/risk format)
+- ❌ WRONG: `- [ ] T001 [P1] [Risk: Medium] [Story: US1] Create model` (missing file path)
 
 ### Task Organization
 
@@ -120,8 +128,8 @@ Every task MUST strictly follow this format:
    - Mark story dependencies (most stories should be independent)
 
 2. **From Contracts**:
-   - Map each contract/endpoint → to the user story it serves
-   - If tests requested: Each contract → contract test task [P] before implementation in that story's phase
+    - Map each contract/endpoint → to the user story it serves
+    - If tests requested: Each contract → contract test task before implementation in that story's phase; note parallel opportunities outside the checklist line
 
 3. **From Data Model**:
    - Map each entity to the user story(ies) that need it

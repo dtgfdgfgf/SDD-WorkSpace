@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.3.0  
+**Version:** 1.4.1
 **Created:** 2025-12-08  
-**Updated:** 2026-03-08  
+**Updated:** 2026-03-18
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -40,6 +40,7 @@ Design priorities:
 | Path | Purpose |
 |------|---------|
 | `studio/constitution/constitution.md` | Highest-authority studio governance |
+| `studio/runtime/shared-runtime-contract.json` | Machine-verifiable shared runtime contract for studio-only convergence |
 | `studio/extensions/` | Canonical shared extension source, manifest schema, catalog, and state |
 | `studio/templates/project-init/` | Project bootstrap skeleton |
 | `studio/templates/sdd-docs/` | Canonical document templates |
@@ -59,6 +60,8 @@ Each project is expected to contain:
 | `.github/copilot-instructions.md` | GitHub Copilot project context |
 | `CLAUDE.md` | Claude project context |
 | `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/readiness/` | Readiness assessment and route-specific packets |
+| `specs/<feature>/readiness/eci/` | ECI dossier artifacts for external capability governance |
 | `specs/<feature>/plan.md` | Technical plan |
 | `specs/<feature>/tasks.md` | Task decomposition |
 | `specs/<feature>/contracts/` | Markdown or machine-readable service contracts |
@@ -109,6 +112,18 @@ Rules:
 ecosystems. These exports are mirrors built from `.github/agents/` and `.github/prompts/`; they are
 not a new source of truth and should be regenerated rather than edited by hand.
 
+`readiness-assessment.md` remains the latest authoritative gate state for each feature. The
+`readiness/eci/` dossier is supporting governance input during post-ECI re-entry and does not
+replace the requirement to re-run readiness before planning.
+
+### 4.1 Shared-Layer Convergence Acceptance
+
+- `projects/` 與 `learning/` 是 consumer spaces，不是 shared-layer convergence 的預設驗收面
+- shared-layer convergence 的 DOD 只看 studio runtime、templates、docs、hooks 與 shared scripts
+- `check-speckit-runtime.ps1 -Json` 是 shared runtime 的主要機器驗證入口
+- `readiness / eci` 的最終 shared-layer 收斂，以 `check-speckit-runtime.ps1 -Json` 為唯一 machine-verifiable acceptance source
+- `docs/readiness_source/` 保留為 design reference，不屬於 canonical runtime acceptance surface
+
 ### 5. Template Strategy
 
 Studio templates are the default baseline. Projects may add local overrides under
@@ -119,6 +134,17 @@ Key template paths:
 | Path | Purpose |
 |------|---------|
 | `studio/templates/sdd-docs/spec-template.md` | Specification template |
+| `studio/templates/sdd-docs/readiness-assessment-template.md` | Readiness assessment template |
+| `studio/templates/sdd-docs/eci-assessment-template.md` | ECI assessment template |
+| `studio/templates/sdd-docs/eci-source-manifest-template.md` | ECI source manifest template |
+| `studio/templates/sdd-docs/eci-adoption-record-template.md` | ECI adoption record template |
+| `studio/templates/sdd-docs/eci-authorization-record-template.md` | ECI authorization record template |
+| `studio/templates/sdd-docs/repo-context-packet-template.md` | Repo context packet template |
+| `studio/templates/sdd-docs/decision-record-template.md` | Decision record template |
+| `studio/templates/sdd-docs/validation-contract-template.md` | Validation contract template |
+| `studio/templates/sdd-docs/access-setup-checklist-template.md` | Access setup checklist template |
+| `studio/templates/sdd-docs/eci-trigger-template.md` | ECI trigger template |
+| `studio/templates/sdd-docs/exploration-boundary-template.md` | Exploration boundary template |
 | `studio/templates/sdd-docs/plan-template.md` | Plan template |
 | `studio/templates/sdd-docs/tasks-template.md` | Checklist-first task template |
 | `studio/templates/sdd-docs/checklist-template.md` | Checklist template |
@@ -151,7 +177,7 @@ the new project classification scheme for fresh practice work.
 | Type | Convention | Example |
 |------|------------|---------|
 | Feature directory | `NNN-kebab-case` | `001-user-registration` |
-| SDD docs | `lowercase.md` | `spec.md`, `plan.md`, `tasks.md` |
+| SDD docs | `lowercase.md` | `spec.md`, `readiness-assessment.md`, `eci-trigger.md`, `eci-assessment.md`, `source-manifest.md`, `adoption-record.md`, `authorization-record.md`, `plan.md`, `tasks.md` |
 | Templates | `kebab-case-template.md` | `spec-template.md` |
 | Prompts | descriptive kebab-case | `clarify-ambiguity.md` |
 | Extensions | `kebab-case` | `security-gates`, `client-review` |
@@ -170,6 +196,8 @@ the new project classification scheme for fresh practice work.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4.1 | 2026-03-18 | Add post-ECI readiness re-entry semantics and clarify that `readiness-assessment.md` remains the latest gate authority |
+| 1.4.0 | 2026-03-18 | Promote `/speckit.eci` to shared runtime and add `readiness/eci/` dossier artifacts |
 | 1.3.0 | 2026-03-08 | Add shared extension registry foundations under `studio/extensions/` |
 | 1.2.0 | 2026-03-08 | Add generated AI skill pack export path as a non-canonical shared artifact |
 | 1.1.0 | 2026-03-07 | Align studio-first runtime sources, constitution paths, and project initialization rules |

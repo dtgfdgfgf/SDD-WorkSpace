@@ -169,12 +169,24 @@ if ($Apply) {
 
     $tempSkillsOut = Join-Path $env:TEMP ('studio-runtime-skill-smoke-' + [guid]::NewGuid().ToString('N'))
     $tempMirrorOut = Join-Path $env:TEMP ('studio-runtime-extension-smoke-' + [guid]::NewGuid().ToString('N'))
+    $runtimeCheckDetailed = Invoke-JsonScriptDetailed -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'check-speckit-runtime.ps1') -Arguments @('-Json')
+    $runtimeAuditFailed = ($runtimeCheckDetailed.EXIT_CODE -ne 0 -or -not $runtimeCheckDetailed.OUTPUT -or -not $runtimeCheckDetailed.OUTPUT.VALID)
 
     $verification = [ordered]@{
         version        = Invoke-JsonScript -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'get-speckit-version.ps1') -Arguments @('-Json')
-        runtimeCheck   = Invoke-JsonScript -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'check-speckit-runtime.ps1') -Arguments @('-Json')
-        skillsExport   = Invoke-JsonScript -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'export-agent-skills.ps1') -Arguments @('-Target', 'codex', '-OutputDir', $tempSkillsOut, '-Force', '-Json')
-        extensionExport = Invoke-JsonScript -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'export-extensions.ps1') -Arguments @('-OutputDir', $tempMirrorOut, '-Force', '-Json')
+        runtimeCheckExitCode = $runtimeCheckDetailed.EXIT_CODE
+        runtimeCheck   = $runtimeCheckDetailed.OUTPUT
+        runtimeCheckRaw = $runtimeCheckDetailed.RAW
+        skillsExport   = $null
+        extensionExport = $null
+    }
+
+    if (-not $runtimeAuditFailed) {
+        $verification.skillsExport = Invoke-JsonScript -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'export-agent-skills.ps1') -Arguments @('-Target', 'codex', '-OutputDir', $tempSkillsOut, '-Force', '-Json')
+        $verification.extensionExport = Invoke-JsonScript -ScriptPath (Join-Path $paths.SHARED_SCRIPTS_DIR 'export-extensions.ps1') -Arguments @('-OutputDir', $tempMirrorOut, '-Force', '-Json')
+    } else {
+        $verification.runtimeAuditStatus = 'failed'
+        $verification.runtimeAuditFailure = 'Shared runtime contract audit failed after apply; smoke exports were skipped.'
     }
 }
 
@@ -191,6 +203,17 @@ $result = [ordered]@{
 
 if ($Apply) {
     Write-JsonFile -Path $reportPath -Data $result -Depth 10
+
+    if (
+        $verification -and (
+            $verification.runtimeCheckExitCode -ne 0 -or
+            -not $verification.runtimeCheck -or
+            -not $verification.runtimeCheck.VALID
+        )
+    ) {
+        Write-Error ("Shared runtime contract audit failed after apply. Review report: {0}" -f $reportPath)
+        exit 1
+    }
 }
 
 if ($Json) {
