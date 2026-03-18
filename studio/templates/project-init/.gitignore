@@ -1,0 +1,86 @@
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.*
+!.env.example
+*.local
+
+# ===========================
+# Node.js
+# ===========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===========================
+# Python
+# ===========================
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===========================
+# .NET / Visual Studio
+# ===========================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+.vs/
+*.user
+*.suo
+*.cache
+packages/
+*.nupkg
+
+# ===========================
+# IDE & Editors
+# ===========================
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================
+# OS Generated
+# ===========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ===========================
+# Build & Deploy
+# ===========================
+dist/
+build/
+out/
+.vercel/
+.netlify/
+
+# ===========================
+# Logs
+# ===========================
+*.log
+logs/
+
+# ===========================
+# AI Tools Local Settings
+# ===========================
+.claude/settings.local.json
+
+# ===========================
+# Temporary Files
+# ===========================
+*.tmp
+*.temp
+*.bak
