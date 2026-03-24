@@ -58,6 +58,7 @@
 | `studio/extensions/` | workspace 級 extension registry |
 | `learning/` | Practice projects |
 | `projects/` | Internal / Client / sample projects |
+| `docs/project-governance-status.md` | 專案治理相容性中央台帳 |
 | `resources/` | 共享資源與匯出產物 |
 | `archive/` | 歷史或封存內容 |
 | `WORKSPACE_STRUCTURE.md` | 工作區結構設計說明 |
@@ -198,6 +199,7 @@ code projects/studio-automation/studio-automation.code-workspace
 ## 延伸閱讀
 
 - `WORKSPACE_STRUCTURE.md`
+- `docs/project-governance-status.md`
 - `studio/QUICKSTART.md`
 - `studio/SDD-QUICKSTART-GUIDE.md`
 - `studio/constitution/constitution.md`

@@ -29,6 +29,7 @@ Design priorities:
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `learning/<project>/` | Practice projects |
 | `projects/<project>/` | Internal, Client, and historical sample projects |
+| `docs/project-governance-status.md` | Central governance compatibility ledger for consumer projects |
 | `archive/` | Archived or deprecated items |
 | `resources/` | Shared resources |
 | `resources/agent-skill-packs/` | Generated AI skill packs exported from shared runtime sources |
@@ -187,6 +188,7 @@ the new project classification scheme for fresh practice work.
 | Document | Purpose |
 |----------|---------|
 | `studio/constitution/constitution.md` | Governance baseline |
+| `docs/project-governance-status.md` | Central project governance compatibility ledger |
 | `.github/copilot-instructions.md` | Workspace AI collaboration rules |
 | `studio/QUICKSTART.md` | Fast-start instructions |
 | `studio/SDD-QUICKSTART-GUIDE.md` | Full workflow guide |

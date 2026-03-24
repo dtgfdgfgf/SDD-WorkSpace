@@ -25,6 +25,7 @@ code <project-name>.code-workspace
 | `.specify/memory/constitution.md` | Project-level canonical constitution |
 | `.github/copilot-instructions.md` | Copilot project context if generated later |
 | `CLAUDE.md` | Claude project context if generated later |
+| `docs/governance-status.md` | Project-local governance compatibility notice |
 | `specs/<feature>/spec.md` | Feature specification |
 | `specs/<feature>/readiness/` | Readiness assessment and route packets (created on first readiness run) |
 | `specs/<feature>/readiness/eci/` | ECI dossier (created only for `ROUTE_TO_ECI` features) |
@@ -59,6 +60,13 @@ This project follows the dual-layer constitution system:
 Project agent context files such as `.github/copilot-instructions.md` and `CLAUDE.md` may be
 generated later, but they do not replace `.specify/memory/constitution.md`.
 
+## Governance Status
+
+New projects created from this template default to `Current` under the shared `readiness` / `eci`
+workflow baseline introduced on 2026-03-18. See `docs/governance-status.md` for the project-local
+compatibility notice and `../../docs/project-governance-status.md` for the central ledger in the
+workspace governance repo.
+
 ## Knowledge Capture
 
 > Complete this section when the project is done.
@@ -72,4 +80,5 @@ generated later, but they do not replace `.specify/memory/constitution.md`.
 - Studio Constitution: `studio/constitution/constitution.md`
 - Workspace Structure: `WORKSPACE_STRUCTURE.md`
 - Project Constitution: `.specify/memory/constitution.md`
+- Governance Status Notice: `docs/governance-status.md`
 - AI Collaboration Context: `.github/copilot-instructions.md`
