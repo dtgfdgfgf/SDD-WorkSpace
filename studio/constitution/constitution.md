@@ -1,7 +1,7 @@
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.4.1
+**Version:** 1.5.0
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects, feature packs, and SDD workflows
 
@@ -71,6 +71,11 @@ Each specification MUST include:
 
 Specifications MUST avoid vague terms ("smart", "fast", "good UI") unless defined concretely.
 
+Core spec items are any requirements, primary scenarios, success criteria, or explicitly named
+capabilities that materially define the promised feature surface. Minor internal decomposition or
+purely local implementation detail changes do not trigger intent-ledger requirements by
+themselves.
+
 ## 4. Clarification Requirements (/speckit.clarify)
 
 Clarification output MUST:
@@ -98,10 +103,17 @@ Readiness output MUST:
   - `NOT_READY`
 - Write `specs/<feature>/readiness/readiness-assessment.md`
 - Write only the minimum route-specific remediation packet required by the chosen status
+- Keep the primary judgment focused on planning safety rather than product-intent completion
+- Distinguish `planability resolved` from `intent obligations retained`
+- Require `specs/<feature>/intent-ledger.md` whenever a core spec item is handled as `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff`
 - Explicitly state allowed next actions and prohibited next actions
 - Recommend `/speckit.plan` only when the primary status is `READY_FOR_PLAN`
 
 If readiness status is not `READY_FOR_PLAN`, the project MAY NOT proceed to `/speckit.plan`.
+
+`intent-ledger.md` is a secondary artifact. It does not create a new stage or a new readiness
+primary status. `READY_FOR_PLAN` MAY still be correct when planning is safe, but the handoff to
+planning is incomplete until any required ledger entries exist and are current.
 
 If readiness routes to ECI, the project MUST continue through `/speckit.eci`. `eci-trigger.md`
 remains the intake seed, and the resulting ECI dossier MUST be written under `readiness/eci/`
@@ -113,6 +125,34 @@ When readiness re-enters after a coherent ECI dossier exists:
 - `READY_FOR_MAINLINE_IMPLEMENTATION` means external capability adoption is no longer the primary blocker by itself
 - `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` means readiness MUST route to the next blocker needed to upgrade authorization, typically validation, access, or an owner decision
 - the project MUST NOT fall back to `ROUTE_TO_ECI` again unless the dossier is stale, contradictory, misrouted, or no longer matches current external capability scope
+
+### Intent Ledger (Secondary Artifact)
+
+When required, `specs/<feature>/intent-ledger.md` MUST record one row per affected core spec item
+using these fixed columns:
+
+- `source_intent_item`
+- `spec_anchor`
+- `current_classification`
+- `current_representation`
+- `defer_or_drop_reason`
+- `reentry_trigger`
+- `follow_on_feature_hint`
+- `surface_disclosure_required`
+- `owner_signoff_required`
+
+`current_classification` MUST be exactly one of:
+
+- `represented_by_substitute`
+- `deferred`
+- `dropped_with_owner_signoff`
+
+Additional rules:
+
+- `represented_by_substitute` entries MUST name the current representative capability or source.
+- `deferred` entries MUST state a concrete re-entry trigger.
+- `dropped_with_owner_signoff` entries MUST capture explicit owner agreement and MUST NOT be silently absorbed by the assistant.
+- If all core spec items remain fully in scope, `intent-ledger.md` is not required.
 
 ## 5.1 External Capability Intake Requirements (/speckit.eci)
 
@@ -138,10 +178,21 @@ A technical plan MUST include:
 - Technology decisions with rationale
 - Integration points / APIs
 - Data flow description
+- `Intent Recovery Obligations` when `intent-ledger.md` exists
 - Constraints and risks
 - “Why Not” decisions (alternatives rejected)
 - Estimated timeline and effort
 - Document version history
+
+When `intent-ledger.md` exists, `plan.md` MUST summarize every
+`represented_by_substitute` and `deferred` entry under `Intent Recovery Obligations`, including:
+
+- how the intent is currently represented
+- why it is not fully implemented in the current iteration
+- what concrete condition will re-open it
+- what downstream coverage disclosure is required
+
+Generic placeholders such as `v1+` without a real re-entry condition are not sufficient.
 
 ## 7. Task Decomposition Requirements (tasks.md)
 
@@ -162,6 +213,9 @@ Interpretation rules:
 - Critical findings must be fixed before implementation
 - Major findings should be fixed before implementation whenever feasible
 - Minor findings are optional at the engineer's discretion
+- `/speckit.analyze` MUST run an `Intent Drift Check` whenever the feature may have compressed core scope
+- `Intent Drift Check` MUST verify that all represented, deferred, or dropped core spec items are recorded in `intent-ledger.md`, that dropped items retain explicit owner signoff references, that `plan.md` carries the required `Intent Recovery Obligations`, and that outward-facing docs do not over-claim current coverage
+- Failing `Intent Drift Check` MUST block an implementation-ready analysis outcome until the artifacts are aligned, even if readiness itself previously remained `READY_FOR_PLAN`
 
 ## 9. Implementation Rules
 
@@ -170,7 +224,7 @@ During implementation:
 - Work MUST follow the task list exactly
 - No feature MAY be added unless included in the spec
 - Small-scope TDD MAY be used where beneficial
-- Any specification change MUST update spec, readiness artifacts, plan, and tasks with version bumps when those artifacts are affected
+- Any specification change MUST update spec, readiness artifacts, `intent-ledger.md`, plan, and tasks with version bumps when those artifacts are affected
 
 ## 10. Feature Packs [NOT ACTIVE]
 
@@ -255,6 +309,7 @@ Each project MUST contain these paths:
 | .github/copilot-instructions.md | GitHub Copilot project context only; not a constitution |
 | CLAUDE.md | Claude project context only; not a constitution |
 | `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/intent-ledger.md` | Secondary artifact for represented / deferred / dropped core intent items when required |
 | `specs/<feature>/readiness/` | Readiness assessment and route-specific packets |
 | `specs/<feature>/readiness/eci/` | ECI dossier artifacts for external capability governance |
 | `specs/<feature>/plan.md` | Technical plan |
@@ -284,8 +339,25 @@ Projects MUST comply with BOTH:
 
 - Relax or skip any Studio Constitution rules
 - Skip any SDD stage
-- Remove mandatory document sections or required governance artifacts (spec/readiness/eci/plan/tasks)
+- Remove mandatory document sections or required governance artifacts (`spec`, `readiness`, `eci`, `intent-ledger` when triggered, `plan`, `tasks`)
 - Override AI collaboration principles
+
+### Defer Does Not Disappear
+
+Approved scope compression does not erase original intent. When a core spec item is represented by
+substitute capability, deferred, or dropped, that obligation remains governed through
+`intent-ledger.md` until it is truthfully re-entered, explicitly dropped with owner signoff, or
+fully delivered.
+
+### Surface Truthfulness
+
+If a feature uses an umbrella name while the current implementation only covers a representative
+subset, `README.md`, `quickstart.md`, and `/speckit.analyze` outputs MUST disclose the current
+coverage and known gaps clearly enough that readers will not mistake the shipped surface for the
+full original intent.
+
+This constitution currently requires documentation truthfulness only. UI-level truthfulness markers
+or badges MAY be added later, but they are not mandatory in this patch.
 
 ### Conflict Resolution
 

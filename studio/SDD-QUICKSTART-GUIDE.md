@@ -55,6 +55,8 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 
 **關鍵規則**：每個階段必須完成後才能進入下一階段，不可跳過。
 
+`intent-ledger.md` 不是新 stage，而是只有在核心 spec 項目被 represented、deferred 或正式 dropped 時才建立的 secondary artifact。
+
 ### 1.3 為什麼要用 SDD
 
 | 好處 | 說明 |
@@ -435,6 +437,7 @@ Constitution 要求至少 3 個 edge cases：
 2. 若尚未具備，主阻塞屬於哪一類。
 3. 最小補救包是什麼。
 4. 現在允許做什麼、不允許做什麼。
+5. 若核心 spec 項目被代表、延後或放棄，這些 intent obligation 是否已被正式保留。
 
 ### 7.3 正式狀態
 
@@ -452,6 +455,7 @@ Constitution 要求至少 3 個 edge cases：
 ### 7.4 輸出與回流規則
 
 - `READY_FOR_PLAN`：產出 `readiness-assessment.md`，然後進入 `/speckit.plan`
+- 若核心 spec 項目被 `represented_by_substitute`、`deferred` 或 `dropped_with_owner_signoff`：必須另外建立或更新 `intent-ledger.md`；`READY_FOR_PLAN` 仍可成立，但 handoff 不完整前不得假裝原始 intent 已消失
 - `ROUTE_TO_ECI`：額外產出 `eci-trigger.md`，執行 `/speckit.eci` 產出 `readiness/eci/*.md` dossier，補完後回跑 `/speckit.readiness`
 - 若 ECI 的結果仍是 `READY_FOR_SANDBOX_ONLY` 或 `READY_FOR_SPIKE_ONLY`：回流 readiness 後應轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，不得直接進 `/speckit.plan`
 - `ROUTE_TO_REPO_CONTEXT`：額外產出 `repo-context-packet.md`，補讀後回跑 `/speckit.readiness`
@@ -465,6 +469,7 @@ Constitution 要求至少 3 個 edge cases：
 - spec 清楚，不代表 implementation 前提已經充足
 - readiness 的作用是阻止 LLM 在前提不足時仍產生看似合理的 plan
 - 真正的 blocker 可能不是 ambiguity，而是 external capability、repo context、decision、validation 或 access
+- readiness 要守的是 planability，不是替產品定義「這輪交付就算完整」；被壓縮掉的核心意圖必須留在 `intent-ledger.md`
 
 ---
 
@@ -488,6 +493,7 @@ Constitution 要求至少 3 個 edge cases：
 | Technology Decisions | 技術選型 + 理由 | 每個決策都要有 rationale |
 | "Why Not" Decisions | 被拒絕的替代方案 | 記錄考慮過但不採用的方案 |
 | Data Flow | 資料流向描述 | 從輸入到輸出的完整流程 |
+| Intent Recovery Obligations | 從 `intent-ledger.md` 承接 represented / deferred 項目 | 寫明目前代表方式、這輪不做原因、重新進場條件、coverage disclosure |
 | Project Structure | 資料夾結構 | 用表格呈現 |
 | Constraints and Risks | 限制與風險 | 技術限制、時程風險等 |
 | Estimated Timeline | 預估時程 | 各階段預估天數 |
@@ -501,6 +507,11 @@ Constitution 要求至少 3 個 edge cases：
 | data-model.md | `specs/<feature>/data-model.md` | 資料模型設計 |
 | contracts/ | `specs/<feature>/contracts/` | API 契約定義 |
 | quickstart.md | `specs/<feature>/quickstart.md` | 快速開始指南 |
+
+若 `intent-ledger.md` 存在，`plan.md` 必須固定加入 `Intent Recovery Obligations` 區段，至少摘要所有
+`represented_by_substitute` 與 `deferred` 項目。不能只寫模糊的 `v1+`，必須交代具體 re-entry trigger。
+
+如果 feature 名稱是 umbrella term，而本輪只做 representative subset，plan 還必須指定後續文件要怎麼揭露 coverage 與 known gaps。
 
 ### 8.4 Technology Decisions 格式
 
@@ -609,6 +620,7 @@ Constitution 要求至少 3 個 edge cases：
 |------|----------|----------|
 | **Coverage** | 每個 FR/NFR 是否都有對應 task | FR-003 沒有任何 task 實作 |
 | **Governance Gate** | readiness assessment 是否仍允許目前的 plan/tasks 狀態 | readiness 是 `ROUTE_TO_ECI`，但已直接進入 plan/tasks |
+| **Intent Drift Check** | represented / deferred / dropped 的核心項目是否有 ledger、plan handoff、與 truthfulness disclosure | readiness 備註提到 defer，但 `intent-ledger.md` 不存在；或 plan 沒承接 |
 | **Consistency** | 三份文件的術語是否一致 | spec 說「使用者」，plan 說「會員」 |
 | **Completeness** | 是否有遺漏的 edge case | EC-002 沒有對應的錯誤處理 task |
 | **Contradiction** | 是否有衝突的描述 | spec 說 3 個例外，tasks 列 4 個 |
@@ -654,6 +666,15 @@ Constitution 要求至少 3 個 edge cases：
 | 遺漏 task | 上線後才發現功能沒做 |
 | 文件衝突 | 不知道該信哪份 |
 | 違反 Constitution | 架構審查不通過 |
+| Representative MVP 被誤讀成完整能力 | shipped surface 與原始 intent 失真 |
+
+`Intent Drift Check` 固定至少檢查三件事：
+
+1. 所有被 represented / deferred / dropped 的核心 spec 項目都有 `intent-ledger.md` 記錄。
+2. `dropped_with_owner_signoff` 項目保有可追溯的 owner signoff reference，且 `plan.md` 已承接 ledger，而不是把 defer 只留在 readiness 附註。
+3. `README.md`、`quickstart.md`、analyze 結論沒有把 representative subset 偽裝成原始完整能力。
+
+若這三項有任一項失敗，不一定表示 readiness 當時判錯，但 analyze 不應給出可以安心進 implement 的綠燈結論。
 
 ---
 
@@ -775,6 +796,7 @@ Constitution 要求至少 3 個 edge cases：
 |------|---------|
 | `.specify/memory/constitution.md` | 專案憲章（可選） |
 | `specs/<feature>/spec.md` | 功能規格 |
+| `specs/<feature>/intent-ledger.md` | 核心意圖被 represented / deferred / dropped 時的 secondary artifact |
 | `specs/<feature>/readiness/` | readiness assessment 與 remediation packet |
 | `specs/<feature>/readiness/eci/` | ECI dossier |
 | `specs/<feature>/plan.md` | 技術計畫 |
@@ -815,6 +837,7 @@ project-root/
       user-auth-discovery.md
     001-user-registration/   # 第一個功能
       spec.md
+      intent-ledger.md       # 只有在 scope compression 影響核心意圖時才建立
       readiness/
         readiness-assessment.md
         eci/
@@ -826,6 +849,7 @@ project-root/
       tasks.md
     002-payment-flow/        # 第二個功能
       spec.md
+      intent-ledger.md       # 只有在 scope compression 影響核心意圖時才建立
       readiness/
         readiness-assessment.md
         eci/
@@ -958,12 +982,14 @@ project-root/
 [ ] 執行 /speckit.readiness
     [ ] 確認 readiness/readiness-assessment.md 已產生
     [ ] 若 status = READY_FOR_PLAN，才進入 /speckit.plan
+    [ ] 若核心 spec 項目被 represented / deferred / dropped，確認 `intent-ledger.md` 已建立或更新
     [ ] 若 status = ROUTE_TO_ECI，完成 eci-trigger.md、執行 /speckit.eci 產出 dossier 後回跑 /speckit.readiness
     [ ] 若 ECI 僅授權 sandbox / spike，補對應的 validation/access/decision packet 後再回跑 /speckit.readiness，不得直接進 /speckit.plan
 
 [ ] 執行 /speckit.plan
     [ ] 確認 plan.md 已產生
     [ ] 確認所有技術決策有 rationale
+    [ ] 若存在 `intent-ledger.md`，確認 `Intent Recovery Obligations` 已承接 represented / deferred 項目與 re-entry trigger
     [ ] 確認有 "Why Not" 章節
 
 [ ] 執行 /speckit.tasks
@@ -973,6 +999,7 @@ project-root/
 
 [ ] 執行 /speckit.analyze
     [ ] 確認無 CRITICAL 問題
+    [ ] 確認 `Intent Drift Check` 通過
     [ ] 修復所有 WARNING（或記錄為已知風險）
 
 [ ] 執行 /speckit.implement
@@ -996,7 +1023,7 @@ project-root/
 ## 17. 附錄：文件模板
 
 除了本附錄中的三個主模板片段外，`studio/templates/sdd-docs/` 也提供
-`readiness-assessment`、`eci-trigger`、`eci-assessment`、`eci-source-manifest`、
+`intent-ledger`、`readiness-assessment`、`eci-trigger`、`eci-assessment`、`eci-source-manifest`、
 `eci-adoption-record`、`eci-authorization-record`、`repo-context-packet`、`decision-record`、
 `validation-contract`、`access-setup-checklist` 與 `exploration-boundary` 模板。
 
@@ -1089,6 +1116,12 @@ project-root/
 | Framework | [框架] |
 | Database | [資料庫] |
 | Testing | [測試框架] |
+
+## Intent Recovery Obligations
+
+| Source Intent Item | Current Representation | Why Not This Iteration | Re-entry Trigger | Coverage Disclosure Needed |
+|--------------------|------------------------|------------------------|------------------|----------------------------|
+| [項目或 `None`] | [目前代表方式 / `N/A`] | [原因] | [具體條件 / `N/A`] | [README / quickstart / analyze / `No`] |
 
 ## Architecture Overview
 

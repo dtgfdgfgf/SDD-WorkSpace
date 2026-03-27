@@ -66,6 +66,8 @@ It may route internally to several blocker categories, but it should not explode
 4. Recommend the correct next step.
 5. On post-ECI re-entry, treat the ECI dossier as governed input and identify the next blocker instead of blindly routing back to ECI.
 6. Preserve governance clarity: do not let ambiguity, unstated assumptions, or missing prerequisites silently pass as implementation-ready.
+7. Distinguish `planability resolved` from `intent obligations retained` when core spec scope is compressed.
+8. Create or update `intent-ledger.md` when core spec items are `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff`.
 
 ### What this agent MUST NOT do
 
@@ -76,6 +78,7 @@ It may route internally to several blocker categories, but it should not explode
 - Do **not** use general engineering intuition as a substitute for repo-specific truth.
 - Do **not** treat missing validation evidence as "can be figured out later" if it materially affects success criteria.
 - Do **not** ignore a valid ECI dossier and pretend external capability governance never happened.
+- Do **not** silently drop a core spec item without explicit owner signoff that can be referenced in `intent-ledger.md`.
 
 ---
 
@@ -137,19 +140,34 @@ Assess the current spec against these dimensions:
 ### 8. Hard Stop
 - If blockers are severe, contradictory, or too foundational to safely continue, prefer `NOT_READY`.
 
+### 9. Intent Obligation Retention
+- Determine whether any core spec item is being handled as:
+  - `represented_by_substitute`
+  - `deferred`
+  - `dropped_with_owner_signoff`
+- Treat core spec items as requirements, primary scenarios, success criteria, or explicitly named capabilities that materially define the promised feature surface.
+- If a proposed drop lacks explicit owner signoff reference, do **not** treat it as a valid drop. Route to `ROUTE_TO_DECISION` unless a stronger blocker already exists.
+
 ---
 
 ## Execution Steps
 
 1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once**.
 2. Parse the minimal JSON payload fields:
+   - `REPO_ROOT`
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
+   - `INTENT_LEDGER`
+   - `READINESS_DIR`
+   - `READINESS_ASSESSMENT`
+   - `ECI_DIR`
    - `STUDIO_ROOT`
    - `CONSTITUTIONS`
 3. If JSON parsing fails, abort and instruct the user to re-run the earlier setup flow.
-4. Derive:
+4. Derive or confirm:
+   - `INTENT_LEDGER = FEATURE_DIR/intent-ledger.md`
    - `READINESS_DIR = FEATURE_DIR/readiness`
+   - `READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`
    - `ECI_DIR = READINESS_DIR/eci`
    - `ECI_ASSESSMENT = ECI_DIR/eci-assessment.md`
    - `ECI_SOURCE_MANIFEST = ECI_DIR/source-manifest.md`
@@ -157,6 +175,7 @@ Assess the current spec against these dimensions:
    - `ECI_AUTHORIZATION_RECORD = ECI_DIR/authorization-record.md`
 5. Load:
    - current `spec.md`
+   - current `intent-ledger.md` if present
    - studio constitution
    - project constitution if present
    - any existing ECI dossier files above if present
@@ -168,12 +187,17 @@ Assess the current spec against these dimensions:
    - If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.
    - If `Authorization Outcome = NOT_READY` or `ECI Level = NO_ECI`, re-triage honestly and return to `ROUTE_TO_ECI` only when external capability governance is still the dominant blocker.
 8. Assess all readiness dimensions.
-9. Select **one primary status** based on the strongest blocker.
-10. Produce:
+9. Determine whether `intent-ledger.md` is required for this run.
+   - Required when one or more core spec items are `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff`.
+   - Not required when all core spec items remain fully in scope.
+   - If any proposed drop lacks explicit owner signoff reference, route to `ROUTE_TO_DECISION` instead of normalizing the drop.
+10. Select **one primary status** based on the strongest blocker.
+11. Produce:
    - a readiness assessment file,
+   - `intent-ledger.md` when required,
    - the minimum required packet for the selected route,
    - a concise operator-facing summary.
-11. Do **not** modify `spec.md` unless the workspace explicitly adds that behavior later.
+12. Do **not** modify `spec.md` unless the workspace explicitly adds that behavior later.
 
 ---
 
@@ -216,6 +240,10 @@ Optional route-specific files:
 - `access-setup-checklist.md`
 - `exploration-boundary.md`
 
+Secondary artifact outside `readiness/` when required:
+
+- `FEATURE_DIR/intent-ledger.md`
+
 Do not create unnecessary files. Create only the packet required by the selected primary status.
 
 ---
@@ -248,6 +276,12 @@ Use this structure:
 - 2–6 bullets summarizing why the current feature is or is not ready.
 - If this is a post-ECI rerun, clearly distinguish what is already governed from what still blocks planning.
 
+## Planability vs Intent Obligations
+- **Planability Resolved**: Yes / No
+- **Intent Obligations Retained**: None / [Summarize represented, deferred, or dropped core spec items]
+- **Intent Ledger Requirement**: Not Required / Create `intent-ledger.md` / Update `intent-ledger.md`
+- **Intent Ledger Path**: `specs/<feature>/intent-ledger.md` / N/A
+
 ## Readiness Dimension Scan
 | Dimension | Status | Notes |
 |-----------|--------|-------|
@@ -270,10 +304,36 @@ Use this structure:
 
 ### Not Allowed
 - ...
+- Include any prohibition on treating a representative subset as if it fully satisfies the original umbrella feature.
 
 ## Secondary Observations
 - Optional, only if useful.
 ```
+
+## Required Structure: `intent-ledger.md`
+
+Create `specs/<feature>/intent-ledger.md` only when required.
+
+```markdown
+# Intent Ledger: [FEATURE NAME]
+
+**Date**: YYYY-MM-DD
+**Spec**: [path to spec.md]
+**Status**: Active
+
+## Ledger
+| source_intent_item | spec_anchor | current_classification | current_representation | defer_or_drop_reason | reentry_trigger | follow_on_feature_hint | surface_disclosure_required | owner_signoff_required |
+|--------------------|-------------|------------------------|------------------------|----------------------|-----------------|------------------------|-----------------------------|-----------------------|
+```
+
+Rules:
+- Allowed `current_classification` values are exactly:
+  - `represented_by_substitute`
+  - `deferred`
+  - `dropped_with_owner_signoff`
+- `represented_by_substitute` MUST name the active substitute or representative source.
+- `deferred` MUST include a concrete re-entry trigger.
+- `dropped_with_owner_signoff` MUST include explicit owner signoff reference. Without that evidence, do **not** treat the drop as valid.
 
 ---
 
@@ -363,12 +423,14 @@ Minimum content:
 ### If `READY_FOR_PLAN`
 You MUST:
 - write `readiness-assessment.md`
+- write or update `intent-ledger.md` when the assessment says it is required
 - clearly state why planning can safely proceed
 - recommend `/speckit.plan`
 
 ### If any `ROUTE_TO_*`
 You MUST:
 - write `readiness-assessment.md`
+- write or update `intent-ledger.md` when intent obligations are retained
 - write the corresponding minimum packet
 - recommend the next concrete action
 - explicitly state what should **not** happen yet
@@ -426,6 +488,8 @@ A good readiness assessment:
 - does **not** let unresolved owner decisions pass as defaults,
 - does **not** let missing validation hide behind "we can test later",
 - does **not** let access/runtime blockers stay implicit,
+- does **not** let defer disappear without a ledger trail,
+- does **not** silently authorize `dropped_with_owner_signoff` without explicit owner signoff reference,
 - and does **not** expand the command surface unnecessarily.
 
 This agent should make the workflow **safer and clearer**, not heavier for its own sake.

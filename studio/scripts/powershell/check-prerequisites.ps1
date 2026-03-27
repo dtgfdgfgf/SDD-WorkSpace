@@ -71,13 +71,17 @@ if ($PathsOnly) {
     
     if ($Json) {
         [PSCustomObject]@{
-            REPO_ROOT    = $paths.REPO_ROOT
-            BRANCH       = $paths.CURRENT_BRANCH
-            FEATURE_DIR  = $paths.FEATURE_DIR
-            FEATURE_SPEC = $paths.FEATURE_SPEC
-            IMPL_PLAN    = $paths.IMPL_PLAN
-            TASKS        = $paths.TASKS
-            STUDIO_ROOT  = $studioRoot
+            REPO_ROOT            = $paths.REPO_ROOT
+            BRANCH               = $paths.CURRENT_BRANCH
+            FEATURE_DIR          = $paths.FEATURE_DIR
+            FEATURE_SPEC         = $paths.FEATURE_SPEC
+            INTENT_LEDGER        = $paths.INTENT_LEDGER
+            READINESS_DIR        = $paths.READINESS_DIR
+            READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT
+            ECI_DIR              = $paths.ECI_DIR
+            IMPL_PLAN            = $paths.IMPL_PLAN
+            TASKS                = $paths.TASKS
+            STUDIO_ROOT          = $studioRoot
             CONSTITUTIONS = $constitutions
         } | ConvertTo-Json -Compress
     } else {
@@ -85,6 +89,10 @@ if ($PathsOnly) {
         Write-Output "BRANCH: $($paths.CURRENT_BRANCH)"
         Write-Output "FEATURE_DIR: $($paths.FEATURE_DIR)"
         Write-Output "FEATURE_SPEC: $($paths.FEATURE_SPEC)"
+        Write-Output "INTENT_LEDGER: $($paths.INTENT_LEDGER)"
+        Write-Output "READINESS_DIR: $($paths.READINESS_DIR)"
+        Write-Output "READINESS_ASSESSMENT: $($paths.READINESS_ASSESSMENT)"
+        Write-Output "ECI_DIR: $($paths.ECI_DIR)"
         Write-Output "IMPL_PLAN: $($paths.IMPL_PLAN)"
         Write-Output "TASKS: $($paths.TASKS)"
         Write-Output "STUDIO_ROOT: $studioRoot"
@@ -118,6 +126,7 @@ $docs = @()
 # Always check these optional docs
 if (Test-Path $paths.RESEARCH) { $docs += 'research.md' }
 if (Test-Path $paths.DATA_MODEL) { $docs += 'data-model.md' }
+if (Test-Path $paths.INTENT_LEDGER) { $docs += 'intent-ledger.md' }
 
 # Check contracts directory (only if it exists and has files)
 if ((Test-Path $paths.CONTRACTS_DIR) -and (Get-ChildItem -Path $paths.CONTRACTS_DIR -ErrorAction SilentlyContinue | Select-Object -First 1)) { 
@@ -139,10 +148,18 @@ if ($Json) {
     
     # JSON output
     [PSCustomObject]@{ 
-        FEATURE_DIR = $paths.FEATURE_DIR
-        AVAILABLE_DOCS = $docs
-        STUDIO_ROOT = $studioRoot
-        CONSTITUTIONS = $constitutions
+        REPO_ROOT            = $paths.REPO_ROOT
+        FEATURE_DIR          = $paths.FEATURE_DIR
+        FEATURE_SPEC         = $paths.FEATURE_SPEC
+        INTENT_LEDGER        = $paths.INTENT_LEDGER
+        READINESS_DIR        = $paths.READINESS_DIR
+        READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT
+        ECI_DIR              = $paths.ECI_DIR
+        IMPL_PLAN            = $paths.IMPL_PLAN
+        TASKS                = $paths.TASKS
+        AVAILABLE_DOCS       = $docs
+        STUDIO_ROOT          = $studioRoot
+        CONSTITUTIONS        = $constitutions
     } | ConvertTo-Json -Compress
 } else {
     # Text output
@@ -152,6 +169,7 @@ if ($Json) {
     # Show status of each potential document
     Test-FileExists -Path $paths.RESEARCH -Description 'research.md' | Out-Null
     Test-FileExists -Path $paths.DATA_MODEL -Description 'data-model.md' | Out-Null
+    Test-FileExists -Path $paths.INTENT_LEDGER -Description 'intent-ledger.md' | Out-Null
     Test-DirHasFiles -Path $paths.CONTRACTS_DIR -Description 'contracts/' | Out-Null
     Test-FileExists -Path $paths.QUICKSTART -Description 'quickstart.md' | Out-Null
     

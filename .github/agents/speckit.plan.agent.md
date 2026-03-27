@@ -26,19 +26,23 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-1. **Read feature paths**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root once and parse `FEATURE_DIR`, `FEATURE_SPEC`, `STUDIO_ROOT`, and `CONSTITUTIONS`. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Read feature paths**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root once and parse `REPO_ROOT`, `FEATURE_DIR`, `FEATURE_SPEC`, `INTENT_LEDGER`, `READINESS_DIR`, `READINESS_ASSESSMENT`, `ECI_DIR`, `STUDIO_ROOT`, and `CONSTITUTIONS`. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Enforce readiness gate before any planning work**:
-   - Derive `READINESS_DIR = FEATURE_DIR/readiness`
-   - Derive `READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`
-   - Derive `ECI_DIR = READINESS_DIR/eci`
+   - Confirm `READINESS_DIR = FEATURE_DIR/readiness`
+   - Confirm `READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`
+   - Confirm `ECI_DIR = READINESS_DIR/eci`
+   - Confirm `INTENT_LEDGER = FEATURE_DIR/intent-ledger.md`
    - Derive `ECI_AUTHORIZATION = ECI_DIR/authorization-record.md`
    - Derive `ECI_ADOPTION = ECI_DIR/adoption-record.md`
    - Derive `ECI_SOURCE_MANIFEST = ECI_DIR/source-manifest.md`
    - If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`
    - Load `READINESS_ASSESSMENT` and locate the declared `Primary Status`
+   - Load `Planability Resolved`, `Intent Ledger Requirement`, and `Intent Ledger Path`
    - If `Primary Status` is absent or ambiguous: ERROR and instruct the user to re-run `/speckit.readiness`
    - If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR, report the status, and instruct the user to complete the remediation identified by readiness before attempting `/speckit.plan` again
+   - If `Intent Ledger Requirement` is `Create \`intent-ledger.md\`` or `Update \`intent-ledger.md\``, and `INTENT_LEDGER` does not exist: ERROR and instruct the user to re-run `/speckit.readiness` or reconcile the missing ledger before planning
+   - If `Intent Ledger Path` is present and disagrees with `INTENT_LEDGER`: ERROR and instruct the user to re-run `/speckit.readiness` so the handoff is coherent
    - If `ECI_AUTHORIZATION` exists:
      - Load `Authorization Outcome`
      - If it is absent or ambiguous: ERROR and instruct the user to reconcile `/speckit.eci` outputs before planning
@@ -47,8 +51,10 @@ You **MUST** consider the user input before proceeding (if not empty).
 3. **Setup plan workspace**: Run `studio/scripts/powershell/setup-plan.ps1 -Json` from repo root and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH`, `STUDIO_ROOT`, and `CONSTITUTIONS`.
 
 4. **Load context (Dual-Layer Constitution)**:
+   - Read `REPO_ROOT/README.md` if present for umbrella-feature naming and existing coverage disclosure
    - Read FEATURE_SPEC for requirements
    - Read READINESS_ASSESSMENT for scope guardrails, secondary observations, and any readiness-imposed constraints
+   - If present, read `INTENT_LEDGER` for intent obligations, representation strategy, re-entry triggers, and disclosure requirements
    - If present, read `ECI_AUTHORIZATION` for allowed/prohibited implementation scope
    - If present, read `ECI_ADOPTION` for adoption boundary and prohibited modes
    - If present, read `ECI_SOURCE_MANIFEST` for governed source basis and version anchors
@@ -57,8 +63,10 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Load IMPL_PLAN template (already copied)
 
 5. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
+   - Fill `Intent Recovery Obligations` from `intent-ledger.md` when required
    - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
    - Fill Constitution Check section from constitution
+   - Ensure the plan names any required README / quickstart coverage disclosure when umbrella naming is broader than the current representative subset
    - Evaluate gates (ERROR if violations unjustified)
    - Phase 0: Generate research.md (resolve all NEEDS CLARIFICATION)
    - Phase 1: Generate data-model.md, contracts/, quickstart.md
@@ -121,6 +129,10 @@ You **MUST** consider the user input before proceeding (if not empty).
 - Never bypass the readiness gate
 - ERROR on gate failures or unresolved clarifications
 - ERROR if `readiness-assessment.md` is missing or its primary status is not `READY_FOR_PLAN`
+- ERROR if readiness says `intent-ledger.md` is required but the file is missing or inconsistent with the handoff
+- Carry every `represented_by_substitute` and `deferred` entry into `Intent Recovery Obligations`
+- Require concrete re-entry triggers; do **not** accept generic placeholders such as `v1+`
+- If feature naming exceeds current coverage, require explicit README / quickstart disclosure rather than letting the representative subset masquerade as the full umbrella capability
 - ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`
 
 

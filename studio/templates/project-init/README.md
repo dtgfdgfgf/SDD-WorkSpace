@@ -27,6 +27,7 @@ code <project-name>.code-workspace
 | `CLAUDE.md` | Claude project context if generated later |
 | `docs/governance-status.md` | Project-local governance compatibility notice |
 | `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/intent-ledger.md` | Secondary artifact for represented / deferred / dropped core intent items when required |
 | `specs/<feature>/readiness/` | Readiness assessment and route packets (created on first readiness run) |
 | `specs/<feature>/readiness/eci/` | ECI dossier (created only for `ROUTE_TO_ECI` features) |
 | `specs/<feature>/plan.md` | Technical plan |
@@ -59,6 +60,10 @@ This project follows the dual-layer constitution system:
 
 Project agent context files such as `.github/copilot-instructions.md` and `CLAUDE.md` may be
 generated later, but they do not replace `.specify/memory/constitution.md`.
+
+Approved scope compression does not make original intent disappear. If a feature only ships a
+representative subset under an umbrella name, keep `intent-ledger.md` current and disclose current
+coverage plus known gaps in `README.md` / `quickstart.md`.
 
 ## Governance Status
 

@@ -14,6 +14,12 @@
 **Auto-generated from feature governance artifacts**
 **Last updated**: 2026-01-27
 
+> Repository note:
+> This repository does not contain a checked-in `studio/` governance tree. Any `studio/*`
+> references below are inherited from a shared template and should be treated as historical
+> placeholders. Prefer checked-in local files such as `.specify/memory/constitution.md`,
+> `README.md`, and `specs/*`.
+
 ---
 
 ## Project Overview

@@ -1,7 +1,7 @@
 # Implementation Plan: [FEATURE NAME]
 
 <!-- 
-  STUDIO TEMPLATE v1.0.0
+  STUDIO TEMPLATE v1.1.0
   Based on: duotify-membership-v1 plan-template
   Usage: Copy to project/.specify/templates/ and customize if needed
 -->
@@ -14,6 +14,21 @@
 ## Summary
 
 [Extract from feature spec: primary requirement + technical approach]
+
+## Intent Recovery Obligations
+
+<!--
+  Required when specs/<feature>/intent-ledger.md exists.
+  If no intent ledger is required, state "None".
+  Do not write generic placeholders such as "v1+" without a concrete re-entry condition.
+-->
+
+| Source Intent Item | Current Representation | Why Not This Iteration | Re-entry Trigger | Coverage Disclosure Needed |
+|--------------------|------------------------|------------------------|------------------|----------------------------|
+| [Item or `None`] | [Current substitute / partial coverage / `N/A`] | [Reason] | [Concrete trigger / `N/A`] | [README / quickstart / analyze note or `No`] |
+
+Dropped items with explicit owner signoff remain governed in `intent-ledger.md`. Mention them here
+when they affect current coverage disclosure or downstream planning assumptions.
 
 ## Technical Context
 
@@ -86,6 +101,7 @@ Data flow: [User/Input] to [Component A] to [Component B] to [Storage/Output]
 | Path | Purpose |
 |------|--------|
 | `specs/[NNN-feature-name]/spec.md` | Feature specification |
+| `specs/[NNN-feature-name]/intent-ledger.md` | Secondary artifact for represented / deferred / dropped core intent items when required |
 | `specs/[NNN-feature-name]/plan.md` | This file |
 | `specs/[NNN-feature-name]/tasks.md` | Task decomposition |
 | `specs/[NNN-feature-name]/checklists/` | Quality checklists (optional) |
@@ -136,6 +152,8 @@ Data flow: [User/Input] to [Component A] to [Component B] to [Storage/Output]
 |-------------|--------|-------|
 | Architecture follows established patterns | PENDING | |
 | Technology decisions documented | PENDING | |
+| Intent recovery obligations are carried forward from `intent-ledger.md` when required | PENDING | |
+| Surface truthfulness disclosure is defined when feature naming exceeds current coverage | PENDING | |
 | Integration points identified | PENDING | |
 | Constraints and risks documented | PENDING | |
 

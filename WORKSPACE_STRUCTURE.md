@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.4.1
+**Version:** 1.5.0
 **Created:** 2025-12-08  
-**Updated:** 2026-03-18
+**Updated:** 2026-03-27
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -61,6 +61,7 @@ Each project is expected to contain:
 | `.github/copilot-instructions.md` | GitHub Copilot project context |
 | `CLAUDE.md` | Claude project context |
 | `specs/<feature>/spec.md` | Feature specification |
+| `specs/<feature>/intent-ledger.md` | Secondary artifact for represented / deferred / dropped core intent items when required |
 | `specs/<feature>/readiness/` | Readiness assessment and route-specific packets |
 | `specs/<feature>/readiness/eci/` | ECI dossier artifacts for external capability governance |
 | `specs/<feature>/plan.md` | Technical plan |
@@ -117,6 +118,11 @@ not a new source of truth and should be regenerated rather than edited by hand.
 `readiness/eci/` dossier is supporting governance input during post-ECI re-entry and does not
 replace the requirement to re-run readiness before planning.
 
+`intent-ledger.md` is a secondary artifact rather than a new stage. It exists only when approved
+scope compression affects core spec items through representative coverage, deferral, or explicit
+drop with owner signoff. When present, it becomes part of the formal handoff from readiness to
+plan and must stay aligned with outward-facing coverage disclosure.
+
 ### 4.1 Shared-Layer Convergence Acceptance
 
 - `projects/` 與 `learning/` 是 consumer spaces，不是 shared-layer convergence 的預設驗收面
@@ -135,6 +141,7 @@ Key template paths:
 | Path | Purpose |
 |------|---------|
 | `studio/templates/sdd-docs/spec-template.md` | Specification template |
+| `studio/templates/sdd-docs/intent-ledger-template.md` | Intent ledger template for compressed core scope |
 | `studio/templates/sdd-docs/readiness-assessment-template.md` | Readiness assessment template |
 | `studio/templates/sdd-docs/eci-assessment-template.md` | ECI assessment template |
 | `studio/templates/sdd-docs/eci-source-manifest-template.md` | ECI source manifest template |
@@ -178,7 +185,7 @@ the new project classification scheme for fresh practice work.
 | Type | Convention | Example |
 |------|------------|---------|
 | Feature directory | `NNN-kebab-case` | `001-user-registration` |
-| SDD docs | `lowercase.md` | `spec.md`, `readiness-assessment.md`, `eci-trigger.md`, `eci-assessment.md`, `source-manifest.md`, `adoption-record.md`, `authorization-record.md`, `plan.md`, `tasks.md` |
+| SDD docs | `lowercase.md` | `spec.md`, `intent-ledger.md`, `readiness-assessment.md`, `eci-trigger.md`, `eci-assessment.md`, `source-manifest.md`, `adoption-record.md`, `authorization-record.md`, `plan.md`, `tasks.md` |
 | Templates | `kebab-case-template.md` | `spec-template.md` |
 | Prompts | descriptive kebab-case | `clarify-ambiguity.md` |
 | Extensions | `kebab-case` | `security-gates`, `client-review` |
@@ -198,6 +205,7 @@ the new project classification scheme for fresh practice work.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5.0 | 2026-03-27 | Add optional `intent-ledger.md` contract and document how readiness, plan, and outward coverage disclosure must carry compressed core intent |
 | 1.4.1 | 2026-03-18 | Add post-ECI readiness re-entry semantics and clarify that `readiness-assessment.md` remains the latest gate authority |
 | 1.4.0 | 2026-03-18 | Promote `/speckit.eci` to shared runtime and add `readiness/eci/` dossier artifacts |
 | 1.3.0 | 2026-03-08 | Add shared extension registry foundations under `studio/extensions/` |

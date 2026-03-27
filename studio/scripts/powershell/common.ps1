@@ -364,19 +364,25 @@ function Get-FeaturePathsEnv {
     $currentBranch = Get-CurrentBranch
     $hasGit = Test-HasGit
     $featureDir = Get-FeatureDir -RepoRoot $repoRoot -Branch $currentBranch
+    $readinessDir = Join-Path $featureDir 'readiness'
+    $eciDir = Join-Path $readinessDir 'eci'
     
     [PSCustomObject]@{
-        REPO_ROOT     = $repoRoot
-        CURRENT_BRANCH = $currentBranch
-        HAS_GIT       = $hasGit
-        FEATURE_DIR   = $featureDir
-        FEATURE_SPEC  = Join-Path $featureDir 'spec.md'
-        IMPL_PLAN     = Join-Path $featureDir 'plan.md'
-        TASKS         = Join-Path $featureDir 'tasks.md'
-        RESEARCH      = Join-Path $featureDir 'research.md'
-        DATA_MODEL    = Join-Path $featureDir 'data-model.md'
-        QUICKSTART    = Join-Path $featureDir 'quickstart.md'
-        CONTRACTS_DIR = Join-Path $featureDir 'contracts'
+        REPO_ROOT            = $repoRoot
+        CURRENT_BRANCH       = $currentBranch
+        HAS_GIT              = $hasGit
+        FEATURE_DIR          = $featureDir
+        FEATURE_SPEC         = Join-Path $featureDir 'spec.md'
+        INTENT_LEDGER        = Join-Path $featureDir 'intent-ledger.md'
+        READINESS_DIR        = $readinessDir
+        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
+        ECI_DIR              = $eciDir
+        IMPL_PLAN            = Join-Path $featureDir 'plan.md'
+        TASKS                = Join-Path $featureDir 'tasks.md'
+        RESEARCH             = Join-Path $featureDir 'research.md'
+        DATA_MODEL           = Join-Path $featureDir 'data-model.md'
+        QUICKSTART           = Join-Path $featureDir 'quickstart.md'
+        CONTRACTS_DIR        = Join-Path $featureDir 'contracts'
     }
 }
 
@@ -426,26 +432,32 @@ function Get-FeaturePathsEnvExtended {
     $currentBranch = Get-CurrentBranch
     $hasGit = Test-HasGit
     $featureDir = Get-FeatureDir -RepoRoot $ProjectRoot -Branch $currentBranch
+    $readinessDir = Join-Path $featureDir 'readiness'
+    $eciDir = Join-Path $readinessDir 'eci'
     $studioPaths = Get-StudioPaths -StudioRoot $StudioRoot
     $constitutions = Get-ConstitutionPaths -StudioRoot $StudioRoot -ProjectRoot $ProjectRoot
     
     [PSCustomObject]@{
         # Project paths
-        PROJECT_ROOT   = $ProjectRoot
-        CURRENT_BRANCH = $currentBranch
-        HAS_GIT        = $hasGit
-        FEATURE_DIR    = $featureDir
-        FEATURE_SPEC   = Join-Path $featureDir 'spec.md'
-        IMPL_PLAN      = Join-Path $featureDir 'plan.md'
-        TASKS          = Join-Path $featureDir 'tasks.md'
-        RESEARCH       = Join-Path $featureDir 'research.md'
-        DATA_MODEL     = Join-Path $featureDir 'data-model.md'
-        QUICKSTART     = Join-Path $featureDir 'quickstart.md'
-        CONTRACTS_DIR  = Join-Path $featureDir 'contracts'
+        PROJECT_ROOT        = $ProjectRoot
+        CURRENT_BRANCH      = $currentBranch
+        HAS_GIT             = $hasGit
+        FEATURE_DIR         = $featureDir
+        FEATURE_SPEC        = Join-Path $featureDir 'spec.md'
+        INTENT_LEDGER       = Join-Path $featureDir 'intent-ledger.md'
+        READINESS_DIR       = $readinessDir
+        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
+        ECI_DIR             = $eciDir
+        IMPL_PLAN           = Join-Path $featureDir 'plan.md'
+        TASKS               = Join-Path $featureDir 'tasks.md'
+        RESEARCH            = Join-Path $featureDir 'research.md'
+        DATA_MODEL          = Join-Path $featureDir 'data-model.md'
+        QUICKSTART          = Join-Path $featureDir 'quickstart.md'
+        CONTRACTS_DIR       = Join-Path $featureDir 'contracts'
         # Studio paths
-        STUDIO_ROOT    = $StudioRoot
-        STUDIO_PATHS   = $studioPaths
-        CONSTITUTIONS  = $constitutions
+        STUDIO_ROOT         = $StudioRoot
+        STUDIO_PATHS        = $studioPaths
+        CONSTITUTIONS       = $constitutions
     }
 }
 

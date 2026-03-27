@@ -92,11 +92,13 @@
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令
 - `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段
 - `/speckit.readiness` 是 `clarify` 與 `plan` 之間的前置治理閘門；只有 `READY_FOR_PLAN` 才能進入 `/speckit.plan`
+- 當 readiness 因 representative subset、defer 或正式 drop 而壓縮核心 spec scope 時，必須建立或更新 `specs/<feature>/intent-ledger.md`；這是 secondary artifact，不是新的 stage
 - 當 readiness 判為 `ROUTE_TO_ECI` 時，必須先執行 `/speckit.eci`，由 `eci-trigger.md` 啟動並在 `readiness/eci/` 產出正式 dossier，之後再回跑 `/speckit.readiness`
 - 完成 `/speckit.eci` 不等於可以直接進 `/speckit.plan`；只有最新的 `readiness-assessment.md` 明確變成 `READY_FOR_PLAN` 才能進入規劃
 - 若 ECI 的授權結果仍是 `READY_FOR_SANDBOX_ONLY` 或 `READY_FOR_SPIKE_ONLY`，下一步應由 `/speckit.readiness` 轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，而不是機械式重做 ECI
+- `plan.md` 若承接到 `intent-ledger.md`，必須有固定的 `Intent Recovery Obligations` 區段；`/speckit.analyze` 也必須做 `Intent Drift Check`
 
-這個 repo 的治理假設是：spec 決定行為邊界、readiness 判斷前提是否足夠、plan 決定技術方向、tasks 決定落地順序，implement 不應跳過前置文件直接做事。
+這個 repo 的治理假設是：spec 決定行為邊界、readiness 判斷前提是否足夠、`defer != disappear`、plan 決定技術方向、tasks 決定落地順序，implement 不應跳過前置文件直接做事。
 
 ## 快速開始
 
@@ -177,6 +179,7 @@ code projects/studio-automation/studio-automation.code-workspace
 | `.specify/memory/constitution.md` | 專案層級憲章 |
 | `.github/copilot-instructions.md` | 專案 AI context |
 | `specs/<feature>/spec.md` | 規格 |
+| `specs/<feature>/intent-ledger.md` | 僅在核心意圖被 represented / deferred / dropped 時建立的 secondary artifact |
 | `specs/<feature>/readiness/` | readiness assessment 與 route packet |
 | `specs/<feature>/readiness/eci/` | ECI dossier |
 | `specs/<feature>/plan.md` | 技術計畫 |
@@ -184,6 +187,9 @@ code projects/studio-automation/studio-automation.code-workspace
 | `src/` | 原始碼 |
 | `docs/` | 文件 |
 | `README.md` | 專案說明 |
+
+若 feature 使用 umbrella 名稱，但本輪只交付 representative subset，`README.md`、`quickstart.md`、
+以及 analyze 結論都必須揭露目前 coverage 與 known gaps，避免把已交付表面誤讀成原始完整意圖。
 
 ## 知識回饋
 

@@ -15,6 +15,17 @@
 - [High-signal conclusion 2]
 - [If this is a post-ECI rerun, distinguish what is already governed from what still blocks planning]
 
+## Planability vs Intent Obligations
+
+- **Planability Resolved**: Yes / No
+- **Intent Obligations Retained**: None / [Summarize any represented, deferred, or dropped core spec items]
+- **Intent Ledger Requirement**: Not Required / Create `intent-ledger.md` / Update `intent-ledger.md`
+- **Intent Ledger Path**: `specs/<feature>/intent-ledger.md` / N/A
+
+> Use this section to keep readiness focused on planning safety while preserving any core intent
+> that was represented, deferred, or dropped. `READY_FOR_PLAN` MAY still be valid, but any
+> required ledger must exist before plan handoff.
+
 ## Readiness Dimension Scan
 
 | Dimension | Status | Notes |

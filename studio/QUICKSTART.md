@@ -64,9 +64,11 @@ code projects/studio-automation/studio-automation.code-workspace
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令。
 - `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段。
 - `/speckit.readiness` 是 plan 前的治理閘門；沒有 `READY_FOR_PLAN` 就不得進入 `/speckit.plan`。
+- 若核心 spec 項目因 representative subset、defer 或正式 drop 而被壓縮，`/speckit.readiness` 必須要求建立或更新 `specs/<feature>/intent-ledger.md`；這是 secondary artifact，不是新的 stage。
 - external capability 問題在 `ROUTE_TO_ECI` 時必須透過 `/speckit.eci` 處理，`eci-trigger.md` 是 intake seed，正式 dossier 會寫入 `readiness/eci/`。
 - `/speckit.eci` 完成後仍必須回到 `/speckit.readiness`；只有最新 readiness 狀態是 `READY_FOR_PLAN` 才能進 `/speckit.plan`。
 - 若 ECI 只授權 sandbox / spike，readiness 應轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，而不是重複 `ROUTE_TO_ECI`。
+- 若存在 `intent-ledger.md`，`plan.md` 必須承接 `Intent Recovery Obligations`，`/speckit.analyze` 必須檢查是否出現 intent drift 與對外 coverage 誤導。
 
 各階段主要產物：
 
@@ -77,8 +79,10 @@ code projects/studio-automation/studio-automation.code-workspace
 | `readiness` | `readiness/readiness-assessment.md` | 判斷是否可安全進入規劃，必要時輸出 remediation packet |
 | `plan` | `plan.md` | 技術決策、風險、contracts、data flow |
 | `tasks` | `tasks.md` | checklist-first 任務分解 |
-| `analyze` | 分析結果 | 驗證 spec、plan、tasks 是否一致 |
+| `analyze` | 分析結果 | 驗證 spec、intent-ledger、plan、tasks 與對外說明是否一致 |
 | `implement` | `src/`, `tests/` | 嚴格依 tasks 實作 |
+
+補充：`intent-ledger.md` 不是新的流程階段；它只在核心 spec 項目被 represented、deferred 或 dropped 時作為 secondary artifact 出現。
 
 `tasks.md` 的 canonical task line 格式如下：
 
@@ -114,6 +118,7 @@ code projects/studio-automation/studio-automation.code-workspace
 | `.github/copilot-instructions.md` | GitHub Copilot 專案 context，不是 constitution |
 | `CLAUDE.md` | Claude 專案 context，不是 constitution |
 | `specs/<feature>/spec.md` | 規格文件 |
+| `specs/<feature>/intent-ledger.md` | 僅在核心意圖被 represented / deferred / dropped 時建立的 secondary artifact |
 | `specs/<feature>/readiness/` | readiness assessment 與 route packet |
 | `specs/<feature>/readiness/eci/` | ECI dossier |
 | `specs/<feature>/plan.md` | 技術計畫 |
@@ -176,7 +181,9 @@ Internal / Client 專案完成後：
 
 ### 如果需求中途變更怎麼辦？
 
-依序更新 `spec.md`、`readiness/*.md`、`readiness/eci/*.md`、`plan.md`、`tasks.md`，並在受影響文件上遞增版本號。
+依序更新 `spec.md`、`intent-ledger.md`（若受影響）、`readiness/*.md`、`readiness/eci/*.md`、`plan.md`、`tasks.md`，並在受影響文件上遞增版本號。
+
+若 feature 名稱比當前交付能力更寬，而本輪只做 representative subset，`README.md`、`quickstart.md` 與 analyze 結論必須揭露目前 coverage 與 known gaps。
 
 ### 如何啟用 Git hooks？
 

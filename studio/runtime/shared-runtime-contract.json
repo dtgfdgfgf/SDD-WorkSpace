@@ -101,6 +101,7 @@
     "eci-source-manifest-template.md",
     "eci-trigger-template.md",
     "exploration-boundary-template.md",
+    "intent-ledger-template.md",
     "plan-template.md",
     "project-constitution-template.md",
     "readiness-assessment-template.md",
@@ -157,6 +158,15 @@
       ]
     },
     {
+      "id": "readme-intent-ledger-truthfulness",
+      "path": "README.md",
+      "mustContainAll": [
+        "必須建立或更新 `specs/<feature>/intent-ledger.md`；這是 secondary artifact，不是新的 stage",
+        "`Intent Recovery Obligations` 區段；`/speckit.analyze` 也必須做 `Intent Drift Check`",
+        "`defer != disappear`"
+      ]
+    },
+    {
       "id": "workspace-structure-contract",
       "path": "WORKSPACE_STRUCTURE.md",
       "mustContainAll": [
@@ -191,6 +201,16 @@
       ]
     },
     {
+      "id": "constitution-intent-ledger-truthfulness",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "### Intent Ledger (Secondary Artifact)",
+        "### Defer Does Not Disappear",
+        "### Surface Truthfulness",
+        "`Intent Drift Check` MUST verify that all represented, deferred, or dropped core spec items are recorded in `intent-ledger.md`"
+      ]
+    },
+    {
       "id": "copilot-shared-layer-audit",
       "path": ".github/copilot-instructions.md",
       "mustContainAll": [
@@ -207,12 +227,30 @@
       ]
     },
     {
+      "id": "quickstart-intent-ledger-truthfulness",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "`/speckit.readiness` 必須要求建立或更新 `specs/<feature>/intent-ledger.md`；這是 secondary artifact，不是新的 stage。",
+        "`plan.md` 必須承接 `Intent Recovery Obligations`，`/speckit.analyze` 必須檢查是否出現 intent drift 與對外 coverage 誤導。",
+        "`intent-ledger.md` 不是新的流程階段；它只在核心 spec 項目被 represented、deferred 或 dropped 時作為 secondary artifact 出現。"
+      ]
+    },
+    {
       "id": "sdd-guide-eci-runtime",
       "path": "studio/SDD-QUICKSTART-GUIDE.md",
       "mustContainAll": [
         "`/speckit.eci` 已是 shared runtime command",
         "`eci-trigger.md` 是 intake seed，不是最終治理終點",
         "ECI 完成後仍必須回到 `/speckit.readiness` 重新判定下一個 blocker"
+      ]
+    },
+    {
+      "id": "sdd-guide-intent-drift-truthfulness",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "`intent-ledger.md` 不是新 stage，而是只有在核心 spec 項目被 represented、deferred 或正式 dropped 時才建立的 secondary artifact。",
+        "`Intent Drift Check` 固定至少檢查三件事：",
+        "`README.md`、`quickstart.md`、analyze 結論沒有把 representative subset 偽裝成原始完整能力。"
       ]
     }
   ],
@@ -230,6 +268,9 @@
         "7. `EXPLORATORY_ONLY`",
         "8. `NOT_READY`",
         "write `readiness-assessment.md`",
+        "Planability vs Intent Obligations",
+        "Create or update `intent-ledger.md` when core spec items are `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff`.",
+        "If any proposed drop lacks explicit owner signoff reference, route to `ROUTE_TO_DECISION` instead of normalizing the drop.",
         "`eci-trigger.md` is the mandatory intake seed for `/speckit.eci`.",
         "If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.",
         "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope."
@@ -259,19 +300,25 @@
         "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`",
         "If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR",
         "If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR",
-        "ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`"
+        "ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`",
+        "Load `Planability Resolved`, `Intent Ledger Requirement`, and `Intent Ledger Path`",
+        "Fill `Intent Recovery Obligations` from `intent-ledger.md` when required",
+        "Ensure the plan names any required README / quickstart coverage disclosure when umbrella naming is broader than the current representative subset",
+        "Require concrete re-entry triggers; do **not** accept generic placeholders such as `v1+`"
       ]
     },
     {
       "id": "analyze-agent-governance-scope",
       "path": ".github/agents/speckit.analyze.agent.md",
       "mustContainAll": [
-        "Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, and document drift across the core execution artifacts (`spec.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`)",
+        "Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, intent drift, and document drift across the core execution artifacts (`spec.md`, `intent-ledger.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`)",
         "Missing `readiness-assessment.md`",
         "`Primary Status` other than `READY_FOR_PLAN` while `plan.md` or `tasks.md` exists",
         "Latest readiness status is `ROUTE_TO_VALIDATION`, `ROUTE_TO_ACCESS`, or `ROUTE_TO_DECISION` after ECI re-entry, but `plan.md` or `tasks.md` already exists",
         "Plan/tasks assumptions that violate ECI `Allowed Implementation Scope`, `Explicit Prohibitions`, or adoption boundary",
-        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality"
+        "#### E. Intent Drift Check",
+        "From README.md (if present):",
+        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, missing required `intent-ledger.md`, dropped-without-signoff, truthfulness drift that over-claims shipped coverage, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality"
       ]
     }
   ],
@@ -282,8 +329,33 @@
       "mustContainAll": [
         "Create under specs/<feature>/readiness/readiness-assessment.md",
         "**Primary Status**: `READY_FOR_PLAN | ROUTE_TO_ECI | ROUTE_TO_REPO_CONTEXT | ROUTE_TO_DECISION | ROUTE_TO_VALIDATION | ROUTE_TO_ACCESS | EXPLORATORY_ONLY | NOT_READY`",
+        "## Planability vs Intent Obligations",
+        "**Intent Ledger Requirement**: Not Required / Create `intent-ledger.md` / Update `intent-ledger.md`",
+        "**Intent Ledger Path**: `specs/<feature>/intent-ledger.md` / N/A",
         "If this is a post-ECI rerun, distinguish what is already governed from what still blocks planning",
         "If this is a post-ECI rerun, explain why external capability governance is no longer the primary blocker or why it still is"
+      ]
+    },
+    {
+      "id": "plan-template-intent-recovery-semantics",
+      "path": "studio/templates/sdd-docs/plan-template.md",
+      "mustContainAll": [
+        "## Intent Recovery Obligations",
+        "Do not write generic placeholders such as \"v1+\" without a concrete re-entry condition.",
+        "Dropped items with explicit owner signoff remain governed in `intent-ledger.md`.",
+        "Intent recovery obligations are carried forward from `intent-ledger.md` when required"
+      ]
+    },
+    {
+      "id": "intent-ledger-template-semantics",
+      "path": "studio/templates/sdd-docs/intent-ledger-template.md",
+      "mustContainAll": [
+        "Create under specs/<feature>/intent-ledger.md only when a core spec item is",
+        "| source_intent_item | spec_anchor | current_classification | current_representation | defer_or_drop_reason | reentry_trigger | follow_on_feature_hint | surface_disclosure_required | owner_signoff_required |",
+        "`represented_by_substitute`",
+        "`deferred`",
+        "`dropped_with_owner_signoff`",
+        "`dropped_with_owner_signoff` MUST include explicit owner signoff"
       ]
     },
     {
@@ -331,7 +403,19 @@
       "path": "studio/scripts/powershell/check-prerequisites.ps1",
       "mustContainAll": [
         "-PathsOnly          Only output path variables (no validation; used by readiness/eci/plan gate checks)",
-        "# Get feature paths only (used by clarify/readiness/eci/plan gate logic)"
+        "# Get feature paths only (used by clarify/readiness/eci/plan gate logic)",
+        "INTENT_LEDGER        = $paths.INTENT_LEDGER",
+        "READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT",
+        "REPO_ROOT            = $paths.REPO_ROOT"
+      ]
+    },
+    {
+      "id": "common-feature-paths-intent-ledger-awareness",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "INTENT_LEDGER        = Join-Path $featureDir 'intent-ledger.md'",
+        "READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'",
+        "ECI_DIR              = $eciDir"
       ]
     },
     {
@@ -358,6 +442,7 @@
     "studio/SDD-QUICKSTART-GUIDE.md",
     "WORKSPACE_STRUCTURE.md",
     "README.md",
+    "studio/scripts/powershell/common.ps1",
     "studio/scripts/powershell/check-prerequisites.ps1",
     "studio/scripts/powershell/check-speckit-runtime.ps1",
     "studio/scripts/powershell/setup-hooks.ps1",

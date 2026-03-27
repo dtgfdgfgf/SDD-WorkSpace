@@ -18,7 +18,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Goal
 
-Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, and document drift across the core execution artifacts (`spec.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`) and any available supporting design artifacts (`data-model.md`, `contracts/`, `research.md`, `quickstart.md`) before implementation. This command MUST run only after `/speckit.tasks` has successfully produced a complete `tasks.md`.
+Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, intent drift, and document drift across the core execution artifacts (`spec.md`, `intent-ledger.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`) and any available supporting design artifacts (`data-model.md`, `contracts/`, `research.md`, `quickstart.md`, `README.md`) before implementation. This command MUST run only after `/speckit.tasks` has successfully produced a complete `tasks.md`.
 
 ## Operating Constraints
 
@@ -33,13 +33,15 @@ Constitution conflicts are automatically CRITICAL and require adjustment of the 
 
 ### 1. Initialize Analysis Context
 
-Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` once from repo root and parse JSON for FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. Derive absolute paths:
+Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` once from repo root and parse JSON for REPO_ROOT, FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. Derive absolute paths:
 
 - SPEC = FEATURE_DIR/spec.md
+- INTENT_LEDGER = FEATURE_DIR/intent-ledger.md
 - READINESS_DIR = FEATURE_DIR/readiness
 - READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md
 - PLAN = FEATURE_DIR/plan.md
 - TASKS = FEATURE_DIR/tasks.md
+- PROJECT_README = REPO_ROOT/README.md
 
 Abort with an error message if any required file is missing (instruct the user to run the missing prerequisite command). Missing `readiness-assessment.md` is always a CRITICAL gate failure.
 For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
@@ -56,10 +58,23 @@ Load only the minimal necessary context from each artifact:
 - User Stories
 - Edge Cases (if present)
 
+**From intent-ledger.md (if present):**
+
+- `source_intent_item`
+- `spec_anchor`
+- `current_classification`
+- `current_representation`
+- `defer_or_drop_reason`
+- `reentry_trigger`
+- `follow_on_feature_hint`
+- `surface_disclosure_required`
+- `owner_signoff_required`
+
 **From readiness-assessment.md (REQUIRED):**
 
 - Primary status
 - Recommended next step
+- Planability vs Intent Obligations
 - Readiness Dimension Scan
 - Primary Blocker Analysis
 - Allowed / Not Allowed Next Actions
@@ -112,6 +127,11 @@ Load only the minimal necessary context from each artifact:
 - Expected run / test workflows
 - Environment assumptions that tasks implicitly rely on
 
+**From README.md (if present):**
+
+- Feature naming and umbrella terminology that may over-claim current coverage
+- User-facing disclosure of representative coverage and known gaps
+
 **From tasks.md:**
 
 - Task IDs
@@ -135,12 +155,14 @@ Load only the minimal necessary context from each artifact:
 Create internal representations (do not include raw artifacts in output):
 
 - **Requirements inventory**: Each functional + non-functional requirement with a stable key (derive slug based on imperative phrase; e.g., "User can upload file" → `user-can-upload-file`)
+- **Intent obligation inventory**: Each represented, deferred, or dropped core item from `intent-ledger.md` plus its representation, signoff, re-entry, and disclosure requirements
 - **Readiness guardrail inventory**: Primary status, route-specific prohibitions, allowed actions, and follow-up conditions
 - **User story/action inventory**: Discrete user actions with acceptance criteria
 - **Task coverage mapping**: Map each task to one or more requirements or stories (inference by keyword / explicit reference patterns like IDs or key phrases)
 - **Entity / invariant inventory**: Core entities, state transitions, and invariants from `data-model.md`
 - **Contract rule inventory**: Validation rules, processing rules, outputs, and failure cases from `contracts/`
 - **Operational workflow inventory**: Expected developer workflows from `quickstart.md`
+- **Surface truthfulness inventory**: README / quickstart claims about shipped coverage, umbrella naming, and known gaps
 - **Constitution rule set**: Extract principle names and MUST/SHOULD normative statements
 
 ### 4. Detection Passes (Token-Efficient Analysis)
@@ -168,9 +190,11 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 
 - Missing `readiness-assessment.md`
 - Missing or ambiguous `Primary Status`
+- Missing or ambiguous `Intent Ledger Requirement` / `Intent Ledger Path` when scope compression is evident
 - `Primary Status` other than `READY_FOR_PLAN` while `plan.md` or `tasks.md` exists
 - Latest readiness status is `ROUTE_TO_VALIDATION`, `ROUTE_TO_ACCESS`, or `ROUTE_TO_DECISION` after ECI re-entry, but `plan.md` or `tasks.md` already exists
 - Required route packet missing for the declared primary status
+- Required `intent-ledger.md` missing even though readiness or plan indicates retained intent obligations
 - `ROUTE_TO_ECI` cases missing the expected `readiness/eci/*.md` dossier after ECI was supposedly completed
 - Plan/tasks assumptions that violate readiness `Allowed` / `Not Allowed Next Actions`
 - Plan/tasks assumptions that violate ECI `Allowed Implementation Scope`, `Explicit Prohibitions`, or adoption boundary
@@ -180,20 +204,30 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Readiness artifact clearly stale relative to current spec or plan/tasks scope (for example, spec changed materially but readiness still reflects an older blocker model)
 - ECI dossier clearly stale relative to trigger/spec/plan assumptions (for example, plan names provider usage or versions outside the source manifest / adoption record)
 
-#### E. Constitution Alignment
+#### E. Intent Drift Check
+
+- Core spec items handled as `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff` but absent from `intent-ledger.md`
+- `dropped_with_owner_signoff` entries missing explicit owner signoff reference
+- `plan.md` missing `Intent Recovery Obligations` even though `intent-ledger.md` exists
+- `Intent Recovery Obligations` omits current representation, reason, re-entry trigger, or disclosure requirement
+- README / quickstart / analyze summary implies full umbrella coverage even though the shipped surface is only a representative subset
+- Plan or README disclosures contradict `surface_disclosure_required` in the ledger
+- Generic placeholders such as `v1+` used where a concrete re-entry trigger is required
+
+#### F. Constitution Alignment
 
 - Any requirement or plan element conflicting with a MUST principle
 - Missing mandated sections or quality gates from constitution
 - `tasks.md` checklist lines that violate the canonical format required by constitution/template (`T### [P#] [Risk: X] [Story: ...]`)
 
-#### F. Coverage Gaps
+#### G. Coverage Gaps
 
 - Requirements with zero associated tasks
 - Tasks with no mapped requirement/story
 - Non-functional requirements not reflected in tasks (e.g., performance, security)
 - Data-model invariants or contract rules with no corresponding task coverage
 
-#### G. Inconsistency
+#### H. Inconsistency
 
 - Terminology drift (same concept named differently across files)
 - Data entities referenced in plan but absent in spec (or vice versa)
@@ -209,7 +243,7 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 
 Use this heuristic to prioritize findings:
 
-- **CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality
+- **CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, missing required `intent-ledger.md`, dropped-without-signoff, truthfulness drift that over-claims shipped coverage, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality
 - **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion
 - **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case, route packet incompleteness that weakens governance clarity
 - **LOW**: Style/wording improvements, minor redundancy not affecting execution order
@@ -233,6 +267,8 @@ Output a Markdown report (no file writes) with the following structure:
 
 **Governance Gate Issues:** (if any)
 
+**Intent Drift Check:** (if any)
+
 **Supporting Artifact Alignment Issues:** (if any)
 
 **Constitution Alignment Issues:** (if any)
@@ -246,6 +282,7 @@ Output a Markdown report (no file writes) with the following structure:
 - Coverage % (requirements with >=1 task)
 - Invariant Coverage % (data-model / contract rules with >=1 task, if supporting docs exist)
 - Readiness Gate Issues Count
+- Intent Drift Issues Count
 - Ambiguity Count
 - Duplication Count
 - Critical Issues Count
@@ -256,6 +293,7 @@ At end of report, output a concise Next Actions block:
 
 - If CRITICAL issues exist: Recommend resolving before `/speckit.implement`
 - If readiness gate issues exist: Recommend re-running `/speckit.readiness` or completing the required remediation packet before touching plan/tasks/implementation
+- If intent drift issues exist: Recommend reconciling `intent-ledger.md`, `plan.md`, README / quickstart disclosure, and then rerun `/speckit.analyze`
 - If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
 - Provide explicit command suggestions: e.g., "Run /speckit.specify with refinement", "Run /speckit.eci to complete external capability governance", "Run /speckit.readiness to refresh gate status", "Run /speckit.plan to adjust architecture after gate clearance", "Manually edit tasks.md to add coverage for 'performance-metrics'", "Align data-model.md / contracts/ with task assumptions"
 
