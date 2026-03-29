@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.5.0
+**Version:** 1.5.1
 **Created:** 2025-12-08  
-**Updated:** 2026-03-27
+**Updated:** 2026-03-30
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -30,6 +30,7 @@ Design priorities:
 | `learning/<project>/` | Practice projects |
 | `projects/<project>/` | Internal, Client, and historical sample projects |
 | `docs/project-governance-status.md` | Central governance compatibility ledger for consumer projects |
+| `docs/mainline-updates/` | Centralized explanation notes for main-bound shared-layer update batches |
 | `archive/` | Archived or deprecated items |
 | `resources/` | Shared resources |
 | `resources/agent-skill-packs/` | Generated AI skill packs exported from shared runtime sources |
@@ -131,6 +132,19 @@ plan and must stay aligned with outward-facing coverage disclosure.
 - `readiness / eci` 的最終 shared-layer 收斂，以 `check-speckit-runtime.ps1 -Json` 為唯一 machine-verifiable acceptance source
 - `docs/readiness_source/` 保留為 design reference，不屬於 canonical runtime acceptance surface
 
+### 4.2 Mainline Update Notes
+
+`docs/mainline-updates/` 是這個 workspace governance repo 的集中更新說明區。任何準備合回
+`main` 的 shared-layer 變更批次，只要動到治理文件、runtime agents、templates、hooks、
+shared scripts 或其 canonical explanatory docs，都應新增一份專門說明檔並更新索引。
+
+規則：
+
+- 一份說明檔可以覆蓋一個 coherent merge-ready batch，不要求每個 commit 各寫一份
+- 檔名格式使用 `YYYY-MM-DD-short-topic.md`
+- 內容至少要說明 summary、why、affected paths、validation、merge notes
+- 正式模板位於 `studio/templates/sdd-docs/mainline-update-note-template.md`
+
 ### 5. Template Strategy
 
 Studio templates are the default baseline. Projects may add local overrides under
@@ -196,6 +210,7 @@ the new project classification scheme for fresh practice work.
 |----------|---------|
 | `studio/constitution/constitution.md` | Governance baseline |
 | `docs/project-governance-status.md` | Central project governance compatibility ledger |
+| `docs/mainline-updates/README.md` | Central index and usage guide for main-bound update notes |
 | `.github/copilot-instructions.md` | Workspace AI collaboration rules |
 | `studio/QUICKSTART.md` | Fast-start instructions |
 | `studio/SDD-QUICKSTART-GUIDE.md` | Full workflow guide |
@@ -205,6 +220,7 @@ the new project classification scheme for fresh practice work.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5.1 | 2026-03-30 | Add centralized `docs/mainline-updates/` management and template for main-bound shared-layer update explanations |
 | 1.5.0 | 2026-03-27 | Add optional `intent-ledger.md` contract and document how readiness, plan, and outward coverage disclosure must carry compressed core intent |
 | 1.4.1 | 2026-03-18 | Add post-ECI readiness re-entry semantics and clarify that `readiness-assessment.md` remains the latest gate authority |
 | 1.4.0 | 2026-03-18 | Promote `/speckit.eci` to shared runtime and add `readiness/eci/` dossier artifacts |

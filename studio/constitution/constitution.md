@@ -1,7 +1,7 @@
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.5.0
+**Version:** 1.5.1
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects, feature packs, and SDD workflows
 
@@ -358,6 +358,20 @@ full original intent.
 
 This constitution currently requires documentation truthfulness only. UI-level truthfulness markers
 or badges MAY be added later, but they are not mandatory in this patch.
+
+### Mainline Update Notes
+
+For this workspace governance repo, any branch intended to merge into `main` that changes
+shared-layer governance, runtime agents, prompts, templates, hooks, shared scripts, or their
+canonical explanatory docs MUST add a dedicated update note under `docs/mainline-updates/`.
+
+Additional rules:
+
+- Each note MUST be indexed in `docs/mainline-updates/README.md`.
+- One note MAY cover one coherent merge-ready batch; a separate note is not required for every
+  individual commit.
+- The note MUST summarize scope, impact, and validation, but it does not replace canonical runtime
+  artifacts or the shared runtime audit.
 
 ### Conflict Resolution
 

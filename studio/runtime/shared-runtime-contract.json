@@ -102,6 +102,7 @@
     "eci-trigger-template.md",
     "exploration-boundary-template.md",
     "intent-ledger-template.md",
+    "mainline-update-note-template.md",
     "plan-template.md",
     "project-constitution-template.md",
     "readiness-assessment-template.md",
@@ -167,6 +168,14 @@
       ]
     },
     {
+      "id": "readme-mainline-update-notes",
+      "path": "README.md",
+      "mustContainAll": [
+        "`docs/mainline-updates/` 留下一份專門說明檔",
+        "`docs/mainline-updates/README.md` 索引"
+      ]
+    },
+    {
       "id": "workspace-structure-contract",
       "path": "WORKSPACE_STRUCTURE.md",
       "mustContainAll": [
@@ -181,6 +190,15 @@
       "mustContainAll": [
         "`readiness / eci` 的最終 shared-layer 收斂，以 `check-speckit-runtime.ps1 -Json` 為唯一 machine-verifiable acceptance source",
         "`docs/readiness_source/` 保留為 design reference，不屬於 canonical runtime acceptance surface"
+      ]
+    },
+    {
+      "id": "workspace-structure-mainline-update-notes",
+      "path": "WORKSPACE_STRUCTURE.md",
+      "mustContainAll": [
+        "`docs/mainline-updates/`",
+        "Centralized explanation notes for main-bound shared-layer update batches",
+        "`studio/templates/sdd-docs/mainline-update-note-template.md`"
       ]
     },
     {
@@ -208,6 +226,24 @@
         "### Defer Does Not Disappear",
         "### Surface Truthfulness",
         "`Intent Drift Check` MUST verify that all represented, deferred, or dropped core spec items are recorded in `intent-ledger.md`"
+      ]
+    },
+    {
+      "id": "constitution-mainline-update-notes",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "### Mainline Update Notes",
+        "`docs/mainline-updates/README.md`",
+        "One note MAY cover one coherent merge-ready batch"
+      ]
+    },
+    {
+      "id": "mainline-update-index",
+      "path": "docs/mainline-updates/README.md",
+      "mustContainAll": [
+        "Central index for main-bound shared-layer update explanation notes.",
+        "Any branch intended to merge into `main`",
+        "`studio/templates/sdd-docs/mainline-update-note-template.md`"
       ]
     },
     {
@@ -359,6 +395,17 @@
       ]
     },
     {
+      "id": "mainline-update-note-template-semantics",
+      "path": "studio/templates/sdd-docs/mainline-update-note-template.md",
+      "mustContainAll": [
+        "Create under docs/mainline-updates/YYYY-MM-DD-short-topic.md",
+        "**Target Branch**: `main`",
+        "## Summary",
+        "## Validation",
+        "## Merge Notes"
+      ]
+    },
+    {
       "id": "eci-assessment-template-semantics",
       "path": "studio/templates/sdd-docs/eci-assessment-template.md",
       "mustContainAll": [
@@ -442,6 +489,7 @@
     "studio/SDD-QUICKSTART-GUIDE.md",
     "WORKSPACE_STRUCTURE.md",
     "README.md",
+    "docs/mainline-updates/",
     "studio/scripts/powershell/common.ps1",
     "studio/scripts/powershell/check-prerequisites.ps1",
     "studio/scripts/powershell/check-speckit-runtime.ps1",

@@ -97,6 +97,7 @@
 - 完成 `/speckit.eci` 不等於可以直接進 `/speckit.plan`；只有最新的 `readiness-assessment.md` 明確變成 `READY_FOR_PLAN` 才能進入規劃
 - 若 ECI 的授權結果仍是 `READY_FOR_SANDBOX_ONLY` 或 `READY_FOR_SPIKE_ONLY`，下一步應由 `/speckit.readiness` 轉判成 `ROUTE_TO_VALIDATION`、`ROUTE_TO_ACCESS` 或 `ROUTE_TO_DECISION` 等次級 blocker，而不是機械式重做 ECI
 - `plan.md` 若承接到 `intent-ledger.md`，必須有固定的 `Intent Recovery Obligations` 區段；`/speckit.analyze` 也必須做 `Intent Drift Check`
+- 凡是準備合回 `main` 的 shared-layer 更新，必須在 `docs/mainline-updates/` 留下一份專門說明檔，並更新 `docs/mainline-updates/README.md` 索引
 
 這個 repo 的治理假設是：spec 決定行為邊界、readiness 判斷前提是否足夠、`defer != disappear`、plan 決定技術方向、tasks 決定落地順序，implement 不應跳過前置文件直接做事。
 
@@ -106,6 +107,7 @@
 
 - `studio/constitution/constitution.md`
 - `WORKSPACE_STRUCTURE.md`
+- `docs/mainline-updates/README.md`
 - `studio/QUICKSTART.md`
 - `studio/SDD-QUICKSTART-GUIDE.md`
 - `.github/copilot-instructions.md`
