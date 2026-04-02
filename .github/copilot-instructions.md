@@ -22,6 +22,7 @@ engineering practice.
 | `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
 | `studio/templates/sdd-agents/` | Mirrored agent templates; sync from `.github/agents/` only |
 | `studio/templates/sdd-docs/` | Canonical studio document templates |
+| `docs/project-worktree-parity-governance.md` | Canonical policy for consumer-project derived worktree parity |
 | `<project>/.github/copilot-instructions.md` | GitHub Copilot project context only |
 | `<project>/CLAUDE.md` | Claude project context only |
 
@@ -81,6 +82,25 @@ Workflow support:
 | `<project>/src/` | Source code |
 | `<project>/docs/` | Documentation |
 | `<project>/README.md` | Project overview and project type declaration |
+
+## Project Worktree Parity
+
+When handling a derived worktree under `projects/` or `learning/`, do not assume project
+completeness from the tracked tree alone.
+
+Rules:
+
+- Treat a derived worktree as a same-level project instance, not as a reduced checkout.
+- Treat `.git` as a normal file-based Git worktree pointer when Git worktree plumbing uses that
+  form.
+- Compare the derived worktree against the source project's declared parity surface before cleanup,
+  normalization, or diagnosis.
+- If the source project depends on `.github/agents/`, `.github/copilot-instructions.md`,
+  `CLAUDE.md`, `.specify/memory/constitution.md`, `.code-workspace`, or declared local-only assets,
+  a derived worktree missing them is not operationally healthy unless a documented equivalent source
+  exists.
+- Do not use public snapshot boundaries, `.gitignore`, or local-only blacklists as justification for
+  dropping required project-operational assets.
 
 ## Markdown Rules
 
@@ -182,6 +202,8 @@ Always:
 - Preserve the studio-first centralized runtime model
 - Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources
 - Treat `studio/extensions/` as the only shared extension registry authority
+- Treat `docs/project-worktree-parity-governance.md` as the canonical rule when evaluating
+  consumer-project derived worktree completeness
 
 ## Knowledge Feedback
 

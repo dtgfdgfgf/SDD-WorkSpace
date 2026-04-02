@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.5.1
+**Version:** 1.6.0
 **Created:** 2025-12-08  
-**Updated:** 2026-03-30
+**Updated:** 2026-04-02
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -30,6 +30,7 @@ Design priorities:
 | `learning/<project>/` | Practice projects |
 | `projects/<project>/` | Internal, Client, and historical sample projects |
 | `docs/project-governance-status.md` | Central governance compatibility ledger for consumer projects |
+| `docs/project-worktree-parity-governance.md` | Canonical governance policy for consumer-project derived worktree parity |
 | `docs/mainline-updates/` | Centralized explanation notes for main-bound shared-layer update batches |
 | `archive/` | Archived or deprecated items |
 | `resources/` | Shared resources |
@@ -71,6 +72,10 @@ Each project is expected to contain:
 | `src/` | Source code |
 | `docs/` | Documentation |
 | `README.md` | Project overview and project type declaration |
+
+Derived worktrees created from these projects MUST preserve the same project-operational surface
+expected of the source project. They are not considered healthy merely because the tracked tree
+exists. The canonical rule for this parity model is `docs/project-worktree-parity-governance.md`.
 
 ## Design Decisions
 
@@ -145,6 +150,19 @@ shared scripts 或其 canonical explanatory docs，都應新增一份專門說�
 - 內容至少要說明 summary、why、affected paths、validation、merge notes
 - 正式模板位於 `studio/templates/sdd-docs/mainline-update-note-template.md`
 
+### 4.3 Project Worktree Parity
+
+Consumer-project derived worktrees are project-equivalent instances, not reduced checkouts.
+
+Rules:
+
+- A derived worktree MUST preserve both tracked parity and required local bootstrap parity.
+- `.git` appearing as a file in a derived worktree is normal Git plumbing, not evidence of damage.
+- Public snapshot boundaries and `.gitignore` rules do not authorize the loss of required local
+  operational assets.
+- If a project declares additional local-only operational assets, derived worktrees MUST preserve
+  them or use a documented equivalent source.
+
 ### 5. Template Strategy
 
 Studio templates are the default baseline. Projects may add local overrides under
@@ -194,6 +212,10 @@ the new project classification scheme for fresh practice work.
 4. Create a project `.code-workspace`
 5. Create a `.github/agents/` junction to workspace runtime agents
 
+These initialization rules govern creation of the root project instance. They do not by themselves
+guarantee derived worktree parity. Derived worktree parity is a separate obligation governed by
+`docs/project-worktree-parity-governance.md`.
+
 ## Naming Conventions
 
 | Type | Convention | Example |
@@ -210,6 +232,7 @@ the new project classification scheme for fresh practice work.
 |----------|---------|
 | `studio/constitution/constitution.md` | Governance baseline |
 | `docs/project-governance-status.md` | Central project governance compatibility ledger |
+| `docs/project-worktree-parity-governance.md` | Canonical consumer-project derived worktree parity policy |
 | `docs/mainline-updates/README.md` | Central index and usage guide for main-bound update notes |
 | `.github/copilot-instructions.md` | Workspace AI collaboration rules |
 | `studio/QUICKSTART.md` | Fast-start instructions |
@@ -220,6 +243,7 @@ the new project classification scheme for fresh practice work.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.6.0 | 2026-04-02 | Add canonical consumer-project derived worktree parity governance and clarify that project initialization bootstrap does not automatically satisfy derived worktree parity |
 | 1.5.1 | 2026-03-30 | Add centralized `docs/mainline-updates/` management and template for main-bound shared-layer update explanations |
 | 1.5.0 | 2026-03-27 | Add optional `intent-ledger.md` contract and document how readiness, plan, and outward coverage disclosure must carry compressed core intent |
 | 1.4.1 | 2026-03-18 | Add post-ECI readiness re-entry semantics and clarify that `readiness-assessment.md` remains the latest gate authority |

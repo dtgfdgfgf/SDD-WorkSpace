@@ -46,6 +46,10 @@
 - studio templates
 - shared extension registry
 
+從 consumer project 派生出的 feature worktree，也必須保留這個 project 的同級操作語境，
+不能只剩 Git tracked files。對 worktree parity 的正式規則，請以
+`docs/project-worktree-parity-governance.md` 為準。
+
 ## 目錄總覽
 
 | Path | Purpose |
@@ -73,6 +77,7 @@
 | Client | `projects/` | 未來正式客戶專案 |
 
 每個專案都應該有自己的 `README.md`、`specs/`、`src/`、`docs/`，以及必要時的 project constitution。
+同一個專案派生出的 feature worktree 也應維持 project-equivalent operating surface，而不是 reduced checkout。
 
 ## SDD 工作流程
 
@@ -208,6 +213,7 @@ code projects/studio-automation/studio-automation.code-workspace
 
 - `WORKSPACE_STRUCTURE.md`
 - `docs/project-governance-status.md`
+- `docs/project-worktree-parity-governance.md`
 - `studio/QUICKSTART.md`
 - `studio/SDD-QUICKSTART-GUIDE.md`
 - `studio/constitution/constitution.md`
