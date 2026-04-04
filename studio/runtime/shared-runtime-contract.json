@@ -14,6 +14,23 @@
     "speckit.taskstoissues",
     "speckit.version"
   ],
+  "requiredClaudeAgents": [
+    "async-python-reviewer.md",
+    "spec-kit-qa-bot.md",
+    "speckit-analyze.md",
+    "speckit-checklist.md",
+    "speckit-clarify.md",
+    "speckit-constitution.md",
+    "speckit-discover.md",
+    "speckit-eci.md",
+    "speckit-implement.md",
+    "speckit-plan.md",
+    "speckit-readiness.md",
+    "speckit-specify.md",
+    "speckit-tasks.md",
+    "speckit-taskstoissues.md",
+    "speckit-version.md"
+  ],
   "requiredPromptStubs": [
     "speckit.analyze.prompt.md",
     "speckit.checklist.prompt.md",
@@ -151,6 +168,15 @@
       ]
     },
     {
+      "id": "readme-claude-shared-runtime",
+      "path": "README.md",
+      "mustContainAll": [
+        "`.claude/agents/` 是 Claude shared runtime source of truth",
+        "`<project>/.claude/agents` junction",
+        "Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源"
+      ]
+    },
+    {
       "id": "readme-readiness-closure",
       "path": "README.md",
       "mustContainAll": [
@@ -182,6 +208,15 @@
         "`studio/runtime/shared-runtime-contract.json`",
         "`projects/` 與 `learning/` 是 consumer spaces，不是 shared-layer convergence 的預設驗收面",
         "`check-speckit-runtime.ps1 -Json` 是 shared runtime 的主要機器驗證入口"
+      ]
+    },
+    {
+      "id": "workspace-structure-claude-runtime",
+      "path": "WORKSPACE_STRUCTURE.md",
+      "mustContainAll": [
+        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "| `.claude/agents/` | Junction to workspace `.claude/agents/` |",
+        "Project-local Claude agents are not supported in this workspace model."
       ]
     },
     {
@@ -263,6 +298,15 @@
       ]
     },
     {
+      "id": "quickstart-claude-runtime",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "每個專案也會建立 `.claude/agents/` junction，來源是 workspace 根目錄的 `.claude/agents/`。",
+        "`/.claude/agents/` 是 Claude shared runtime source of truth",
+        "Claude skills 與 shared agents runtime 是不同層"
+      ]
+    },
+    {
       "id": "quickstart-intent-ledger-truthfulness",
       "path": "studio/QUICKSTART.md",
       "mustContainAll": [
@@ -278,6 +322,15 @@
         "`/speckit.eci` 已是 shared runtime command",
         "`eci-trigger.md` 是 intake seed，不是最終治理終點",
         "ECI 完成後仍必須回到 `/speckit.readiness` 重新判定下一個 blocker"
+      ]
+    },
+    {
+      "id": "sdd-guide-claude-runtime-boundary",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "`.claude/agents/` 是 shared Claude runtime authority",
+        "`<project>/.claude/agents` 是 direct junction consumption path",
+        "Claude skills install root 與 workspace shared agents runtime 是不同層"
       ]
     },
     {
@@ -472,10 +525,31 @@
         "shared runtime audit",
         "readiness/**/*.md"
       ]
+    },
+    {
+      "id": "seed-claude-agents-authority-boundary",
+      "path": "studio/scripts/powershell/seed-claude-agents.ps1",
+      "mustContainAll": [
+        ".claude/agents",
+        "copilot-instructions.md",
+        "Claude shared runtime authority after generation"
+      ]
+    },
+    {
+      "id": "new-project-worktree-claude-bootstrap",
+      "path": "studio/scripts/powershell/new-project-worktree.ps1",
+      "mustContainAll": [
+        "Initialize-ProjectSharedAgentJunctions",
+        ".claude/agents",
+        ".github/copilot-instructions.md",
+        "CLAUDE.md",
+        ".code-workspace"
+      ]
     }
   ],
   "sharedGatePaths": [
     ".github/agents/",
+    ".claude/agents/",
     ".github/prompts/",
     ".github/copilot-instructions.md",
     ".githooks/pre-commit",
@@ -493,6 +567,8 @@
     "studio/scripts/powershell/common.ps1",
     "studio/scripts/powershell/check-prerequisites.ps1",
     "studio/scripts/powershell/check-speckit-runtime.ps1",
+    "studio/scripts/powershell/seed-claude-agents.ps1",
+    "studio/scripts/powershell/new-project-worktree.ps1",
     "studio/scripts/powershell/setup-hooks.ps1",
     "studio/scripts/powershell/upgrade-studio-runtime.ps1"
   ]

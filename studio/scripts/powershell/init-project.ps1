@@ -157,33 +157,31 @@ try {
             @{
                 name = "agents (read-only)"
                 path = "../../.github/agents"
+            },
+            @{
+                name = "claude agents (read-only)"
+                path = "../../.claude/agents"
             }
         )
         settings = @{
             "files.readonlyInclude" = @{
-                "**/studio/**"         = $true
-                "**/.github/agents/**" = $true
+                "**/studio/**"          = $true
+                "**/.github/agents/**"  = $true
+                "**/.claude/agents/**"  = $true
             }
         }
     } | ConvertTo-Json -Depth 4
     Set-Content -Path $workspaceFile -Value $workspaceContent -Encoding UTF8
 
-    # Create .github/agents Junction for VS Code agent discovery
-    $githubDir = Join-Path $targetDir '.github'
-    $agentsJunction = Join-Path $githubDir 'agents'
-    $agentsSource = Join-Path $workspaceRoot '.github/agents'
-    
-    if (-not (Test-Path $githubDir)) {
-        New-Item -ItemType Directory -Path $githubDir -Force | Out-Null
-    }
-    
-    if (Test-Path $agentsSource) {
-        # Create Junction (directory symbolic link) to workspace agents
-        New-Item -ItemType Junction -Path $agentsJunction -Target $agentsSource -Force | Out-Null
-        Write-Host "Created agents junction: .github/agents -> $agentsSource" -ForegroundColor Gray
-    }
-    else {
-        Write-Warning "Agents source not found at: $agentsSource - skipping junction creation"
+    # Create shared agent junctions for Copilot and Claude runtime discovery
+    foreach ($junction in @(Initialize-ProjectSharedAgentJunctions -ProjectRoot $targetDir -WorkspaceRoot $workspaceRoot)) {
+        if ($junction.available) {
+            $verb = if ($junction.created) { 'Created' } else { 'Verified' }
+            $relativePath = [System.IO.Path]::GetRelativePath($targetDir, $junction.path)
+            Write-Host "$verb agent junction: $relativePath -> $($junction.target)" -ForegroundColor Gray
+        } else {
+            Write-Warning "Shared $($junction.agentType) agents source not found at: $($junction.target) - skipping junction creation"
+        }
     }
 
     # Remove .gitkeep files if directories have content
@@ -204,7 +202,7 @@ try {
     Write-Host "  2. Start SDD workflow with: /speckit.specify <your feature description>"
     Write-Host ""
     Write-Host "Project Type: $Type" -ForegroundColor Cyan
-    Write-Host "Workspace File: $Name.code-workspace (includes studio & agents as read-only)" -ForegroundColor Cyan
+    Write-Host "Workspace File: $Name.code-workspace (includes studio, Copilot agents, and Claude agents as read-only)" -ForegroundColor Cyan
     Write-Host "Knowledge Capture: retrospective.md (required) + learnings.md (if applicable)"
     Write-Host ""
 

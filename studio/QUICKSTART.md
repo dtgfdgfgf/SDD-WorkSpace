@@ -34,9 +34,12 @@ code projects/studio-automation/studio-automation.code-workspace
 | `<project-name>` | 可編輯 | 專案程式碼與文件 |
 | `studio (read-only)` | 唯讀 | constitution、templates、scripts |
 | `agents (read-only)` | 唯讀 | workspace runtime agents |
+| `claude agents (read-only)` | 唯讀 | workspace Claude runtime agents |
 
 每個專案也會建立 `.github/agents/` junction，來源是 workspace 根目錄的
 `.github/agents/`。這是 runtime source；`studio/templates/sdd-agents/` 只是 mirror。
+每個專案也會建立 `.claude/agents/` junction，來源是 workspace 根目錄的 `.claude/agents/`。
+`/.claude/agents/` 是 Claude shared runtime source of truth。Claude skills 與 shared agents runtime 是不同層。
 
 ### 專案類型
 
@@ -115,6 +118,7 @@ code projects/studio-automation/studio-automation.code-workspace
 | Path | Purpose |
 |------|---------|
 | `.specify/memory/constitution.md` | 專案層級 canonical constitution |
+| `.claude/agents/` | Claude shared runtime junction |
 | `.github/copilot-instructions.md` | GitHub Copilot 專案 context，不是 constitution |
 | `CLAUDE.md` | Claude 專案 context，不是 constitution |
 | `specs/<feature>/spec.md` | 規格文件 |

@@ -2,7 +2,7 @@
 
 一個以 Specification-Driven Development (SDD) 為核心的 studio-first 工作區，目標是把個人 AI 工程實踐、共享治理、專案初始化、知識回饋與 AI agent runtime 集中在同一個 workspace 內管理。
 
-這個 repo 不是單一產品專案，而是整個 SDD 工作室的基礎設施。`studio/` 放 canonical sources，`.github/` 放 runtime agents 與 prompt 資產，`learning/` 與 `projects/` 放實際練習和交付專案。
+這個 repo 不是單一產品專案，而是整個 SDD 工作室的基礎設施。`studio/` 放 canonical sources，`.github/` 放 Copilot runtime assets，`.claude/` 放 Claude runtime assets，`learning/` 與 `projects/` 放實際練習和交付專案。
 
 ## 為什麼有這個 repo
 
@@ -23,7 +23,8 @@
 共享能力集中在 workspace 根層與 `studio/`：
 
 - `studio/constitution/constitution.md` 是最高權限治理文件
-- `.github/agents/` 與 `.github/prompts/` 是 runtime source of truth
+- `.github/agents/` 與 `.github/prompts/` 是 Copilot runtime source of truth
+- `.claude/agents/` 是 Claude shared runtime source of truth
 - `studio/templates/` 提供專案初始化與 SDD 文件模板
 - `studio/scripts/powershell/` 提供初始化、同步、匯出與維護腳本
 - `studio/extensions/` 是共享 extension registry
@@ -42,9 +43,12 @@
 專案本身放在 `learning/` 或 `projects/`，但會透過 shared runtime 吃到工作區的共享資產，例如：
 
 - `.github/agents/` junction
+- `<project>/.claude/agents` junction
 - workspace-level Copilot instructions
 - studio templates
 - shared extension registry
+
+目前 workspace 採 direct junction 模型提供 Claude shared agents，不支援 project-local Claude agents。
 
 從 consumer project 派生出的 feature worktree，也必須保留這個 project 的同級操作語境，
 不能只剩 Git tracked files。對 worktree parity 的正式規則，請以
@@ -55,6 +59,7 @@
 | Path | Purpose |
 |------|---------|
 | `.github/agents/` | 共享 SDD runtime agents |
+| `.claude/agents/` | 共享 Claude runtime agents |
 | `.github/prompts/` | 共享 prompt 資產 |
 | `studio/constitution/` | studio 級治理與方法論 |
 | `studio/templates/` | 專案初始化與 SDD 文件模板 |
@@ -150,12 +155,13 @@ code projects/studio-automation/studio-automation.code-workspace
 以下是這個 workspace 內比較重要的 authority 邊界：
 
 - Runtime source of truth: `.github/agents/`、`.github/prompts/`
+- `.claude/agents/` 是 Claude shared runtime source of truth
 - Studio mirror / scaffolding source: `studio/templates/sdd-agents/`
 - Canonical governance source: `studio/constitution/constitution.md`
 - Canonical extension registry: `studio/extensions/`
 - Generated skill pack exports: `resources/agent-skill-packs/`
 
-其中 `studio/templates/sdd-agents/` 是 mirror，不應與 `.github/agents/` 競爭成第二個權威來源。`resources/agent-skill-packs/` 是產生物，不是手動維護的主要來源。
+其中 `studio/templates/sdd-agents/` 是 mirror，不應與 `.github/agents/` 競爭成第二個權威來源。Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源。
 
 ## Shared-Layer Convergence
 
@@ -173,7 +179,9 @@ code projects/studio-automation/studio-automation.code-workspace
 | `studio/scripts/powershell/init-practice.ps1` | 建立 Practice 專案 |
 | `studio/scripts/powershell/init-project.ps1` | 建立 Internal / Client 專案 |
 | `studio/scripts/powershell/create-new-feature.ps1` | 建立新 feature 工作區與文件骨架 |
+| `studio/scripts/powershell/new-project-worktree.ps1` | 建立 consumer project derived worktree 並補齊 shared agent junction parity |
 | `studio/scripts/powershell/check-speckit-runtime.ps1` | 驗證 shared runtime contract、mirror parity、templates、hooks 與 canonical docs |
+| `studio/scripts/powershell/seed-claude-agents.ps1` | 從現有 Copilot shared agent surface seed workspace Claude shared agents |
 | `studio/scripts/powershell/update-agent-context.ps1` | 更新 agent context / runtime 對齊 |
 | `setup-copilot-agents.ps1` | 安裝或更新 GitHub Copilot custom agents |
 

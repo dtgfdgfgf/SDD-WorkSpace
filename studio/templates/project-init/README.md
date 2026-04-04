@@ -23,6 +23,8 @@ code <project-name>.code-workspace
 | Path | Purpose |
 |------|---------|
 | `.specify/memory/constitution.md` | Project-level canonical constitution |
+| `.github/agents/` | Copilot shared runtime junction |
+| `.claude/agents/` | Claude shared runtime junction |
 | `.github/copilot-instructions.md` | Copilot project context if generated later |
 | `CLAUDE.md` | Claude project context if generated later |
 | `docs/governance-status.md` | Project-local governance compatibility notice |
@@ -57,6 +59,7 @@ This project follows the dual-layer constitution system:
 - Project folder (editable)
 - Studio folder (read-only)
 - Agents folder (read-only)
+- Claude agents folder (read-only)
 
 Project agent context files such as `.github/copilot-instructions.md` and `CLAUDE.md` may be
 generated later, but they do not replace `.specify/memory/constitution.md`.

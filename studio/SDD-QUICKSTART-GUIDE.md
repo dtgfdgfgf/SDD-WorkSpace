@@ -138,6 +138,8 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 .\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
 ```
 
+另外，`.claude/agents/` 是 shared Claude runtime authority，`<project>/.claude/agents` 是 direct junction consumption path。Claude skills install root 與 workspace shared agents runtime 是不同層。
+
 **為何這麼做**：Constitution 定義了「什麼可以做、什麼不能做」。不了解規則就開始，會導致後續大量返工。
 
 ### 2.4 可用的 Custom Agents
@@ -190,6 +192,7 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 |------|------|------|
 | Studio Constitution | `studio/constitution/constitution.md` | 所有專案都必須遵守的最高權限規則 |
 | Project Constitution | `<project>/.specify/memory/constitution.md` | 專案層級補充規則，只能加嚴不能放寬 |
+| Shared Claude Runtime | `.claude/agents/` | workspace 級 Claude shared runtime authority |
 | Agent Context | `<project>/.github/copilot-instructions.md`、`<project>/CLAUDE.md` | AI 協作脈絡檔，不是 constitution |
 
 **合併邏輯**：
@@ -1232,7 +1235,6 @@ project-root/
 ---
 
 > **注意**：本指南會隨著 SDD 實踐經驗持續更新。如有建議或發現問題，請更新 `studio/knowledge-base/learnings.md`。
-
 
 
 

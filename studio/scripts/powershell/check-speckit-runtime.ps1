@@ -12,7 +12,7 @@ if ($Help) {
     $helpLines = @(
         'Usage: ./check-speckit-runtime.ps1 [-Json] [-Help]',
         '',
-        'Checks studio-first runtime readiness, including the shared runtime contract, mirror parity, templates, hooks, extension governance, and skills install targets.',
+        'Checks studio-first runtime readiness, including Copilot and Claude shared runtime authorities, mirror parity, templates, hooks, extension governance, and skills install targets.',
         '',
         'Options:',
         '  -Json    Output structured JSON summary',
@@ -173,6 +173,7 @@ foreach ($extensionWarning in @($validator.WARNINGS)) {
 
 $commandChecks = @()
 $promptStubChecks = @()
+$claudeAgentChecks = @()
 $mirrorParityChecks = @()
 $templateChecks = @()
 $docSemanticChecks = @()
@@ -239,6 +240,38 @@ if (-not $contract) {
             inContract = $false
         }
         $failures += New-AuditFailure -Category 'prompts' -Id ("unexpected-{0}" -f $unexpectedPromptFile) -Message "Unexpected prompt stub not declared in contract: $unexpectedPromptFile" -Path $promptPath
+    }
+
+    $actualClaudeAgentFiles = if (Test-Path -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR) {
+        @(Get-ChildItem -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR -File -Filter '*.md' | Select-Object -ExpandProperty Name)
+    } else {
+        @()
+    }
+    $requiredClaudeAgentFiles = @($contract.requiredClaudeAgents | ForEach-Object { [string]$_ })
+
+    foreach ($requiredClaudeAgentFile in $requiredClaudeAgentFiles) {
+        $claudeAgentPath = Join-Path $paths.SHARED_CLAUDE_AGENTS_DIR $requiredClaudeAgentFile
+        $exists = Test-Path -LiteralPath $claudeAgentPath
+        $claudeAgentChecks += [ordered]@{
+            name       = $requiredClaudeAgentFile
+            path       = $claudeAgentPath
+            exists     = $exists
+            inContract = $true
+        }
+        if (-not $exists) {
+            $failures += New-AuditFailure -Category 'claude-agents' -Id $requiredClaudeAgentFile -Message "Missing required Claude shared agent: $requiredClaudeAgentFile" -Path $claudeAgentPath
+        }
+    }
+
+    foreach ($unexpectedClaudeAgentFile in @($actualClaudeAgentFiles | Where-Object { $_ -notin $requiredClaudeAgentFiles })) {
+        $claudeAgentPath = Join-Path $paths.SHARED_CLAUDE_AGENTS_DIR $unexpectedClaudeAgentFile
+        $claudeAgentChecks += [ordered]@{
+            name       = $unexpectedClaudeAgentFile
+            path       = $claudeAgentPath
+            exists     = $true
+            inContract = $false
+        }
+        $failures += New-AuditFailure -Category 'claude-agents' -Id ("unexpected-{0}" -f $unexpectedClaudeAgentFile) -Message "Unexpected Claude shared agent not declared in contract: $unexpectedClaudeAgentFile" -Path $claudeAgentPath
     }
 
     foreach ($pair in @($contract.requiredMirrorPairs)) {
@@ -368,6 +401,7 @@ $result = [ordered]@{
     RUNTIME_MANIFEST_PATH     = $runtimeSources.MANIFEST_PATH
     RUNTIME_AGENT_COUNT       = if (Test-Path -LiteralPath $runtimeSources.AGENTS_DIR) { @(Get-ChildItem -LiteralPath $runtimeSources.AGENTS_DIR -File -Recurse).Count } else { 0 }
     RUNTIME_PROMPT_COUNT      = if (Test-Path -LiteralPath $runtimeSources.PROMPTS_DIR) { @(Get-ChildItem -LiteralPath $runtimeSources.PROMPTS_DIR -File -Recurse).Count } else { 0 }
+    CLAUDE_RUNTIME_AGENT_COUNT = if (Test-Path -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR) { @(Get-ChildItem -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR -File -Recurse).Count } else { 0 }
     TOOL_CHECKS               = $toolChecks
     SUPPORTED_AGENT_CONTEXTS  = $supportedAgentContexts
     EXTENSION_REGISTRY_VALID  = $validator.VALID
@@ -377,6 +411,7 @@ $result = [ordered]@{
     EXTENSION_WARNINGS        = $validator.WARNING_COUNT
     COMMAND_CHECKS            = $commandChecks
     PROMPT_STUB_CHECKS        = $promptStubChecks
+    CLAUDE_AGENT_CHECKS       = $claudeAgentChecks
     MIRROR_PARITY             = $mirrorParityChecks
     TEMPLATE_CHECKS           = $templateChecks
     DOC_SEMANTIC_CHECKS       = $docSemanticChecks
@@ -403,6 +438,7 @@ Write-Output ("Warnings: {0}" -f $result.WARNING_COUNT)
 Write-Output ("Runtime source mode: {0}" -f $result.RUNTIME_SOURCE_MODE)
 Write-Output ("Runtime agents: {0}" -f $result.RUNTIME_AGENT_COUNT)
 Write-Output ("Runtime prompts: {0}" -f $result.RUNTIME_PROMPT_COUNT)
+Write-Output ("Claude shared agents: {0}" -f $result.CLAUDE_RUNTIME_AGENT_COUNT)
 Write-Output ("Extension registry valid: {0}" -f $result.EXTENSION_REGISTRY_VALID.ToString().ToLower())
 Write-Output ("Supported agent contexts: {0}" -f ($result.SUPPORTED_AGENT_CONTEXTS -join ', '))
 

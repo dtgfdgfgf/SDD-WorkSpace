@@ -17,6 +17,7 @@ engineering practice.
 | `studio/constitution/constitution.md` | Studio-level governance and highest authority |
 | `<project>/.specify/memory/constitution.md` | Project-level canonical constitution when project rules exist |
 | `.github/agents/` | Runtime source for shared SDD agents |
+| `.claude/agents/` | Runtime source for shared Claude agents |
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `studio/extensions/` | Canonical shared extension registry and workspace-level extension state |
 | `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
@@ -95,7 +96,7 @@ Rules:
   form.
 - Compare the derived worktree against the source project's declared parity surface before cleanup,
   normalization, or diagnosis.
-- If the source project depends on `.github/agents/`, `.github/copilot-instructions.md`,
+- If the source project depends on `.github/agents/`, `.claude/agents/`, `.github/copilot-instructions.md`,
   `CLAUDE.md`, `.specify/memory/constitution.md`, `.code-workspace`, or declared local-only assets,
   a derived worktree missing them is not operationally healthy unless a documented equivalent source
   exists.
@@ -201,6 +202,7 @@ Always:
 - Flag document drift and missing updates
 - Preserve the studio-first centralized runtime model
 - Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources
+- Treat workspace `/.claude/agents/` as the Claude shared runtime authority; Claude skills installs are a separate layer
 - Treat `studio/extensions/` as the only shared extension registry authority
 - Treat `docs/project-worktree-parity-governance.md` as the canonical rule when evaluating
   consumer-project derived worktree completeness

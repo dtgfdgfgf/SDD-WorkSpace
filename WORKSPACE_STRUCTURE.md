@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.6.0
+**Version:** 1.7.0
 **Created:** 2025-12-08  
-**Updated:** 2026-04-02
+**Updated:** 2026-04-04
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -26,6 +26,7 @@ Design priorities:
 |------|---------|
 | `.github/copilot-instructions.md` | Workspace-level Copilot rules |
 | `.github/agents/` | Runtime source for shared SDD agents |
+| `.claude/agents/` | Runtime source for shared Claude agents |
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `learning/<project>/` | Practice projects |
 | `projects/<project>/` | Internal, Client, and historical sample projects |
@@ -60,6 +61,7 @@ Each project is expected to contain:
 |------|---------|
 | `.specify/memory/constitution.md` | Project-level canonical constitution |
 | `.github/agents/` | Junction to workspace `.github/agents/` |
+| `.claude/agents/` | Junction to workspace `.claude/agents/` |
 | `.github/copilot-instructions.md` | GitHub Copilot project context |
 | `CLAUDE.md` | Claude project context |
 | `specs/<feature>/spec.md` | Feature specification |
@@ -96,10 +98,13 @@ Notes:
 The runtime source of truth is:
 
 - `.github/agents/`
+- `.claude/agents/`
 - `.github/prompts/`
 
 `studio/templates/sdd-agents/` is retained as a mirror for scaffolding and auditability. It should
 be updated from the runtime source, not edited independently as a competing authority.
+
+Project-local Claude agents are not supported in this workspace model.
 
 ### 3. Extension Registry
 
@@ -118,7 +123,9 @@ Rules:
 
 `resources/agent-skill-packs/<agent>/` stores generated skill pack exports for skill-based agent
 ecosystems. These exports are mirrors built from `.github/agents/` and `.github/prompts/`; they are
-not a new source of truth and should be regenerated rather than edited by hand.
+not a new source of truth and should be regenerated rather than edited by hand. Claude skills
+install roots are a separate install/export layer and do not replace workspace `/.claude/agents/`
+authority.
 
 `readiness-assessment.md` remains the latest authoritative gate state for each feature. The
 `readiness/eci/` dossier is supporting governance input during post-ECI re-entry and does not
@@ -211,10 +218,14 @@ the new project classification scheme for fresh practice work.
 3. Preserve or create `.specify/memory/constitution.md`
 4. Create a project `.code-workspace`
 5. Create a `.github/agents/` junction to workspace runtime agents
+6. Create a `.claude/agents/` junction to workspace Claude runtime agents
 
 These initialization rules govern creation of the root project instance. They do not by themselves
 guarantee derived worktree parity. Derived worktree parity is a separate obligation governed by
 `docs/project-worktree-parity-governance.md`.
+
+Derived worktree bootstrap uses `studio/scripts/powershell/new-project-worktree.ps1` to preserve
+the same shared junction model for Copilot and Claude runtime agents.
 
 ## Naming Conventions
 
@@ -243,6 +254,7 @@ guarantee derived worktree parity. Derived worktree parity is a separate obligat
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7.0 | 2026-04-04 | Add workspace-level Claude shared junction runtime, project init support, and derived worktree bootstrap for `.claude/agents/` |
 | 1.6.0 | 2026-04-02 | Add canonical consumer-project derived worktree parity governance and clarify that project initialization bootstrap does not automatically satisfy derived worktree parity |
 | 1.5.1 | 2026-03-30 | Add centralized `docs/mainline-updates/` management and template for main-bound shared-layer update explanations |
 | 1.5.0 | 2026-03-27 | Add optional `intent-ledger.md` contract and document how readiness, plan, and outward coverage disclosure must carry compressed core intent |

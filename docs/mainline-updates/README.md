@@ -38,5 +38,6 @@ the index below in the same change batch.
 
 | Date | Topic | Source Branch | Status | Summary |
 |------|-------|---------------|--------|---------|
+| 2026-04-04 | [`claude-junction-runtime`](./2026-04-04-claude-junction-runtime.md) | `main` | Ready | Add workspace-level Claude shared junction runtime, project init support, derived worktree bootstrap, and runtime audit coverage. |
 | 2026-04-02 | [`project-worktree-parity-governance`](./2026-04-02-project-worktree-parity-governance.md) | `main` | Ready | Define consumer-project derived worktrees as project-equivalent instances and require parity checks beyond Git-tracked files. |
 | 2026-03-30 | [`intent-ledger-runtime-governance`](./2026-03-30-intent-ledger-runtime-governance.md) | `001-yuanta-trading-workspace` | Ready | Enforce `intent-ledger` across readiness/plan/analyze runtime semantics and sync the branch with latest `main` before merge. |

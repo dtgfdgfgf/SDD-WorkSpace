@@ -196,7 +196,7 @@ This constitution defines project-specific rules that add to the Studio Constitu
 ## Project Context
 
 - Classification: $classification
-- Runtime agents come from the workspace `.github/agents/` junction.
+- Shared runtime agents are available through the workspace `.github/agents/` and `.claude/agents/` junctions.
 - Agent context files such as `.github/copilot-instructions.md` and `CLAUDE.md` are operational
   context only. They do not replace this constitution.
 
@@ -638,6 +638,131 @@ function Copy-DirectoryContents {
     }
 }
 
+function Get-NormalizedLinkTarget {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.IO.FileSystemInfo]$Item
+    )
+
+    if (-not ($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        return $null
+    }
+
+    $rawTarget = $Item.Target
+    if ($rawTarget -is [System.Array]) {
+        $rawTarget = $rawTarget | Select-Object -First 1
+    }
+
+    if ([string]::IsNullOrWhiteSpace([string]$rawTarget)) {
+        return $null
+    }
+
+    return Resolve-AbsolutePath -Path ([string]$rawTarget) -BaseDir (Split-Path -Parent $Item.FullName)
+}
+
+function Ensure-DirectoryJunction {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$Target,
+        [switch]$Force
+    )
+
+    $resolvedPath = Resolve-AbsolutePath -Path $Path
+    $resolvedTarget = Resolve-AbsolutePath -Path $Target
+
+    if (-not (Test-Path -LiteralPath $resolvedTarget -PathType Container)) {
+        return [ordered]@{
+            path      = $resolvedPath
+            target    = $resolvedTarget
+            available = $false
+            created   = $false
+            status    = 'missing-target'
+        }
+    }
+
+    $parentDir = Split-Path -Parent $resolvedPath
+    if ($parentDir -and -not (Test-Path -LiteralPath $parentDir)) {
+        New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+    }
+
+    if (Test-Path -LiteralPath $resolvedPath) {
+        $existingItem = Get-Item -LiteralPath $resolvedPath -Force
+        $existingTarget = Get-NormalizedLinkTarget -Item $existingItem
+
+        if ($existingItem.LinkType -eq 'Junction' -and $existingTarget -eq $resolvedTarget) {
+            return [ordered]@{
+                path      = $resolvedPath
+                target    = $resolvedTarget
+                available = $true
+                created   = $false
+                status    = 'unchanged'
+            }
+        }
+
+        if (-not $Force) {
+            throw "Path already exists and is not the requested junction: $resolvedPath"
+        }
+
+        if ($existingItem.LinkType -eq 'Junction') {
+            Remove-Item -LiteralPath $resolvedPath -Force
+        } else {
+            Remove-Item -LiteralPath $resolvedPath -Recurse -Force
+        }
+    }
+
+    New-Item -ItemType Junction -Path $resolvedPath -Target $resolvedTarget -Force | Out-Null
+
+    return [ordered]@{
+        path      = $resolvedPath
+        target    = $resolvedTarget
+        available = $true
+        created   = $true
+        status    = 'created'
+    }
+}
+
+function Initialize-ProjectSharedAgentJunctions {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkspaceRoot,
+        [switch]$Force
+    )
+
+    $projectRootPath = Resolve-AbsolutePath -Path $ProjectRoot
+    $workspaceRootPath = Resolve-AbsolutePath -Path $WorkspaceRoot
+    $junctionRequests = @(
+        [ordered]@{
+            agentType = 'copilot'
+            path      = Join-Path $projectRootPath '.github/agents'
+            target    = Join-Path $workspaceRootPath '.github/agents'
+        },
+        [ordered]@{
+            agentType = 'claude'
+            path      = Join-Path $projectRootPath '.claude/agents'
+            target    = Join-Path $workspaceRootPath '.claude/agents'
+        }
+    )
+
+    $results = @()
+    foreach ($request in $junctionRequests) {
+        $junctionResult = Ensure-DirectoryJunction -Path $request.path -Target $request.target -Force:$Force
+        $results += [ordered]@{
+            agentType = $request.agentType
+            path      = $junctionResult.path
+            target    = $junctionResult.target
+            available = $junctionResult.available
+            created   = $junctionResult.created
+            status    = $junctionResult.status
+        }
+    }
+
+    return $results
+}
+
 function Get-StudioSharedLayerPaths {
     param(
         [string]$StartDir = (Get-Location)
@@ -665,6 +790,7 @@ function Get-StudioSharedLayerPaths {
         EXTENSIONS_MANIFEST_SCHEMA = Join-Path $extensionsRoot 'manifest.schema.json'
         EXTENSIONS_VALIDATOR_PATH  = Join-Path $studioRoot 'scripts/powershell/validate-extension-registry.ps1'
         SHARED_AGENTS_DIR          = Join-Path $workspaceRoot '.github/agents'
+        SHARED_CLAUDE_AGENTS_DIR   = Join-Path $workspaceRoot '.claude/agents'
         SHARED_PROMPTS_DIR         = Join-Path $workspaceRoot '.github/prompts'
         SHARED_SKILLS_DIR          = Join-Path $workspaceRoot '.github/skills'
         SHARED_SCRIPTS_DIR         = Join-Path $studioRoot 'scripts/powershell'
