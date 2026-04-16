@@ -1,6 +1,6 @@
 ---
 description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, readiness artifacts, plan.md, and tasks.md after task generation.
-model: claude-opus-4-6
+model: claude-opus-4-7
 infer: true
 ---
 

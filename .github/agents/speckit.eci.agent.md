@@ -1,6 +1,6 @@
 ---
 description: Govern external capability adoption after readiness routes a feature to ECI, classify the ECI level, and emit the dossier artifacts required for safe readiness re-entry.
-model: claude-opus-4-6
+model: claude-opus-4-7
 infer: true
 handoffs:
   - label: Re-Run Readiness

@@ -1,7 +1,7 @@
----
+﻿---
 name: speckit-clarify
 description: "Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec."
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/speckit.clarify.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->

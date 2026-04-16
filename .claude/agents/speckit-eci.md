@@ -1,7 +1,7 @@
----
+﻿---
 name: speckit-eci
 description: "Govern external capability adoption after readiness routes a feature to ECI, classify the ECI level, and emit the dossier artifacts required for safe readiness re-entry."
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/speckit.eci.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->

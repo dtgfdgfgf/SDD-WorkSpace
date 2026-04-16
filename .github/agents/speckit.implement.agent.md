@@ -1,6 +1,6 @@
 ---
 description: Execute the implementation plan by processing and executing all tasks defined in tasks.md
-model: claude-opus-4-6
+model: claude-opus-4-7
 infer: true
 ---
 

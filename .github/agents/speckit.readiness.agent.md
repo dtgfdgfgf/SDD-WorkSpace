@@ -1,6 +1,6 @@
 ---
 description: Assess whether the current feature spec is ready to proceed to planning, identify the primary readiness blocker if not, and emit the minimum remediation packet required to move forward safely.
-model: claude-opus-4-6
+model: claude-opus-4-7
 infer: true
 handoffs:
   - label: Build Technical Plan

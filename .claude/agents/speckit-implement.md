@@ -1,7 +1,7 @@
----
+﻿---
 name: speckit-implement
 description: "Execute the implementation plan by processing and executing all tasks defined in tasks.md"
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/speckit.implement.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->

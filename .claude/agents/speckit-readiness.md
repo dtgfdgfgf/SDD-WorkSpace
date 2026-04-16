@@ -1,7 +1,7 @@
----
+﻿---
 name: speckit-readiness
 description: "Assess whether the current feature spec is ready to proceed to planning, identify the primary readiness blocker if not, and emit the minimum remediation packet required to move forward safely."
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/speckit.readiness.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->

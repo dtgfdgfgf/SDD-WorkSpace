@@ -5,7 +5,7 @@ description: >
   Consumes raw consultation transcripts and infers
   spec-ready discovery structure grounded in commercial reality.
 tools: []
-model: claude-opus-4-6
+model: claude-opus-4-7
 handoffs:
   - label: Generate Specification
     agent: speckit.specify

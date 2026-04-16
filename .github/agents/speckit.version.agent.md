@@ -1,6 +1,6 @@
 ---
 description: Show the local studio-first Spec Kit version state and upstream alignment summary.
-model: claude-opus-4-6
+model: claude-opus-4-7
 infer: true
 ---
 

@@ -1,7 +1,7 @@
----
+﻿---
 name: speckit-constitution
 description: "Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync."
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/speckit.constitution.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
