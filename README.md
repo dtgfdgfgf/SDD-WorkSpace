@@ -156,12 +156,11 @@ code projects/studio-automation/studio-automation.code-workspace
 
 - Runtime source of truth: `.github/agents/`、`.github/prompts/`
 - `.claude/agents/` 是 Claude shared runtime source of truth
-- Studio mirror / scaffolding source: `studio/templates/sdd-agents/`
 - Canonical governance source: `studio/constitution/constitution.md`
 - Canonical extension registry: `studio/extensions/`
 - Generated skill pack exports: `resources/agent-skill-packs/`
 
-其中 `studio/templates/sdd-agents/` 是 mirror，不應與 `.github/agents/` 競爭成第二個權威來源。Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源。
+Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源。
 
 ## Shared-Layer Convergence
 

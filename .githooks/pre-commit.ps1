@@ -10,6 +10,8 @@
     3. plan.md files contain required sections
     4. tasks.md files follow checklist format
     5. Commit messages follow Conventional Commits format
+    6. Change manifest completeness advisory (warning only)
+    7. Impact routing advisory via impact-registry.json (warning only)
 
 .NOTES
     To enable: git config core.hooksPath .githooks
@@ -50,7 +52,7 @@ function Convert-ToRepoRelativePath {
         return $Path
     }
 
-    return ($Path -replace '\\', '/').TrimStart('./')
+    return ($Path -replace '\\', '/') -replace '^\.\/', ''
 }
 
 function Get-SharedGatePaths {
@@ -95,7 +97,7 @@ function Invoke-SharedRuntimeAudit {
 
     # shared runtime audit
     $auditOutput = & $script:sharedRuntimeAuditScript -Json 2>&1
-    $auditExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
+    $auditExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 }
     $auditJson = if ($auditOutput) { $auditOutput -join [Environment]::NewLine } else { $null }
 
     if ([string]::IsNullOrWhiteSpace($auditJson)) {
@@ -139,7 +141,7 @@ function Get-EdgeCaseCount {
         return $count
     }
 
-    $fallbackPattern = '(?mi)^\s*(?:[-*]|\d+\.)\s+.*(edge|boundary|exception|error|invalid|empty|null|overflow|timeout|邊界|例外|異常|錯誤|無效|空值|逾時|超時)'
+    $fallbackPattern = '(?mi)^\s*(?:[-*]|\d+\.)\s+.*(edge\s*case|boundary|exception|invalid|overflow|timeout|error\s+(case|scenario|handling)|empty\s+(input|state|value|result)|null\s+(value|input|check|case)|邊界|例外|異常|錯誤(處理|情境|案例)|無效|空值|逾時|超時)'
     return [regex]::Matches($Content, $fallbackPattern).Count
 }
 
@@ -180,7 +182,8 @@ function Get-ReadinessValidationErrors {
                 @{ Name = 'Primary Blocker Analysis section'; Pattern = '(?mi)^##\s+Primary Blocker Analysis\s*$' },
                 @{ Name = 'Allowed / Not Allowed Next Actions section'; Pattern = '(?mi)^##\s+Allowed\s*/\s*Not Allowed Next Actions\s*$' },
                 @{ Name = 'Allowed subsection'; Pattern = '(?mi)^#{2,3}\s+Allowed\s*$' },
-                @{ Name = 'Not Allowed subsection'; Pattern = '(?mi)^#{2,3}\s+Not Allowed\s*$' }
+                @{ Name = 'Not Allowed subsection'; Pattern = '(?mi)^#{2,3}\s+Not Allowed\s*$' },
+                @{ Name = 'Planability vs Intent Obligations section'; Pattern = '(?mi)^##\s+Planability vs Intent Obligations\s*$' }
             )
         }
         'eci-trigger.md' {
@@ -276,6 +279,115 @@ function Get-ReadinessValidationErrors {
 }
 
 # ========================================
+# Drift governance helpers
+# ========================================
+
+function Get-ImpactRegistry {
+    $registryPath = Join-Path $script:workspaceRoot 'studio/runtime/impact-registry.json'
+    if (-not (Test-Path -LiteralPath $registryPath)) {
+        return $null
+    }
+
+    try {
+        return Get-Content -LiteralPath $registryPath -Raw | ConvertFrom-Json -AsHashtable
+    } catch {
+        Write-HookWarning "Unable to read impact registry: $registryPath"
+        return $null
+    }
+}
+
+function Get-ChangeTypesFromPaths {
+    param(
+        [string[]]$StagedPaths,
+        [hashtable]$Registry
+    )
+
+    $normalizedStaged = @($StagedPaths | ForEach-Object { Convert-ToRepoRelativePath -Path $_ })
+    $matchedTypes = @{}
+
+    foreach ($route in $Registry.impactRouting) {
+        $triggers = @($route.trigger -split '\|' | ForEach-Object { $_.Trim() })
+
+        foreach ($trigger in $triggers) {
+            if ($matchedTypes.Contains($route.changeType)) { break }
+
+            # Replace <feature> placeholder with wildcard for matching
+            $matchTrigger = $trigger -replace '<feature>', '*'
+
+            foreach ($staged in $normalizedStaged) {
+                $match = $false
+
+                if ($matchTrigger.Contains('*')) {
+                    $pattern = '^' + [regex]::Escape($matchTrigger).Replace('\*', '[^/]*') + '$'
+                    if ($staged -match $pattern) { $match = $true }
+                } elseif ($matchTrigger.EndsWith('/')) {
+                    if ($staged.StartsWith($matchTrigger, [System.StringComparison]::OrdinalIgnoreCase)) {
+                        $match = $true
+                    }
+                } else {
+                    if ($staged -eq $matchTrigger) { $match = $true }
+                }
+
+                if ($match) {
+                    # For feature-scoped triggers, capture the feature name
+                    $featureName = $null
+                    if ($trigger -match '<feature>') {
+                        $escaped = [regex]::Escape(($trigger -replace '<feature>', '___FEAT___'))
+                        $featurePattern = '^' + $escaped.Replace('___FEAT___', '([^/]+)') + '$'
+                        if ($staged -match $featurePattern) {
+                            $featureName = $Matches[1]
+                        }
+                    }
+
+                    $matchedTypes[$route.changeType] = @{
+                        Route       = $route
+                        FeatureName = $featureName
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    return $matchedTypes
+}
+
+function Get-ManifestPendingItems {
+    param([string]$Content)
+
+    $result = @{
+        Status            = 'unknown'
+        PendingMustUpdate = @()
+        PendingMustReview = @()
+    }
+
+    if ($Content -match '\*\*Status\*\*:\s*([\w-]+)') {
+        $result.Status = $Matches[1].ToLower()
+    }
+
+    # Parse impact assessment table rows
+    # Format: | Document | Authority | Impact Level | Status | Notes |
+    $rowPattern = '(?m)^\|\s*([^|]+?)\s*\|\s*[^|]+?\s*\|\s*(must_update|must_review)\s*\|\s*(pending|done|skipped)\s*\|'
+    $tableMatches = [regex]::Matches($Content, $rowPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+
+    foreach ($m in $tableMatches) {
+        $doc = $m.Groups[1].Value.Trim()
+        $impact = $m.Groups[2].Value.Trim().ToLower()
+        $status = $m.Groups[3].Value.Trim().ToLower()
+
+        if ($status -eq 'pending') {
+            if ($impact -eq 'must_update') {
+                $result.PendingMustUpdate += $doc
+            } elseif ($impact -eq 'must_review') {
+                $result.PendingMustReview += $doc
+            }
+        }
+    }
+
+    return $result
+}
+
+# ========================================
 # Get staged files
 # ========================================
 $stagedFiles = git diff --cached --name-only --diff-filter=ACM 2>$null
@@ -303,6 +415,128 @@ if ($sharedLayerFiles.Count -gt 0) {
 }
 
 # ========================================
+# Change manifest completeness (advisory)
+# ========================================
+$manifestFiles = @($stagedFiles | Where-Object {
+    $_ -match '(?:specs/[^/]+/change-manifests|docs/change-manifests)/.*\.md$'
+})
+
+if ($manifestFiles.Count -gt 0) {
+    Write-HookInfo 'Checking change manifest completeness...'
+
+    foreach ($file in $manifestFiles) {
+        $fullPath = Join-Path $script:workspaceRoot $file
+        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        if (-not $content) { continue }
+
+        $parsed = Get-ManifestPendingItems -Content $content
+
+        if ($parsed.Status -in @('open', 'propagating')) {
+            if ($parsed.PendingMustUpdate.Count -gt 0) {
+                Write-HookWarning "[$file] Open manifest has $($parsed.PendingMustUpdate.Count) pending must_update:"
+                foreach ($doc in $parsed.PendingMustUpdate) {
+                    Write-Host "    - $doc" -ForegroundColor Yellow
+                }
+            }
+            if ($parsed.PendingMustReview.Count -gt 0) {
+                Write-HookInfo "[$file] Open manifest has $($parsed.PendingMustReview.Count) pending must_review"
+            }
+        }
+
+        if ($parsed.Status -eq 'closed' -and ($parsed.PendingMustUpdate.Count -gt 0 -or $parsed.PendingMustReview.Count -gt 0)) {
+            Write-HookWarning "[$file] Manifest marked closed but has pending items"
+        }
+
+        if ($parsed.PendingMustUpdate.Count -eq 0 -and $parsed.PendingMustReview.Count -eq 0 -and $parsed.Status -ne 'unknown') {
+            Write-HookSuccess "[$file] Change manifest complete"
+        }
+    }
+    Write-Host ''
+}
+
+# ========================================
+# Impact routing advisory (advisory)
+# ========================================
+$impactRegistry = Get-ImpactRegistry
+
+if ($impactRegistry) {
+    $changeTypes = Get-ChangeTypesFromPaths -StagedPaths $stagedFiles -Registry $impactRegistry
+
+    if ($changeTypes.Count -gt 0) {
+        Write-HookInfo 'Impact routing advisory for detected change types...'
+
+        $normalizedStaged = @($stagedFiles | ForEach-Object { Convert-ToRepoRelativePath -Path $_ })
+
+        foreach ($entry in $changeTypes.GetEnumerator()) {
+            $typeName = $entry.Key
+            $route = $entry.Value.Route
+            $featureName = $entry.Value.FeatureName
+
+            $missingTargets = @()
+
+            foreach ($rule in $route.rules) {
+                if ($rule.impact -ne 'must_update') { continue }
+
+                $target = [string]$rule.target
+
+                # Resolve feature-scoped targets
+                if ($target -match '<feature>') {
+                    if ($featureName) {
+                        $target = $target -replace '<feature>', $featureName
+                    } else {
+                        continue
+                    }
+                }
+
+                # Check if target (or any file under target pattern) is in staged files
+                $found = $false
+                foreach ($staged in $normalizedStaged) {
+                    if ($target.Contains('*')) {
+                        $pattern = '^' + [regex]::Escape($target).Replace('\*', '[^/]*') + '$'
+                        if ($staged -match $pattern) { $found = $true; break }
+                    } elseif ($target.EndsWith('/')) {
+                        if ($staged.StartsWith($target, [System.StringComparison]::OrdinalIgnoreCase)) {
+                            $found = $true; break
+                        }
+                    } else {
+                        if ($staged -eq $target) { $found = $true; break }
+                    }
+                }
+
+                if (-not $found) {
+                    $missingTargets += @{ Target = $target; Reason = $rule.reason }
+                }
+            }
+
+            if ($missingTargets.Count -gt 0) {
+                Write-HookWarning "Change type '$typeName': must_update targets not in this commit:"
+                foreach ($t in $missingTargets) {
+                    Write-Host "    - $($t.Target)" -ForegroundColor Yellow
+                    if ($t.Reason) {
+                        Write-Host "      $($t.Reason)" -ForegroundColor DarkGray
+                    }
+                }
+            } else {
+                $mustUpdateCount = @($route.rules | Where-Object {
+                    $_.impact -eq 'must_update' -and $_.target -notmatch '<feature>'
+                }).Count
+                $featureMustUpdateCount = 0
+                if ($featureName) {
+                    $featureMustUpdateCount = @($route.rules | Where-Object {
+                        $_.impact -eq 'must_update' -and $_.target -match '<feature>'
+                    }).Count
+                }
+                if (($mustUpdateCount + $featureMustUpdateCount) -gt 0) {
+                    Write-HookSuccess "Change type '$typeName': all must_update targets in this commit"
+                }
+            }
+        }
+        Write-Host ''
+    }
+}
+
+# ========================================
 # 1. Validate spec.md files
 # ========================================
 $specFiles = $stagedFiles | Where-Object { $_ -match 'spec\.md$' }
@@ -318,12 +552,14 @@ if ($specFiles) {
         @{ Name = 'Non-Functional Requirements'; Pattern = 'Non-Functional Requirement|NFR\b|非功能需求' },
         @{ Name = 'Edge Cases'; Pattern = 'Edge Case|Boundary|Exception|Error Handling|邊界|例外|錯誤處理' },
         @{ Name = 'Success Criteria'; Pattern = 'Success Criteria|Acceptance Criteria|成功標準|驗收標準' },
-        @{ Name = 'Out of Scope'; Pattern = 'Out of Scope|Exclusion|Not Included|不在範圍|排除項目' }
+        @{ Name = 'Out of Scope'; Pattern = 'Out of Scope|Exclusion|Not Included|不在範圍|排除項目' },
+        @{ Name = 'Document version'; Pattern = '(?mi)(Version|版本)\s*[:：]\s*\S|(?mi)^[*_]*Version[*_]*\s*[:：]' }
     )
 
     foreach ($file in $specFiles) {
-        if (-not (Test-Path $file)) { continue }
-        $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+        $fullPath = Join-Path $script:workspaceRoot $file
+        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
         if (-not $content) { continue }
 
         $missingSections = @()
@@ -362,8 +598,9 @@ if ($readinessFiles) {
     Write-HookInfo 'Validating readiness artifacts...'
 
     foreach ($file in $readinessFiles) {
-        if (-not (Test-Path $file)) { continue }
-        $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+        $fullPath = Join-Path $script:workspaceRoot $file
+        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
         if (-not $content) { continue }
 
         $validationErrors = Get-ReadinessValidationErrors -Path $file -Content $content
@@ -375,6 +612,53 @@ if ($readinessFiles) {
         }
         else {
             Write-HookSuccess "[$file] Readiness artifact structure valid"
+        }
+    }
+    Write-Host ''
+}
+
+# ========================================
+# 2b. Validate intent-ledger.md files
+# ========================================
+$intentLedgerFiles = $stagedFiles | Where-Object { $_ -match 'intent-ledger\.md$' }
+
+if ($intentLedgerFiles) {
+    Write-HookInfo 'Validating intent-ledger.md files...'
+
+    foreach ($file in $intentLedgerFiles) {
+        $fullPath = Join-Path $script:workspaceRoot $file
+        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        if (-not $content) { continue }
+
+        $validationErrors = @()
+
+        # Check 9-column table header
+        if ($content -notmatch 'source_intent_item\s*\|.*spec_anchor\s*\|.*current_classification\s*\|.*current_representation\s*\|.*defer_or_drop_reason\s*\|.*reentry_trigger\s*\|.*follow_on_feature_hint\s*\|.*surface_disclosure_required\s*\|.*owner_signoff_required') {
+            $validationErrors += 'Missing 9-column intent-ledger table header (source_intent_item | spec_anchor | current_classification | current_representation | defer_or_drop_reason | reentry_trigger | follow_on_feature_hint | surface_disclosure_required | owner_signoff_required)'
+        }
+
+        # Check valid current_classification values in data rows
+        $validClassifications = 'represented_by_substitute|deferred|dropped_with_owner_signoff'
+        $dataRowMatches = [regex]::Matches($content, '(?m)^\|\s*([^|]+?)\s*\|\s*[^|]+?\s*\|\s*`?([^|`]+?)`?\s*\|')
+        foreach ($row in $dataRowMatches) {
+            $firstCol = $row.Groups[1].Value.Trim()
+            $classValue = $row.Groups[2].Value.Trim()
+            # Skip header row and separator rows
+            if ($firstCol -eq 'source_intent_item' -or $firstCol -match '^[-:]+$') { continue }
+            if ($classValue -and $classValue -notmatch '^[-:]+$' -and $classValue -ne 'current_classification' -and $classValue -notmatch "^($validClassifications)$") {
+                $validationErrors += "Invalid current_classification value: '$classValue' (must be represented_by_substitute, deferred, or dropped_with_owner_signoff)"
+            }
+        }
+
+        if ($validationErrors.Count -gt 0) {
+            Write-HookError "[$file] Intent ledger validation failed:"
+            foreach ($err in $validationErrors) {
+                Write-Host "    - $err" -ForegroundColor Red
+            }
+        }
+        else {
+            Write-HookSuccess "[$file] Intent ledger structure valid"
         }
     }
     Write-Host ''
@@ -394,12 +678,15 @@ if ($planFiles) {
         @{ Name = 'Integration'; Pattern = 'Integration|API|Endpoint|整合|介接|端點' },
         @{ Name = 'Data Flow'; Pattern = 'Data Flow|Data Model|Schema|資料流|資料模型|結構' },
         @{ Name = 'Risks'; Pattern = 'Risk|Constraint|Limitation|風險|限制' },
-        @{ Name = 'Why Not'; Pattern = 'Why Not|Alternative|Decision|Rejected|替代方案|不採用' }
+        @{ Name = 'Why Not'; Pattern = 'Why Not|Alternative|Decision|Rejected|替代方案|不採用' },
+        @{ Name = 'Estimated timeline'; Pattern = 'Estimated [Tt]imeline|Timeline|時程|預估時間' },
+        @{ Name = 'Document version'; Pattern = '(?mi)(Version|版本)\s*[:：]\s*\S|(?mi)^[*_]*Version[*_]*\s*[:：]' }
     )
 
     foreach ($file in $planFiles) {
-        if (-not (Test-Path $file)) { continue }
-        $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+        $fullPath = Join-Path $script:workspaceRoot $file
+        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
         if (-not $content) { continue }
 
         $missingSections = @()
@@ -431,8 +718,9 @@ if ($tasksFiles) {
     Write-HookInfo 'Validating tasks.md files...'
 
     foreach ($file in $tasksFiles) {
-        if (-not (Test-Path $file)) { continue }
-        $content = Get-Content $file -Raw -ErrorAction SilentlyContinue
+        $fullPath = Join-Path $script:workspaceRoot $file
+        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
         if (-not $content) { continue }
 
         $validationErrors = @()

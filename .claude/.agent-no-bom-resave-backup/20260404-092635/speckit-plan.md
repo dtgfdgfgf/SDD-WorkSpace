@@ -1,16 +1,10 @@
----
-description: Execute the implementation planning workflow after readiness gate clearance using the plan template to generate design artifacts.
+﻿---
+name: speckit-plan
+description: "Execute the implementation planning workflow after readiness gate clearance using the plan template to generate design artifacts."
 model: claude-opus-4-6
-infer: true
-handoffs: 
-  - label: Create Tasks
-    agent: speckit.tasks
-    prompt: Break the plan into tasks
-    send: true
-  - label: Create Checklist
-    agent: speckit.checklist
-    prompt: Create a checklist for the following domain...
 ---
+
+<!-- Seeded from .github/agents/speckit.plan.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

@@ -1,5 +1,10 @@
 # Workspace Development Guidelines
 
+<!-- Authority: dependent (agent-scoped subset).
+     The workspace-level source of truth is .github/copilot-instructions.md.
+     This file provides a project-template-oriented agent context and should not
+     contradict the workspace-level instructions. -->
+
 <!-- 
   STUDIO TEMPLATE v1.0.0
   Based on: duotify-membership-v1 agent-file-template

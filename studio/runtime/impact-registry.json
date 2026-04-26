@@ -1,0 +1,359 @@
+{
+  "documentAuthority": [
+    {
+      "path": "studio/constitution/constitution.md",
+      "authority": "source_of_truth",
+      "domain": "governance",
+      "description": "Highest governance authority for all projects and workflows"
+    },
+    {
+      "path": "studio/runtime/shared-runtime-contract.json",
+      "authority": "source_of_truth",
+      "domain": "runtime_verification",
+      "description": "Machine-verifiable invariants for all governance requirements"
+    },
+    {
+      "path": "studio/runtime/impact-registry.json",
+      "authority": "source_of_truth",
+      "domain": "routing",
+      "description": "Change-to-document conditional impact routing rules"
+    },
+    {
+      "path": ".github/agents/*.agent.md",
+      "authority": "source_of_truth",
+      "domain": "agent_runtime",
+      "description": "Copilot agent definitions, canonical source for agent behavior"
+    },
+    {
+      "path": "studio/templates/sdd-docs/*.md",
+      "authority": "source_of_truth",
+      "domain": "templates",
+      "description": "Canonical document templates for SDD workflow"
+    },
+    {
+      "path": ".githooks/pre-commit.ps1",
+      "authority": "source_of_truth",
+      "domain": "hooks",
+      "description": "Commit-time validation logic"
+    },
+    {
+      "path": "studio/scripts/powershell/*.ps1",
+      "authority": "source_of_truth",
+      "domain": "scripts",
+      "description": "Studio automation and runtime verification"
+    },
+    {
+      "path": "specs/<feature>/spec.md",
+      "authority": "source_of_truth",
+      "domain": "feature",
+      "description": "Feature requirements, per-feature source of truth"
+    },
+    {
+      "path": "specs/<feature>/readiness/**/*.md",
+      "authority": "source_of_truth",
+      "domain": "feature",
+      "description": "Readiness and ECI governance artifacts, per-feature"
+    },
+    {
+      "path": "docs/project-worktree-parity-governance.md",
+      "authority": "source_of_truth",
+      "domain": "governance",
+      "description": "Worktree parity obligations for derived worktrees"
+    },
+    {
+      "path": ".claude/agents/*.md",
+      "authority": "dependent",
+      "domain": "agent_runtime",
+      "description": "Claude agent definitions, seeded from .github/agents/"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "authority": "dependent",
+      "domain": "agent_context",
+      "description": "Copilot project context, reflects constitution rules"
+    },
+    {
+      "path": "specs/<feature>/plan.md",
+      "authority": "dependent",
+      "domain": "feature",
+      "description": "Technical plan, depends on spec, readiness, intent-ledger"
+    },
+    {
+      "path": "specs/<feature>/tasks.md",
+      "authority": "dependent",
+      "domain": "feature",
+      "description": "Task decomposition, depends on plan"
+    },
+    {
+      "path": "specs/<feature>/intent-ledger.md",
+      "authority": "dependent",
+      "domain": "feature",
+      "description": "Scope compression tracker, depends on spec and readiness"
+    },
+    {
+      "path": "README.md",
+      "authority": "informational",
+      "domain": "overview",
+      "description": "Workspace overview, must reflect current governance state"
+    },
+    {
+      "path": "WORKSPACE_STRUCTURE.md",
+      "authority": "informational",
+      "domain": "structure",
+      "description": "Architecture documentation, must reflect current directory layout"
+    },
+    {
+      "path": "studio/QUICKSTART.md",
+      "authority": "informational",
+      "domain": "onboarding",
+      "description": "Chinese-language quickstart onboarding guide"
+    },
+    {
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "authority": "informational",
+      "domain": "onboarding",
+      "description": "Comprehensive SDD methodology guide"
+    },
+    {
+      "path": "docs/mainline-updates/*.md",
+      "authority": "informational",
+      "domain": "change_tracking",
+      "description": "Merge explanation notes and index"
+    }
+  ],
+  "impactRouting": [
+    {
+      "changeType": "constitution_change",
+      "trigger": "studio/constitution/constitution.md",
+      "description": "Any change to the studio constitution",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "Constitution invariants may need new or updated mustContainAll entries"
+        },
+        {
+          "target": "studio/runtime/impact-registry.json",
+          "impact": "maybe_review",
+          "reason": "Authority classification or routing rules may need adjustment"
+        },
+        {
+          "target": ".github/agents/*.agent.md",
+          "impact": "must_review",
+          "reason": "Agent behavior semantics may be affected by new governance rules"
+        },
+        {
+          "target": ".claude/agents/*.md",
+          "impact": "must_review",
+          "reason": "Claude agents mirror Copilot agents and must reflect updated semantics"
+        },
+        {
+          "target": "studio/templates/sdd-docs/*.md",
+          "impact": "must_review",
+          "reason": "Templates may need new sections or updated guidance"
+        },
+        {
+          "target": "README.md",
+          "impact": "must_update",
+          "reason": "Must reflect current governance state and workflow sequence"
+        },
+        {
+          "target": "WORKSPACE_STRUCTURE.md",
+          "impact": "maybe_review",
+          "reason": "Structure doc may need updates if paths or conventions changed"
+        },
+        {
+          "target": "studio/QUICKSTART.md",
+          "impact": "must_update",
+          "reason": "Must reflect constitution rules in quickstart form"
+        },
+        {
+          "target": "studio/SDD-QUICKSTART-GUIDE.md",
+          "impact": "must_update",
+          "reason": "Must reflect updated methodology rules"
+        },
+        {
+          "target": ".github/copilot-instructions.md",
+          "impact": "must_review",
+          "reason": "Copilot context may need updated governance references"
+        },
+        {
+          "target": ".githooks/pre-commit.ps1",
+          "impact": "maybe_review",
+          "reason": "Validation logic may need updates for new governance rules"
+        }
+      ]
+    },
+    {
+      "changeType": "contract_change",
+      "trigger": "studio/runtime/shared-runtime-contract.json",
+      "description": "Any change to the shared runtime contract",
+      "rules": [
+        {
+          "target": ".githooks/pre-commit.ps1",
+          "impact": "must_review",
+          "reason": "Hook consumes contract for sharedGatePaths and audit invocation"
+        },
+        {
+          "target": "studio/scripts/powershell/check-speckit-runtime.ps1",
+          "impact": "must_review",
+          "reason": "Audit script validates contract invariants"
+        },
+        {
+          "target": "studio/constitution/constitution.md",
+          "impact": "maybe_review",
+          "reason": "Contract changes may reflect constitution-level decisions"
+        }
+      ]
+    },
+    {
+      "changeType": "agent_change",
+      "trigger": ".github/agents/*.agent.md",
+      "description": "Any change to Copilot runtime agent definitions",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "Agent invariants may need updated mustContainAll entries"
+        },
+        {
+          "target": ".claude/agents/*.md",
+          "impact": "must_update",
+          "reason": "Claude mirrors must stay in sync with Copilot source"
+        },
+        {
+          "target": "studio/constitution/constitution.md",
+          "impact": "reference",
+          "reason": "Agent definitions are documented in constitution document authority section"
+        },
+        {
+          "target": "README.md",
+          "impact": "reference",
+          "reason": "Agent changes may warrant workspace overview update"
+        }
+      ]
+    },
+    {
+      "changeType": "template_change",
+      "trigger": "studio/templates/sdd-docs/*.md",
+      "description": "Any change to SDD document templates",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "Template invariants may need updated mustContainAll entries"
+        },
+        {
+          "target": ".github/agents/*.agent.md",
+          "impact": "maybe_review",
+          "reason": "Agents may reference template structure or field names"
+        },
+        {
+          "target": "studio/constitution/constitution.md",
+          "impact": "maybe_review",
+          "reason": "Template changes may warrant constitution-level documentation"
+        },
+        {
+          "target": "README.md",
+          "impact": "reference",
+          "reason": "Template changes may warrant workspace overview update"
+        }
+      ]
+    },
+    {
+      "changeType": "hook_change",
+      "trigger": ".githooks/",
+      "description": "Any change to git hook validation logic",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "Hook invariants may need updated entries"
+        },
+        {
+          "target": "studio/constitution/constitution.md",
+          "impact": "maybe_review",
+          "reason": "Hook behavior changes may need governance documentation"
+        },
+        {
+          "target": "studio/QUICKSTART.md",
+          "impact": "maybe_review",
+          "reason": "Quickstart may reference hook behavior"
+        }
+      ]
+    },
+    {
+      "changeType": "script_change",
+      "trigger": "studio/scripts/powershell/*.ps1",
+      "description": "Any change to studio PowerShell automation scripts",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "Script invariants may need updated entries"
+        },
+        {
+          "target": ".githooks/pre-commit.ps1",
+          "impact": "maybe_review",
+          "reason": "Pre-commit invokes check-speckit-runtime.ps1"
+        }
+      ]
+    },
+    {
+      "changeType": "spec_change",
+      "trigger": "specs/<feature>/spec.md",
+      "description": "Any change to feature spec that affects requirements referenced in downstream artifacts",
+      "rules": [
+        {
+          "target": "specs/<feature>/readiness/readiness-assessment.md",
+          "impact": "must_review",
+          "reason": "Readiness classification may change if requirements changed"
+        },
+        {
+          "target": "specs/<feature>/intent-ledger.md",
+          "impact": "must_review",
+          "reason": "Scope compression tracking may need new or updated rows"
+        },
+        {
+          "target": "specs/<feature>/plan.md",
+          "impact": "must_update",
+          "reason": "Plan must reflect current spec requirements"
+        },
+        {
+          "target": "specs/<feature>/tasks.md",
+          "impact": "must_update",
+          "reason": "Tasks must reflect current plan derived from spec"
+        }
+      ]
+    },
+    {
+      "changeType": "doc_change",
+      "trigger": "README.md|WORKSPACE_STRUCTURE.md|studio/QUICKSTART.md|studio/SDD-QUICKSTART-GUIDE.md",
+      "description": "Changes to informational docs that may contain invariant text",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "maybe_review",
+          "reason": "Informational docs have docInvariant entries; changing invariant text breaks the contract"
+        }
+      ]
+    },
+    {
+      "changeType": "registry_change",
+      "trigger": "studio/runtime/impact-registry.json",
+      "description": "Any change to the impact registry itself",
+      "rules": [
+        {
+          "target": "studio/constitution/constitution.md",
+          "impact": "maybe_review",
+          "reason": "Authority classification in constitution should stay aligned with registry"
+        },
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "maybe_review",
+          "reason": "Contract sharedGatePaths may need alignment"
+        }
+      ]
+    }
+  ]
+}

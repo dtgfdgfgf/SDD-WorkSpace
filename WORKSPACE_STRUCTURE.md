@@ -48,7 +48,6 @@ Design priorities:
 | `studio/extensions/` | Canonical shared extension source, manifest schema, catalog, and state |
 | `studio/templates/project-init/` | Project bootstrap skeleton |
 | `studio/templates/sdd-docs/` | Canonical document templates |
-| `studio/templates/sdd-agents/` | Mirror of runtime agents; update from `.github/agents/` |
 | `studio/knowledge-base/learnings.md` | Cross-project learning capture |
 | `studio/prompts/<stage>/` | Stage-specific reusable prompts |
 | `studio/scripts/powershell/` | Studio automation scripts |
@@ -101,8 +100,7 @@ The runtime source of truth is:
 - `.claude/agents/`
 - `.github/prompts/`
 
-`studio/templates/sdd-agents/` is retained as a mirror for scaffolding and auditability. It should
-be updated from the runtime source, not edited independently as a competing authority.
+Agent definitions live in `.github/agents/` (source of truth) and `.claude/agents/` (seeded copy with Claude-specific format).
 
 Project-local Claude agents are not supported in this workspace model.
 

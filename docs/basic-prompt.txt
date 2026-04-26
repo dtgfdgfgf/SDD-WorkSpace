@@ -1,0 +1,6 @@
+Clarify the current feature spec.
+Assess readiness for the current feature.
+Create the technical plan for the current feature.
+Generate tasks for the current feature.
+Analyze the current feature artifacts for consistency.
+Implement the current feature from tasks.md.

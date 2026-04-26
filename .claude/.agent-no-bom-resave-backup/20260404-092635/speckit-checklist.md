@@ -1,8 +1,10 @@
----
-description: Generate a custom checklist for the current feature based on user requirements.
+﻿---
+name: speckit-checklist
+description: "Generate a custom checklist for the current feature based on user requirements."
 model: claude-opus-4-6
-infer: true
 ---
+
+<!-- Seeded from .github/agents/speckit.checklist.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

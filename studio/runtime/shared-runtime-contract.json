@@ -14,6 +14,7 @@
     "speckit.taskstoissues",
     "speckit.version"
   ],
+  "requiredClaudeAgentsNote": "spec-kit-qa-bot.md derives its name from the frontmatter 'name' field in .github/agents/spec-kit.agent.md, not from a filename pattern match",
   "requiredClaudeAgents": [
     "async-python-reviewer.md",
     "spec-kit-qa-bot.md",
@@ -36,6 +37,7 @@
     "speckit.checklist.prompt.md",
     "speckit.clarify.prompt.md",
     "speckit.constitution.prompt.md",
+    "speckit.discover.prompt.md",
     "speckit.eci.prompt.md",
     "speckit.implement.prompt.md",
     "speckit.plan.prompt.md",
@@ -45,72 +47,13 @@
     "speckit.taskstoissues.prompt.md",
     "speckit.version.prompt.md"
   ],
-  "requiredMirrorPairs": [
-    {
-      "runtime": ".github/agents/speckit.analyze.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.analyze.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.checklist.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.checklist.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.clarify.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.clarify.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.constitution.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.constitution.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.discover.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.discover.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.eci.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.eci.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.implement.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.implement.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.plan.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.plan.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.readiness.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.readiness.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.specify.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.specify.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.tasks.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.tasks.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.taskstoissues.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.taskstoissues.agent.md"
-    },
-    {
-      "runtime": ".github/agents/speckit.version.agent.md",
-      "mirror": "studio/templates/sdd-agents/speckit.version.agent.md"
-    },
-    {
-      "runtime": ".github/agents/spec-kit.agent.md",
-      "mirror": "studio/templates/sdd-agents/spec-kit.agent.md"
-    },
-    {
-      "runtime": ".github/agents/copilot-instructions.md",
-      "mirror": "studio/templates/sdd-agents/copilot-instructions.md"
-    }
-  ],
   "requiredDocTemplates": [
     "agent-file-template.md",
     "access-setup-checklist-template.md",
+    "change-manifest-template.md",
     "checklist-template.md",
+    "claude-md-template.md",
+    "copilot-instructions-template.md",
     "decision-record-template.md",
     "eci-adoption-record-template.md",
     "eci-assessment-template.md",
@@ -141,7 +84,14 @@
       "path": ".githooks/pre-commit.ps1",
       "mustContainAll": [
         "check-speckit-runtime.ps1",
-        "shared runtime audit"
+        "shared runtime audit",
+        "impact-registry.json",
+        "Change manifest completeness",
+        "Impact routing advisory",
+        "Document version",
+        "Estimated timeline",
+        "Planability vs Intent Obligations",
+        "intent-ledger"
       ]
     }
   ],
@@ -270,6 +220,20 @@
         "### Mainline Update Notes",
         "`docs/mainline-updates/README.md`",
         "One note MAY cover one coherent merge-ready batch"
+      ]
+    },
+    {
+      "id": "constitution-document-authority-update-order",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "### Document Authority and Update Order",
+        "`source_of_truth`",
+        "`dependent`",
+        "`informational`",
+        "update order MUST follow the authority chain",
+        "Update `source_of_truth` documents first",
+        "Propagate to `dependent` documents",
+        "Reconcile `informational` documents"
       ]
     },
     {
@@ -455,7 +419,25 @@
         "**Target Branch**: `main`",
         "## Summary",
         "## Validation",
-        "## Merge Notes"
+        "## Merge Notes",
+        "Change manifests:"
+      ]
+    },
+    {
+      "id": "change-manifest-template-semantics",
+      "path": "studio/templates/sdd-docs/change-manifest-template.md",
+      "mustContainAll": [
+        "**Change Type**:",
+        "**Origin Document**:",
+        "**Status**: open | propagating | closed",
+        "## Impact Assessment",
+        "must_update",
+        "must_review",
+        "maybe_review",
+        "reference",
+        "## Propagation Order",
+        "## Completion Criteria",
+        "studio/runtime/impact-registry.json"
       ]
     },
     {
@@ -545,6 +527,18 @@
         "CLAUDE.md",
         ".code-workspace"
       ]
+    },
+    {
+      "id": "generate-impact-registry-authority",
+      "path": "studio/scripts/powershell/generate-impact-registry.ps1",
+      "mustContainAll": [
+        "impact-registry.json",
+        "drift-governance",
+        "documentAuthority",
+        "impactRouting",
+        "builtinDocumentAuthority",
+        "builtinImpactRouting"
+      ]
     }
   ],
   "sharedGatePaths": [
@@ -557,7 +551,6 @@
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
     "studio/templates/project-init/README.md",
-    "studio/templates/sdd-agents/",
     "studio/templates/sdd-docs/",
     "studio/QUICKSTART.md",
     "studio/SDD-QUICKSTART-GUIDE.md",
@@ -570,6 +563,9 @@
     "studio/scripts/powershell/seed-claude-agents.ps1",
     "studio/scripts/powershell/new-project-worktree.ps1",
     "studio/scripts/powershell/setup-hooks.ps1",
-    "studio/scripts/powershell/upgrade-studio-runtime.ps1"
+    "studio/scripts/powershell/upgrade-studio-runtime.ps1",
+    "studio/scripts/powershell/generate-impact-registry.ps1",
+    "studio/runtime/impact-registry.json",
+    "docs/change-manifests/"
   ]
 }

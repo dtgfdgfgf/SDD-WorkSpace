@@ -832,7 +832,7 @@ function Invoke-JsonScript {
     for ($i = 0; $i -lt $Arguments.Count; $i++) {
         $token = [string]$Arguments[$i]
         if ($token.StartsWith('-')) {
-            $name = $token.TrimStart('-')
+            $name = $token -replace '^-{1,2}', ''
             if (($i + 1) -lt $Arguments.Count -and -not ([string]$Arguments[$i + 1]).StartsWith('-')) {
                 $namedParameters[$name] = $Arguments[$i + 1]
                 $i++
@@ -849,7 +849,7 @@ function Invoke-JsonScript {
     } else {
         & $ScriptPath @namedParameters
     }
-    if ($LASTEXITCODE -ne 0) {
+    if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) {
         throw "Script failed: $ScriptPath"
     }
 
@@ -873,7 +873,7 @@ function Invoke-JsonScriptDetailed {
     for ($i = 0; $i -lt $Arguments.Count; $i++) {
         $token = [string]$Arguments[$i]
         if ($token.StartsWith('-')) {
-            $name = $token.TrimStart('-')
+            $name = $token -replace '^-{1,2}', ''
             if (($i + 1) -lt $Arguments.Count -and -not ([string]$Arguments[$i + 1]).StartsWith('-')) {
                 $namedParameters[$name] = $Arguments[$i + 1]
                 $i++
@@ -958,8 +958,8 @@ function Get-SupportedAgentContexts {
         return @()
     }
 
-    return [regex]::Matches($match.Matches[0].Groups[1].Value, "'([^']+)'") |
-        ForEach-Object { $_.Groups[1].Value }
+    return [regex]::Matches($match.Matches[0].Groups[1].Value, "(['""])([^'""]+)\1") |
+        ForEach-Object { $_.Groups[2].Value }
 }
 
 function Get-SkillInstallTargets {

@@ -1,5 +1,9 @@
 # Copilot Instructions
 
+<!-- Authority: source_of_truth for workspace-level Copilot agent context.
+     The agent-scoped subset at .github/agents/copilot-instructions.md is a dependent
+     document and should derive from this file's guidance, not compete with it. -->
+
 ## Overview
 
 This workspace is a studio-first Specification-Driven Development (SDD) environment for a solo AI
@@ -21,7 +25,6 @@ engineering practice.
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `studio/extensions/` | Canonical shared extension registry and workspace-level extension state |
 | `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
-| `studio/templates/sdd-agents/` | Mirrored agent templates; sync from `.github/agents/` only |
 | `studio/templates/sdd-docs/` | Canonical studio document templates |
 | `docs/project-worktree-parity-governance.md` | Canonical policy for consumer-project derived worktree parity |
 | `<project>/.github/copilot-instructions.md` | GitHub Copilot project context only |

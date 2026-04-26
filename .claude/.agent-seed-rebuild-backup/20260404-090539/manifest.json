@@ -1,0 +1,176 @@
+{
+  "createdAt": "2026-04-04T09:05:40.2060539+08:00",
+  "agentDir": "C:\\Users\\user\\Workspace\\.claude\\agents",
+  "seed": {
+    "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\test-runner.md",
+    "hash": "F4BABBFFD26B081146E23E9A604D3FEC43E9D50BD512F8CA0C66C884D5B779B8",
+    "fileId": "0x0000000000000000002b0000001100b5"
+  },
+  "targets": [
+    {
+      "name": "async-python-reviewer.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\async-python-reviewer.md",
+      "preHash": "DEF1CA4BF7080FEA5D84208D8A9125CCE1B4B1359D7236CEDC0512815C9B9624",
+      "postHash": "DEF1CA4BF7080FEA5D84208D8A9125CCE1B4B1359D7236CEDC0512815C9B9624",
+      "preFileId": "0x000000000000000000100000000e85dc",
+      "postFileId": "0x0000000000000000008c0000000276ef",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 4594
+    },
+    {
+      "name": "spec-kit-qa-bot.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\spec-kit-qa-bot.md",
+      "preHash": "6C5FA1B98C3C59B5C18959C473F75CCD73C42B553DCDAAF44C924F21725E160E",
+      "postHash": "6C5FA1B98C3C59B5C18959C473F75CCD73C42B553DCDAAF44C924F21725E160E",
+      "preFileId": "0x00000000000000000ec2000000014657",
+      "postFileId": "0x0000000000000000040800000002ab74",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 5611
+    },
+    {
+      "name": "speckit-analyze.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-analyze.md",
+      "preHash": "26DEA07EA9EEC0337B5050184078523D21E02CE4D8BC510FBDA1416AC18C45FE",
+      "postHash": "26DEA07EA9EEC0337B5050184078523D21E02CE4D8BC510FBDA1416AC18C45FE",
+      "preFileId": "0x00000000000000000300000000015159",
+      "postFileId": "0x00000000000000000ec3000000014657",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 15675
+    },
+    {
+      "name": "speckit-checklist.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-checklist.md",
+      "preHash": "AA114AB20A4886D8689454E777A99DA4DC279ED762E93BE46B4E5DA90EE574E3",
+      "postHash": "AA114AB20A4886D8689454E777A99DA4DC279ED762E93BE46B4E5DA90EE574E3",
+      "preFileId": "0x000000000000000002710000000159a9",
+      "postFileId": "0x00000000000000000301000000015159",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 17695
+    },
+    {
+      "name": "speckit-clarify.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-clarify.md",
+      "preHash": "4E095F44A4ED5C3B11575BB1E76053C4589F4C685609930041FC3DEC8D2A0BBB",
+      "postHash": "4E095F44A4ED5C3B11575BB1E76053C4589F4C685609930041FC3DEC8D2A0BBB",
+      "preFileId": "0x00000000000000000199000000015b21",
+      "postFileId": "0x000000000000000002720000000159a9",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 11994
+    },
+    {
+      "name": "speckit-constitution.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-constitution.md",
+      "preHash": "16F128E5D9ECE65DE53A8064EE18148A76C8091B83F5A6C3B5316D81E89F0EBB",
+      "postHash": "16F128E5D9ECE65DE53A8064EE18148A76C8091B83F5A6C3B5316D81E89F0EBB",
+      "preFileId": "0x0000000000000000036600000001773a",
+      "postFileId": "0x0000000000000000019a000000015b21",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 6291
+    },
+    {
+      "name": "speckit-discover.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-discover.md",
+      "preHash": "9E3885787233C0CACE93CF3C0C508FFA26844D0CF4004A44E45EDE0DE2841A7E",
+      "postHash": "9E3885787233C0CACE93CF3C0C508FFA26844D0CF4004A44E45EDE0DE2841A7E",
+      "preFileId": "0x000000000000000003b6000000018062",
+      "postFileId": "0x0000000000000000036700000001773a",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 6119
+    },
+    {
+      "name": "speckit-eci.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-eci.md",
+      "preHash": "E43C8EDC2974451F2014373878C265A01C6B848E099476F37ACED659B9390A8E",
+      "postHash": "E43C8EDC2974451F2014373878C265A01C6B848E099476F37ACED659B9390A8E",
+      "preFileId": "0x00000000000000000110000000019cdb",
+      "postFileId": "0x000000000000000003b7000000018062",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 12206
+    },
+    {
+      "name": "speckit-implement.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-implement.md",
+      "preHash": "F9E88F0059E8278CB3F5B7CFD0BF35D9605947E8D768958ACA3A1101995489C3",
+      "postHash": "F9E88F0059E8278CB3F5B7CFD0BF35D9605947E8D768958ACA3A1101995489C3",
+      "preFileId": "0x0000000000000000015900000001a4f8",
+      "postFileId": "0x00000000000000000111000000019cdb",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 8134
+    },
+    {
+      "name": "speckit-plan.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-plan.md",
+      "preHash": "DF0FE44F4602C3167F38C4F1BD664AC5E8FB77F94ACEBA539568C10851A22079",
+      "postHash": "DF0FE44F4602C3167F38C4F1BD664AC5E8FB77F94ACEBA539568C10851A22079",
+      "preFileId": "0x0000000000000000039400000001c444",
+      "postFileId": "0x0000000000000000015a00000001a4f8",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 7644
+    },
+    {
+      "name": "speckit-readiness.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-readiness.md",
+      "preHash": "5D381AB650060E28C2BCEA9661E1C2B3C0B84FB993D2D4E5590B197C79478F01",
+      "postHash": "5D381AB650060E28C2BCEA9661E1C2B3C0B84FB993D2D4E5590B197C79478F01",
+      "preFileId": "0x0000000000000000079200000001dea1",
+      "postFileId": "0x0000000000000000039500000001c444",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 21012
+    },
+    {
+      "name": "speckit-specify.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-specify.md",
+      "preHash": "DE0B6CF429B83F12EEEAFA44C9A9685BA316F1EA67F65E874A87D4B90BFE7056",
+      "postHash": "DE0B6CF429B83F12EEEAFA44C9A9685BA316F1EA67F65E874A87D4B90BFE7056",
+      "preFileId": "0x0000000000000000001400000001ec51",
+      "postFileId": "0x0000000000000000079300000001dea1",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 13400
+    },
+    {
+      "name": "speckit-tasks.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-tasks.md",
+      "preHash": "B8E85EB88AF2DCC61530B0ED74693E25D4BEDFF14AA45FF1198CA2A3C4BEA265",
+      "postHash": "B8E85EB88AF2DCC61530B0ED74693E25D4BEDFF14AA45FF1198CA2A3C4BEA265",
+      "preFileId": "0x0000000000000000001100000001ec54",
+      "postFileId": "0x0000000000000000001500000001ec51",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 7844
+    },
+    {
+      "name": "speckit-taskstoissues.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-taskstoissues.md",
+      "preHash": "623B99916775A83708D47E44B2DCE3623A76635C0F46116E5DEB5E04A91B3C65",
+      "postHash": "623B99916775A83708D47E44B2DCE3623A76635C0F46116E5DEB5E04A91B3C65",
+      "preFileId": "0x0000000000000000001f00000001eeb4",
+      "postFileId": "0x0000000000000000001200000001ec54",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 1550
+    },
+    {
+      "name": "speckit-version.md",
+      "path": "C:\\Users\\user\\Workspace\\.claude\\agents\\speckit-version.md",
+      "preHash": "F66ED66D87DA1F058BAE18A5612CBBC88264644E2C9104B76FCAA3A3F69E4EA5",
+      "postHash": "F66ED66D87DA1F058BAE18A5612CBBC88264644E2C9104B76FCAA3A3F69E4EA5",
+      "preFileId": "0x0000000000000000005800000001eeba",
+      "postFileId": "0x0000000000000000002000000001eeb4",
+      "hashMatch": true,
+      "fileIdChanged": true,
+      "length": 1677
+    }
+  ]
+}

@@ -42,6 +42,7 @@
 
 - `git diff --check`
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`
+- Change manifests: [all closed / N deferred with reason / none required]
 - [Any additional validation command or manual check]
 
 ## Merge Notes

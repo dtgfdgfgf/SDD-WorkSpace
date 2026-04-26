@@ -1,17 +1,10 @@
 ---
-name: speckit.discover
-description: >
-  Internal SDD discovery analysis agent.
-  Consumes raw consultation transcripts and infers
-  spec-ready discovery structure grounded in commercial reality.
-tools: []
+name: "speckit-discover"
+description: "Internal SDD discovery analysis agent. Consumes raw consultation transcripts and infers spec-ready discovery structure grounded in commercial reality."
 model: claude-opus-4-6
-handoffs:
-  - label: Generate Specification
-    agent: speckit.specify
-    prompt: Generate specification from this discovery output
-infer: true
 ---
+
+<!-- Seeded from .github/agents/speckit.discover.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 # speckit.discover.agent
 

@@ -1,8 +1,10 @@
----
-description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, readiness artifacts, plan.md, and tasks.md after task generation.
+﻿---
+name: speckit-analyze
+description: "Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, readiness artifacts, plan.md, and tasks.md after task generation."
 model: claude-opus-4-6
-infer: true
 ---
+
+<!-- Seeded from .github/agents/speckit.analyze.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

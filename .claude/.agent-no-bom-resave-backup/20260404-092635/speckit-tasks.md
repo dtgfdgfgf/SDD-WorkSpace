@@ -1,17 +1,10 @@
----
-description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
+﻿---
+name: speckit-tasks
+description: "Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts."
 model: claude-opus-4-6
-infer: true
-handoffs: 
-  - label: Analyze For Consistency
-    agent: speckit.analyze
-    prompt: Run a project analysis for consistency
-    send: true
-  - label: Implement Project
-    agent: speckit.implement
-    prompt: Start the implementation in phases
-    send: true
 ---
+
+<!-- Seeded from .github/agents/speckit.tasks.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

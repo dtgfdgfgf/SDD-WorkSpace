@@ -1,17 +1,10 @@
----
-description: Create or update the feature specification from a natural language feature description.
+﻿---
+name: speckit-specify
+description: "Create or update the feature specification from a natural language feature description."
 model: claude-opus-4-6
-infer: true
-handoffs: 
-  - label: Clarify Spec Requirements
-    agent: speckit.clarify
-    prompt: Clarify specification requirements
-    send: true
-  - label: Assess Implementation Readiness
-    agent: speckit.readiness
-    prompt: Assess whether the current spec is ready for planning.
-    send: true
 ---
+
+<!-- Seeded from .github/agents/speckit.specify.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

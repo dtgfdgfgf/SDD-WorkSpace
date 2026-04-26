@@ -1,13 +1,10 @@
----
-description: Govern external capability adoption after readiness routes a feature to ECI, classify the ECI level, and emit the dossier artifacts required for safe readiness re-entry.
+﻿---
+name: speckit-eci
+description: "Govern external capability adoption after readiness routes a feature to ECI, classify the ECI level, and emit the dossier artifacts required for safe readiness re-entry."
 model: claude-opus-4-6
-infer: true
-handoffs:
-  - label: Re-Run Readiness
-    agent: speckit.readiness
-    prompt: Re-run readiness after the ECI dossier is complete.
-    send: true
 ---
+
+<!-- Seeded from .github/agents/speckit.eci.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

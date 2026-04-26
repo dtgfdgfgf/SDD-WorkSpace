@@ -1,17 +1,10 @@
----
-description: Assess whether the current feature spec is ready to proceed to planning, identify the primary readiness blocker if not, and emit the minimum remediation packet required to move forward safely.
+﻿---
+name: speckit-readiness
+description: "Assess whether the current feature spec is ready to proceed to planning, identify the primary readiness blocker if not, and emit the minimum remediation packet required to move forward safely."
 model: claude-opus-4-6
-infer: true
-handoffs:
-  - label: Build Technical Plan
-    agent: speckit.plan
-    prompt: Create a plan for the spec if readiness assessment is READY_FOR_PLAN.
-    send: true
-  - label: Run External Capability Intake
-    agent: speckit.eci
-    prompt: Continue the ROUTE_TO_ECI path using readiness/eci-trigger.md as the intake seed.
-    send: true
 ---
+
+<!-- Seeded from .github/agents/speckit.readiness.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
 
 ## Output Language
 

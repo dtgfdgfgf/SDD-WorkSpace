@@ -1,9 +1,48 @@
+<!-- drift-governance
+authority: source_of_truth
+domain: governance
+impact_on_change:
+  - target: studio/runtime/shared-runtime-contract.json
+    level: must_review
+    reason: Constitution invariants may need new or updated mustContainAll entries
+  - target: studio/runtime/impact-registry.json
+    level: maybe_review
+    reason: Authority classification or routing rules may need adjustment
+  - target: .github/agents/*.agent.md
+    level: must_review
+    reason: Agent behavior semantics may be affected by new governance rules
+  - target: .claude/agents/*.md
+    level: must_review
+    reason: Claude agents mirror Copilot agents and must reflect updated semantics
+  - target: studio/templates/sdd-docs/*.md
+    level: must_review
+    reason: Templates may need new sections or updated guidance
+  - target: README.md
+    level: must_update
+    reason: Must reflect current governance state and workflow sequence
+  - target: WORKSPACE_STRUCTURE.md
+    level: maybe_review
+    reason: Structure doc may need updates if paths or conventions changed
+  - target: studio/QUICKSTART.md
+    level: must_update
+    reason: Must reflect constitution rules in quickstart form
+  - target: studio/SDD-QUICKSTART-GUIDE.md
+    level: must_update
+    reason: Must reflect updated methodology rules
+  - target: .github/copilot-instructions.md
+    level: must_review
+    reason: Copilot context may need updated governance references
+  - target: .githooks/pre-commit.ps1
+    level: maybe_review
+    reason: Validation logic may need updates for new governance rules
+-->
+
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.5.1
+**Version:** 1.7.0
 **Scope:** Studio-level governance for a single-person AI engineering practice  
-**Applies to:** All projects, feature packs, and SDD workflows
+**Applies to:** All projects and SDD workflows
 
 ## 1. Purpose
 
@@ -26,7 +65,7 @@ Projects are classified into three types with different levels of rigor:
 | **Internal** | Studio tools, automation, personal projects | Full SDD flow | `retrospective.md` required |
 | **Client** | Paid client work (future) | Full SDD flow + client review gates | `retrospective.md` required |
 
-**Current Phase:** Practice (as of 2025-12)
+**Current Phase:** Practice + Internal (as of 2026-04)
 
 Classification MUST be declared in the project's `README.md` or `.specify/memory/constitution.md`.
 
@@ -104,7 +143,7 @@ Readiness output MUST:
 - Write `specs/<feature>/readiness/readiness-assessment.md`
 - Write only the minimum route-specific remediation packet required by the chosen status
 - Keep the primary judgment focused on planning safety rather than product-intent completion
-- Distinguish `planability resolved` from `intent obligations retained`
+- Distinguish `planability resolved` from `intent obligations retained` (section heading: `## Planability vs Intent Obligations`)
 - Require `specs/<feature>/intent-ledger.md` whenever a core spec item is handled as `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff`
 - Explicitly state allowed next actions and prohibited next actions
 - Recommend `/speckit.plan` only when the primary status is `READY_FOR_PLAN`
@@ -226,32 +265,7 @@ During implementation:
 - Small-scope TDD MAY be used where beneficial
 - Any specification change MUST update spec, readiness artifacts, `intent-ledger.md`, plan, and tasks with version bumps when those artifacts are affected
 
-## 10. Feature Packs [NOT ACTIVE]
-
-> **Status:** This section is NOT ACTIVE. It will be activated when the studio has established reusable service templates from completed projects.
-
-This section applies when the studio has established reusable service templates.
-
-All reusable services (e.g., chatbot-basic, CRM-lite, automation-basic) SHOULD be stored in:
-
-- templates/feature-packs/<service-name>/
-
-Each Feature Pack SHOULD include:
-
-- spec-template.md
-- plan-template.md
-- tasks-template.md
-- Common prompts
-- Common integration / API flows
-
-New projects SHOULD start from an appropriate Feature Pack when:
-
-- A matching Feature Pack exists, AND
-- The project scope aligns with the template
-
-Until Feature Packs are established, projects start from `templates/project-init/` skeleton.
-
-## 11. AI Agent Collaboration Rules
+## 10. AI Agent Collaboration Rules
 
 AI agents MUST operate under the following principles:
 
@@ -268,7 +282,7 @@ AI agents MUST operate under the following principles:
 - All AI-generated content MUST be manually reviewed
 - AI MAY NOT skip SDD stages or suggest skipping stages
 
-### 10.1 LLM-Friendly Document Formatting
+## 10.1 LLM-Friendly Document Formatting
 
 All AI-generated `.md` files MUST follow these formatting rules:
 
@@ -299,9 +313,9 @@ All AI-generated `.md` files MUST follow these formatting rules:
 | `README.md`, human-facing docs | YES |
 | `learnings.md`, `retrospective.md` | YES |
 
-## 12. Required Project Structure
+## 11. Required Project Structure
 
-Each project MUST contain these paths:
+Each project MUST contain the following base paths. Items marked "when required" or "when triggered" are conditional on their trigger criteria being met (see relevant sections for details):
 
 | Path | Purpose |
 |------|--------|
@@ -318,7 +332,7 @@ Each project MUST contain these paths:
 | `docs/` | Documentation |
 | `README.md` | Project overview |
 
-## 13. Governance Rules
+## 12. Governance Rules
 
 ### Dual-Layer Compliance
 
@@ -386,6 +400,57 @@ constitution.
 - Versioning MUST follow Semantic Versioning
 - Updates to Studio Constitution SHOULD trigger review of related templates
 
+### Document Authority and Update Order
+
+All governed documents in this workspace belong to one of three authority layers:
+
+| Authority Layer | Definition | Update Priority |
+|-----------------|------------|-----------------|
+| `source_of_truth` | The document that formally defines the requirement, rule, or behavior. Changes originate here. | First |
+| `dependent` | Documents derived from or constrained by a source of truth. Must stay consistent with their source. | Second |
+| `informational` | Overviews, indexes, or explanatory documents. May lag briefly if drift is tracked. | Third |
+
+When a change propagates across multiple documents, the update order MUST follow the authority chain:
+
+1. Update `source_of_truth` documents first.
+2. Propagate to `dependent` documents.
+3. Reconcile `informational` documents.
+
+This ordering ensures that dependent documents always reference the current authoritative state,
+not a stale version.
+
+#### Workspace Document Authority Classification
+
+**Source of Truth:**
+
+- `studio/constitution/constitution.md` (governance)
+- `studio/runtime/shared-runtime-contract.json` (runtime verification)
+- `studio/runtime/impact-registry.json` (change-to-document impact routing)
+- `.github/agents/*.agent.md` (agent runtime definitions)
+- `studio/templates/sdd-docs/*.md` (document templates)
+- `.githooks/pre-commit.ps1` (commit-time validation)
+- `studio/scripts/powershell/*.ps1` (studio automation)
+- `specs/<feature>/spec.md` (feature requirements, per-feature)
+- `specs/<feature>/readiness/**/*.md` (readiness and ECI governance, per-feature)
+- `docs/project-worktree-parity-governance.md` (worktree parity)
+
+**Dependent:**
+
+- `.claude/agents/*.md` (seeded from `.github/agents/`)
+- `.github/copilot-instructions.md` (workspace-level Copilot context, reflects constitution rules)
+- `.github/agents/copilot-instructions.md` (agent-scoped subset of workspace copilot-instructions)
+- `specs/<feature>/plan.md` (depends on spec, readiness, intent-ledger)
+- `specs/<feature>/tasks.md` (depends on plan)
+- `specs/<feature>/intent-ledger.md` (depends on spec, readiness)
+
+**Informational:**
+
+- `README.md` (workspace overview)
+- `WORKSPACE_STRUCTURE.md` (architecture documentation)
+- `studio/QUICKSTART.md` (onboarding guide)
+- `studio/SDD-QUICKSTART-GUIDE.md` (methodology guide)
+- `docs/mainline-updates/*.md` (merge explanation notes)
+
 ### Shared-Layer Verification
 
 - Shared-layer convergence MUST be validated against studio runtime artifacts, templates, docs, hooks, and shared scripts.
@@ -394,11 +459,11 @@ constitution.
 - The final shared-layer closure for readiness / eci MUST treat `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the only machine-verifiable acceptance source.
 - `docs/readiness_source/` MAY remain as design reference material, but it MUST NOT be treated as the canonical runtime acceptance surface.
 
-## 14. Knowledge Capture (Mandatory)
+## 13. Knowledge Capture (Mandatory)
 
 Every completed project MUST include a knowledge capture phase. Requirements vary by project type (see Section 1.1).
 
-### 13.1 Practice Projects (Lightweight)
+## 13.1 Practice Projects (Lightweight)
 
 For Practice projects, update `studio/knowledge-base/learnings.md` with:
 
@@ -420,7 +485,7 @@ Format:
 
 `retrospective.md` is OPTIONAL for Practice projects.
 
-### 13.2 Internal / Client Projects (Full)
+## 13.2 Internal / Client Projects (Full)
 
 For Internal and Client projects, create `retrospective.md` in the project root with:
 
@@ -431,7 +496,7 @@ For Internal and Client projects, create `retrospective.md` in the project root 
 
 Additionally, update `studio/knowledge-base/learnings.md` if significant learnings exist.
 
-### 13.3 Asset Extraction Review
+## 13.3 Asset Extraction Review
 
 After each project (all types), ask:
 
@@ -439,14 +504,14 @@ After each project (all types), ask:
 - Any reusable template section? Extract it to `studio/templates/`
 - Any pattern worth documenting? Record it in `learnings.md`
 
-### 13.4 Constitution Review
+## 13.4 Constitution Review
 
 If recurring friction points are found:
 
 - Propose updates to Studio Constitution
 - Document the change rationale in commit message or changelog
 
-### 13.5 Knowledge Base Structure
+## 13.5 Knowledge Base Structure
 
 | Path | Purpose |
 |------|--------|

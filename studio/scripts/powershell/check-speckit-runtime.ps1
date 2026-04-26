@@ -3,6 +3,7 @@
 [CmdletBinding()]
 param(
     [switch]$Json,
+    [switch]$Fix,
     [switch]$Help
 )
 
@@ -10,12 +11,13 @@ $ErrorActionPreference = 'Stop'
 
 if ($Help) {
     $helpLines = @(
-        'Usage: ./check-speckit-runtime.ps1 [-Json] [-Help]',
+        'Usage: ./check-speckit-runtime.ps1 [-Json] [-Fix] [-Help]',
         '',
-        'Checks studio-first runtime readiness, including Copilot and Claude shared runtime authorities, mirror parity, templates, hooks, extension governance, and skills install targets.',
+        'Checks studio-first runtime readiness, including Copilot and Claude shared runtime authorities, templates, hooks, extension governance, and skills install targets.',
         '',
         'Options:',
         '  -Json    Output structured JSON summary',
+        '  -Fix     Reserved for future auto-fix capabilities',
         '  -Help    Show this help message'
     )
     Write-Output ($helpLines -join "`n")
@@ -174,7 +176,6 @@ foreach ($extensionWarning in @($validator.WARNINGS)) {
 $commandChecks = @()
 $promptStubChecks = @()
 $claudeAgentChecks = @()
-$mirrorParityChecks = @()
 $templateChecks = @()
 $docSemanticChecks = @()
 $agentSemanticChecks = @()
@@ -274,36 +275,6 @@ if (-not $contract) {
         $failures += New-AuditFailure -Category 'claude-agents' -Id ("unexpected-{0}" -f $unexpectedClaudeAgentFile) -Message "Unexpected Claude shared agent not declared in contract: $unexpectedClaudeAgentFile" -Path $claudeAgentPath
     }
 
-    foreach ($pair in @($contract.requiredMirrorPairs)) {
-        $runtimePath = Join-Path $paths.WORKSPACE_ROOT ([string]$pair.runtime)
-        $mirrorPath = Join-Path $paths.WORKSPACE_ROOT ([string]$pair.mirror)
-        $runtimeExists = Test-Path -LiteralPath $runtimePath
-        $mirrorExists = Test-Path -LiteralPath $mirrorPath
-        $hashMatch = $false
-
-        if ($runtimeExists -and $mirrorExists) {
-            $runtimeHash = (Get-FileHash -LiteralPath $runtimePath -Algorithm SHA256).Hash
-            $mirrorHash = (Get-FileHash -LiteralPath $mirrorPath -Algorithm SHA256).Hash
-            $hashMatch = ($runtimeHash -eq $mirrorHash)
-        }
-
-        $mirrorParityChecks += [ordered]@{
-            runtimePath  = $runtimePath
-            mirrorPath   = $mirrorPath
-            runtimeExists = $runtimeExists
-            mirrorExists = $mirrorExists
-            hashMatch    = $hashMatch
-        }
-
-        if (-not $runtimeExists) {
-            $failures += New-AuditFailure -Category 'mirror-parity' -Id ([string]$pair.runtime) -Message 'Runtime file missing for required mirror pair.' -Path $runtimePath
-        } elseif (-not $mirrorExists) {
-            $failures += New-AuditFailure -Category 'mirror-parity' -Id ([string]$pair.mirror) -Message 'Mirror file missing for required mirror pair.' -Path $mirrorPath
-        } elseif (-not $hashMatch) {
-            $failures += New-AuditFailure -Category 'mirror-parity' -Id ([string]$pair.runtime) -Message 'Runtime file and mirror file differ.' -Path $runtimePath
-        }
-    }
-
     $templatesDir = Join-Path $paths.STUDIO_ROOT 'templates/sdd-docs'
     foreach ($templateName in @($contract.requiredDocTemplates | ForEach-Object { [string]$_ })) {
         $templatePath = Join-Path $templatesDir $templateName
@@ -318,7 +289,7 @@ if (-not $contract) {
         }
     }
 
-    foreach ($hookContract in @($contract.requiredHooks)) {
+    foreach ($hookContract in ($contract.requiredHooks ?? @())) {
         $hookPath = Join-Path $paths.WORKSPACE_ROOT ([string]$hookContract.path)
         $exists = Test-Path -LiteralPath $hookPath
         $missingRequirements = @()
@@ -341,19 +312,19 @@ if (-not $contract) {
         }
     }
 
-    $docContractResult = Invoke-PathContractChecks -Entries @($contract.docInvariants) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'docs' -MissingMessage 'Canonical document required by contract is missing.'
+    $docContractResult = Invoke-PathContractChecks -Entries ($contract.docInvariants ?? @()) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'docs' -MissingMessage 'Canonical document required by contract is missing.'
     $docSemanticChecks = @($docContractResult.Checks)
     $failures += @($docContractResult.Failures)
 
-    $agentContractResult = Invoke-PathContractChecks -Entries @($contract.agentInvariants) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'agent-semantics' -MissingMessage 'Runtime agent required by semantic contract is missing.'
+    $agentContractResult = Invoke-PathContractChecks -Entries ($contract.agentInvariants ?? @()) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'agent-semantics' -MissingMessage 'Runtime agent required by semantic contract is missing.'
     $agentSemanticChecks = @($agentContractResult.Checks)
     $failures += @($agentContractResult.Failures)
 
-    $templateContractResult = Invoke-PathContractChecks -Entries @($contract.templateInvariants) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'template-semantics' -MissingMessage 'Template required by semantic contract is missing.'
+    $templateContractResult = Invoke-PathContractChecks -Entries ($contract.templateInvariants ?? @()) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'template-semantics' -MissingMessage 'Template required by semantic contract is missing.'
     $templateSemanticChecks = @($templateContractResult.Checks)
     $failures += @($templateContractResult.Failures)
 
-    $scriptContractResult = Invoke-PathContractChecks -Entries @($contract.scriptInvariants) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'script-semantics' -MissingMessage 'Shared script required by semantic contract is missing.'
+    $scriptContractResult = Invoke-PathContractChecks -Entries ($contract.scriptInvariants ?? @()) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'script-semantics' -MissingMessage 'Shared script required by semantic contract is missing.'
     $scriptSemanticChecks = @($scriptContractResult.Checks)
     $failures += @($scriptContractResult.Failures)
 }
@@ -388,6 +359,40 @@ foreach ($target in @('codex', 'claude')) {
     }
 }
 
+# ========================================
+# Impact registry freshness check
+# ========================================
+$registryFreshnessCheck = [ordered]@{
+    id     = 'impact-registry-freshness'
+    fresh  = $false
+    reason = $null
+}
+
+$generatorScript = Join-Path $paths.WORKSPACE_ROOT 'studio/scripts/powershell/generate-impact-registry.ps1'
+$registryFile = Join-Path $paths.WORKSPACE_ROOT 'studio/runtime/impact-registry.json'
+
+if (-not (Test-Path -LiteralPath $generatorScript)) {
+    $registryFreshnessCheck.reason = 'Generator script not found'
+    $warnings += 'Impact registry freshness: generator script not found'
+} elseif (-not (Test-Path -LiteralPath $registryFile)) {
+    $registryFreshnessCheck.reason = 'Registry file not found'
+    $failures += (New-AuditFailure -Category 'registry-freshness' -Id 'impact-registry-missing' -Message 'impact-registry.json does not exist' -Path $registryFile)
+} else {
+    try {
+        $compareOutput = & $generatorScript -Compare 2>&1
+        $compareExit = $LASTEXITCODE
+        if ($compareExit -eq 0) {
+            $registryFreshnessCheck.fresh = $true
+        } else {
+            $registryFreshnessCheck.reason = 'Generated output differs from current file'
+            $warnings += 'Impact registry is stale: run generate-impact-registry.ps1 -Write to refresh'
+        }
+    } catch {
+        $registryFreshnessCheck.reason = "Generator error: $($_.Exception.Message)"
+        $warnings += "Impact registry freshness check error: $($_.Exception.Message)"
+    }
+}
+
 $result = [ordered]@{
     VALID                     = ($failures.Count -eq 0)
     ERROR_COUNT               = $failures.Count
@@ -412,7 +417,6 @@ $result = [ordered]@{
     COMMAND_CHECKS            = $commandChecks
     PROMPT_STUB_CHECKS        = $promptStubChecks
     CLAUDE_AGENT_CHECKS       = $claudeAgentChecks
-    MIRROR_PARITY             = $mirrorParityChecks
     TEMPLATE_CHECKS           = $templateChecks
     DOC_SEMANTIC_CHECKS       = $docSemanticChecks
     AGENT_SEMANTIC_CHECKS     = $agentSemanticChecks
@@ -420,6 +424,7 @@ $result = [ordered]@{
     SCRIPT_SEMANTIC_CHECKS    = $scriptSemanticChecks
     HOOK_CHECKS               = $hookChecks
     SKILL_TARGETS             = $skillTargets
+    REGISTRY_FRESHNESS        = $registryFreshnessCheck
     WARNINGS                  = $warnings
     FAILURES                  = $failures
 }
