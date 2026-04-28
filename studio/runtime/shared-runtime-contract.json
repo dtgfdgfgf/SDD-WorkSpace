@@ -537,6 +537,9 @@
         "Project Constitution",
         "sync-agent-bootstrap.ps1",
         "check-agent-bootstrap.ps1",
+        "check-speckit-runtime.ps1",
+        "mainline-updates",
+        "Test-ProjectConstitutionDoesNotRelaxStudio",
         "version",
         "changelog"
       ]
