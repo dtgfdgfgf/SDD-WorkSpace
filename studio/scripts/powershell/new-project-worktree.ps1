@@ -54,7 +54,7 @@ if ($LASTEXITCODE -ne 0) {
 $junctions = @(Initialize-ProjectSharedAgentJunctions -ProjectRoot $targetRoot -WorkspaceRoot $workspaceRoot)
 $copiedFiles = @()
 
-foreach ($relativePath in @('.github/copilot-instructions.md', 'CLAUDE.md')) {
+foreach ($relativePath in @('AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md')) {
     $sourcePath = Join-Path $projectRoot $relativePath
     $targetPath = Join-Path $targetRoot $relativePath
 

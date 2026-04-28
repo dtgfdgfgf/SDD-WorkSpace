@@ -104,8 +104,9 @@ contract explicitly permits.
 | Git worktree metadata | MUST exist and function correctly | `.git` may be a file in derived worktrees; this is normal. |
 | `.github/agents/` junction or equivalent shared runtime entry | MUST be available when the project uses shared runtime agents | Missing runtime entry means agent execution context is incomplete. |
 | `.claude/agents/` junction or equivalent shared runtime entry | MUST be available when the project uses shared Claude runtime agents | Missing Claude runtime entry means Claude subagent discovery is incomplete. |
-| `.github/copilot-instructions.md` | MUST be available when project bootstrap or workspace workflow depends on project-local Copilot context | Workspace-level instructions do not automatically replace project-specific context. |
+| `AGENTS.md` | MUST be available when the project bootstrap contract requires Codex / Copilot CLI runtime context | Generated governance bootstrap block must stay synchronized with `CLAUDE.md` and `.github/copilot-instructions.md`. |
 | `CLAUDE.md` | MUST be available when the project bootstrap contract requires Claude project context | Not every project must have one, but required projects must preserve it. |
+| `.github/copilot-instructions.md` | MUST be available when project bootstrap or workspace workflow depends on project-local Copilot context | Workspace-level instructions do not automatically replace project-specific context. |
 | `.specify/memory/constitution.md` or explicit equivalent source | MUST be available for projects governed by a project constitution | Equivalent source MUST be documented, not assumed. |
 | Project `.code-workspace` | MUST exist for initialized projects that rely on workspace bootstrap expectations | Derived worktrees should remain first-class project instances in editor tooling as well. |
 

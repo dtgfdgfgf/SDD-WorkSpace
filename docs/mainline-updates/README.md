@@ -38,6 +38,7 @@ the index below in the same change batch.
 
 | Date | Topic | Source Branch | Status | Summary |
 |------|-------|---------------|--------|---------|
+| 2026-04-28 | [`worktree-agents-md-parity`](./2026-04-28-worktree-agents-md-parity.md) | `main` | Ready | Extend `new-project-worktree.ps1` and parity governance doc to include `AGENTS.md` so derived worktrees carry all three v1.8.0 runtime adapters. |
 | 2026-04-28 | [`update-constitution-invariants`](./2026-04-28-update-constitution-invariants.md) | `main` | Ready | Strengthen `update-constitution-script` invariant to lock the three v1.8.0 governance rules embedded in the script. |
 | 2026-04-28 | [`adapter-change-routing`](./2026-04-28-adapter-change-routing.md) | `main` | Ready | Add `adapter_change` changeType to impact routing so adapter edits produce precise must_update advisories. |
 | 2026-04-28 | [`quickstart-adapter-invariants`](./2026-04-28-quickstart-adapter-invariants.md) | `main` | Ready | Lock the v1.8.0 adapter narrative in QUICKSTART and SDD-GUIDE via two new contract docInvariants. |
