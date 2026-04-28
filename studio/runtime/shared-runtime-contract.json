@@ -309,6 +309,27 @@
         "`Intent Drift Check` 固定至少檢查三件事：",
         "`README.md`、`quickstart.md`、analyze 結論沒有把 representative subset 偽裝成原始完整能力。"
       ]
+    },
+    {
+      "id": "quickstart-agent-adapters",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        "runtime adapter"
+      ]
+    },
+    {
+      "id": "sdd-guide-runtime-adapters",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "Runtime Agent Adapters",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        "generated governance bootstrap"
+      ]
     }
   ],
   "agentInvariants": [
