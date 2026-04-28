@@ -40,7 +40,7 @@ impact_on_change:
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.7.0
+**Version:** 1.8.0
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects and SDD workflows
 
@@ -282,6 +282,28 @@ AI agents MUST operate under the following principles:
 - All AI-generated content MUST be manually reviewed
 - AI MAY NOT skip SDD stages or suggest skipping stages
 
+### Runtime Agent Bootstrap Governance
+
+Agent startup context MUST use a five-file governance model:
+
+| File | Constitutional Role | Authority |
+|------|---------------------|-----------|
+| `studio/constitution/constitution.md` | Studio Constitution and highest governance source | 1 |
+| `.specify/memory/constitution.md` | Project Constitution and additive project rules | 2 |
+| `AGENTS.md` | Codex / Copilot CLI runtime adapter with generated governance bootstrap | 3 |
+| `CLAUDE.md` | Claude Code runtime adapter with generated governance bootstrap and direct `@path` imports | 3 |
+| `.github/copilot-instructions.md` | GitHub Copilot runtime adapter with generated governance bootstrap | 3 |
+
+Maintenance rules:
+
+- True constitution content MUST live only in `studio/constitution/constitution.md` and `.specify/memory/constitution.md`.
+- Runtime adapter files MUST NOT become competing constitutions.
+- `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` MUST contain the same generated `GENERATED GOVERNANCE BOOTSTRAP` block.
+- Tool-specific wrapper text MAY differ, but shared governance additions MUST be made in the generated bootstrap block and synchronized across all three adapters.
+- When one adapter changes, the other two MUST be synchronized before commit.
+- When `studio/constitution/constitution.md` changes, root adapters and new-project bootstrap templates MUST continue to reference the centralized Studio Constitution path and current version metadata.
+- Projects MUST reference the centralized Studio Constitution; project-local copies of the Studio Constitution are prohibited.
+
 ## 10.1 LLM-Friendly Document Formatting
 
 All AI-generated `.md` files MUST follow these formatting rules:
@@ -320,6 +342,7 @@ Each project MUST contain the following base paths. Items marked "when required"
 | Path | Purpose |
 |------|--------|
 | .specify/memory/constitution.md | Project-level canonical constitution when project-specific rules exist |
+| AGENTS.md | Codex / Copilot CLI runtime adapter; not a constitution |
 | .github/copilot-instructions.md | GitHub Copilot project context only; not a constitution |
 | CLAUDE.md | Claude project context only; not a constitution |
 | `specs/<feature>/spec.md` | Feature specification |
@@ -391,7 +414,7 @@ Additional rules:
 
 If ambiguity exists between Studio and Project constitutions, Studio Constitution takes precedence.
 
-Project agent context files such as .github/copilot-instructions.md and CLAUDE.md MAY
+Project agent context files such as AGENTS.md, .github/copilot-instructions.md, and CLAUDE.md MAY
 summarize or reference the governing rules, but they MUST NOT be treated as the project
 constitution.
 
@@ -399,6 +422,13 @@ constitution.
 
 - Versioning MUST follow Semantic Versioning
 - Updates to Studio Constitution SHOULD trigger review of related templates
+
+### Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.8.0 | 2026-04-27 | Added runtime agent bootstrap governance for AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md synchronization. |
+| 1.7.0 | 2026-04-10 | Shared-layer consistency update and document authority classification. |
 
 ### Document Authority and Update Order
 
@@ -437,6 +467,8 @@ not a stale version.
 **Dependent:**
 
 - `.claude/agents/*.md` (seeded from `.github/agents/`)
+- `AGENTS.md` (workspace-level Codex / Copilot CLI runtime adapter, reflects constitution rules)
+- `CLAUDE.md` (workspace-level Claude Code runtime adapter, reflects constitution rules)
 - `.github/copilot-instructions.md` (workspace-level Copilot context, reflects constitution rules)
 - `.github/agents/copilot-instructions.md` (agent-scoped subset of workspace copilot-instructions)
 - `specs/<feature>/plan.md` (depends on spec, readiness, intent-ledger)
@@ -525,5 +557,4 @@ If recurring friction points are found:
 | Practice | `learnings.md` updated |
 | Internal | `retrospective.md` exists + `learnings.md` updated (if applicable) |
 | Client | `retrospective.md` exists + `learnings.md` updated (if applicable) |
-
 

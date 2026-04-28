@@ -67,6 +67,18 @@
       "description": "Claude agent definitions, seeded from .github/agents/"
     },
     {
+      "path": "AGENTS.md",
+      "authority": "dependent",
+      "domain": "agent_context",
+      "description": "Codex and Copilot CLI runtime adapter, reflects constitution rules"
+    },
+    {
+      "path": "CLAUDE.md",
+      "authority": "dependent",
+      "domain": "agent_context",
+      "description": "Claude Code runtime adapter, reflects constitution rules"
+    },
+    {
       "path": ".github/copilot-instructions.md",
       "authority": "dependent",
       "domain": "agent_context",
@@ -173,6 +185,16 @@
           "reason": "Must reflect updated methodology rules"
         },
         {
+          "target": "AGENTS.md",
+          "impact": "must_review",
+          "reason": "Codex and Copilot CLI adapter may need updated governance bootstrap metadata"
+        },
+        {
+          "target": "CLAUDE.md",
+          "impact": "must_review",
+          "reason": "Claude Code adapter may need updated governance bootstrap metadata"
+        },
+        {
           "target": ".github/copilot-instructions.md",
           "impact": "must_review",
           "reason": "Copilot context may need updated governance references"
@@ -223,13 +245,11 @@
         },
         {
           "target": "studio/constitution/constitution.md",
-          "impact": "reference",
-          "reason": "Agent definitions are documented in constitution document authority section"
+          "impact": "reference"
         },
         {
           "target": "README.md",
-          "impact": "reference",
-          "reason": "Agent changes may warrant workspace overview update"
+          "impact": "reference"
         }
       ]
     },
@@ -255,8 +275,7 @@
         },
         {
           "target": "README.md",
-          "impact": "reference",
-          "reason": "Template changes may warrant workspace overview update"
+          "impact": "reference"
         }
       ]
     },

@@ -49,6 +49,7 @@
   ],
   "requiredDocTemplates": [
     "agent-file-template.md",
+    "agents-md-template.md",
     "access-setup-checklist-template.md",
     "change-manifest-template.md",
     "checklist-template.md",
@@ -88,6 +89,9 @@
         "impact-registry.json",
         "Change manifest completeness",
         "Impact routing advisory",
+        "Agent bootstrap synchronized",
+        "sync-agent-bootstrap.ps1",
+        "check-agent-bootstrap.ps1",
         "Document version",
         "Estimated timeline",
         "Planability vs Intent Obligations",
@@ -481,6 +485,42 @@
   ],
   "scriptInvariants": [
     {
+      "id": "sync-agent-bootstrap-script",
+      "path": "studio/scripts/powershell/sync-agent-bootstrap.ps1",
+      "mustContainAll": [
+        "BEGIN GENERATED GOVERNANCE BOOTSTRAP",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        "-From",
+        "-StudioConstitutionVersion"
+      ]
+    },
+    {
+      "id": "check-agent-bootstrap-script",
+      "path": "studio/scripts/powershell/check-agent-bootstrap.ps1",
+      "mustContainAll": [
+        "BEGIN GENERATED GOVERNANCE BOOTSTRAP",
+        "bootstrap-block-drift",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        "@path import"
+      ]
+    },
+    {
+      "id": "update-constitution-script",
+      "path": "studio/scripts/powershell/update-constitution.ps1",
+      "mustContainAll": [
+        "Scope Studio",
+        "Project Constitution",
+        "sync-agent-bootstrap.ps1",
+        "check-agent-bootstrap.ps1",
+        "version",
+        "changelog"
+      ]
+    },
+    {
       "id": "check-prerequisites-readiness-awareness",
       "path": "studio/scripts/powershell/check-prerequisites.ps1",
       "mustContainAll": [
@@ -542,6 +582,8 @@
     }
   ],
   "sharedGatePaths": [
+    "AGENTS.md",
+    "CLAUDE.md",
     ".github/agents/",
     ".claude/agents/",
     ".github/prompts/",
@@ -560,6 +602,9 @@
     "studio/scripts/powershell/common.ps1",
     "studio/scripts/powershell/check-prerequisites.ps1",
     "studio/scripts/powershell/check-speckit-runtime.ps1",
+    "studio/scripts/powershell/sync-agent-bootstrap.ps1",
+    "studio/scripts/powershell/check-agent-bootstrap.ps1",
+    "studio/scripts/powershell/update-constitution.ps1",
     "studio/scripts/powershell/seed-claude-agents.ps1",
     "studio/scripts/powershell/new-project-worktree.ps1",
     "studio/scripts/powershell/setup-hooks.ps1",

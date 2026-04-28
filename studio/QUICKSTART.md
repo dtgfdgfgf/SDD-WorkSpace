@@ -119,6 +119,7 @@ code projects/studio-automation/studio-automation.code-workspace
 |------|---------|
 | `.specify/memory/constitution.md` | 專案層級 canonical constitution |
 | `.claude/agents/` | Claude shared runtime junction |
+| `AGENTS.md` | Codex / Copilot CLI runtime adapter，不是 constitution |
 | `.github/copilot-instructions.md` | GitHub Copilot 專案 context，不是 constitution |
 | `CLAUDE.md` | Claude 專案 context，不是 constitution |
 | `specs/<feature>/spec.md` | 規格文件 |
@@ -139,7 +140,7 @@ code projects/studio-automation/studio-automation.code-workspace
 
 1. `studio/constitution/constitution.md`
 2. `<project>/.specify/memory/constitution.md`
-3. 專案 agent context 檔案，例如 `.github/copilot-instructions.md` 與 `CLAUDE.md`
+3. 專案 runtime adapter，例如 `AGENTS.md`、`CLAUDE.md` 與 `.github/copilot-instructions.md`
 
 Project Constitution 可以：
 

@@ -120,6 +120,8 @@
 - `docs/mainline-updates/README.md`
 - `studio/QUICKSTART.md`
 - `studio/SDD-QUICKSTART-GUIDE.md`
+- `AGENTS.md`
+- `CLAUDE.md`
 - `.github/copilot-instructions.md`
 
 ### 2. 啟用 Git hooks
@@ -191,7 +193,9 @@ Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer�
 | Path | Purpose |
 |------|---------|
 | `.specify/memory/constitution.md` | 專案層級憲章 |
-| `.github/copilot-instructions.md` | 專案 AI context |
+| `AGENTS.md` | Codex / Copilot CLI runtime adapter |
+| `CLAUDE.md` | Claude Code runtime adapter |
+| `.github/copilot-instructions.md` | Copilot runtime adapter |
 | `specs/<feature>/spec.md` | 規格 |
 | `specs/<feature>/intent-ledger.md` | 僅在核心意圖被 represented / deferred / dropped 時建立的 secondary artifact |
 | `specs/<feature>/readiness/` | readiness assessment 與 route packet |

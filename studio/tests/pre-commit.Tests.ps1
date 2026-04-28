@@ -208,6 +208,33 @@ Describe 'Get-ChangeTypesFromPaths' {
     }
 }
 
+Describe 'agent bootstrap path helpers' {
+    It 'treats root adapter files as workspace root bootstrap files' {
+        Get-AgentBootstrapProjectRootForPath -Path 'AGENTS.md' | Should -Be $WorkspaceRoot
+        Get-AgentBootstrapProjectRootForPath -Path 'CLAUDE.md' | Should -Be $WorkspaceRoot
+        Get-AgentBootstrapProjectRootForPath -Path '.github/copilot-instructions.md' | Should -Be $WorkspaceRoot
+    }
+
+    It 'resolves nested project adapter paths to their project root' {
+        $expected = Join-Path $WorkspaceRoot 'projects/example'
+        Get-AgentBootstrapProjectRootForPath -Path 'projects/example/AGENTS.md' | Should -Be $expected
+        Get-AgentBootstrapProjectRootForPath -Path 'projects/example/CLAUDE.md' | Should -Be $expected
+        Get-AgentBootstrapProjectRootForPath -Path 'projects/example/.github/copilot-instructions.md' | Should -Be $expected
+    }
+
+    It 'resolves project constitution path to its project root' {
+        $expected = Join-Path $WorkspaceRoot 'projects/example'
+        Get-AgentBootstrapProjectRootForPath -Path 'projects/example/.specify/memory/constitution.md' | Should -Be $expected
+    }
+
+    It 'detects adapter and project constitution paths' {
+        Test-IsAgentAdapterPath -Path 'AGENTS.md' | Should -BeTrue
+        Test-IsAgentAdapterPath -Path 'projects/example/.github/copilot-instructions.md' | Should -BeTrue
+        Test-IsProjectConstitutionPath -Path 'projects/example/.specify/memory/constitution.md' | Should -BeTrue
+        Test-IsAgentAdapterPath -Path '.github/agents/copilot-instructions.md' | Should -BeFalse
+    }
+}
+
 Describe 'Get-ManifestPendingItems' {
     # Regression: M1 — Status regex \w+ could not match hyphenated values
 

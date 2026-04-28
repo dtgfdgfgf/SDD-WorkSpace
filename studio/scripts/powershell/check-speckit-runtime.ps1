@@ -182,6 +182,7 @@ $agentSemanticChecks = @()
 $templateSemanticChecks = @()
 $scriptSemanticChecks = @()
 $hookChecks = @()
+$agentBootstrapChecks = @()
 
 if (-not $contract) {
     $failures += New-AuditFailure -Category 'contract' -Id 'missing-contract' -Message 'Shared runtime contract not found or unreadable.' -Path $paths.SHARED_RUNTIME_CONTRACT
@@ -329,6 +330,20 @@ if (-not $contract) {
     $failures += @($scriptContractResult.Failures)
 }
 
+$agentBootstrapScript = Join-Path $paths.SHARED_SCRIPTS_DIR 'check-agent-bootstrap.ps1'
+if (-not (Test-Path -LiteralPath $agentBootstrapScript)) {
+    $failures += New-AuditFailure -Category 'agent-bootstrap' -Id 'missing-check-script' -Message 'Agent bootstrap check script is missing.' -Path $agentBootstrapScript
+} else {
+    $agentBootstrapResult = Invoke-JsonScriptDetailed -ScriptPath $agentBootstrapScript -Arguments @('-ProjectRoot', $paths.WORKSPACE_ROOT, '-Json')
+    if ($agentBootstrapResult.OUTPUT) {
+        $agentBootstrapChecks = @($agentBootstrapResult.OUTPUT)
+    }
+
+    if ($agentBootstrapResult.EXIT_CODE -ne 0 -or -not $agentBootstrapResult.OUTPUT -or -not $agentBootstrapResult.OUTPUT.VALID) {
+        $failures += New-AuditFailure -Category 'agent-bootstrap' -Id 'workspace-bootstrap-invalid' -Message 'Workspace root AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md are not synchronized.' -Path $paths.WORKSPACE_ROOT
+    }
+}
+
 $skillTargets = @()
 foreach ($target in @('codex', 'claude')) {
     try {
@@ -379,8 +394,8 @@ if (-not (Test-Path -LiteralPath $generatorScript)) {
     $failures += (New-AuditFailure -Category 'registry-freshness' -Id 'impact-registry-missing' -Message 'impact-registry.json does not exist' -Path $registryFile)
 } else {
     try {
-        $compareOutput = & $generatorScript -Compare 2>&1
-        $compareExit = $LASTEXITCODE
+        $compareOutput = & pwsh -NoProfile -File $generatorScript -Compare 2>&1
+        $compareExit = if ($?) { 0 } elseif ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 }
         if ($compareExit -eq 0) {
             $registryFreshnessCheck.fresh = $true
         } else {
@@ -422,6 +437,7 @@ $result = [ordered]@{
     AGENT_SEMANTIC_CHECKS     = $agentSemanticChecks
     TEMPLATE_SEMANTIC_CHECKS  = $templateSemanticChecks
     SCRIPT_SEMANTIC_CHECKS    = $scriptSemanticChecks
+    AGENT_BOOTSTRAP_CHECKS    = $agentBootstrapChecks
     HOOK_CHECKS               = $hookChecks
     SKILL_TARGETS             = $skillTargets
     REGISTRY_FRESHNESS        = $registryFreshnessCheck

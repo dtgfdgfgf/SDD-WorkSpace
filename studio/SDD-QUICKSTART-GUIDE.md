@@ -193,7 +193,7 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 | Studio Constitution | `studio/constitution/constitution.md` | 所有專案都必須遵守的最高權限規則 |
 | Project Constitution | `<project>/.specify/memory/constitution.md` | 專案層級補充規則，只能加嚴不能放寬 |
 | Shared Claude Runtime | `.claude/agents/` | workspace 級 Claude shared runtime authority |
-| Agent Context | `<project>/.github/copilot-instructions.md`、`<project>/CLAUDE.md` | AI 協作脈絡檔，不是 constitution |
+| Runtime Agent Adapters | `<project>/AGENTS.md`、`<project>/CLAUDE.md`、`<project>/.github/copilot-instructions.md` | AI 啟動 adapter，共用 generated governance bootstrap，不是 constitution |
 
 **合併邏輯**：
 - Project Constitution 可以：新增專案特定術語、定義更嚴格的編碼標準、新增額外的審查清單
@@ -1235,6 +1235,5 @@ project-root/
 ---
 
 > **注意**：本指南會隨著 SDD 實踐經驗持續更新。如有建議或發現問題，請更新 `studio/knowledge-base/learnings.md`。
-
 
 

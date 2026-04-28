@@ -102,34 +102,13 @@ try {
     $projectConstPath = Initialize-ProjectConstitution -ProjectRoot $targetDir -ProjectName $Name -ProjectType $Type -StudioRoot $studioRoot
     Write-Host "Project constitution ready: $projectConstPath" -ForegroundColor Gray
 
-    # Generate CLAUDE.md from template
-    $claudeTemplatePath = Join-Path $studioRoot 'templates/sdd-docs/claude-md-template.md'
-    $claudeTargetPath = Join-Path $targetDir 'CLAUDE.md'
-    if ((Test-Path $claudeTemplatePath) -and -not (Test-Path $claudeTargetPath)) {
-        $claudeContent = Get-Content $claudeTemplatePath -Raw
-        $claudeContent = $claudeContent -replace '\[PROJECT_NAME\]', $Name
-        $claudeContent = $claudeContent -replace '\[PROJECT_TYPE\]', $Type
-        $claudeContent = $claudeContent -replace '\[CREATED_DATE\]', (Get-Date -Format 'yyyy-MM-dd')
-        Set-Content -Path $claudeTargetPath -Value $claudeContent -NoNewline
-        Write-Host "Generated CLAUDE.md" -ForegroundColor Gray
+    # Generate synchronized runtime agent bootstrap adapters
+    $bootstrapScript = Join-Path $studioRoot 'scripts/powershell/sync-agent-bootstrap.ps1'
+    & $bootstrapScript -ProjectRoot $targetDir -ProjectName $Name -ProjectType $Type -ProjectDescription $Description -Write | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Agent bootstrap generation failed for $targetDir"
     }
-
-    # Generate .github/copilot-instructions.md from template
-    $copilotTemplatePath = Join-Path $studioRoot 'templates/sdd-docs/copilot-instructions-template.md'
-    $copilotTargetDir = Join-Path $targetDir '.github'
-    $copilotTargetPath = Join-Path $copilotTargetDir 'copilot-instructions.md'
-    if ((Test-Path $copilotTemplatePath) -and -not (Test-Path $copilotTargetPath)) {
-        if (-not (Test-Path $copilotTargetDir)) {
-            New-Item -ItemType Directory -Path $copilotTargetDir -Force | Out-Null
-        }
-        $copilotContent = Get-Content $copilotTemplatePath -Raw
-        $copilotContent = $copilotContent -replace '\[PROJECT_NAME\]', $Name
-        $copilotContent = $copilotContent -replace '\[PROJECT_TYPE\]', $Type
-        $copilotContent = $copilotContent -replace '\[PROJECT_DESCRIPTION\]', $Description
-        $copilotContent = $copilotContent -replace '\[CREATED_DATE\]', (Get-Date -Format 'yyyy-MM-dd')
-        Set-Content -Path $copilotTargetPath -Value $copilotContent -NoNewline
-        Write-Host "Generated .github/copilot-instructions.md" -ForegroundColor Gray
-    }
+    Write-Host "Generated AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md" -ForegroundColor Gray
 
     # Create retrospective.md template for Internal/Client projects
     $retroPath = Join-Path $targetDir 'retrospective.md'

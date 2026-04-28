@@ -61,8 +61,9 @@ Each project is expected to contain:
 | `.specify/memory/constitution.md` | Project-level canonical constitution |
 | `.github/agents/` | Junction to workspace `.github/agents/` |
 | `.claude/agents/` | Junction to workspace `.claude/agents/` |
+| `AGENTS.md` | Codex / Copilot CLI runtime adapter |
+| `CLAUDE.md` | Claude Code runtime adapter |
 | `.github/copilot-instructions.md` | GitHub Copilot project context |
-| `CLAUDE.md` | Claude project context |
 | `specs/<feature>/spec.md` | Feature specification |
 | `specs/<feature>/intent-ledger.md` | Secondary artifact for represented / deferred / dropped core intent items when required |
 | `specs/<feature>/readiness/` | Readiness assessment and route-specific packets |
@@ -90,7 +91,7 @@ exists. The canonical rule for this parity model is `docs/project-worktree-parit
 Notes:
 
 - Project constitutions can only add stricter rules.
-- `.github/copilot-instructions.md` and `CLAUDE.md` are context files, not constitutions.
+- `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` are synchronized runtime adapters, not constitutions.
 
 ### 2. Runtime Agent Source
 
@@ -243,6 +244,8 @@ the same shared junction model for Copilot and Claude runtime agents.
 | `docs/project-governance-status.md` | Central project governance compatibility ledger |
 | `docs/project-worktree-parity-governance.md` | Canonical consumer-project derived worktree parity policy |
 | `docs/mainline-updates/README.md` | Central index and usage guide for main-bound update notes |
+| `AGENTS.md` | Workspace Codex / Copilot CLI runtime adapter |
+| `CLAUDE.md` | Workspace Claude Code runtime adapter |
 | `.github/copilot-instructions.md` | Workspace AI collaboration rules |
 | `studio/QUICKSTART.md` | Fast-start instructions |
 | `studio/SDD-QUICKSTART-GUIDE.md` | Full workflow guide |

@@ -1,6 +1,43 @@
+# Copilot Instructions: Workspace
+
+This file is the GitHub Copilot runtime adapter for this project.
+
+<!-- BEGIN GENERATED GOVERNANCE BOOTSTRAP -->
+## Generated Governance Bootstrap
+
+**Bootstrap Version:** 1
+**Studio Constitution:** `studio/constitution/constitution.md`
+**Studio Constitution Version:** 1.8.0
+**Project Constitution:** `N/A (workspace root)`
+
+This runtime adapter participates in dual-layer constitution governance.
+
+Load and apply rules in this order:
+
+1. `studio/constitution/constitution.md`
+2. `.specify/memory/constitution.md` when present
+3. This adapter file
+
+If either required constitution is missing or inaccessible, report governance context incomplete before planning or implementation.
+
+Hard rules:
+
+- Studio Constitution has highest authority.
+- Project Constitution can only add stricter rules.
+- Agent context files are adapters, not constitutions.
+- Governed delivery work follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- If documents conflict, flag drift instead of silently choosing.
+<!-- END GENERATED GOVERNANCE BOOTSTRAP -->
+
+## Tool Notes
+
+- GitHub Copilot and Copilot CLI should follow the governance bootstrap before planning, editing, or suggesting implementation work.
+- Keep shared governance additions inside the generated bootstrap block so AGENTS.md and CLAUDE.md can be synchronized.
+
+<!-- MANUAL ADDITIONS START -->
 # Copilot Instructions
 
-<!-- Authority: source_of_truth for workspace-level Copilot agent context.
+<!-- Authority: dependent runtime adapter for workspace-level Copilot agent context.
      The agent-scoped subset at .github/agents/copilot-instructions.md is a dependent
      document and should derive from this file's guidance, not compete with it. -->
 
@@ -27,8 +64,9 @@ engineering practice.
 | `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
 | `studio/templates/sdd-docs/` | Canonical studio document templates |
 | `docs/project-worktree-parity-governance.md` | Canonical policy for consumer-project derived worktree parity |
+| `<project>/AGENTS.md` | Codex / Copilot CLI runtime adapter only |
+| `<project>/CLAUDE.md` | Claude Code runtime adapter only |
 | `<project>/.github/copilot-instructions.md` | GitHub Copilot project context only |
-| `<project>/CLAUDE.md` | Claude project context only |
 
 ## Governance Order
 
@@ -36,13 +74,13 @@ When working in a project, load rules in this order:
 
 1. `studio/constitution/constitution.md`
 2. `<project>/.specify/memory/constitution.md` if present
-3. Agent context files such as `.github/copilot-instructions.md` or `CLAUDE.md`
+3. Runtime adapter files such as `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md`
 
 Priority rules:
 
 - Studio Constitution is non-negotiable.
 - Project Constitution can add stricter rules only.
-- Agent context files summarize or operationalize the rules; they are not constitutions.
+- Runtime adapter files summarize or operationalize the rules; they are not constitutions.
 - If any conflict exists, Studio Constitution wins.
 
 ## Shared-Layer Audit
@@ -191,7 +229,7 @@ Never:
 - Run `/speckit.plan` without a `READY_FOR_PLAN` readiness assessment
 - Treat `/speckit.eci` as direct authorization for planning without re-running `/speckit.readiness`
 - Treat `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` ECI authorization as sufficient for planning
-- Treat `.github/copilot-instructions.md` or `CLAUDE.md` as the project constitution
+- Treat `AGENTS.md`, `.github/copilot-instructions.md`, or `CLAUDE.md` as the project constitution
 - Invent requirements that are not in the spec or clarified outputs
 - Add features outside the approved scope
 - Change governance files without explicit reason
@@ -217,3 +255,4 @@ When recurring friction appears:
 1. Record the issue in project context or retrospective notes.
 2. Suggest prompt extraction into `studio/prompts/<stage>/` when the pattern is reusable.
 3. Update `studio/knowledge-base/learnings.md` after project completion when the learning matters beyond one task.
+<!-- MANUAL ADDITIONS END -->

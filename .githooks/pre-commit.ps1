@@ -125,6 +125,148 @@ function Invoke-SharedRuntimeAudit {
     Write-HookSuccess 'Shared runtime audit passed'
 }
 
+# ========================================
+# Agent bootstrap governance helpers
+# ========================================
+
+function Test-IsAgentAdapterPath {
+    param([string]$Path)
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $Path
+    return (
+        $normalizedPath -eq 'AGENTS.md' -or
+        $normalizedPath -eq 'CLAUDE.md' -or
+        $normalizedPath -eq '.github/copilot-instructions.md' -or
+        $normalizedPath -match '(^|/)(AGENTS\.md|CLAUDE\.md|\.github/copilot-instructions\.md)$'
+    )
+}
+
+function Test-IsProjectConstitutionPath {
+    param([string]$Path)
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $Path
+    return ($normalizedPath -match '(^|/)\.specify/memory/constitution\.md$')
+}
+
+function Get-AgentBootstrapProjectRootForPath {
+    param([string]$Path)
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $Path
+
+    if ($normalizedPath -in @('AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md')) {
+        return $script:workspaceRoot
+    }
+
+    if ($normalizedPath -match '^(.*)/(AGENTS\.md|CLAUDE\.md|\.github/copilot-instructions\.md|\.specify/memory/constitution\.md)$') {
+        return Join-Path $script:workspaceRoot $Matches[1]
+    }
+
+    return $null
+}
+
+function Invoke-AgentBootstrapJsonTool {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptPath,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    if (-not (Test-Path -LiteralPath $ScriptPath)) {
+        return [ordered]@{
+            ExitCode = 1
+            Output   = $null
+            Raw      = "Script not found: $ScriptPath"
+        }
+    }
+
+    $toolOutput = & $ScriptPath @Arguments 2>&1
+    $toolExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
+    $rawOutput = if ($toolOutput) { $toolOutput -join [Environment]::NewLine } else { '' }
+    $parsedOutput = $null
+
+    if (-not [string]::IsNullOrWhiteSpace($rawOutput)) {
+        try {
+            $parsedOutput = $rawOutput | ConvertFrom-Json -AsHashtable
+        } catch {
+            $parsedOutput = $null
+        }
+    }
+
+    return [ordered]@{
+        ExitCode = $toolExitCode
+        Output   = $parsedOutput
+        Raw      = $rawOutput
+    }
+}
+
+function Invoke-AgentBootstrapSync {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot,
+        [string]$From,
+        [string]$StudioConstitutionVersion
+    )
+
+    $syncScript = Join-Path $script:workspaceRoot 'studio/scripts/powershell/sync-agent-bootstrap.ps1'
+    $arguments = @('-ProjectRoot', $ProjectRoot, '-Write', '-Json')
+    if ($From) {
+        $arguments += @('-From', $From)
+    }
+    if ($StudioConstitutionVersion) {
+        $arguments += @('-StudioConstitutionVersion', $StudioConstitutionVersion)
+    }
+
+    $result = Invoke-AgentBootstrapJsonTool -ScriptPath $syncScript -Arguments $arguments
+    if ($result.ExitCode -ne 0 -or -not $result.Output) {
+        Write-HookError "Agent bootstrap sync failed for $ProjectRoot"
+        if ($result.Raw) { Write-Host $result.Raw -ForegroundColor Red }
+        return
+    }
+
+    if ([int]$result.Output.CHANGED_COUNT -gt 0) {
+        Write-HookError 'Agent bootstrap synchronized. Review changed files and re-stage them.'
+        foreach ($changedFile in @($result.Output.CHANGED_FILES)) {
+            Write-Host "    - $changedFile" -ForegroundColor Yellow
+        }
+    } else {
+        Write-HookSuccess "Agent bootstrap already synchronized: $ProjectRoot"
+    }
+}
+
+function Invoke-AgentBootstrapCheck {
+    param([Parameter(Mandatory = $true)][string]$ProjectRoot)
+
+    $checkScript = Join-Path $script:workspaceRoot 'studio/scripts/powershell/check-agent-bootstrap.ps1'
+    $result = Invoke-AgentBootstrapJsonTool -ScriptPath $checkScript -Arguments @('-ProjectRoot', $ProjectRoot, '-Json')
+    if ($result.ExitCode -ne 0 -or -not $result.Output -or -not $result.Output.VALID) {
+        Write-HookError "Agent bootstrap check failed for $ProjectRoot"
+        if ($result.Output -and $result.Output.FAILURES) {
+            foreach ($failure in @($result.Output.FAILURES)) {
+                Write-Host "    - $($failure.id): $($failure.message)" -ForegroundColor Red
+            }
+        } elseif ($result.Raw) {
+            Write-Host $result.Raw -ForegroundColor Red
+        }
+    } else {
+        Write-HookSuccess "Agent bootstrap check passed: $ProjectRoot"
+    }
+}
+
+function Get-StudioConstitutionVersionFromFile {
+    $constitutionPath = Join-Path $script:workspaceRoot 'studio/constitution/constitution.md'
+    if (-not (Test-Path -LiteralPath $constitutionPath)) {
+        return $null
+    }
+
+    $content = Get-Content -LiteralPath $constitutionPath -Raw
+    if ($content -match '(?m)^\*\*Version:\*\*\s*([^\r\n]+)\s*$') {
+        return $Matches[1].Trim()
+    }
+
+    return $null
+}
+
 function Get-EdgeCaseCount {
     param([string]$Content)
 
@@ -411,6 +553,71 @@ if ($sharedGatePaths.Count -gt 0) {
 if ($sharedLayerFiles.Count -gt 0) {
     Write-HookInfo 'Shared-layer files detected; running shared runtime audit...'
     Invoke-SharedRuntimeAudit
+    Write-Host ''
+}
+
+# ========================================
+# Agent bootstrap synchronization / validation
+# ========================================
+$studioConstitutionChanged = @($stagedFiles | Where-Object {
+    (Convert-ToRepoRelativePath -Path $_) -eq 'studio/constitution/constitution.md'
+})
+
+if ($studioConstitutionChanged.Count -gt 0) {
+    Write-HookInfo 'Studio Constitution change detected; synchronizing root runtime adapters...'
+    $studioVersion = Get-StudioConstitutionVersionFromFile
+    Invoke-AgentBootstrapSync -ProjectRoot $script:workspaceRoot -StudioConstitutionVersion $studioVersion
+
+    $mainlineNotes = @($stagedFiles | Where-Object {
+        $normalized = Convert-ToRepoRelativePath -Path $_
+        $normalized -match '^docs/mainline-updates/[^/]+\.md$' -and $normalized -ne 'docs/mainline-updates/README.md'
+    })
+    if ($mainlineNotes.Count -eq 0) {
+        Write-HookError 'Studio Constitution changes require a docs/mainline-updates/*.md note in the same commit.'
+    }
+    Write-Host ''
+}
+
+$adapterFiles = @($stagedFiles | Where-Object { Test-IsAgentAdapterPath -Path $_ })
+if ($adapterFiles.Count -gt 0) {
+    Write-HookInfo 'Agent adapter changes detected; checking synchronized generated bootstrap blocks...'
+
+    $adapterGroups = @{}
+    foreach ($adapterFile in $adapterFiles) {
+        $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $adapterFile
+        if (-not $projectRoot) { continue }
+        if (-not $adapterGroups.ContainsKey($projectRoot)) {
+            $adapterGroups[$projectRoot] = @()
+        }
+        $adapterGroups[$projectRoot] += $adapterFile
+    }
+
+    foreach ($entry in $adapterGroups.GetEnumerator()) {
+        $projectRoot = $entry.Key
+        $changedAdapters = @($entry.Value)
+        if ($changedAdapters.Count -eq 1) {
+            $fromPath = Join-Path $script:workspaceRoot (Convert-ToRepoRelativePath -Path $changedAdapters[0])
+            Invoke-AgentBootstrapSync -ProjectRoot $projectRoot -From $fromPath
+            Write-HookError 'Single runtime adapter change detected. Review the synchronized adapter set and stage AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md together.'
+        } else {
+            Invoke-AgentBootstrapCheck -ProjectRoot $projectRoot
+        }
+    }
+    Write-Host ''
+}
+
+$projectConstitutionFiles = @($stagedFiles | Where-Object { Test-IsProjectConstitutionPath -Path $_ })
+if ($projectConstitutionFiles.Count -gt 0) {
+    Write-HookInfo 'Project Constitution changes detected; synchronizing local runtime adapters...'
+    $projectRoots = @{}
+    foreach ($projectConstitutionFile in $projectConstitutionFiles) {
+        $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $projectConstitutionFile
+        if ($projectRoot) { $projectRoots[$projectRoot] = $true }
+    }
+
+    foreach ($projectRoot in $projectRoots.Keys) {
+        Invoke-AgentBootstrapSync -ProjectRoot $projectRoot
+    }
     Write-Host ''
 }
 

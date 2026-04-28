@@ -82,6 +82,8 @@ $builtinDocumentAuthority = @(
     @{ path = 'specs/<feature>/readiness/**/*.md';         authority = 'source_of_truth'; domain = 'feature';              description = 'Readiness and ECI governance artifacts, per-feature' }
     @{ path = 'docs/project-worktree-parity-governance.md'; authority = 'source_of_truth'; domain = 'governance';          description = 'Worktree parity obligations for derived worktrees' }
     @{ path = '.claude/agents/*.md';                       authority = 'dependent';       domain = 'agent_runtime';        description = 'Claude agent definitions, seeded from .github/agents/' }
+    @{ path = 'AGENTS.md';                                  authority = 'dependent';       domain = 'agent_context';        description = 'Codex and Copilot CLI runtime adapter, reflects constitution rules' }
+    @{ path = 'CLAUDE.md';                                  authority = 'dependent';       domain = 'agent_context';        description = 'Claude Code runtime adapter, reflects constitution rules' }
     @{ path = '.github/copilot-instructions.md';           authority = 'dependent';       domain = 'agent_context';        description = 'Copilot project context, reflects constitution rules' }
     @{ path = 'specs/<feature>/plan.md';                   authority = 'dependent';       domain = 'feature';              description = 'Technical plan, depends on spec, readiness, intent-ledger' }
     @{ path = 'specs/<feature>/tasks.md';                  authority = 'dependent';       domain = 'feature';              description = 'Task decomposition, depends on plan' }
@@ -115,6 +117,8 @@ $builtinImpactRouting = @(
             @{ target = 'WORKSPACE_STRUCTURE.md';                     impact = 'maybe_review'; reason = 'Structure doc may need updates if paths or conventions changed' }
             @{ target = 'studio/QUICKSTART.md';                       impact = 'must_update'; reason = 'Must reflect constitution rules in quickstart form' }
             @{ target = 'studio/SDD-QUICKSTART-GUIDE.md';             impact = 'must_update'; reason = 'Must reflect updated methodology rules' }
+            @{ target = 'AGENTS.md';                                  impact = 'must_review'; reason = 'Codex and Copilot CLI adapter may need updated governance bootstrap metadata' }
+            @{ target = 'CLAUDE.md';                                  impact = 'must_review'; reason = 'Claude Code adapter may need updated governance bootstrap metadata' }
             @{ target = '.github/copilot-instructions.md';            impact = 'must_review'; reason = 'Copilot context may need updated governance references' }
             @{ target = '.githooks/pre-commit.ps1';                   impact = 'maybe_review'; reason = 'Validation logic may need updates for new governance rules' }
         )
@@ -392,7 +396,7 @@ function Build-Registry {
 # ============================================================
 
 function ConvertTo-RegistryJson {
-    param([hashtable]$Registry)
+    param([object]$Registry)
 
     # Use ConvertTo-Json with sufficient depth
     return $Registry | ConvertTo-Json -Depth 10

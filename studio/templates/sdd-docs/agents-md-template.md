@@ -1,11 +1,6 @@
-# CLAUDE.md
+# Agent Runtime Context: [PROJECT_NAME]
 
-This file is the Claude Code runtime adapter for [PROJECT_NAME].
-
-## Direct Imports
-
-@[RELATIVE_STUDIO_CONSTITUTION]
-@.specify/memory/constitution.md
+This file is the default runtime adapter for Codex and Copilot CLI.
 
 <!-- BEGIN GENERATED GOVERNANCE BOOTSTRAP -->
 ## Generated Governance Bootstrap
@@ -36,8 +31,8 @@ Hard rules:
 
 ## Tool Notes
 
-- Claude Code should use the direct imports plus the generated bootstrap before planning, editing, or running implementation work.
-- Keep shared governance additions inside the generated bootstrap block so AGENTS.md and .github/copilot-instructions.md can be synchronized.
+- Read the governance bootstrap before planning, editing, or running implementation work.
+- Keep shared governance additions inside the generated bootstrap block so CLAUDE.md and .github/copilot-instructions.md can be synchronized.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- Add project-specific notes here. This section is preserved when regenerating the file. -->

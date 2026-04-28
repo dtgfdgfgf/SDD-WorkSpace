@@ -1,66 +1,39 @@
-# [PROJECT_NAME] Agent Context
+# Copilot Instructions: [PROJECT_NAME]
 
-<!--
-  STUDIO TEMPLATE v1.0.0
-  This file provides project-specific agent context for GitHub Copilot.
-  Canonical project constitution: .specify/memory/constitution.md
-  Place at: <project>/.github/copilot-instructions.md
--->
+This file is the GitHub Copilot runtime adapter for this project.
 
-**Last updated**: [CREATED_DATE]
+<!-- BEGIN GENERATED GOVERNANCE BOOTSTRAP -->
+## Generated Governance Bootstrap
 
-## Governance Reference
+**Bootstrap Version:** 1
+**Studio Constitution:** `[RELATIVE_STUDIO_CONSTITUTION]`
+**Studio Constitution Version:** [STUDIO_CONSTITUTION_VERSION]
+**Project Constitution:** `.specify/memory/constitution.md`
 
-Apply rules in this order:
+This runtime adapter participates in dual-layer constitution governance.
 
-1. `studio/constitution/constitution.md`
-2. `.specify/memory/constitution.md`
-3. This agent context file
+Load and apply rules in this order:
 
-This file is not the project constitution. It should summarize and operationalize the governing rules, not replace them.
+1. `[RELATIVE_STUDIO_CONSTITUTION]`
+2. `.specify/memory/constitution.md` when present
+3. This adapter file
 
-## Project Overview
+If either required constitution is missing or inaccessible, report governance context incomplete before planning or implementation.
 
-**Name**: [PROJECT_NAME]
-**Type**: [PROJECT_TYPE]
-**Description**: [PROJECT_DESCRIPTION]
+Hard rules:
 
-## Active Technologies
+- Studio Constitution has highest authority.
+- Project Constitution can only add stricter rules.
+- Agent context files are adapters, not constitutions.
+- Governed delivery work follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- If documents conflict, flag drift instead of silently choosing.
+<!-- END GENERATED GOVERNANCE BOOTSTRAP -->
 
-| Category | Technology | Version |
-|----------|------------|---------|
-| Language | [e.g., TypeScript] | [version] |
-| Framework | [e.g., Next.js] | [version] |
+## Tool Notes
 
-## Commands
+- GitHub Copilot and Copilot CLI should follow the governance bootstrap before planning, editing, or suggesting implementation work.
+- Keep shared governance additions inside the generated bootstrap block so AGENTS.md and CLAUDE.md can be synchronized.
 
-### Development
-
-```bash
-# Start development server
-[command]
-
-# Run tests
-[command]
-```
-
-## Code Style
-
-### Comments
-
-- Use English for code comments
-- Use Traditional Chinese (zh-TW) for business logic explanations
-
-## AI Agent Instructions
-
-### Do
-
-- Follow spec/readiness/plan/tasks exactly
-- Ask for clarification when ambiguous
-- Reference specific documents when making decisions
-
-### Do Not
-
-- Add features not in specification
-- Skip SDD stages
-- Assume requirements not explicitly written
+<!-- MANUAL ADDITIONS START -->
+<!-- Add project-specific notes here. This section is preserved when regenerating the file. -->
+<!-- MANUAL ADDITIONS END -->
