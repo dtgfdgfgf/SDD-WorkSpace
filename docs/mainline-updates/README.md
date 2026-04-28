@@ -38,6 +38,7 @@ the index below in the same change batch.
 
 | Date | Topic | Source Branch | Status | Summary |
 |------|-------|---------------|--------|---------|
+| 2026-04-28 | [`adapter-change-routing`](./2026-04-28-adapter-change-routing.md) | `main` | Ready | Add `adapter_change` changeType to impact routing so adapter edits produce precise must_update advisories. |
 | 2026-04-28 | [`quickstart-adapter-invariants`](./2026-04-28-quickstart-adapter-invariants.md) | `main` | Ready | Lock the v1.8.0 adapter narrative in QUICKSTART and SDD-GUIDE via two new contract docInvariants. |
 | 2026-04-27 | [`agent-bootstrap-governance`](./2026-04-27-agent-bootstrap-governance.md) | `main` | Ready | Add synchronized runtime adapter governance for Codex, Claude Code, and Copilot startup context. |
 | 2026-04-10 | [`shared-layer-consistency-fix`](./2026-04-10-shared-layer-consistency-fix.md) | `main` | Ready | Fix 8 shared-layer issues: constitution renumber, authority classification, pre-commit MUST validations, stale mirrors, ghost directory, init script templates, audit auto-fix. |

@@ -194,6 +194,19 @@ $builtinImpactRouting = @(
         )
     }
     @{
+        changeType  = 'adapter_change'
+        trigger     = 'AGENTS.md|CLAUDE.md|.github/copilot-instructions.md'
+        description = 'Runtime adapter changes; all three must stay synchronized via the generated bootstrap block'
+        rules       = @(
+            @{ target = 'AGENTS.md';                                              impact = 'must_update'; reason = 'All three adapters share the same generated governance bootstrap block' }
+            @{ target = 'CLAUDE.md';                                              impact = 'must_update'; reason = 'All three adapters share the same generated governance bootstrap block' }
+            @{ target = '.github/copilot-instructions.md';                        impact = 'must_update'; reason = 'All three adapters share the same generated governance bootstrap block' }
+            @{ target = 'studio/runtime/shared-runtime-contract.json';            impact = 'maybe_review'; reason = 'Adapter edits may affect bootstrap-related invariants' }
+            @{ target = 'studio/scripts/powershell/sync-agent-bootstrap.ps1';     impact = 'reference' }
+            @{ target = 'studio/scripts/powershell/check-agent-bootstrap.ps1';    impact = 'reference' }
+        )
+    }
+    @{
         changeType  = 'registry_change'
         trigger     = 'studio/runtime/impact-registry.json'
         description = 'Any change to the impact registry itself'
