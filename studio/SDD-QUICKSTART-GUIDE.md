@@ -162,6 +162,7 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 
 ---
 
+<!-- governance-anchor: sdd-guide-core-principles -->
 ## 3. SDD 核心原則
 
 ### 3.1 MUST DO（必須遵守）
@@ -794,6 +795,9 @@ Constitution 要求至少 3 個 edge cases：
 ## 13. 專案資料夾結構
 
 ### 13.1 標準結構
+
+> **Canonical reference**: 憲章 §11 是 master table。本表為 informational 摘要，
+> 若兩處衝突以 `studio/constitution/constitution.md` §11 為準。
 
 | Path | Purpose |
 |------|---------|

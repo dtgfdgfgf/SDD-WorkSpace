@@ -12,6 +12,20 @@ modify studio/constitution/constitution.md or .specify/memory/constitution.md.
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = (Get-Location).Path,
+    [ValidateScript({
+        if ([string]::IsNullOrWhiteSpace($_)) { return $true }
+        $allowed = @('AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md', 'copilot-instructions.md')
+        if ($_ -in @('AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md')) {
+            return $true
+        }
+        # Allow absolute or relative paths whose basename matches one of the canonical adapters,
+        # so that callers in scripts and tests can pass a fully-resolved path.
+        $leaf = Split-Path -Leaf $_
+        if ($leaf -in $allowed) {
+            return $true
+        }
+        throw "Invalid -From value: '$_'. Must be one of: AGENTS.md, CLAUDE.md, .github/copilot-instructions.md, or a path whose basename matches one of these."
+    })]
     [string]$From,
     [string]$StudioConstitutionVersion,
     [string]$ProjectName,

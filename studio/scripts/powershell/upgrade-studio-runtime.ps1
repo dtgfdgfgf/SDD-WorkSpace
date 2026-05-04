@@ -18,12 +18,18 @@ if ($Help) {
         '',
         'Syncs the studio-first shared layer from a local snapshot that already matches the workspace shared-layer shape.',
         '',
+        'Default behavior: dry-run.',
+        '',
         'Options:',
         '  -UpstreamSnapshotDir Local snapshot directory used as the comparison/apply source',
-        '  -DryRun             Report changes only (default when -Apply is omitted)',
-        '  -Apply              Apply allowlisted shared-layer changes',
+        '  -DryRun             Report changes only (this is the DEFAULT; -DryRun and -Apply are mutually exclusive)',
+        '  -Apply              Actually apply the allowlisted shared-layer changes (REQUIRED to write anything)',
         '  -Json               Output structured JSON summary',
-        '  -Help               Show this help message'
+        '  -Help               Show this help message',
+        '',
+        'Examples:',
+        '  pwsh ./upgrade-studio-runtime.ps1 -UpstreamSnapshotDir ../snapshot          # preview changes',
+        '  pwsh ./upgrade-studio-runtime.ps1 -UpstreamSnapshotDir ../snapshot -Apply   # actually copy them'
     )
     Write-Output ($helpLines -join "`n")
     exit 0
@@ -81,7 +87,7 @@ if (-not (Test-Path -LiteralPath $snapshotRoot -PathType Container)) {
 }
 
 if ($DryRun -and $Apply) {
-    Write-Error 'Use either -DryRun or -Apply, not both.'
+    Write-Error '-DryRun and -Apply are mutually exclusive. Default behavior is dry-run; specify -Apply only when you actually want to write changes.'
     exit 1
 }
 

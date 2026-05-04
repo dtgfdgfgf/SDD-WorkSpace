@@ -1,29 +1,19 @@
 # Workspace Development Guidelines
 
 <!-- Authority: dependent (agent-scoped subset).
-     The workspace-level Copilot adapter is .github/copilot-instructions.md.
-     This file provides a project-template-oriented agent context and should not
-     contradict the workspace-level instructions. -->
+     This file is a project-template-oriented agent context. Per constitution Section 10,
+     agent-scoped subsets do NOT carry an independent GENERATED GOVERNANCE BOOTSTRAP block;
+     they derive from their workspace-level adapter (.github/copilot-instructions.md) and
+     MUST NOT contradict it. The canonical Studio Constitution is studio/constitution/constitution.md. -->
 
-<!-- 
-  STUDIO TEMPLATE v1.0.0
-  Based on: duotify-membership-v1 agent-file-template
-  Usage: Copy to project/.specify/templates/ and customize if needed
-  
-  This file provides AI agents (Copilot, Claude, etc.) with project-specific context.
-  It is auto-generated from feature governance artifacts and manually maintained sections.
-  
-  Location in project: Place at project root as AGENTS.md or in .specify/
+<!--
+  STUDIO TEMPLATE v1.1.0
+  Project-template agent context. Copy to project/.specify/templates/ and customize if needed.
+  Auto-generated from feature governance artifacts plus a manually maintained section.
 -->
 
 **Auto-generated from feature governance artifacts**
-**Last updated**: 2026-01-27
-
-> Repository note:
-> This repository does not contain a checked-in `studio/` governance tree. Any `studio/*`
-> references below are inherited from a shared template and should be treated as historical
-> placeholders. Prefer checked-in local files such as `.specify/memory/constitution.md`,
-> `README.md`, and `specs/*`.
+**Last updated**: 2026-04-30
 
 ---
 

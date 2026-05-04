@@ -18,6 +18,8 @@
 .\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client -Description "電商平台開發"
 ```
 
+新建專案預設會建立成獨立 Git repo，初始化腳本會在 project root 執行 `git init -b main`、設定 `core.hooksPath` 指向 workspace `.githooks`，並產生三個 runtime adapter。初始化不會自動建立 initial commit。
+
 ### 開啟方式
 
 建立專案後，使用產生的 `.code-workspace` 檔案開啟：
@@ -49,6 +51,7 @@ code projects/studio-automation/studio-automation.code-workspace
 | `Internal` | `projects/` | 完整七階段 | `retrospective.md` 必要 |
 | `Client` | `projects/` | 完整七階段加審核門檻 | `retrospective.md` 必要 |
 
+<!-- governance-anchor: quickstart-seven-stage-workflow -->
 ## 七階段工作流程
 
 所有交付工作都必須依序執行：
@@ -100,6 +103,7 @@ code projects/studio-automation/studio-automation.code-workspace
 | 初始化 | `init-practice.ps1 -Name <name>` | 建立 Practice 專案 |
 | 初始化 | `init-project.ps1 -Name <name> -Type Internal` | 建立 Internal 專案 |
 | 初始化 | `init-project.ps1 -Name <name> -Type Client` | 建立 Client 專案 |
+| 初始化 | `setup-hooks.ps1 -ProjectRoot <project-root>` | 為既有 project repo 設定 workspace hooks |
 | 主流程 | `/speckit.specify <描述>` | 建立規格 |
 | 主流程 | `/speckit.clarify` | 釐清需求 |
 | 主流程 | `/speckit.readiness` | 進行前規劃 readiness triage |
@@ -115,9 +119,13 @@ code projects/studio-automation/studio-automation.code-workspace
 
 ## 專案結構
 
+> **Canonical reference**: 憲章 §11 是 master table。本表為 informational 摘要，
+> 若兩處衝突以 `studio/constitution/constitution.md` §11 為準。
+
 | Path | Purpose |
 |------|---------|
 | `.specify/memory/constitution.md` | 專案層級 canonical constitution |
+| `.github/agents/` | Copilot shared runtime junction |
 | `.claude/agents/` | Claude shared runtime junction |
 | `AGENTS.md` | Codex / Copilot CLI runtime adapter，不是 constitution |
 | `.github/copilot-instructions.md` | GitHub Copilot 專案 context，不是 constitution |
@@ -193,8 +201,11 @@ Internal / Client 專案完成後：
 ### 如何啟用 Git hooks？
 
 ```powershell
-git config core.hooksPath .githooks
+.\studio\scripts\powershell\setup-hooks.ps1
+.\studio\scripts\powershell\setup-hooks.ps1 -ProjectRoot projects/studio-automation
 ```
+
+不帶 `-ProjectRoot` 時設定 workspace repo；帶 `-ProjectRoot` 時設定指定 project repo。新建專案已由初始化腳本自動設定。
 
 ### 如何驗證 shared runtime？
 

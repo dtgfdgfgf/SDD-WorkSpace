@@ -7,6 +7,7 @@ color: green
 ---
 
 <!-- Seeded from .github/agents/async-python-reviewer.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
+<!-- WARNING: This file is a seeded copy from .github/agents/async-python-reviewer.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
 ## 🔍 When Reviewing Code, Focus On
 
 **Code Review 時的檢查重點與優先級。**

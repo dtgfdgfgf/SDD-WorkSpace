@@ -1,4 +1,22 @@
 {
+  "_commandLayeringNote": "mandatoryStageCommands corresponds to the seven mandatory delivery stages defined in constitution Section 2; auxiliaryCommands are the supporting commands also defined in Section 2 plus the version command defined in Section 10. requiredCommands MUST equal the union of the two for backward compatibility (verified by docInvariants and constitution-contract.Tests.ps1).",
+  "mandatoryStageCommands": [
+    "speckit.specify",
+    "speckit.clarify",
+    "speckit.readiness",
+    "speckit.plan",
+    "speckit.tasks",
+    "speckit.analyze",
+    "speckit.implement"
+  ],
+  "auxiliaryCommands": [
+    "speckit.checklist",
+    "speckit.constitution",
+    "speckit.discover",
+    "speckit.eci",
+    "speckit.taskstoissues",
+    "speckit.version"
+  ],
   "requiredCommands": [
     "speckit.analyze",
     "speckit.checklist",
@@ -55,6 +73,7 @@
     "checklist-template.md",
     "claude-md-template.md",
     "copilot-instructions-template.md",
+    "data-model-template.md",
     "decision-record-template.md",
     "eci-adoption-record-template.md",
     "eci-assessment-template.md",
@@ -63,11 +82,15 @@
     "eci-trigger-template.md",
     "exploration-boundary-template.md",
     "intent-ledger-template.md",
+    "learnings-entry-template.md",
     "mainline-update-note-template.md",
     "plan-template.md",
     "project-constitution-template.md",
+    "quickstart-template.md",
     "readiness-assessment-template.md",
     "repo-context-packet-template.md",
+    "research-template.md",
+    "retrospective-template.md",
     "spec-template.md",
     "tasks-template.md",
     "validation-contract-template.md"
@@ -92,6 +115,11 @@
         "Agent bootstrap synchronized",
         "sync-agent-bootstrap.ps1",
         "check-agent-bootstrap.ps1",
+        "diff-filter=ACDMR",
+        "checkout-index",
+        "staged snapshot",
+        "Runtime adapter must be staged with its synchronized set",
+        "Test-StagedPlanningGate",
         "Document version",
         "Estimated timeline",
         "Planability vs Intent Obligations",
@@ -502,6 +530,43 @@
         "After the ECI dossier exists, the latest authoritative state lives in readiness-assessment.md plus readiness/eci/*.md, not in this trigger alone.",
         "Mainline implementation MUST NOT begin until `/speckit.eci` has produced the dossier and readiness is re-run."
       ]
+    },
+    {
+      "id": "governance-anchor-pilot-constitution",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAnchors": [
+        "constitution-section-11-required-project-structure",
+        "constitution-section-12-governance-rules"
+      ]
+    },
+    {
+      "id": "governance-anchor-pilot-quickstart",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAnchors": [
+        "quickstart-seven-stage-workflow"
+      ]
+    },
+    {
+      "id": "governance-anchor-pilot-sdd-guide",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAnchors": [
+        "sdd-guide-core-principles"
+      ]
+    },
+    {
+      "id": "governance-anchor-pilot-claude-md",
+      "path": "CLAUDE.md",
+      "mustContainAnchors": [
+        "claude-direct-imports",
+        "claude-tool-notes"
+      ]
+    },
+    {
+      "id": "governance-anchor-pilot-agents-md",
+      "path": "AGENTS.md",
+      "mustContainAnchors": [
+        "agents-tool-notes"
+      ]
     }
   ],
   "scriptInvariants": [
@@ -561,15 +626,68 @@
       "mustContainAll": [
         "INTENT_LEDGER        = Join-Path $featureDir 'intent-ledger.md'",
         "READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'",
-        "ECI_DIR              = $eciDir"
+        "ECI_DIR              = $eciDir",
+        "Initialize-ProjectGitRepository",
+        "core.hooksPath"
       ]
     },
     {
-      "id": "setup-hooks-readiness-awareness",
+      "id": "setup-hooks-repo-root-awareness",
       "path": "studio/scripts/powershell/setup-hooks.ps1",
       "mustContainAll": [
-        "shared runtime audit",
-        "readiness/**/*.md"
+        "ProjectRoot",
+        "core.hooksPath",
+        "GetRelativePath",
+        "workspace .githooks"
+      ]
+    },
+    {
+      "id": "init-project-independent-git-repo",
+      "path": "studio/scripts/powershell/init-project.ps1",
+      "mustContainAll": [
+        "Initialize-ProjectFromTemplate",
+        "independent Git repository",
+        "hooksPath"
+      ]
+    },
+    {
+      "id": "init-practice-independent-git-repo",
+      "path": "studio/scripts/powershell/init-practice.ps1",
+      "mustContainAll": [
+        "Initialize-ProjectFromTemplate",
+        "independent Git repository",
+        "hooksPath"
+      ]
+    },
+    {
+      "id": "common-init-from-template-helper",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Initialize-ProjectFromTemplate",
+        "Initialize-ProjectGitRepository",
+        "Initialize-ProjectSharedAgentJunctions",
+        "Initialize-ProjectConstitution",
+        "SupportsShouldProcess"
+      ]
+    },
+    {
+      "id": "create-new-feature-consumer-git-boundary",
+      "path": "studio/scripts/powershell/create-new-feature.ps1",
+      "mustContainAll": [
+        "Test-IsWorkspaceConsumerProjectRoot",
+        "Consumer project is not an independent Git root",
+        "git init -b main"
+      ]
+    },
+    {
+      "id": "setup-plan-readiness-hard-gate",
+      "path": "studio/scripts/powershell/setup-plan.ps1",
+      "mustContainAll": [
+        "Assert-ReadyForPlan",
+        "READY_FOR_PLAN",
+        "Intent Ledger Requirement",
+        "Authorization Outcome",
+        "READY_FOR_MAINLINE_IMPLEMENTATION"
       ]
     },
     {
@@ -589,7 +707,32 @@
         ".claude/agents",
         ".github/copilot-instructions.md",
         "CLAUDE.md",
-        ".code-workspace"
+        ".code-workspace",
+        "core.hooksPath",
+        "ValidateScript"
+      ]
+    },
+    {
+      "id": "validate-feature-structure-shape",
+      "path": "studio/scripts/powershell/validate-feature-structure.ps1",
+      "mustContainAll": [
+        "FeatureDir",
+        "WarningsAsErrors",
+        "readiness-assessment.md",
+        "intent-ledger.md",
+        "ROUTE_TO_ECI",
+        "tasks-no-canonical-line",
+        "Get-MarkdownField"
+      ]
+    },
+    {
+      "id": "sync-agent-bootstrap-from-validation",
+      "path": "studio/scripts/powershell/sync-agent-bootstrap.ps1",
+      "mustContainAll": [
+        "ValidateScript",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md"
       ]
     },
     {
@@ -602,6 +745,62 @@
         "impactRouting",
         "builtinDocumentAuthority",
         "builtinImpactRouting"
+      ]
+    },
+    {
+      "id": "setup-clarify-spec-gate",
+      "path": "studio/scripts/powershell/setup-clarify.ps1",
+      "mustContainAll": [
+        "Get-NeedsClarificationMarkers",
+        "spec.md is required",
+        "STAGE",
+        "Force",
+        "FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "setup-readiness-clarify-gate",
+      "path": "studio/scripts/powershell/setup-readiness.ps1",
+      "mustContainAll": [
+        "readiness-assessment-template.md",
+        "[NEEDS CLARIFICATION]",
+        "ECI_DIR",
+        "Force",
+        "SCAFFOLDED"
+      ]
+    },
+    {
+      "id": "setup-tasks-plan-gate",
+      "path": "studio/scripts/powershell/setup-tasks.ps1",
+      "mustContainAll": [
+        "tasks-template.md",
+        "plan.md is required",
+        "no Version field",
+        "Force",
+        "SCAFFOLDED"
+      ]
+    },
+    {
+      "id": "setup-analyze-prerequisites",
+      "path": "studio/scripts/powershell/setup-analyze.ps1",
+      "mustContainAll": [
+        "checklist-template.md",
+        "validate-feature-structure.ps1",
+        "Intent Drift Check",
+        "ANALYSIS_CHECKLIST",
+        "Force"
+      ]
+    },
+    {
+      "id": "setup-implement-tasks-gate",
+      "path": "studio/scripts/powershell/setup-implement.ps1",
+      "mustContainAll": [
+        "Get-PendingTasks",
+        "Get-UnresolvedCriticalFindings",
+        "validate-feature-structure.ps1",
+        "PENDING_TASKS",
+        "SELECTED_TASK",
+        "Force"
       ]
     }
   ],

@@ -48,6 +48,8 @@
 - studio templates
 - shared extension registry
 
+新建的 consumer project 預設是獨立 Git repo；初始化腳本會在 project root 執行 `git init -b main`，並將 `core.hooksPath` 設為指向 workspace `.githooks` 的相對路徑。這讓 project repo 可以套用同一套 machine-enforced governance gates，而不需要把 shared runtime 複製進專案。
+
 目前 workspace 採 direct junction 模型提供 Claude shared agents，不支援 project-local Claude agents。
 
 從 consumer project 派生出的 feature worktree，也必須保留這個 project 的同級操作語境，
@@ -82,6 +84,7 @@
 | Client | `projects/` | 未來正式客戶專案 |
 
 每個專案都應該有自己的 `README.md`、`specs/`、`src/`、`docs/`，以及必要時的 project constitution。
+新專案也應有自己的 `.git/`，且 Git root 必須等於 project root；`/speckit.specify` 不會在 `projects/` 或 `learning/` 的 consumer project 中 silently fallback 成 non-git flow。
 同一個專案派生出的 feature worktree 也應維持 project-equivalent operating surface，而不是 reduced checkout。
 
 ## SDD 工作流程
@@ -127,8 +130,10 @@
 ### 2. 啟用 Git hooks
 
 ```powershell
-git config core.hooksPath .githooks
+.\studio\scripts\powershell\setup-hooks.ps1
 ```
+
+Workspace repo 使用上列命令。新建 consumer project 會由初始化腳本自動設定 hooks；既有 project repo 可用 `.\studio\scripts\powershell\setup-hooks.ps1 -ProjectRoot <project-root>` 補設定。
 
 ### 3. 建立新專案
 
@@ -144,6 +149,8 @@ Internal / Client:
 .\studio\scripts\powershell\init-project.ps1 -Name "studio-automation" -Type Internal
 .\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client
 ```
+
+上述初始化腳本會建立 project-local Git repo、設定 workspace hooks、產生 runtime adapters，並建立 shared agent junction；不會自動建立 initial commit。
 
 ### 4. 使用產生的 `.code-workspace` 開啟專案
 
@@ -177,8 +184,9 @@ Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer�
 
 | Script | Purpose |
 |--------|---------|
-| `studio/scripts/powershell/init-practice.ps1` | 建立 Practice 專案 |
-| `studio/scripts/powershell/init-project.ps1` | 建立 Internal / Client 專案 |
+| `studio/scripts/powershell/init-practice.ps1` | 建立 Practice 專案、初始化 project-local Git repo 並設定 workspace hooks |
+| `studio/scripts/powershell/init-project.ps1` | 建立 Internal / Client 專案、初始化 project-local Git repo 並設定 workspace hooks |
+| `studio/scripts/powershell/setup-hooks.ps1` | 設定 workspace repo 或指定 project repo 的 `core.hooksPath` |
 | `studio/scripts/powershell/create-new-feature.ps1` | 建立新 feature 工作區與文件骨架 |
 | `studio/scripts/powershell/new-project-worktree.ps1` | 建立 consumer project derived worktree 並補齊 shared agent junction parity |
 | `studio/scripts/powershell/check-speckit-runtime.ps1` | 驗證 shared runtime contract、mirror parity、templates、hooks 與 canonical docs |

@@ -1,9 +1,6 @@
 ---
 name: speckit.discover
-description: >
-  Internal SDD discovery analysis agent.
-  Consumes raw consultation transcripts and infers
-  spec-ready discovery structure grounded in commercial reality.
+description: Internal SDD discovery analysis agent that consumes raw consultation transcripts and infers spec-ready discovery structure grounded in commercial reality.
 tools: []
 model: claude-opus-4-7
 handoffs:

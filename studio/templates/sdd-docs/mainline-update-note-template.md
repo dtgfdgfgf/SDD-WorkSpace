@@ -4,13 +4,19 @@
   Create under docs/mainline-updates/YYYY-MM-DD-short-topic.md
   Required for workspace-governance branches intended to merge into main when shared-layer
   governance, runtime agents, prompts, templates, hooks, shared scripts, or canonical docs change.
+
+  Status state machine:
+  - Draft: in progress; Related Commits MAY be TBD.
+  - Ready: this batch is finalized and the commits exist. Related Commits MUST list at least
+    one concrete commit hash (or PR link). A Ready note with all-TBD commit metadata is invalid.
+  - Merged: the batch has been merged into main. Related Commits MUST list the final hash(es).
 -->
 
 **Date**: YYYY-MM-DD
 **Source Branch**: [branch-name]
 **Target Branch**: `main`
 **Status**: Draft / Ready / Merged
-**Related Commits**: [hashes or `TBD`]
+**Related Commits**: [hashes or `TBD` only while Status: Draft]
 **Related PR**: [link or `N/A`]
 
 ## Summary

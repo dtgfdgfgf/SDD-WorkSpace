@@ -192,6 +192,26 @@ function ConvertTo-CleanBranchName {
     
     return $Name.ToLower() -replace '[^a-z0-9]', '-' -replace '-{2,}', '-' -replace '^-', '' -replace '-$', ''
 }
+
+function Test-IsWorkspaceConsumerProjectRoot {
+    param([string]$CandidateRoot)
+
+    $studioRoot = Find-StudioRoot -StartDir $CandidateRoot
+    if (-not $studioRoot) {
+        return $false
+    }
+
+    $workspaceRoot = Split-Path -Parent $studioRoot
+    foreach ($containerName in @('projects', 'learning')) {
+        $containerPath = Join-Path $workspaceRoot $containerName
+        if ((Test-Path -LiteralPath $containerPath) -and (Test-PathInsideRoot -Root $containerPath -Candidate $CandidateRoot)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 $startDir = (Get-Location).Path
 $fallbackRoot = Find-RepositoryRoot -StartDir $startDir
 if (-not $fallbackRoot) {
@@ -208,6 +228,10 @@ try {
             $repoRoot = $resolvedGitRoot
             $hasGit = $true
         } else {
+            if (Test-IsWorkspaceConsumerProjectRoot -CandidateRoot $resolvedFallbackRoot) {
+                Write-Error "Consumer project is not an independent Git root: $resolvedFallbackRoot. Run the project init script again or initialize this project with 'git init -b main' and configure workspace hooks before /speckit.specify."
+                exit 1
+            }
             $repoRoot = $resolvedFallbackRoot
             $hasGit = $false
         }
@@ -215,7 +239,12 @@ try {
         throw "Git not available"
     }
 } catch {
-    $repoRoot = (Resolve-Path $fallbackRoot).Path
+    $resolvedFallbackRoot = (Resolve-Path $fallbackRoot).Path
+    if (Test-IsWorkspaceConsumerProjectRoot -CandidateRoot $resolvedFallbackRoot) {
+        Write-Error "Consumer project is not an independent Git root: $resolvedFallbackRoot. Run the project init script again or initialize this project with 'git init -b main' and configure workspace hooks before /speckit.specify."
+        exit 1
+    }
+    $repoRoot = $resolvedFallbackRoot
     $hasGit = $false
 }
 
@@ -314,10 +343,10 @@ if ($branchName.Length -gt $maxBranchLength) {
 }
 
 if ($hasGit) {
-    try {
-        git checkout -b $branchName | Out-Null
-    } catch {
-        Write-Warning "Failed to create git branch: $branchName"
+    git checkout -b $branchName 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "[specify] Failed to create git branch: $branchName (likely exists or worktree dirty). Resolve and re-run."
+        exit 1
     }
 } else {
     Write-Warning "[specify] Warning: Git repository not detected; skipped branch creation for $branchName"

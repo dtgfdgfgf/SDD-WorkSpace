@@ -21,6 +21,13 @@
 $ErrorActionPreference = 'Continue'
 $script:hasErrors = $false
 $script:workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$script:repoRoot = (& git rev-parse --show-toplevel 2>$null)
+if ($LASTEXITCODE -ne 0 -or -not $script:repoRoot) {
+    Write-Host '[ERROR] Unable to resolve Git repository root for pre-commit validation.' -ForegroundColor Red
+    exit 1
+}
+$script:repoRoot = (Resolve-Path -LiteralPath $script:repoRoot).Path
+$script:isWorkspaceRepo = ($script:repoRoot -eq $script:workspaceRoot)
 $script:sharedRuntimeContractPath = Join-Path $script:workspaceRoot 'studio/runtime/shared-runtime-contract.json'
 $script:sharedRuntimeAuditScript = Join-Path $script:workspaceRoot 'studio/scripts/powershell/check-speckit-runtime.ps1'
 
@@ -89,6 +96,192 @@ function Test-IsSharedGateHit {
     return $false
 }
 
+function Get-NonNoteSharedLayerFiles {
+    param(
+        [AllowEmptyCollection()]
+        [string[]]$SharedLayerFiles
+    )
+
+    return @($SharedLayerFiles | Where-Object {
+        $normalized = Convert-ToRepoRelativePath -Path $_
+        -not ($normalized -like 'docs/mainline-updates/*')
+    })
+}
+
+function Get-StagedMainlineUpdateNotes {
+    param(
+        [AllowEmptyCollection()]
+        [string[]]$StagedFiles
+    )
+
+    return @($StagedFiles | Where-Object {
+        $normalized = Convert-ToRepoRelativePath -Path $_
+        $normalized -match '^docs/mainline-updates/[^/]+\.md$' -and $normalized -ne 'docs/mainline-updates/README.md'
+    })
+}
+
+function ConvertFrom-GitNameStatusZ {
+    param([string]$Raw)
+
+    if ([string]::IsNullOrEmpty($Raw)) {
+        return @()
+    }
+
+    $parts = @($Raw -split "`0" | Where-Object { $_ -ne '' })
+    $changes = @()
+    $i = 0
+    while ($i -lt $parts.Count) {
+        $status = [string]$parts[$i]
+        $i++
+
+        if ($status -match '^[RC]') {
+            if ($i + 1 -ge $parts.Count) { break }
+            $oldPath = Convert-ToRepoRelativePath -Path $parts[$i]
+            $i++
+            $path = Convert-ToRepoRelativePath -Path $parts[$i]
+            $i++
+        } else {
+            if ($i -ge $parts.Count) { break }
+            $oldPath = $null
+            $path = Convert-ToRepoRelativePath -Path $parts[$i]
+            $i++
+        }
+
+        $changes += [PSCustomObject]@{
+            Status  = $status
+            Path    = $path
+            OldPath = $oldPath
+        }
+    }
+
+    return $changes
+}
+
+function Get-StagedChanges {
+    $raw = & git -C $script:repoRoot diff --cached --name-status -z --diff-filter=ACDMR 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-HookError 'Unable to read staged changes from Git index.'
+        return @()
+    }
+
+    return @(ConvertFrom-GitNameStatusZ -Raw ([string]::Join('', @($raw))))
+}
+
+function Get-StagedActivePaths {
+    param([object[]]$Changes)
+
+    return @($Changes | Where-Object { $_.Status -notmatch '^D' } | ForEach-Object { $_.Path })
+}
+
+function Get-StagedTouchedPaths {
+    param([object[]]$Changes)
+
+    $paths = @()
+    foreach ($change in @($Changes)) {
+        if ($change.Path) { $paths += $change.Path }
+        if ($change.OldPath) { $paths += $change.OldPath }
+    }
+    return @($paths | Sort-Object -Unique)
+}
+
+function Test-StagedPathDeleted {
+    param(
+        [string]$Path,
+        [object[]]$Changes
+    )
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $Path
+    return [bool](@($Changes | Where-Object { $_.Path -eq $normalizedPath -and $_.Status -match '^D' }).Count)
+}
+
+function Test-StagedPathExists {
+    param([string]$Path)
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $Path
+    & git -C $script:repoRoot cat-file -e ":$normalizedPath" 2>$null
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Get-StagedFileContent {
+    param([string]$Path)
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $Path
+    $content = & git -C $script:repoRoot show ":$normalizedPath" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        return $null
+    }
+
+    return ($content -join [Environment]::NewLine)
+}
+
+function Get-RepoRelativePath {
+    param([string]$Path)
+
+    return ([System.IO.Path]::GetRelativePath($script:repoRoot, $Path) -replace '\\', '/')
+}
+
+function Invoke-SharedRuntimeAuditOnStagedSnapshot {
+    if (-not $script:isWorkspaceRepo) {
+        Write-HookInfo 'Shared runtime audit skipped: current repository is a consumer project.'
+        return
+    }
+
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sdd-runtime-staged-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
+    New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+
+    $auditConfirmed = $false
+    try {
+        $prefix = $tempRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+        & git -C $script:repoRoot checkout-index -a -f --prefix=$prefix 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-HookError 'Unable to materialize staged shared-layer snapshot for audit.'
+            return
+        }
+
+        $snapshotAuditScript = Join-Path $tempRoot 'studio/scripts/powershell/check-speckit-runtime.ps1'
+        if (-not (Test-Path -LiteralPath $snapshotAuditScript)) {
+            Write-HookError 'Shared runtime audit script is missing from the staged snapshot.'
+            return
+        }
+
+        $auditOutput = & pwsh -NoProfile -File $snapshotAuditScript -Json 2>&1
+        $auditExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 }
+        $auditJson = if ($auditOutput) { $auditOutput -join [Environment]::NewLine } else { $null }
+
+        if ([string]::IsNullOrWhiteSpace($auditJson)) {
+            Write-HookError 'Shared runtime audit did not return JSON output from staged snapshot.'
+            return
+        }
+
+        try {
+            $auditResult = $auditJson | ConvertFrom-Json -AsHashtable
+        } catch {
+            Write-HookError 'Unable to parse shared runtime audit JSON output from staged snapshot.'
+            Write-Host $auditJson -ForegroundColor DarkGray
+            return
+        }
+
+        if ($auditExitCode -ne 0 -or -not $auditResult.VALID -or [int]$auditResult.ERROR_COUNT -gt 0) {
+            Write-HookError 'Shared runtime audit failed against staged snapshot.'
+            foreach ($failure in @($auditResult.FAILURES)) {
+                $pathSuffix = if ($failure.path) { " [$($failure.path)]" } else { '' }
+                Write-Host "    - [$($failure.category)] $($failure.message)$pathSuffix" -ForegroundColor Red
+            }
+            return
+        }
+
+        Write-HookSuccess 'Shared runtime audit passed against staged snapshot'
+        $auditConfirmed = $true
+    } finally {
+        if (-not $auditConfirmed -and -not $script:hasErrors) {
+            Write-HookError 'Shared runtime audit terminated without confirming success (no error path covered).'
+        }
+        if (Test-Path -LiteralPath $tempRoot) {
+            Remove-Item -LiteralPath $tempRoot -Recurse -Force
+        }
+    }
+}
+
 function Invoke-SharedRuntimeAudit {
     if (-not (Test-Path -LiteralPath $script:sharedRuntimeAuditScript)) {
         Write-HookError "Shared runtime audit script not found: $($script:sharedRuntimeAuditScript)"
@@ -153,12 +346,12 @@ function Get-AgentBootstrapProjectRootForPath {
 
     $normalizedPath = Convert-ToRepoRelativePath -Path $Path
 
-    if ($normalizedPath -in @('AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md')) {
-        return $script:workspaceRoot
+    if ($normalizedPath -in @('AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md', '.specify/memory/constitution.md')) {
+        return $script:repoRoot
     }
 
     if ($normalizedPath -match '^(.*)/(AGENTS\.md|CLAUDE\.md|\.github/copilot-instructions\.md|\.specify/memory/constitution\.md)$') {
-        return Join-Path $script:workspaceRoot $Matches[1]
+        return Join-Path $script:repoRoot $Matches[1]
     }
 
     return $null
@@ -265,6 +458,218 @@ function Get-StudioConstitutionVersionFromFile {
     }
 
     return $null
+}
+
+function Get-MarkdownFieldValue {
+    # NOTE: pre-commit hook is intentionally self-contained (does not dot-source
+    # common.ps1) so it keeps working even if shared scripts are corrupt during a
+    # mid-edit commit. The regex behavior MUST match Get-MarkdownField in
+    # studio/scripts/powershell/common.ps1.
+    param(
+        [string]$Content,
+        [string]$FieldName
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Content)) {
+        return $null
+    }
+
+    $escapedField = [regex]::Escape($FieldName)
+    # Support both "**Field:**" and "**Field**:" formats found in workspace docs.
+    $pattern = "(?mi)^\s*(?:-\s*)?\*\*$escapedField(?::\*\*|\*\*:)\s*(.+?)\s*$"
+    if ($Content -notmatch $pattern) {
+        return $null
+    }
+
+    $value = $Matches[1].Trim()
+    if ($value -match '^`(.+)`$') {
+        $value = $Matches[1]
+    } elseif ($value -match '^"(.+)"$') {
+        $value = $Matches[1]
+    }
+    return $value
+}
+
+function Get-GovernanceBootstrapBlock {
+    param([string]$Content)
+
+    if ([string]::IsNullOrWhiteSpace($Content)) {
+        return $null
+    }
+
+    $pattern = '(?s)' + [regex]::Escape('<!-- BEGIN GENERATED GOVERNANCE BOOTSTRAP -->') + '.*?' + [regex]::Escape('<!-- END GENERATED GOVERNANCE BOOTSTRAP -->')
+    $match = [regex]::Match($Content, $pattern)
+    if (-not $match.Success) {
+        return $null
+    }
+
+    return $match.Value.Trim()
+}
+
+function Convert-ToPortableRelativePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$FromPath,
+        [Parameter(Mandatory = $true)][string]$ToPath
+    )
+
+    return ([System.IO.Path]::GetRelativePath($FromPath, $ToPath) -replace '\\', '/')
+}
+
+function Get-AdapterRelPathsForProjectRoot {
+    param([Parameter(Mandatory = $true)][string]$ProjectRoot)
+
+    $projectRootPath = (Resolve-Path -LiteralPath $ProjectRoot).Path
+    $base = if ($projectRootPath -eq $script:repoRoot) {
+        ''
+    } else {
+        (Get-RepoRelativePath -Path $projectRootPath).TrimEnd('/')
+    }
+
+    $prefix = if ($base) { "$base/" } else { '' }
+    return @(
+        "${prefix}AGENTS.md",
+        "${prefix}CLAUDE.md",
+        "${prefix}.github/copilot-instructions.md"
+    )
+}
+
+function Get-StagedStudioConstitutionVersion {
+    $stagedConstitution = if ($script:isWorkspaceRepo -and (Test-StagedPathExists -Path 'studio/constitution/constitution.md')) {
+        Get-StagedFileContent -Path 'studio/constitution/constitution.md'
+    } else {
+        $null
+    }
+
+    if ($stagedConstitution -and $stagedConstitution -match '(?m)^\*\*Version:\*\*\s*([^\r\n]+)\s*$') {
+        return $Matches[1].Trim()
+    }
+
+    return Get-StudioConstitutionVersionFromFile
+}
+
+function Test-StagedAgentBootstrapForProject {
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectRoot,
+        [Parameter(Mandatory = $true)][object[]]$Changes,
+        [switch]$RequireAllAdaptersStaged
+    )
+
+    $adapterPaths = Get-AdapterRelPathsForProjectRoot -ProjectRoot $ProjectRoot
+    $changedActivePaths = Get-StagedActivePaths -Changes $Changes
+    $contents = @{}
+    $blocks = @()
+
+    foreach ($adapterPath in $adapterPaths) {
+        if ($RequireAllAdaptersStaged -and ($changedActivePaths -notcontains $adapterPath)) {
+            Write-HookError "Runtime adapter must be staged with its synchronized set: $adapterPath"
+            continue
+        }
+
+        if (-not (Test-StagedPathExists -Path $adapterPath)) {
+            Write-HookError "Required runtime adapter is missing from staged commit: $adapterPath"
+            continue
+        }
+
+        $content = Get-StagedFileContent -Path $adapterPath
+        $contents[$adapterPath] = $content
+        $block = Get-GovernanceBootstrapBlock -Content $content
+        if (-not $block) {
+            Write-HookError "Generated governance bootstrap block is missing in staged adapter: $adapterPath"
+            continue
+        }
+
+        if ($content -match '(?m)^#\s+Studio Constitution\s*$') {
+            Write-HookError "Adapter appears to inline-copy the Studio Constitution instead of referencing it: $adapterPath"
+        }
+
+        $blocks += $block
+    }
+
+    if ($blocks.Count -gt 1) {
+        $firstBlock = $blocks[0]
+        foreach ($block in $blocks) {
+            if ($block -ne $firstBlock) {
+                Write-HookError "Generated governance bootstrap blocks are not synchronized in staged adapters for: $ProjectRoot"
+                break
+            }
+        }
+    }
+
+    $projectRootPath = (Resolve-Path -LiteralPath $ProjectRoot).Path
+    $studioConstitutionPath = Join-Path $script:workspaceRoot 'studio/constitution/constitution.md'
+    $relativeStudioConstitution = Convert-ToPortableRelativePath -FromPath $projectRootPath -ToPath $studioConstitutionPath
+    $projectConstitutionRelPath = (Get-RepoRelativePath -Path (Join-Path $projectRootPath '.specify/memory/constitution.md'))
+    $hasProjectConstitution = Test-StagedPathExists -Path $projectConstitutionRelPath
+    $studioVersion = Get-StagedStudioConstitutionVersion
+
+    foreach ($adapterPath in $adapterPaths) {
+        $content = [string]$contents[$adapterPath]
+        if ([string]::IsNullOrWhiteSpace($content)) { continue }
+
+        if ($content.IndexOf($relativeStudioConstitution, [System.StringComparison]::Ordinal) -lt 0) {
+            Write-HookError "Staged adapter does not reference the resolved Studio Constitution path '$relativeStudioConstitution': $adapterPath"
+        }
+
+        if ($studioVersion -and $content.IndexOf("**Studio Constitution Version:** $studioVersion", [System.StringComparison]::Ordinal) -lt 0) {
+            Write-HookError "Staged adapter does not reference current Studio Constitution version $studioVersion`: $adapterPath"
+        }
+
+        if ($hasProjectConstitution -and $content.IndexOf('.specify/memory/constitution.md', [System.StringComparison]::Ordinal) -lt 0) {
+            Write-HookError "Staged adapter does not reference .specify/memory/constitution.md: $adapterPath"
+        }
+    }
+
+    $claudePath = $adapterPaths[1]
+    $claudeContent = [string]$contents[$claudePath]
+    if (-not [string]::IsNullOrWhiteSpace($claudeContent)) {
+        $studioImportPattern = '(?m)^@' + [regex]::Escape($relativeStudioConstitution) + '\s*$'
+        if ($claudeContent -notmatch $studioImportPattern) {
+            Write-HookError "CLAUDE.md staged adapter is missing the direct Studio Constitution @path import: $claudePath"
+        }
+
+        if ($hasProjectConstitution -and $claudeContent -notmatch '(?m)^@\.specify/memory/constitution\.md\s*$') {
+            Write-HookError "CLAUDE.md staged adapter is missing the direct project constitution @path import: $claudePath"
+        }
+    }
+}
+
+function Test-StagedPlanningGate {
+    param([Parameter(Mandatory = $true)][string]$ArtifactPath)
+
+    $normalizedPath = Convert-ToRepoRelativePath -Path $ArtifactPath
+    if ($normalizedPath -notmatch '^(?<featureDir>(?:.+/)?specs/[^/]+)/(?:plan|tasks)\.md$') {
+        return
+    }
+
+    $featureDir = $Matches['featureDir']
+    $readinessPath = "$featureDir/readiness/readiness-assessment.md"
+    $readinessContent = Get-StagedFileContent -Path $readinessPath
+    if ([string]::IsNullOrWhiteSpace($readinessContent)) {
+        Write-HookError "Planning artifact is staged without readiness-assessment.md in the staged commit: $normalizedPath"
+        return
+    }
+
+    $primaryStatus = Get-MarkdownFieldValue -Content $readinessContent -FieldName 'Primary Status'
+    if ($primaryStatus -ne 'READY_FOR_PLAN') {
+        Write-HookError "Planning artifact is staged while readiness Primary Status is '$primaryStatus' instead of READY_FOR_PLAN: $normalizedPath"
+    }
+
+    $ledgerRequirement = Get-MarkdownFieldValue -Content $readinessContent -FieldName 'Intent Ledger Requirement'
+    if ($ledgerRequirement -match 'Create\s+`?intent-ledger\.md`?|Update\s+`?intent-ledger\.md`?') {
+        $ledgerPath = "$featureDir/intent-ledger.md"
+        if (-not (Test-StagedPathExists -Path $ledgerPath)) {
+            Write-HookError "Planning artifact is staged but readiness requires intent-ledger.md and it is missing from the staged commit: $ledgerPath"
+        }
+    }
+
+    $authorizationPath = "$featureDir/readiness/eci/authorization-record.md"
+    if (Test-StagedPathExists -Path $authorizationPath) {
+        $authorizationContent = Get-StagedFileContent -Path $authorizationPath
+        $authorizationOutcome = Get-MarkdownFieldValue -Content $authorizationContent -FieldName 'Authorization Outcome'
+        if ($authorizationOutcome -ne 'READY_FOR_MAINLINE_IMPLEMENTATION') {
+            Write-HookError "Planning artifact is staged but ECI Authorization Outcome is '$authorizationOutcome' instead of READY_FOR_MAINLINE_IMPLEMENTATION: $normalizedPath"
+        }
+    }
 }
 
 function Get-EdgeCaseCount {
@@ -532,8 +937,10 @@ function Get-ManifestPendingItems {
 # ========================================
 # Get staged files
 # ========================================
-$stagedFiles = git diff --cached --name-only --diff-filter=ACM 2>$null
-if (-not $stagedFiles) {
+$stagedChanges = Get-StagedChanges
+$stagedFiles = Get-StagedActivePaths -Changes $stagedChanges
+$stagedTouchedFiles = Get-StagedTouchedPaths -Changes $stagedChanges
+if (-not $stagedChanges) {
     Write-HookInfo 'No staged files to validate'
     exit 0
 }
@@ -546,41 +953,57 @@ Write-Host ''
 
 $sharedGatePaths = Get-SharedGatePaths
 $sharedLayerFiles = @()
-if ($sharedGatePaths.Count -gt 0) {
-    $sharedLayerFiles = @($stagedFiles | Where-Object { Test-IsSharedGateHit -Path $_ -GatePaths $sharedGatePaths })
+if ($script:isWorkspaceRepo -and $sharedGatePaths.Count -gt 0) {
+    $sharedLayerFiles = @($stagedTouchedFiles | Where-Object { Test-IsSharedGateHit -Path $_ -GatePaths $sharedGatePaths })
 }
 
 if ($sharedLayerFiles.Count -gt 0) {
-    Write-HookInfo 'Shared-layer files detected; running shared runtime audit...'
-    Invoke-SharedRuntimeAudit
+    Write-HookInfo 'Shared-layer files detected; running shared runtime audit against staged snapshot...'
+    Invoke-SharedRuntimeAuditOnStagedSnapshot
     Write-Host ''
 }
 
 # ========================================
-# Agent bootstrap synchronization / validation
+# H1: Mainline-update note enforcement (constitution §12)
+# Any shared-layer governance change requires a paired docs/mainline-updates/*.md note
+# in the same commit. mainline-updates/* edits themselves and the README are exempt
+# (otherwise the rule would be self-locking).
 # ========================================
-$studioConstitutionChanged = @($stagedFiles | Where-Object {
+$nonNoteSharedFiles = Get-NonNoteSharedLayerFiles -SharedLayerFiles $sharedLayerFiles
+$mainlineNotesStaged = Get-StagedMainlineUpdateNotes -StagedFiles $stagedFiles
+
+if ($script:isWorkspaceRepo -and $nonNoteSharedFiles.Count -gt 0 -and $mainlineNotesStaged.Count -eq 0) {
+    Write-HookError 'Shared-layer governance changes require a docs/mainline-updates/*.md note in the same commit (constitution Section 12).'
+    Write-Host '  Affected shared-layer paths:' -ForegroundColor Yellow
+    foreach ($file in @($nonNoteSharedFiles | Select-Object -First 5)) {
+        Write-Host "    - $file" -ForegroundColor Red
+    }
+    if ($nonNoteSharedFiles.Count -gt 5) {
+        Write-Host "    ... and $($nonNoteSharedFiles.Count - 5) more" -ForegroundColor Red
+    }
+    Write-Host '  Author a note from studio/templates/sdd-docs/mainline-update-note-template.md and add it to docs/mainline-updates/README.md.' -ForegroundColor Yellow
+    Write-Host ''
+}
+
+# ========================================
+# H2: Studio Constitution change requires synchronized workspace adapters
+# When studio/constitution/constitution.md is staged, AGENTS.md / CLAUDE.md /
+# .github/copilot-instructions.md MUST be staged together AND their bootstrap
+# blocks MUST reference the current constitution version.
+# ========================================
+$studioConstitutionChanged = @($stagedTouchedFiles | Where-Object {
     (Convert-ToRepoRelativePath -Path $_) -eq 'studio/constitution/constitution.md'
 })
 
-if ($studioConstitutionChanged.Count -gt 0) {
-    Write-HookInfo 'Studio Constitution change detected; synchronizing root runtime adapters...'
-    $studioVersion = Get-StudioConstitutionVersionFromFile
-    Invoke-AgentBootstrapSync -ProjectRoot $script:workspaceRoot -StudioConstitutionVersion $studioVersion
-
-    $mainlineNotes = @($stagedFiles | Where-Object {
-        $normalized = Convert-ToRepoRelativePath -Path $_
-        $normalized -match '^docs/mainline-updates/[^/]+\.md$' -and $normalized -ne 'docs/mainline-updates/README.md'
-    })
-    if ($mainlineNotes.Count -eq 0) {
-        Write-HookError 'Studio Constitution changes require a docs/mainline-updates/*.md note in the same commit.'
-    }
+if ($studioConstitutionChanged.Count -gt 0 -and $script:isWorkspaceRepo) {
+    Write-HookInfo 'Studio Constitution change detected; root runtime adapters must be synchronized in the staged commit...'
+    Test-StagedAgentBootstrapForProject -ProjectRoot $script:repoRoot -Changes $stagedChanges -RequireAllAdaptersStaged
     Write-Host ''
 }
 
-$adapterFiles = @($stagedFiles | Where-Object { Test-IsAgentAdapterPath -Path $_ })
+$adapterFiles = @($stagedTouchedFiles | Where-Object { Test-IsAgentAdapterPath -Path $_ })
 if ($adapterFiles.Count -gt 0) {
-    Write-HookInfo 'Agent adapter changes detected; checking synchronized generated bootstrap blocks...'
+    Write-HookInfo 'Agent adapter changes detected; checking staged generated bootstrap blocks...'
 
     $adapterGroups = @{}
     foreach ($adapterFile in $adapterFiles) {
@@ -594,21 +1017,14 @@ if ($adapterFiles.Count -gt 0) {
 
     foreach ($entry in $adapterGroups.GetEnumerator()) {
         $projectRoot = $entry.Key
-        $changedAdapters = @($entry.Value)
-        if ($changedAdapters.Count -eq 1) {
-            $fromPath = Join-Path $script:workspaceRoot (Convert-ToRepoRelativePath -Path $changedAdapters[0])
-            Invoke-AgentBootstrapSync -ProjectRoot $projectRoot -From $fromPath
-            Write-HookError 'Single runtime adapter change detected. Review the synchronized adapter set and stage AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md together.'
-        } else {
-            Invoke-AgentBootstrapCheck -ProjectRoot $projectRoot
-        }
+        Test-StagedAgentBootstrapForProject -ProjectRoot $projectRoot -Changes $stagedChanges -RequireAllAdaptersStaged
     }
     Write-Host ''
 }
 
-$projectConstitutionFiles = @($stagedFiles | Where-Object { Test-IsProjectConstitutionPath -Path $_ })
+$projectConstitutionFiles = @($stagedTouchedFiles | Where-Object { Test-IsProjectConstitutionPath -Path $_ })
 if ($projectConstitutionFiles.Count -gt 0) {
-    Write-HookInfo 'Project Constitution changes detected; synchronizing local runtime adapters...'
+    Write-HookInfo 'Project Constitution changes detected; checking staged local runtime adapters...'
     $projectRoots = @{}
     foreach ($projectConstitutionFile in $projectConstitutionFiles) {
         $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $projectConstitutionFile
@@ -616,7 +1032,7 @@ if ($projectConstitutionFiles.Count -gt 0) {
     }
 
     foreach ($projectRoot in $projectRoots.Keys) {
-        Invoke-AgentBootstrapSync -ProjectRoot $projectRoot
+        Test-StagedAgentBootstrapForProject -ProjectRoot $projectRoot -Changes $stagedChanges -RequireAllAdaptersStaged
     }
     Write-Host ''
 }
@@ -632,9 +1048,7 @@ if ($manifestFiles.Count -gt 0) {
     Write-HookInfo 'Checking change manifest completeness...'
 
     foreach ($file in $manifestFiles) {
-        $fullPath = Join-Path $script:workspaceRoot $file
-        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        $content = Get-StagedFileContent -Path $file
         if (-not $content) { continue }
 
         $parsed = Get-ManifestPendingItems -Content $content
@@ -764,9 +1178,7 @@ if ($specFiles) {
     )
 
     foreach ($file in $specFiles) {
-        $fullPath = Join-Path $script:workspaceRoot $file
-        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        $content = Get-StagedFileContent -Path $file
         if (-not $content) { continue }
 
         $missingSections = @()
@@ -805,9 +1217,7 @@ if ($readinessFiles) {
     Write-HookInfo 'Validating readiness artifacts...'
 
     foreach ($file in $readinessFiles) {
-        $fullPath = Join-Path $script:workspaceRoot $file
-        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        $content = Get-StagedFileContent -Path $file
         if (-not $content) { continue }
 
         $validationErrors = Get-ReadinessValidationErrors -Path $file -Content $content
@@ -833,9 +1243,7 @@ if ($intentLedgerFiles) {
     Write-HookInfo 'Validating intent-ledger.md files...'
 
     foreach ($file in $intentLedgerFiles) {
-        $fullPath = Join-Path $script:workspaceRoot $file
-        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        $content = Get-StagedFileContent -Path $file
         if (-not $content) { continue }
 
         $validationErrors = @()
@@ -874,7 +1282,9 @@ if ($intentLedgerFiles) {
 # ========================================
 # 3. Validate plan.md files
 # ========================================
-$planFiles = $stagedFiles | Where-Object { $_ -match 'plan\.md$' }
+# Scope: only SDD feature plans live under `specs/<feature>/plan.md`. Agent
+# definition files such as `.claude/agents/speckit-plan.md` are not SDD plans.
+$planFiles = $stagedFiles | Where-Object { $_ -match '(^|/)specs/[^/]+/plan\.md$' }
 
 if ($planFiles) {
     Write-HookInfo 'Validating plan.md files...'
@@ -891,9 +1301,8 @@ if ($planFiles) {
     )
 
     foreach ($file in $planFiles) {
-        $fullPath = Join-Path $script:workspaceRoot $file
-        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        Test-StagedPlanningGate -ArtifactPath $file
+        $content = Get-StagedFileContent -Path $file
         if (-not $content) { continue }
 
         $missingSections = @()
@@ -919,15 +1328,16 @@ if ($planFiles) {
 # ========================================
 # 4. Validate tasks.md files
 # ========================================
-$tasksFiles = $stagedFiles | Where-Object { $_ -match 'tasks\.md$' }
+# Scope: only SDD feature tasks live under `specs/<feature>/tasks.md`. Agent
+# definition files such as `.claude/agents/speckit-tasks.md` are not SDD tasks.
+$tasksFiles = $stagedFiles | Where-Object { $_ -match '(^|/)specs/[^/]+/tasks\.md$' }
 
 if ($tasksFiles) {
     Write-HookInfo 'Validating tasks.md files...'
 
     foreach ($file in $tasksFiles) {
-        $fullPath = Join-Path $script:workspaceRoot $file
-        if (-not (Test-Path -LiteralPath $fullPath)) { continue }
-        $content = Get-Content -LiteralPath $fullPath -Raw -ErrorAction SilentlyContinue
+        Test-StagedPlanningGate -ArtifactPath $file
+        $content = Get-StagedFileContent -Path $file
         if (-not $content) { continue }
 
         $validationErrors = @()

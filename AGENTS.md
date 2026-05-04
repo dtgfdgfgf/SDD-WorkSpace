@@ -29,6 +29,7 @@ Hard rules:
 - If documents conflict, flag drift instead of silently choosing.
 <!-- END GENERATED GOVERNANCE BOOTSTRAP -->
 
+<!-- governance-anchor: agents-tool-notes -->
 ## Tool Notes
 
 - Read the governance bootstrap before planning, editing, or running implementation work.

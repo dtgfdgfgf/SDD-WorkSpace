@@ -5,6 +5,7 @@ model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/spec-kit.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
+<!-- WARNING: This file is a seeded copy from .github/agents/spec-kit.agent.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
 
 > Repository note:
 > This repository does not contain a checked-in `studio/` governance tree. Any `studio/*`

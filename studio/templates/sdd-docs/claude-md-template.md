@@ -2,6 +2,14 @@
 
 This file is the Claude Code runtime adapter for [PROJECT_NAME].
 
+<!--
+  Direct Imports note (Claude-specific): Claude Code natively supports the @path import syntax
+  to inline-load referenced files into the runtime context. AGENTS.md (Codex / Copilot CLI) and
+  .github/copilot-instructions.md (Copilot) do NOT support @-imports; their templates therefore
+  omit this section by design. When syncing the three adapters via sync-agent-bootstrap.ps1,
+  this Direct Imports block stays Claude-only.
+-->
+
 ## Direct Imports
 
 @[RELATIVE_STUDIO_CONSTITUTION]

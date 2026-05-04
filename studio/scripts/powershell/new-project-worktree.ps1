@@ -6,7 +6,23 @@ param(
     [string]$SourceRoot,
     [Parameter(Mandatory = $true)]
     [string]$Path,
+    [ValidateScript({
+        if ([string]::IsNullOrWhiteSpace($_)) { return $true }
+        # Git ref naming rules (subset): no spaces, no .., no leading/trailing slash,
+        # no consecutive slashes, no end with .lock, no @{ sequence.
+        if ($_ -match '\s' -or $_ -match '\.\.' -or $_ -match '@\{' -or $_ -match '//' -or $_ -match '\.lock$' -or $_ -match '^/' -or $_ -match '/$') {
+            throw "Invalid git branch name: '$_'. Branch names cannot contain spaces, '..', '@{', '//', or end with '.lock'."
+        }
+        return $true
+    })]
     [string]$Branch,
+    [ValidateScript({
+        if ([string]::IsNullOrWhiteSpace($_)) { return $true }
+        if ($_ -match '\s' -or $_ -match '@\{' -or $_ -match '//' -or $_ -match '\.lock$') {
+            throw "Invalid git commit-ish: '$_'. Commit-ish cannot contain spaces, '@{', '//', or end with '.lock'."
+        }
+        return $true
+    })]
     [string]$Commitish,
     [switch]$Json
 )
@@ -50,6 +66,18 @@ if ($LASTEXITCODE -ne 0) {
     throw 'git worktree add failed.'
 }
 
+# M8: configure the new worktree's core.hooksPath relative to the worktree root
+# so that commits inside the worktree are governed by the workspace .githooks
+# (independent of whatever path the parent repo had configured).
+$workspaceHooksDir = Join-Path $workspaceRoot '.githooks'
+if (Test-Path -LiteralPath $workspaceHooksDir -PathType Container) {
+    $worktreeHooksPath = [System.IO.Path]::GetRelativePath($targetRoot, $workspaceHooksDir) -replace '\\', '/'
+    & git -C $targetRoot config core.hooksPath $worktreeHooksPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Failed to configure core.hooksPath for worktree: $targetRoot"
+    }
+}
+
 # Restore shared agent junction parity for both .github/agents and .claude/agents.
 $junctions = @(Initialize-ProjectSharedAgentJunctions -ProjectRoot $targetRoot -WorkspaceRoot $workspaceRoot)
 $copiedFiles = @()
@@ -83,10 +111,13 @@ Get-ChildItem -LiteralPath $projectRoot -File -Filter '*.code-workspace' | ForEa
 }
 
 $result = [ordered]@{
-    projectRoot = $projectRoot
-    targetRoot  = $targetRoot
-    junctions   = $junctions
-    copiedFiles = $copiedFiles
+    projectRoot      = $projectRoot
+    targetRoot       = $targetRoot
+    junctions        = $junctions
+    copiedFiles      = $copiedFiles
+    worktreeHooksPath = if (Test-Path -LiteralPath $workspaceHooksDir -PathType Container) {
+        [System.IO.Path]::GetRelativePath($targetRoot, $workspaceHooksDir) -replace '\\', '/'
+    } else { $null }
 }
 
 if ($Json) {

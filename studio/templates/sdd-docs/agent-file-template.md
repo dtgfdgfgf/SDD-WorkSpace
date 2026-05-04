@@ -38,6 +38,9 @@ rules, not replace them.
 
 ## Project Structure
 
+> **Canonical reference**: Studio Constitution §11 holds the master table. This table is an
+> informational subset; on conflict, `studio/constitution/constitution.md` §11 wins.
+
 | Path | Purpose |
 |------|---------|
 | `project/.specify/memory/constitution.md` | Canonical project constitution |

@@ -39,14 +39,23 @@ if (-not $pester) {
 Import-Module Pester -MinimumVersion 5.0 -Force
 
 # Configure and run
+$artifactsDir = Join-Path $testsDir '_artifacts'
+if (-not (Test-Path -LiteralPath $artifactsDir)) {
+    New-Item -ItemType Directory -Path $artifactsDir -Force | Out-Null
+}
+$resultPath = Join-Path $artifactsDir 'testResults.xml'
+
 $config = New-PesterConfiguration
 $config.Run.Path = $testsDir
 $config.Run.Exit = $true
 $config.Output.Verbosity = $Output
-$config.TestResult.Enabled = $false
+$config.TestResult.Enabled = $true
+$config.TestResult.OutputFormat = 'NUnitXml'
+$config.TestResult.OutputPath = $resultPath
 
 Write-Host "`n=== Governance Self-Verification ===" -ForegroundColor Cyan
 Write-Host "Tests path: $testsDir" -ForegroundColor DarkGray
+Write-Host "Result XML: $resultPath" -ForegroundColor DarkGray
 Write-Host ''
 
 Invoke-Pester -Configuration $config

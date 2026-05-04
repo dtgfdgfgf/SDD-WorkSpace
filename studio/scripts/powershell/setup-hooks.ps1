@@ -1,78 +1,92 @@
 <#
 .SYNOPSIS
-    Setup Git hooks for the SDD workspace.
+    Setup Git hooks for the SDD workspace or a consumer project repository.
 
 .DESCRIPTION
-    Configures Git to use the .githooks directory for hooks.
-    This enables shared runtime audit enforcement, SDD document validation, and Conventional Commits checking.
+    Configures Git to use the workspace .githooks directory. When -ProjectRoot is
+    omitted, the workspace repository is configured. When -ProjectRoot is provided,
+    that independent consumer repository is configured with a relative hooksPath
+    that points back to the workspace hooks.
+
+.PARAMETER ProjectRoot
+    Optional Git repository root to configure. Defaults to the workspace root.
 
 .EXAMPLE
     .\setup-hooks.ps1
-
-.NOTES
-    Run this once per workspace clone.
+    .\setup-hooks.ps1 -ProjectRoot ..\..\projects\my-project
 #>
 
-$ErrorActionPreference = "Stop"
+[CmdletBinding()]
+param(
+    [string]$ProjectRoot
+)
 
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  SDD Git Hooks Setup" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
+$ErrorActionPreference = 'Stop'
 
-# Find workspace root
-$workspaceRoot = $PWD.Path
-$maxDepth = 5
-$depth = 0
+. "$PSScriptRoot/common.ps1"
 
-while ($depth -lt $maxDepth) {
-    if (Test-Path (Join-Path $workspaceRoot "studio")) {
-        break
-    }
-    $parent = Split-Path $workspaceRoot -Parent
-    if (-not $parent -or $parent -eq $workspaceRoot) {
-        break
-    }
-    $workspaceRoot = $parent
-    $depth++
-}
-
-$hooksDir = Join-Path $workspaceRoot ".githooks"
-
-if (-not (Test-Path $hooksDir)) {
-    Write-Host "❌ .githooks directory not found at: $hooksDir" -ForegroundColor Red
+$workspaceRoot = Find-WorkspaceRoot -StartDir $PSScriptRoot
+if (-not $workspaceRoot) {
+    Write-Host '[ERROR] Unable to resolve workspace root from script location.' -ForegroundColor Red
     exit 1
 }
 
-# Check if we're in a git repository
-$gitDir = Join-Path $workspaceRoot ".git"
-if (-not (Test-Path $gitDir)) {
-    Write-Host "❌ Not a Git repository: $workspaceRoot" -ForegroundColor Red
-    Write-Host "   Initialize with: git init" -ForegroundColor Yellow
+$targetRoot = if ($ProjectRoot) {
+    Resolve-AbsolutePath -Path $ProjectRoot
+} else {
+    $workspaceRoot
+}
+
+$hooksDir = Join-Path $workspaceRoot '.githooks'
+
+Write-Host ''
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host '  SDD Git Hooks Setup' -ForegroundColor Cyan
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host ''
+
+if (-not (Test-Path -LiteralPath $hooksDir -PathType Container)) {
+    Write-Host "[ERROR] .githooks directory not found at: $hooksDir" -ForegroundColor Red
     exit 1
 }
 
-# Configure git hooks path
+if (-not (Test-Path -LiteralPath $targetRoot -PathType Container)) {
+    Write-Host "[ERROR] Repository root not found: $targetRoot" -ForegroundColor Red
+    exit 1
+}
+
+$gitRoot = & git -C $targetRoot rev-parse --show-toplevel 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $gitRoot) {
+    Write-Host "[ERROR] Not a Git repository: $targetRoot" -ForegroundColor Red
+    Write-Host '        Initialize with: git init -b main' -ForegroundColor Yellow
+    exit 1
+}
+
+$resolvedGitRoot = (Resolve-Path -LiteralPath $gitRoot).Path
+if ($resolvedGitRoot -ne (Resolve-Path -LiteralPath $targetRoot).Path) {
+    Write-Host "[ERROR] ProjectRoot must be the Git repository root: $targetRoot" -ForegroundColor Red
+    Write-Host "        Resolved Git root: $resolvedGitRoot" -ForegroundColor Yellow
+    exit 1
+}
+
+$hooksPath = [System.IO.Path]::GetRelativePath($resolvedGitRoot, $hooksDir) -replace '\\', '/'
+
 try {
-    Push-Location $workspaceRoot
-    git config core.hooksPath .githooks
-    Pop-Location
-    
-    Write-Host "✓ Git hooks path configured: .githooks" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Hooks enabled:" -ForegroundColor Cyan
-    Write-Host "  • pre-commit  - Runs shared runtime audit and validates SDD governance docs (spec.md, readiness/**/*.md, plan.md, tasks.md)" -ForegroundColor Gray
-    Write-Host "  • commit-msg  - Validates Conventional Commits format" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "To bypass hooks temporarily:" -ForegroundColor Yellow
-    Write-Host "  git commit --no-verify" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "To disable hooks:" -ForegroundColor Yellow
-    Write-Host "  git config --unset core.hooksPath" -ForegroundColor Gray
-    Write-Host ""
-    
+    git -C $resolvedGitRoot config core.hooksPath $hooksPath
+
+    Write-Host "[OK] Git hooks path configured: $hooksPath" -ForegroundColor Green
+    Write-Host ''
+    Write-Host 'Hooks enabled:' -ForegroundColor Cyan
+    Write-Host '  - pre-commit  - Runs shared runtime audit and validates SDD governance docs (spec.md, readiness/**/*.md, plan.md, tasks.md)' -ForegroundColor Gray
+    Write-Host '  - commit-msg  - Validates Conventional Commits format' -ForegroundColor Gray
+    Write-Host ''
+    Write-Host 'To bypass hooks temporarily:' -ForegroundColor Yellow
+    Write-Host '  git commit --no-verify' -ForegroundColor Gray
+    Write-Host ''
+    Write-Host 'To disable hooks:' -ForegroundColor Yellow
+    Write-Host '  git config --unset core.hooksPath' -ForegroundColor Gray
+    Write-Host ''
 } catch {
-    Write-Host "❌ Failed to configure git hooks: $_" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to configure git hooks: $_" -ForegroundColor Red
     exit 1
 }

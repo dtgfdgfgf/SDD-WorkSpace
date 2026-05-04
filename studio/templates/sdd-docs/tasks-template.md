@@ -4,6 +4,18 @@
   STUDIO TEMPLATE v1.1.0
   Canonical task line format:
   - [ ] T### [P#] [Risk: X] [Story: ...] Description
+
+  Phase semantics (aligned with .github/agents/speckit.tasks.agent.md):
+  - Phase 1 "Setup":   project initialization, environment, scaffolding (always present).
+  - Phase 2 "Foundation": shared infrastructure, data models, base error handling
+                        (always present, even when only one user story exists).
+  - Phase 3+ "Story Delivery": one phase per User Story. Test tasks within a story
+                              phase are CONDITIONAL (only when the user explicitly
+                              requested tests OR the spec / plan declares a testing
+                              expectation). Do NOT add Tests sub-phases when the
+                              feature is exempt from a testing requirement.
+  - Final Phase "Polish": docs, quickstart, retrospective preparation.
+  Story phases run independently after Foundation; Polish runs after the last story.
 -->
 
 **Feature ID**: `[NNN-feature-name]`  

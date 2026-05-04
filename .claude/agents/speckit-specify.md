@@ -5,6 +5,7 @@ model: claude-opus-4-7
 ---
 
 <!-- Seeded from .github/agents/speckit.specify.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
+<!-- WARNING: This file is a seeded copy from .github/agents/speckit.specify.agent.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
 
 ## Output Language
 
@@ -53,10 +54,9 @@ Given that feature description, do this:
       - Find the highest number N
       - Use N+1 for the new branch number
    
-   d. Run the script `studio/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS"` with the calculated number and short-name:
-      - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-      - Bash example: `studio/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
-      - PowerShell example: `studio/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
+   d. Run the PowerShell script with the calculated number and short-name:
+      - Pass `-Json`, `-Number N+1`, `-ShortName "your-short-name"`, and the feature description once
+      - PowerShell example: `studio/scripts/powershell/create-new-feature.ps1 -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
    
    **IMPORTANT**:
    - Check all three sources (remote branches, local branches, specs directories) to find the highest number

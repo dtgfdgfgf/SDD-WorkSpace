@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.7.0
+**Version:** 1.8.0
 **Created:** 2025-12-08  
-**Updated:** 2026-04-04
+**Updated:** 2026-04-30
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -74,6 +74,10 @@ Each project is expected to contain:
 | `src/` | Source code |
 | `docs/` | Documentation |
 | `README.md` | Project overview and project type declaration |
+
+Fresh consumer projects are independent Git repositories. Their Git root MUST be the project root,
+and their `core.hooksPath` points back to the workspace `.githooks` directory so project-local
+commits still run the shared governance gates.
 
 Derived worktrees created from these projects MUST preserve the same project-operational surface
 expected of the source project. They are not considered healthy merely because the tracked tree
@@ -218,6 +222,11 @@ the new project classification scheme for fresh practice work.
 4. Create a project `.code-workspace`
 5. Create a `.github/agents/` junction to workspace runtime agents
 6. Create a `.claude/agents/` junction to workspace Claude runtime agents
+7. Initialize the project root as an independent Git repo with `git init -b main` when `.git/` is missing
+8. Set the project repo `core.hooksPath` to the relative path for the workspace `.githooks`
+
+The project template `.gitignore` excludes `.github/agents/` and `.claude/agents/` junction content
+so consumer repos do not accidentally track shared runtime files.
 
 These initialization rules govern creation of the root project instance. They do not by themselves
 guarantee derived worktree parity. Derived worktree parity is a separate obligation governed by
@@ -255,6 +264,7 @@ the same shared junction model for Copilot and Claude runtime agents.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8.0 | 2026-04-30 | Make new consumer projects independent Git repos with workspace hook configuration and machine-enforced staged governance gates |
 | 1.7.0 | 2026-04-04 | Add workspace-level Claude shared junction runtime, project init support, and derived worktree bootstrap for `.claude/agents/` |
 | 1.6.0 | 2026-04-02 | Add canonical consumer-project derived worktree parity governance and clarify that project initialization bootstrap does not automatically satisfy derived worktree parity |
 | 1.5.1 | 2026-03-30 | Add centralized `docs/mainline-updates/` management and template for main-bound shared-layer update explanations |

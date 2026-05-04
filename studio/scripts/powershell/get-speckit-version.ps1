@@ -24,27 +24,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Get-MarkdownFieldValue {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Path,
-        [Parameter(Mandatory = $true)]
-        [string]$Field
-    )
-
-    if (-not (Test-Path $Path)) {
-        return $null
-    }
-
-    $pattern = "^\*\*$([regex]::Escape($Field)):\*\*\s*(.+)$"
-    $match = Select-String -Path $Path -Pattern $pattern | Select-Object -First 1
-    if ($match) {
-        return $match.Matches[0].Groups[1].Value.Trim()
-    }
-
-    return $null
-}
-
 function Get-UpstreamAnalysisRange {
     param(
         [Parameter(Mandatory = $true)]
@@ -78,8 +57,8 @@ $agentsDir = $runtimeSources.AGENTS_DIR
 $promptsDir = $runtimeSources.PROMPTS_DIR
 $updateAgentContextPath = Join-Path $paths.SHARED_SCRIPTS_DIR 'update-agent-context.ps1'
 
-$constitutionVersion = Get-MarkdownFieldValue -Path $constitutionPath -Field 'Version'
-$workspaceStructureVersion = Get-MarkdownFieldValue -Path $workspaceStructurePath -Field 'Version'
+$constitutionVersion = Get-MarkdownField -Path $constitutionPath -Field 'Version'
+$workspaceStructureVersion = Get-MarkdownField -Path $workspaceStructurePath -Field 'Version'
 $upstreamRange = Get-UpstreamAnalysisRange -Path $upstreamAnalysisPath
 $supportedAgentContexts = Get-SupportedAgentContexts -Path $updateAgentContextPath
 

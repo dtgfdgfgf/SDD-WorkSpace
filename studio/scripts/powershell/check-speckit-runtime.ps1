@@ -63,7 +63,8 @@ function Test-ContentContract {
     param(
         [string]$Content,
         [object[]]$MustContainAll = @(),
-        [object[]]$MustMatchAll = @()
+        [object[]]$MustMatchAll = @(),
+        [object[]]$MustContainAnchors = @()
     )
 
     $missing = @()
@@ -81,6 +82,15 @@ function Test-ContentContract {
     foreach ($requiredPattern in @($MustMatchAll)) {
         if (-not [string]::IsNullOrWhiteSpace([string]$requiredPattern) -and ($Content -notmatch [string]$requiredPattern)) {
             $missing += "missing pattern: $requiredPattern"
+        }
+    }
+
+    foreach ($requiredAnchor in @($MustContainAnchors)) {
+        $anchorId = [string]$requiredAnchor
+        if ([string]::IsNullOrWhiteSpace($anchorId)) { continue }
+        $anchorMarker = "<!-- governance-anchor: $anchorId -->"
+        if ($Content.IndexOf($anchorMarker, [System.StringComparison]::Ordinal) -lt 0) {
+            $missing += "missing anchor: $anchorId"
         }
     }
 
@@ -109,7 +119,7 @@ function Invoke-PathContractChecks {
 
         if ($exists) {
             $content = Get-Content -LiteralPath $targetPath -Raw
-            $missingRequirements = @(Test-ContentContract -Content $content -MustContainAll @($entry.mustContainAll) -MustMatchAll @($entry.mustMatchAll))
+            $missingRequirements = @(Test-ContentContract -Content $content -MustContainAll @($entry.mustContainAll) -MustMatchAll @($entry.mustMatchAll) -MustContainAnchors @($entry.mustContainAnchors))
         }
 
         $checks += [ordered]@{
@@ -395,16 +405,16 @@ if (-not (Test-Path -LiteralPath $generatorScript)) {
 } else {
     try {
         $compareOutput = & pwsh -NoProfile -File $generatorScript -Compare 2>&1
-        $compareExit = if ($?) { 0 } elseif ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 }
+        $compareExit = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
         if ($compareExit -eq 0) {
             $registryFreshnessCheck.fresh = $true
         } else {
             $registryFreshnessCheck.reason = 'Generated output differs from current file'
-            $warnings += 'Impact registry is stale: run generate-impact-registry.ps1 -Write to refresh'
+            $failures += (New-AuditFailure -Category 'registry-freshness' -Id 'impact-registry-stale' -Message 'Impact registry is stale: run generate-impact-registry.ps1 -Write to refresh' -Path $registryFile)
         }
     } catch {
         $registryFreshnessCheck.reason = "Generator error: $($_.Exception.Message)"
-        $warnings += "Impact registry freshness check error: $($_.Exception.Message)"
+        $failures += (New-AuditFailure -Category 'registry-freshness' -Id 'impact-registry-error' -Message "Impact registry freshness check error: $($_.Exception.Message)" -Path $registryFile)
     }
 }
 

@@ -2,6 +2,12 @@
 
 This file is the GitHub Copilot runtime adapter for this project.
 
+<!--
+  Direct Imports note: GitHub Copilot does NOT support Claude's @path import syntax.
+  Reference paths to constitutions appear inside the GENERATED GOVERNANCE BOOTSTRAP block as
+  human-readable references. The Direct Imports section lives only in CLAUDE.md.
+-->
+
 <!-- BEGIN GENERATED GOVERNANCE BOOTSTRAP -->
 ## Generated Governance Bootstrap
 

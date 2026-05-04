@@ -76,3 +76,9 @@ logs/
 # ===========================
 learning/
 projects/
+
+# ===========================
+# Test Artifacts
+# ===========================
+testResults.xml
+studio/tests/_artifacts/

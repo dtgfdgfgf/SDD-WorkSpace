@@ -2,6 +2,7 @@
 
 This file is the Claude Code runtime adapter for Workspace.
 
+<!-- governance-anchor: claude-direct-imports -->
 ## Direct Imports
 
 @studio/constitution/constitution.md
@@ -33,6 +34,7 @@ Hard rules:
 - If documents conflict, flag drift instead of silently choosing.
 <!-- END GENERATED GOVERNANCE BOOTSTRAP -->
 
+<!-- governance-anchor: claude-tool-notes -->
 ## Tool Notes
 
 - Claude Code should use the direct imports plus the generated bootstrap before planning, editing, or running implementation work.

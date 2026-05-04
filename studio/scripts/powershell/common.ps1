@@ -389,10 +389,10 @@ function Get-FeaturePathsEnv {
 function Test-FileExists {
     param([string]$Path, [string]$Description)
     if (Test-Path -Path $Path -PathType Leaf) {
-        Write-Output "  ✓ $Description"
+        Write-Output "  [OK]   $Description"
         return $true
     } else {
-        Write-Output "  ✗ $Description"
+        Write-Output "  [MISS] $Description"
         return $false
     }
 }
@@ -400,10 +400,10 @@ function Test-FileExists {
 function Test-DirHasFiles {
     param([string]$Path, [string]$Description)
     if ((Test-Path -Path $Path -PathType Container) -and (Get-ChildItem -Path $Path -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | Select-Object -First 1)) {
-        Write-Output "  ✓ $Description"
+        Write-Output "  [OK]   $Description"
         return $true
     } else {
-        Write-Output "  ✗ $Description"
+        Write-Output "  [MISS] $Description"
         return $false
     }
 }
@@ -761,6 +761,367 @@ function Initialize-ProjectSharedAgentJunctions {
     }
 
     return $results
+}
+
+function Initialize-ProjectGitRepository {
+    <#
+    .SYNOPSIS
+    Initialize a consumer project as an independent Git repository and attach workspace hooks.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkspaceRoot,
+        [string]$InitialBranch = 'main'
+    )
+
+    $projectRootPath = Resolve-AbsolutePath -Path $ProjectRoot
+    $workspaceRootPath = Resolve-AbsolutePath -Path $WorkspaceRoot
+    $hooksDir = Join-Path $workspaceRootPath '.githooks'
+
+    if (-not (Test-Path -LiteralPath $hooksDir -PathType Container)) {
+        throw "Workspace hooks directory not found: $hooksDir"
+    }
+
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        throw 'Git is required to initialize consumer projects.'
+    }
+
+    $gitMetadataPath = Join-Path $projectRootPath '.git'
+    $initialized = $false
+    if (-not (Test-Path -LiteralPath $gitMetadataPath)) {
+        & git init -b $InitialBranch $projectRootPath | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "git init failed for project: $projectRootPath"
+        }
+        $initialized = $true
+    }
+
+    $hooksPath = [System.IO.Path]::GetRelativePath($projectRootPath, $hooksDir) -replace '\\', '/'
+    & git -C $projectRootPath config core.hooksPath $hooksPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to configure core.hooksPath for project: $projectRootPath"
+    }
+
+    return [ordered]@{
+        projectRoot = $projectRootPath
+        initialized = $initialized
+        hooksPath   = $hooksPath
+    }
+}
+
+# ============================================================================
+# Markdown field parsing (unified helper - M4)
+# ============================================================================
+
+function Get-MarkdownField {
+    <#
+    .SYNOPSIS
+    Extract a Markdown bold-key field value (`**Field:** value`) from content or a file.
+
+    .DESCRIPTION
+    Unified replacement for the previously duplicated Get-MarkdownFieldValue / Get-MarkdownField
+    helpers across pre-commit.ps1, setup-plan.ps1, and get-speckit-version.ps1. Supports:
+    - Plain text:        `**Field:** value`
+    - Backtick wrapped:  `**Field:** ` + "`" + `value` + "`"
+    - List item prefix:  `- **Field:** value`
+    - Quoted value:      `**Field:** "value"`
+
+    Pass either -Content (raw string) or -Path (read from file). Returns $null when the
+    field is absent or the file does not exist.
+    #>
+    [CmdletBinding(DefaultParameterSetName = 'Content')]
+    param(
+        [Parameter(Mandatory = $true, ParameterSetName = 'Content')]
+        [AllowEmptyString()]
+        [string]$Content,
+        [Parameter(Mandatory = $true, ParameterSetName = 'Path')]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$Field
+    )
+
+    if ($PSCmdlet.ParameterSetName -eq 'Path') {
+        if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+            return $null
+        }
+        $Content = Get-Content -LiteralPath $Path -Raw
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Content)) {
+        return $null
+    }
+
+    $escapedField = [regex]::Escape($Field)
+    # Support both "**Field:**" (colon inside) used by constitution.md /
+    # WORKSPACE_STRUCTURE.md, and "**Field**:" (colon outside) used by
+    # readiness-assessment.md and friends.
+    $pattern = "(?mi)^\s*(?:-\s*)?\*\*$escapedField(?::\*\*|\*\*:)\s*(.+?)\s*$"
+    if ($Content -notmatch $pattern) {
+        return $null
+    }
+
+    $value = $Matches[1].Trim()
+
+    if ($value -match '^`(.+)`$') {
+        $value = $Matches[1]
+    } elseif ($value -match '^"(.+)"$') {
+        $value = $Matches[1]
+    }
+
+    return $value
+}
+
+# ============================================================================
+# Project init helpers (M3, M3', M20, M21)
+# ============================================================================
+
+function New-CodeWorkspaceContent {
+    <#
+    .SYNOPSIS
+    Build the JSON content for a project's <name>.code-workspace multi-root file.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectName,
+        [string]$StudioRelativePath = '../../studio',
+        [string]$AgentsRelativePath = '../../.github/agents',
+        [string]$ClaudeAgentsRelativePath = '../../.claude/agents'
+    )
+
+    $workspace = [ordered]@{
+        folders  = @(
+            [ordered]@{ name = $ProjectName;                path = '.' },
+            [ordered]@{ name = 'studio (read-only)';        path = $StudioRelativePath },
+            [ordered]@{ name = 'agents (read-only)';        path = $AgentsRelativePath },
+            [ordered]@{ name = 'claude agents (read-only)'; path = $ClaudeAgentsRelativePath }
+        )
+        settings = [ordered]@{
+            'files.readonlyInclude' = [ordered]@{
+                '**/studio/**'         = $true
+                '**/.github/agents/**' = $true
+                '**/.claude/agents/**' = $true
+            }
+        }
+    }
+
+    return ($workspace | ConvertTo-Json -Depth 4)
+}
+
+function Get-RetrospectiveContent {
+    <#
+    .SYNOPSIS
+    Build the retrospective.md scaffold content for an Internal/Client project.
+    Sources from studio/templates/sdd-docs/retrospective-template.md when available;
+    falls back to inline scaffold for backward compatibility.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectName,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Internal', 'Client')]
+        [string]$ProjectType,
+        [string]$StudioRoot,
+        [string]$CreatedDate = (Get-Date -Format 'yyyy-MM-dd')
+    )
+
+    if ($StudioRoot) {
+        $templatePath = Join-Path $StudioRoot 'templates/sdd-docs/retrospective-template.md'
+        if (Test-Path -LiteralPath $templatePath) {
+            $template = Get-Content -LiteralPath $templatePath -Raw
+            $template = $template -replace '\[PROJECT_NAME\]', $ProjectName
+            $template = $template -replace '\[PROJECT_TYPE\]', $ProjectType
+            $template = $template -replace '\[CREATED_DATE\]', $CreatedDate
+            return $template
+        }
+    }
+
+    return @"
+# Retrospective: $ProjectName
+
+**Project Type:** $ProjectType
+**Created:** $CreatedDate
+**Completed:** [TBD]
+
+## What went well?
+
+-
+
+## What was painful?
+
+-
+
+## What would I do differently?
+
+-
+
+## Time estimate vs actual
+
+| Phase | Estimated | Actual | Notes |
+|-------|-----------|--------|-------|
+| Specify | | | |
+| Clarify | | | |
+| Plan | | | |
+| Tasks | | | |
+| Implement | | | |
+| **Total** | | | |
+
+## Key Learnings
+
+> Extract significant learnings to ``studio/knowledge-base/learnings.md``
+
+-
+"@
+}
+
+function Initialize-ProjectFromTemplate {
+    <#
+    .SYNOPSIS
+    Copy the project-init template into a target directory and apply the standard
+    SDD workspace scaffold (README rewrite, project constitution, agent bootstrap,
+    code-workspace file, retrospective for Internal/Client, agent junctions, git init).
+
+    .DESCRIPTION
+    This is the unified replacement for the ~80 lines of duplicated logic between
+    init-project.ps1 (Internal/Client) and init-practice.ps1 (Practice). All file
+    operations honor -WhatIf via SupportsShouldProcess, and Copy-Item excludes any
+    stray .git metadata from the template directory.
+
+    .PARAMETER Name
+    Project name (used in README, code-workspace, retrospective heading).
+
+    .PARAMETER TargetDir
+    Absolute path where the new project root will be created.
+
+    .PARAMETER Type
+    Project classification: Practice / Internal / Client.
+
+    .PARAMETER TemplateDir
+    Source template directory (typically `studio/templates/project-init`).
+
+    .PARAMETER StudioRoot
+    Absolute path to the studio/ directory (for bootstrap script discovery and templates).
+
+    .PARAMETER WorkspaceRoot
+    Absolute path to the workspace root (for shared agent junction targets and hooks).
+
+    .PARAMETER Description
+    Optional README description; defaulted by Type if empty.
+    #>
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string]$TargetDir,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Practice', 'Internal', 'Client')]
+        [string]$Type,
+        [Parameter(Mandatory = $true)]
+        [string]$TemplateDir,
+        [Parameter(Mandatory = $true)]
+        [string]$StudioRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkspaceRoot,
+        [string]$Description
+    )
+
+    if (-not $Description) {
+        $Description = switch ($Type) {
+            'Practice' { 'A Practice project for learning and experimentation.' }
+            'Internal' { 'An Internal project for studio tools and automation.' }
+            'Client'   { 'A Client project.' }
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $TemplateDir -PathType Container)) {
+        throw "Project template not found at: $TemplateDir"
+    }
+
+    if (Test-Path -LiteralPath $TargetDir) {
+        throw "Project already exists at: $TargetDir"
+    }
+
+    $createdDate = Get-Date -Format 'yyyy-MM-dd'
+    $createdAny = $false
+
+    if ($PSCmdlet.ShouldProcess($TargetDir, "Copy project-init template (excluding .git/.gitkeep transients)")) {
+        Copy-Item -Path $TemplateDir -Destination $TargetDir -Recurse -Force -Exclude '.git'
+        $strayGit = Join-Path $TargetDir '.git'
+        if (Test-Path -LiteralPath $strayGit) {
+            Remove-Item -LiteralPath $strayGit -Recurse -Force
+        }
+        $createdAny = $true
+    }
+
+    $readmePath = Join-Path $TargetDir 'README.md'
+    if ((Test-Path -LiteralPath $readmePath) -and $PSCmdlet.ShouldProcess($readmePath, 'Substitute README placeholders')) {
+        $readmeContent = Get-Content -LiteralPath $readmePath -Raw
+        $readmeContent = $readmeContent -replace '\[PROJECT_NAME\]', $Name
+        $readmeContent = $readmeContent -replace '\[PROJECT_TYPE\]', $Type
+        $readmeContent = $readmeContent -replace '\[PROJECT_DESCRIPTION\]', $Description
+        $readmeContent = $readmeContent -replace '\[CREATED_DATE\]', $createdDate
+        Set-Content -LiteralPath $readmePath -Value $readmeContent -NoNewline
+    }
+
+    $projectConstPath = $null
+    if ($PSCmdlet.ShouldProcess((Join-Path $TargetDir '.specify/memory/constitution.md'), 'Initialize project constitution')) {
+        $projectConstPath = Initialize-ProjectConstitution -ProjectRoot $TargetDir -ProjectName $Name -ProjectType $Type -StudioRoot $StudioRoot -CreatedDate $createdDate
+    }
+
+    if ($PSCmdlet.ShouldProcess($TargetDir, 'Generate runtime agent bootstrap (AGENTS.md, CLAUDE.md, copilot-instructions)')) {
+        $bootstrapScript = Join-Path $StudioRoot 'scripts/powershell/sync-agent-bootstrap.ps1'
+        & $bootstrapScript -ProjectRoot $TargetDir -ProjectName $Name -ProjectType $Type -ProjectDescription $Description -Write | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Agent bootstrap generation failed for $TargetDir"
+        }
+    }
+
+    if ($Type -in 'Internal', 'Client') {
+        $retroPath = Join-Path $TargetDir 'retrospective.md'
+        if ($PSCmdlet.ShouldProcess($retroPath, 'Scaffold retrospective.md')) {
+            $retroContent = Get-RetrospectiveContent -ProjectName $Name -ProjectType $Type -StudioRoot $StudioRoot -CreatedDate $createdDate
+            Set-Content -LiteralPath $retroPath -Value $retroContent -NoNewline
+        }
+    }
+
+    $workspaceFile = Join-Path $TargetDir "$Name.code-workspace"
+    if ($PSCmdlet.ShouldProcess($workspaceFile, 'Write multi-root code-workspace JSON')) {
+        $workspaceContent = New-CodeWorkspaceContent -ProjectName $Name
+        Set-Content -LiteralPath $workspaceFile -Value $workspaceContent -Encoding UTF8
+    }
+
+    $junctionResults = @()
+    if ($PSCmdlet.ShouldProcess($TargetDir, 'Create shared agent junctions for Copilot and Claude')) {
+        $junctionResults = @(Initialize-ProjectSharedAgentJunctions -ProjectRoot $TargetDir -WorkspaceRoot $WorkspaceRoot)
+    }
+
+    $gitInit = $null
+    if ($PSCmdlet.ShouldProcess($TargetDir, 'Initialize independent Git repository and configure hooksPath')) {
+        $gitInit = Initialize-ProjectGitRepository -ProjectRoot $TargetDir -WorkspaceRoot $WorkspaceRoot
+    }
+
+    if ((Test-Path -LiteralPath $TargetDir) -and $PSCmdlet.ShouldProcess($TargetDir, 'Cleanup .gitkeep markers in non-empty directories')) {
+        Get-ChildItem -Path $TargetDir -Recurse -Filter '.gitkeep' -ErrorAction SilentlyContinue | ForEach-Object {
+            $parentDir = $_.DirectoryName
+            $siblingCount = @(Get-ChildItem -Path $parentDir -Exclude '.gitkeep').Count
+            if ($siblingCount -gt 0) {
+                Remove-Item -LiteralPath $_.FullName -Force
+            }
+        }
+    }
+
+    return [ordered]@{
+        targetDir            = $TargetDir
+        type                 = $Type
+        projectConstitution  = $projectConstPath
+        codeWorkspaceFile    = $workspaceFile
+        junctions            = $junctionResults
+        gitRepository        = $gitInit
+        createdDate          = $createdDate
+        anyChange            = $createdAny -or $WhatIfPreference -eq $false
+    }
 }
 
 function Get-StudioSharedLayerPaths {

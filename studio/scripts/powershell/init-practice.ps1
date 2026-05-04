@@ -6,6 +6,9 @@
     Creates a new Practice project by copying the project-init template to learning/<name>/.
     Practice projects are for learning exercises, demos, and skill-building.
 
+    Delegates the bulk of the scaffold to Initialize-ProjectFromTemplate (in common.ps1)
+    so init-project and init-practice share a single implementation.
+
 .PARAMETER Name
     The name of the project (will become the directory name).
 
@@ -15,6 +18,7 @@
 .EXAMPLE
     .\init-practice.ps1 -Name "my-first-sdd"
     .\init-practice.ps1 -Name "chatbot-demo" -Description "A simple chatbot demo using LINE API"
+    .\init-practice.ps1 -Name "preview" -WhatIf
 
 .NOTES
     Project Type: Practice
@@ -23,14 +27,17 @@
     Knowledge Capture: learnings.md update (lightweight)
 #>
 
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [ValidatePattern('^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$')]
     [string]$Name,
 
     [Parameter(Mandatory = $false)]
-    [string]$Description = ""
+    [string]$Description = ''
 )
+
+$ErrorActionPreference = 'Stop'
 
 # Import common functions
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -49,94 +56,38 @@ if (-not $workspaceRoot) {
 $templateDir = Join-Path $studioRoot 'templates/project-init'
 $targetDir = Join-Path $workspaceRoot "learning/$Name"
 
-# Validate template exists
-if (-not (Test-Path $templateDir)) {
-    Write-Error "Project template not found at: $templateDir"
-    Write-Host "Please ensure studio/templates/project-init/ exists."
-    exit 1
-}
-
-# Check if target already exists
 if (Test-Path $targetDir) {
     Write-Error "Project already exists at: $targetDir"
     Write-Host "Choose a different name or remove the existing directory."
     exit 1
 }
 
-# Create target directory and copy template
 Write-Host "Creating Practice project: $Name" -ForegroundColor Cyan
 Write-Host "Target: $targetDir" -ForegroundColor Gray
 
 try {
-    # Copy template to target
-    Copy-Item -Path $templateDir -Destination $targetDir -Recurse -Force
+    $result = Initialize-ProjectFromTemplate `
+        -Name $Name `
+        -TargetDir $targetDir `
+        -Type 'Practice' `
+        -TemplateDir $templateDir `
+        -StudioRoot $studioRoot `
+        -WorkspaceRoot $workspaceRoot `
+        -Description $Description `
+        -WhatIf:$WhatIfPreference
 
-    # Update README.md with project info
-    $readmePath = Join-Path $targetDir 'README.md'
-    if (Test-Path $readmePath) {
-        $readmeContent = Get-Content $readmePath -Raw
-        $readmeContent = $readmeContent -replace '\[PROJECT_NAME\]', $Name
-        $readmeContent = $readmeContent -replace '\[PROJECT_TYPE\]', 'Practice'
-        $readmeContent = $readmeContent -replace '\[PROJECT_DESCRIPTION\]', $(if ($Description) { $Description } else { "A Practice project for learning and experimentation." })
-        $readmeContent = $readmeContent -replace '\[CREATED_DATE\]', (Get-Date -Format 'yyyy-MM-dd')
-        Set-Content -Path $readmePath -Value $readmeContent -NoNewline
+    if ($WhatIfPreference) {
+        Write-Host ""
+        Write-Host "[WhatIf] No filesystem changes were applied." -ForegroundColor Yellow
+        return
     }
 
-    # Ensure project constitution exists
-    $projectConstPath = Initialize-ProjectConstitution -ProjectRoot $targetDir -ProjectName $Name -ProjectType 'Practice' -StudioRoot $studioRoot
-    Write-Host "Project constitution ready: $projectConstPath" -ForegroundColor Gray
-
-    # Generate synchronized runtime agent bootstrap adapters
-    $bootstrapScript = Join-Path $studioRoot 'scripts/powershell/sync-agent-bootstrap.ps1'
-    $practiceDescription = if ($Description) { $Description } else { "A Practice project for learning and experimentation." }
-    & $bootstrapScript -ProjectRoot $targetDir -ProjectName $Name -ProjectType 'Practice' -ProjectDescription $practiceDescription -Write | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Agent bootstrap generation failed for $targetDir"
+    if ($result.projectConstitution) {
+        Write-Host "Project constitution ready: $($result.projectConstitution)" -ForegroundColor Gray
     }
     Write-Host "Generated AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md" -ForegroundColor Gray
 
-    # Remove .gitkeep files if directories have content
-    Get-ChildItem -Path $targetDir -Recurse -Filter '.gitkeep' | ForEach-Object {
-        $parentDir = $_.DirectoryName
-        $siblingCount = (Get-ChildItem -Path $parentDir -Exclude '.gitkeep').Count
-        if ($siblingCount -gt 0) {
-            Remove-Item $_.FullName -Force
-        }
-    }
-
-    # Create .code-workspace file for multi-root workspace support
-    $workspaceFile = Join-Path $targetDir "$Name.code-workspace"
-    $workspaceContent = @{
-        folders  = @(
-            @{
-                name = $Name
-                path = "."
-            },
-            @{
-                name = "studio (read-only)"
-                path = "../../studio"
-            },
-            @{
-                name = "agents (read-only)"
-                path = "../../.github/agents"
-            },
-            @{
-                name = "claude agents (read-only)"
-                path = "../../.claude/agents"
-            }
-        )
-        settings = @{
-            "files.readonlyInclude" = @{
-                "**/studio/**"          = $true
-                "**/.github/agents/**"  = $true
-                "**/.claude/agents/**"  = $true
-            }
-        }
-    } | ConvertTo-Json -Depth 4
-    Set-Content -Path $workspaceFile -Value $workspaceContent -Encoding UTF8
-
-    # Create shared agent junctions for Copilot and Claude runtime discovery
-    foreach ($junction in @(Initialize-ProjectSharedAgentJunctions -ProjectRoot $targetDir -WorkspaceRoot $workspaceRoot)) {
+    foreach ($junction in $result.junctions) {
         if ($junction.available) {
             $verb = if ($junction.created) { 'Created' } else { 'Verified' }
             $relativePath = [System.IO.Path]::GetRelativePath($targetDir, $junction.path)
@@ -146,8 +97,13 @@ try {
         }
     }
 
+    if ($result.gitRepository) {
+        $gitVerb = if ($result.gitRepository.initialized) { 'Initialized' } else { 'Verified' }
+        Write-Host "$gitVerb independent Git repository with hooksPath: $($result.gitRepository.hooksPath)" -ForegroundColor Gray
+    }
+
     Write-Host ""
-    Write-Host "✓ Practice project created successfully!" -ForegroundColor Green
+    Write-Host "[OK] Practice project created successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
     Write-Host "  1. Open project with multi-root workspace:"
@@ -158,12 +114,10 @@ try {
     Write-Host "Workspace File: $Name.code-workspace (includes studio, Copilot agents, and Claude agents as read-only)" -ForegroundColor Cyan
     Write-Host "Knowledge Capture: Update studio/knowledge-base/learnings.md when complete"
     Write-Host ""
-
 }
 catch {
     Write-Error "Failed to create project: $_"
-    # Cleanup on failure
-    if (Test-Path $targetDir) {
+    if ((Test-Path $targetDir) -and -not $WhatIfPreference) {
         Remove-Item -Path $targetDir -Recurse -Force
     }
     exit 1

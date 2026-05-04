@@ -5,6 +5,8 @@ BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
     . (Get-ScriptFunctionsBlock -ScriptPath (Join-Path $WorkspaceRoot '.githooks/pre-commit.ps1'))
     $script:workspaceRoot = $WorkspaceRoot
+    $script:repoRoot = $WorkspaceRoot
+    $script:isWorkspaceRepo = $true
 }
 
 # ============================================================
@@ -208,11 +210,42 @@ Describe 'Get-ChangeTypesFromPaths' {
     }
 }
 
+Describe 'staged change parsing' {
+    It 'parses delete and rename records from name-status -z output' {
+        $raw = "D`0studio/templates/sdd-docs/spec-template.md`0R100`0README.md`0README-new.md`0"
+        $result = ConvertFrom-GitNameStatusZ -Raw $raw
+
+        $result.Count | Should -Be 2
+        $result[0].Status | Should -Be 'D'
+        $result[0].Path | Should -Be 'studio/templates/sdd-docs/spec-template.md'
+        $result[1].Status | Should -Be 'R100'
+        $result[1].OldPath | Should -Be 'README.md'
+        $result[1].Path | Should -Be 'README-new.md'
+    }
+
+    It 'detects shared gate hits for staged delete and rename paths' {
+        $raw = "D`0studio/templates/sdd-docs/spec-template.md`0R100`0studio/runtime/shared-runtime-contract.json`0studio/runtime/contract-renamed.json`0"
+        $changes = ConvertFrom-GitNameStatusZ -Raw $raw
+        $touched = Get-StagedTouchedPaths -Changes $changes
+
+        @($touched | Where-Object {
+            Test-IsSharedGateHit -Path $_ -GatePaths @(
+                'studio/runtime/shared-runtime-contract.json',
+                'studio/templates/sdd-docs/spec-template.md'
+            )
+        }).Count | Should -Be 2
+    }
+}
+
 Describe 'agent bootstrap path helpers' {
     It 'treats root adapter files as workspace root bootstrap files' {
         Get-AgentBootstrapProjectRootForPath -Path 'AGENTS.md' | Should -Be $WorkspaceRoot
         Get-AgentBootstrapProjectRootForPath -Path 'CLAUDE.md' | Should -Be $WorkspaceRoot
         Get-AgentBootstrapProjectRootForPath -Path '.github/copilot-instructions.md' | Should -Be $WorkspaceRoot
+    }
+
+    It 'treats root project constitution as the current repository root' {
+        Get-AgentBootstrapProjectRootForPath -Path '.specify/memory/constitution.md' | Should -Be $WorkspaceRoot
     }
 
     It 'resolves nested project adapter paths to their project root' {
@@ -232,6 +265,238 @@ Describe 'agent bootstrap path helpers' {
         Test-IsAgentAdapterPath -Path 'projects/example/.github/copilot-instructions.md' | Should -BeTrue
         Test-IsProjectConstitutionPath -Path 'projects/example/.specify/memory/constitution.md' | Should -BeTrue
         Test-IsAgentAdapterPath -Path '.github/agents/copilot-instructions.md' | Should -BeFalse
+    }
+}
+
+Describe 'pre-commit integration gates' {
+    BeforeAll {
+        $script:preCommitScript = Join-Path $WorkspaceRoot '.githooks/pre-commit.ps1'
+        $script:syncScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/sync-agent-bootstrap.ps1'
+    }
+
+    It 'fails when only part of the adapter set is staged' {
+        $repo = Join-Path $TestDrive 'partial-adapters'
+        New-Item -ItemType Directory -Path (Join-Path $repo '.specify/memory') -Force | Out-Null
+        '# Project Constitution' | Set-Content -LiteralPath (Join-Path $repo '.specify/memory/constitution.md')
+        git init -b main $repo | Out-Null
+
+        pwsh -NoProfile -File $script:syncScript -ProjectRoot $repo -ProjectName fixture -ProjectType Internal -Write -Json | Out-Null
+        git -C $repo add AGENTS.md CLAUDE.md | Out-Null
+
+        Push-Location $repo
+        try {
+            $output = pwsh -NoProfile -File $script:preCommitScript 2>&1
+            $exitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        $exitCode | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Runtime adapter must be staged with its synchronized set'
+    }
+
+    It 'fails when a staged plan has no staged readiness approval' {
+        $repo = Join-Path $TestDrive 'plan-without-readiness'
+        New-Item -ItemType Directory -Path (Join-Path $repo 'specs/001-fixture') -Force | Out-Null
+        git init -b main $repo | Out-Null
+
+        @"
+# Plan: Fixture
+
+## Architecture
+Text
+## Technology
+Text
+## Integration
+Text
+## Data Flow
+Text
+## Risks
+Text
+## Why Not
+Text
+## Estimated timeline
+Text
+**Version**: v1.0.0
+"@ | Set-Content -LiteralPath (Join-Path $repo 'specs/001-fixture/plan.md')
+        git -C $repo add specs/001-fixture/plan.md | Out-Null
+
+        Push-Location $repo
+        try {
+            $output = pwsh -NoProfile -File $script:preCommitScript 2>&1
+            $exitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        $exitCode | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'without readiness-assessment\.md'
+    }
+
+    It 'fails when project constitution changes without staging the adapter set' {
+        $repo = Join-Path $TestDrive 'constitution-without-adapters'
+        New-Item -ItemType Directory -Path (Join-Path $repo '.specify/memory') -Force | Out-Null
+        '# Project Constitution' | Set-Content -LiteralPath (Join-Path $repo '.specify/memory/constitution.md')
+        git init -b main $repo | Out-Null
+
+        pwsh -NoProfile -File $script:syncScript -ProjectRoot $repo -ProjectName fixture -ProjectType Internal -Write -Json | Out-Null
+        git -C $repo add .specify/memory/constitution.md | Out-Null
+
+        Push-Location $repo
+        try {
+            $output = pwsh -NoProfile -File $script:preCommitScript 2>&1
+            $exitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        $exitCode | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Runtime adapter must be staged with its synchronized set'
+    }
+}
+
+# ============================================================
+# H1 regression: mainline-update note enforcement helpers
+# ============================================================
+
+Describe 'Get-NonNoteSharedLayerFiles (H1)' {
+    It 'excludes docs/mainline-updates/* paths from shared-layer files' {
+        $files = @(
+            'studio/constitution/constitution.md',
+            'docs/mainline-updates/2026-04-30-foo.md',
+            'docs/mainline-updates/README.md',
+            '.githooks/pre-commit.ps1'
+        )
+        $result = Get-NonNoteSharedLayerFiles -SharedLayerFiles $files
+        $result | Should -Contain 'studio/constitution/constitution.md'
+        $result | Should -Contain '.githooks/pre-commit.ps1'
+        $result | Should -Not -Contain 'docs/mainline-updates/2026-04-30-foo.md'
+        $result | Should -Not -Contain 'docs/mainline-updates/README.md'
+    }
+
+    It 'returns empty array for empty input' {
+        $result = Get-NonNoteSharedLayerFiles -SharedLayerFiles @()
+        $result.Count | Should -Be 0
+    }
+
+    It 'returns empty array when all files are mainline-updates entries' {
+        $files = @('docs/mainline-updates/a.md', 'docs/mainline-updates/README.md')
+        $result = Get-NonNoteSharedLayerFiles -SharedLayerFiles $files
+        $result.Count | Should -Be 0
+    }
+}
+
+Describe 'Get-StagedMainlineUpdateNotes (H1)' {
+    It 'matches docs/mainline-updates/<date>-<topic>.md' {
+        $files = @(
+            'docs/mainline-updates/2026-04-30-critical-bug-cleanup.md',
+            'docs/mainline-updates/README.md',
+            'studio/constitution/constitution.md'
+        )
+        $result = Get-StagedMainlineUpdateNotes -StagedFiles $files
+        $result | Should -Contain 'docs/mainline-updates/2026-04-30-critical-bug-cleanup.md'
+        $result | Should -Not -Contain 'docs/mainline-updates/README.md'
+        $result | Should -Not -Contain 'studio/constitution/constitution.md'
+    }
+
+    It 'rejects subdirectory paths (only flat <date>-<topic>.md files)' {
+        $files = @('docs/mainline-updates/archive/old.md', 'docs/mainline-updates/2026-04-30-foo.md')
+        $result = Get-StagedMainlineUpdateNotes -StagedFiles $files
+        $result | Should -Not -Contain 'docs/mainline-updates/archive/old.md'
+        $result | Should -Contain 'docs/mainline-updates/2026-04-30-foo.md'
+    }
+
+    It 'returns empty for no staged notes' {
+        $result = Get-StagedMainlineUpdateNotes -StagedFiles @('README.md', 'src/main.js')
+        $result.Count | Should -Be 0
+    }
+}
+
+# ============================================================
+# H4 regression: Invoke-SharedRuntimeAuditOnStagedSnapshot
+# defensive marker presence check (inspection-based regression).
+# Ensures future refactors do not silently remove the $auditConfirmed
+# safety net that catches uncovered failure paths.
+# ============================================================
+
+Describe 'Invoke-SharedRuntimeAuditOnStagedSnapshot defensive marker (H4)' {
+    BeforeAll {
+        $script:hookContent = Get-Content -LiteralPath (Join-Path $WorkspaceRoot '.githooks/pre-commit.ps1') -Raw
+    }
+
+    It 'declares $auditConfirmed local marker' {
+        $hookContent | Should -Match '\$auditConfirmed\s*=\s*\$false'
+    }
+
+    It 'sets $auditConfirmed = $true on the success path' {
+        $hookContent | Should -Match 'Write-HookSuccess[^\r\n]*Shared runtime audit passed against staged snapshot[\s\S]*?\$auditConfirmed\s*=\s*\$true'
+    }
+
+    It 'has finally fallback that flags uncovered failure paths' {
+        $hookContent | Should -Match 'if\s*\(\s*-not\s+\$auditConfirmed\s+-and\s+-not\s+\$script:hasErrors\s*\)'
+    }
+}
+
+# ============================================================
+# H3 e2e: Invoke-SharedRuntimeAuditOnStagedSnapshot end-to-end failure path.
+# Mirrors a minimum subset of the workspace into TestDrive so the hook treats
+# it as the workspace repo and runs check-speckit-runtime against the staged
+# snapshot. Then breaks the contract on purpose and asserts the hook fails.
+# ============================================================
+
+Describe 'staged snapshot audit fails on broken contract (H3)' {
+    BeforeAll {
+        $script:fixtureRoot = Join-Path $TestDrive 'audit-failure-fixture'
+        New-Item -ItemType Directory -Path $script:fixtureRoot -Force | Out-Null
+
+        # Mirror minimum workspace structure required by check-speckit-runtime.
+        $dirsToMirror = @('.githooks', '.github', '.claude', 'studio')
+        foreach ($dir in $dirsToMirror) {
+            $src = Join-Path $WorkspaceRoot $dir
+            if (Test-Path -LiteralPath $src) {
+                $dst = Join-Path $script:fixtureRoot $dir
+                Copy-Item -Path $src -Destination $dst -Recurse -Force
+            }
+        }
+        foreach ($file in @('AGENTS.md', 'CLAUDE.md', 'README.md', 'WORKSPACE_STRUCTURE.md')) {
+            $src = Join-Path $WorkspaceRoot $file
+            if (Test-Path -LiteralPath $src) {
+                Copy-Item -Path $src -Destination (Join-Path $script:fixtureRoot $file) -Force
+            }
+        }
+
+        git init -b main $script:fixtureRoot 2>&1 | Out-Null
+        git -C $script:fixtureRoot config user.email 'test@example.com' | Out-Null
+        git -C $script:fixtureRoot config user.name 'Test' | Out-Null
+        git -C $script:fixtureRoot add -A 2>&1 | Out-Null
+        git -C $script:fixtureRoot commit -m 'chore: baseline' --no-verify 2>&1 | Out-Null
+    }
+
+    It 'fails when staged contract introduces a missing required prompt stub' {
+        # Stage a sharedGatePaths file (constitution) so the audit triggers.
+        $constitutionPath = Join-Path $script:fixtureRoot 'studio/constitution/constitution.md'
+        Add-Content -LiteralPath $constitutionPath -Value "`n<!-- harmless edit for H3 fixture -->"
+
+        # Break the contract: add a requiredPromptStub for a file that does not exist.
+        $contractPath = Join-Path $script:fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json -AsHashtable
+        $contract.requiredPromptStubs = @(@($contract.requiredPromptStubs) + 'speckit.does-not-exist.prompt.md')
+        ($contract | ConvertTo-Json -Depth 100) | Set-Content -LiteralPath $contractPath -Encoding UTF8
+
+        # Add a mainline-update note so H1 rule does not fire instead of audit.
+        $notePath = Join-Path $script:fixtureRoot 'docs/mainline-updates/2099-01-01-h3-fixture.md'
+        New-Item -ItemType Directory -Path (Split-Path $notePath) -Force | Out-Null
+        Set-Content -LiteralPath $notePath -Value "# H3 fixture note`n`nFor staged-snapshot audit failure test." -Encoding UTF8
+
+        git -C $script:fixtureRoot add studio/constitution/constitution.md studio/runtime/shared-runtime-contract.json docs/mainline-updates/2099-01-01-h3-fixture.md 2>&1 | Out-Null
+
+        Push-Location $script:fixtureRoot
+        try {
+            $output = pwsh -NoProfile -File (Join-Path $script:fixtureRoot '.githooks/pre-commit.ps1') 2>&1
+            $exitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+
+        $exitCode | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Shared runtime audit failed against staged snapshot'
     }
 }
 

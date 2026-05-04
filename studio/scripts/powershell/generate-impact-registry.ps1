@@ -183,6 +183,33 @@ $builtinImpactRouting = @(
             @{ target = 'specs/<feature>/intent-ledger.md';                 impact = 'must_review'; reason = 'Scope compression tracking may need new or updated rows' }
             @{ target = 'specs/<feature>/plan.md';                          impact = 'must_update'; reason = 'Plan must reflect current spec requirements' }
             @{ target = 'specs/<feature>/tasks.md';                         impact = 'must_update'; reason = 'Tasks must reflect current plan derived from spec' }
+            @{ target = 'README.md';                                        impact = 'maybe_review'; reason = 'Surface truthfulness (constitution Section 12): umbrella feature names with shrunken coverage MUST be disclosed to readers' }
+            @{ target = 'studio/QUICKSTART.md';                             impact = 'maybe_review'; reason = 'Surface truthfulness: outward-facing quickstart MUST not over-claim against compressed core scope' }
+        )
+    }
+    @{
+        changeType  = 'readiness_change'
+        trigger     = 'specs/<feature>/readiness/readiness-assessment.md'
+        description = 'Any change to a feature readiness assessment; downstream planning artifacts must be revalidated'
+        rules       = @(
+            @{ target = 'specs/<feature>/intent-ledger.md';                       impact = 'must_review'; reason = 'Readiness classification changes may surface new represented/deferred/dropped core items' }
+            @{ target = 'specs/<feature>/plan.md';                                impact = 'must_update'; reason = 'Plan must reflect the latest readiness primary status and Intent Recovery Obligations' }
+            @{ target = 'specs/<feature>/tasks.md';                               impact = 'must_update'; reason = 'Tasks may need restructuring when readiness gates change' }
+            @{ target = 'specs/<feature>/readiness/eci/eci-assessment.md';        impact = 'maybe_review'; reason = 'ECI dossier may be referenced as governed input on readiness re-entry' }
+        )
+    }
+    @{
+        changeType  = 'worktree_parity_change'
+        trigger     = 'docs/project-worktree-parity-governance.md'
+        description = 'Changes to consumer-project derived worktree parity governance; ripple to bootstrap and init scripts'
+        rules       = @(
+            @{ target = 'studio/scripts/powershell/new-project-worktree.ps1'; impact = 'must_update'; reason = 'Worktree bootstrap script must implement the parity rules' }
+            @{ target = 'studio/scripts/powershell/init-project.ps1';         impact = 'must_review'; reason = 'Project init must produce baseline parity that derived worktrees inherit' }
+            @{ target = 'studio/scripts/powershell/init-practice.ps1';        impact = 'must_review'; reason = 'Practice init must produce baseline parity that derived worktrees inherit' }
+            @{ target = 'studio/runtime/shared-runtime-contract.json';        impact = 'maybe_review'; reason = 'Contract sharedGatePaths and runtime invariants may need updates' }
+            @{ target = 'studio/QUICKSTART.md';                               impact = 'maybe_review'; reason = 'Quickstart may reference worktree behavior' }
+            @{ target = 'studio/SDD-QUICKSTART-GUIDE.md';                     impact = 'maybe_review'; reason = 'SDD guide may reference worktree behavior' }
+            @{ target = 'WORKSPACE_STRUCTURE.md';                             impact = 'maybe_review'; reason = 'Workspace structure overview may need updated parity description' }
         )
     }
     @{
@@ -305,7 +332,7 @@ function Get-FrontmatterOverrides {
 
     # Scan .md files with drift-governance blocks
     $mdFiles = @(Get-ChildItem -Path $workspaceRoot -Filter '*.md' -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git|projects|learning)[\\/]' })
+        Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git|projects|learning|resources|merged)[\\/]|[\\/]studio[\\/]upstream[\\/]' })
 
     foreach ($file in $mdFiles) {
         $meta = Read-DriftGovernanceBlock -FilePath $file.FullName
@@ -317,7 +344,7 @@ function Get-FrontmatterOverrides {
 
     # Scan .ps1 files
     $ps1Files = @(Get-ChildItem -Path $workspaceRoot -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git|projects|learning)[\\/]' })
+        Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git|projects|learning|resources|merged)[\\/]|[\\/]studio[\\/]upstream[\\/]' })
 
     foreach ($file in $ps1Files) {
         $meta = Read-DriftGovernanceBlock -FilePath $file.FullName

@@ -40,6 +40,7 @@ function Get-FrontMatterAndBody {
 
     $lines = [System.IO.File]::ReadAllLines($Path, $Utf8)
     if ($lines.Count -lt 3 -or $lines[0] -ne '---') {
+        Write-Warning "Frontmatter missing or malformed in '$Path' (no leading '---' delimiter); skipping."
         return $null
     }
 
@@ -52,6 +53,7 @@ function Get-FrontMatterAndBody {
     }
 
     if ($endIndex -lt 0) {
+        Write-Warning "Frontmatter missing closing '---' delimiter in '$Path'; skipping."
         return $null
     }
 
@@ -224,6 +226,7 @@ function Write-ClaudeAgentFile {
     $lines.Add('---')
     $lines.Add('')
     $lines.Add(("<!-- Seeded from .github/agents/{0} via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->" -f $sourceFileName))
+    $lines.Add(("<!-- WARNING: This file is a seeded copy from .github/agents/{0}. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->" -f $sourceFileName))
     if ($parsed.Body.Count -gt 0) {
         foreach ($bodyLine in $parsed.Body) {
             $lines.Add([string]$bodyLine)
@@ -236,17 +239,20 @@ function Write-ClaudeAgentFile {
     return [ordered]@{
         name       = $name
         sourceFile = $sourceFileName
-        outputPath = $outputPath
+        outputPath = ($outputPath -replace '\\', '/')
     }
 }
 
 $generated = @()
+$skipped = @()
 Get-ChildItem -LiteralPath $sourceDir -File -Filter '*.md' |
     Sort-Object Name |
     ForEach-Object {
         $result = Write-ClaudeAgentFile -SourcePath $_.FullName -OutputDir $outputDir
         if ($null -ne $result) {
             $generated += $result
+        } else {
+            $skipped += $_.Name
         }
     }
 
@@ -255,7 +261,9 @@ $result = [ordered]@{
     sourceDir     = $sourceDir
     outputDir     = $outputDir
     generated     = @($generated)
+    skipped       = @($skipped)
     count         = $generated.Count
+    skippedCount  = $skipped.Count
 }
 
 if ($Json) {

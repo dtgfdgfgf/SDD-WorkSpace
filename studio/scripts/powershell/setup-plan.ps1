@@ -20,6 +20,36 @@ if ($Help) {
 # Load common functions
 . "$PSScriptRoot/common.ps1"
 
+function Assert-ReadyForPlan {
+    param([Parameter(Mandatory = $true)][object]$Paths)
+
+    if (-not (Test-Path -LiteralPath $Paths.READINESS_ASSESSMENT -PathType Leaf)) {
+        throw "readiness-assessment.md is required before planning. Run /speckit.readiness first: $($Paths.READINESS_ASSESSMENT)"
+    }
+
+    $readinessContent = Get-Content -LiteralPath $Paths.READINESS_ASSESSMENT -Raw
+    $primaryStatus = Get-MarkdownField -Content $readinessContent -Field 'Primary Status'
+    if ($primaryStatus -ne 'READY_FOR_PLAN') {
+        throw "Planning is blocked because readiness Primary Status is '$primaryStatus'. Complete readiness remediation before running /speckit.plan."
+    }
+
+    $ledgerRequirement = Get-MarkdownField -Content $readinessContent -Field 'Intent Ledger Requirement'
+    if ($ledgerRequirement -match 'Create\s+`?intent-ledger\.md`?|Update\s+`?intent-ledger\.md`?') {
+        if (-not (Test-Path -LiteralPath $Paths.INTENT_LEDGER -PathType Leaf)) {
+            throw "Planning is blocked because readiness requires intent-ledger.md, but it does not exist: $($Paths.INTENT_LEDGER)"
+        }
+    }
+
+    $authorizationRecord = Join-Path $Paths.ECI_DIR 'authorization-record.md'
+    if (Test-Path -LiteralPath $authorizationRecord -PathType Leaf) {
+        $authorizationContent = Get-Content -LiteralPath $authorizationRecord -Raw
+        $authorizationOutcome = Get-MarkdownField -Content $authorizationContent -Field 'Authorization Outcome'
+        if ($authorizationOutcome -ne 'READY_FOR_MAINLINE_IMPLEMENTATION') {
+            throw "Planning is blocked because ECI Authorization Outcome is '$authorizationOutcome'. Re-run /speckit.readiness after resolving the ECI boundary."
+        }
+    }
+}
+
 # Get all paths and variables from common functions
 $paths = Get-FeaturePathsEnv
 
@@ -27,6 +57,8 @@ $paths = Get-FeaturePathsEnv
 if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit $paths.HAS_GIT)) { 
     exit 1 
 }
+
+Assert-ReadyForPlan -Paths $paths
 
 # Ensure the feature directory exists
 New-Item -ItemType Directory -Path $paths.FEATURE_DIR -Force | Out-Null

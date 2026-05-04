@@ -75,3 +75,58 @@ Describe 'Test-PathInsideRoot edge cases' {
         Test-PathInsideRoot -Root $root -Candidate $escape | Should -BeFalse
     }
 }
+
+Describe 'Initialize-ProjectGitRepository' {
+    It 'initializes an independent project repo and configures hooksPath to workspace hooks' {
+        $workspace = Join-Path $TestDrive 'workspace'
+        $project = Join-Path $workspace 'projects/example'
+        New-Item -ItemType Directory -Path (Join-Path $workspace '.githooks') -Force | Out-Null
+        New-Item -ItemType Directory -Path $project -Force | Out-Null
+
+        $result = Initialize-ProjectGitRepository -ProjectRoot $project -WorkspaceRoot $workspace
+
+        $result.initialized | Should -BeTrue
+        (Test-Path -LiteralPath (Join-Path $project '.git')) | Should -BeTrue
+        $hooksPath = git -C $project config core.hooksPath
+        $hooksPath | Should -Be '../../.githooks'
+    }
+}
+
+# ============================================================
+# H5 regression: .gitkeep cleanup count safety
+# init-project.ps1 / init-practice.ps1 wrap Get-ChildItem in @() so that a
+# single result still returns Count = 1 instead of $null.
+# ============================================================
+
+Describe '.gitkeep cleanup Count safety (H5 regression)' {
+    It 'returns Count = 1 for single sibling when wrapped in @()' {
+        $dir = Join-Path $TestDrive 'h5-single'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir '.gitkeep') -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir 'README.md') -Force | Out-Null
+
+        $count = @(Get-ChildItem -Path $dir -Exclude '.gitkeep').Count
+        $count | Should -Be 1
+    }
+
+    It 'returns Count = 0 when only .gitkeep exists' {
+        $dir = Join-Path $TestDrive 'h5-empty'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir '.gitkeep') -Force | Out-Null
+
+        $count = @(Get-ChildItem -Path $dir -Exclude '.gitkeep').Count
+        $count | Should -Be 0
+    }
+
+    It 'returns Count = N for N siblings' {
+        $dir = Join-Path $TestDrive 'h5-many'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir '.gitkeep') -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir 'a.md') -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir 'b.md') -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $dir 'c.md') -Force | Out-Null
+
+        $count = @(Get-ChildItem -Path $dir -Exclude '.gitkeep').Count
+        $count | Should -Be 3
+    }
+}

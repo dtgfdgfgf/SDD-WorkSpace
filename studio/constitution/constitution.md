@@ -282,6 +282,17 @@ AI agents MUST operate under the following principles:
 - All AI-generated content MUST be manually reviewed
 - AI MAY NOT skip SDD stages or suggest skipping stages
 
+Auxiliary command roles (per Section 2 plus the version command):
+
+- checklist: emit a stage-agnostic checklist scaffold for arbitrary review work
+- constitution: produce or update a project constitution skeleton
+- discover: optional pre-spec discovery aid for messy inputs
+- taskstoissues: convert a finalized tasks.md into tracker issue stubs
+- version: report the current studio runtime version, contract version, and SDD agent set in a machine-readable form for diagnostic and audit reporting
+
+These commands are not part of the seven mandatory delivery stages, and they do not satisfy any
+mandatory-stage entry gate by themselves.
+
 ### Runtime Agent Bootstrap Governance
 
 Agent startup context MUST use a five-file governance model:
@@ -303,6 +314,12 @@ Maintenance rules:
 - When one adapter changes, the other two MUST be synchronized before commit.
 - When `studio/constitution/constitution.md` changes, root adapters and new-project bootstrap templates MUST continue to reference the centralized Studio Constitution path and current version metadata.
 - Projects MUST reference the centralized Studio Constitution; project-local copies of the Studio Constitution are prohibited.
+
+Agent-scoped subset adapters (such as `.github/agents/copilot-instructions.md`) are dependent
+documents that derive from their workspace-level adapter and MAY NOT carry an independent
+`GENERATED GOVERNANCE BOOTSTRAP` block. They MUST declare their `Authority: dependent
+(agent-scoped subset)` in a leading HTML comment and MUST NOT contradict the workspace-level
+adapter from which they derive.
 
 ## 10.1 LLM-Friendly Document Formatting
 
@@ -335,6 +352,7 @@ All AI-generated `.md` files MUST follow these formatting rules:
 | `README.md`, human-facing docs | YES |
 | `learnings.md`, `retrospective.md` | YES |
 
+<!-- governance-anchor: constitution-section-11-required-project-structure -->
 ## 11. Required Project Structure
 
 Each project MUST contain the following base paths. Items marked "when required" or "when triggered" are conditional on their trigger criteria being met (see relevant sections for details):
@@ -355,6 +373,7 @@ Each project MUST contain the following base paths. Items marked "when required"
 | `docs/` | Documentation |
 | `README.md` | Project overview |
 
+<!-- governance-anchor: constitution-section-12-governance-rules -->
 ## 12. Governance Rules
 
 ### Dual-Layer Compliance

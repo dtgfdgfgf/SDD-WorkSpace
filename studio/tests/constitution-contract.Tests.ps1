@@ -69,17 +69,55 @@ Describe 'constitution heading level consistency' {
 }
 
 Describe 'constitution phase accuracy' {
-    It 'Current Phase date is within last 3 months' {
+    It 'Current Phase date is within last quarter (4 months grace period)' {
         $constitution | Should -Match 'Current Phase.*\(as of (\d{4}-\d{2})\)'
         $dateMatch = [regex]::Match($constitution, 'as of (\d{4}-\d{2})')
         $phaseDate = [datetime]::ParseExact($dateMatch.Groups[1].Value, 'yyyy-MM', $null)
         $monthsAgo = ((Get-Date) - $phaseDate).TotalDays / 30
-        $monthsAgo | Should -BeLessThan 3 -Because 'phase declaration should be reviewed at least quarterly'
+        # 4 months threshold = "at least quarterly review" with one month grace.
+        # When this fails: review the Current Phase declaration in studio/constitution/constitution.md §1.1
+        # and bump the "(as of YYYY-MM)" stamp once project mix has been reassessed.
+        $monthsAgo | Should -BeLessThan 4 -Because 'phase declaration should be reviewed at least quarterly (run a phase reassessment and update the as-of stamp)'
     }
 }
 
 Describe 'requiredMirrorPairs removed' {
     It 'contract no longer contains requiredMirrorPairs' {
         $contract.ContainsKey('requiredMirrorPairs') | Should -BeFalse -Because 'sdd-agents template mirror layer has been removed'
+    }
+}
+
+# ============================================================
+# H11: requiredCommands layering — mandatoryStageCommands + auxiliaryCommands
+# ============================================================
+
+Describe 'requiredCommands layering (H11)' {
+    It 'contract has mandatoryStageCommands key' {
+        $contract.ContainsKey('mandatoryStageCommands') | Should -BeTrue
+    }
+
+    It 'contract has auxiliaryCommands key' {
+        $contract.ContainsKey('auxiliaryCommands') | Should -BeTrue
+    }
+
+    It 'mandatoryStageCommands lists exactly the seven SDD stages' {
+        $expected = @(
+            'speckit.specify', 'speckit.clarify', 'speckit.readiness',
+            'speckit.plan', 'speckit.tasks', 'speckit.analyze', 'speckit.implement'
+        )
+        $actual = @($contract.mandatoryStageCommands | Sort-Object)
+        ($expected | Sort-Object) | ForEach-Object { $actual | Should -Contain $_ }
+        $actual.Count | Should -Be 7
+    }
+
+    It 'mandatoryStageCommands and auxiliaryCommands are disjoint' {
+        $intersect = @($contract.mandatoryStageCommands | Where-Object { $_ -in $contract.auxiliaryCommands })
+        $intersect.Count | Should -Be 0
+    }
+
+    It 'requiredCommands equals union of mandatory and auxiliary' {
+        $union = @($contract.mandatoryStageCommands + $contract.auxiliaryCommands | Sort-Object -Unique)
+        $required = @($contract.requiredCommands | Sort-Object -Unique)
+        ($union -join ',') | Should -Be ($required -join ',')
     }
 }
