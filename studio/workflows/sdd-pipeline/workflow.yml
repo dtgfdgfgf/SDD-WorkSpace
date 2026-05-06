@@ -1,0 +1,180 @@
+schema_version: "1.0.0"
+workflow:
+  id: sdd-pipeline
+  name: SDD Seven-Stage Pipeline
+  version: "1.0.0"
+  integration: studio-first
+  description: |
+    Executable representation of the SDD seven-stage flow.
+    Readiness routes all 8 primary statuses through a switch.
+    ECI re-entry routes all 3 authorization outcomes through a nested switch.
+
+inputs:
+  - name: feature
+    type: feature-id
+    required: true
+    description: Feature id, e.g. 001-foo. Must match the directory under specs/.
+
+steps:
+  # 1. Specify ----------------------------------------------------------------
+  - id: stage-specify
+    type: command
+    dispatch: agent
+    agent_command: /speckit.specify
+    expected_artifact: "specs/{{ inputs.feature }}/spec.md"
+    operator_message: "Run /speckit.specify in your agent IDE, produce spec.md, then resume."
+
+  # 2. Clarify ----------------------------------------------------------------
+  - id: stage-clarify-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-clarify.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-clarify
+    type: command
+    dispatch: agent
+    agent_command: /speckit.clarify
+    expected_artifact: "specs/{{ inputs.feature }}/spec.md"
+    operator_message: "Resolve every [NEEDS CLARIFICATION] marker in spec.md, then resume."
+
+  # 3. Readiness --------------------------------------------------------------
+  - id: stage-readiness-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-readiness.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-readiness
+    type: command
+    dispatch: agent
+    agent_command: /speckit.readiness
+    expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
+    operator_message: "Produce readiness-assessment.md with one of the 8 primary statuses set, then resume."
+
+  # 4. Branch on readiness's 8 primary statuses -------------------------------
+  - id: branch-readiness-status
+    type: switch
+    subject: "{{ vars.readiness_primary_status | default('NOT_READY') }}"
+    cases:
+      READY_FOR_PLAN:
+        - id: ready-confirm
+          type: gate
+          prompt: "Readiness is READY_FOR_PLAN. Proceed to /speckit.plan?"
+      ROUTE_TO_ECI:
+        - id: stage-eci
+          type: command
+          dispatch: agent
+          agent_command: /speckit.eci
+          expected_artifact: "specs/{{ inputs.feature }}/readiness/eci/authorization-record.md"
+          operator_message: "Run /speckit.eci to produce the ECI dossier, then resume."
+        - id: branch-eci-authorization
+          type: switch
+          subject: "{{ vars.eci_authorization_outcome | default('NOT_READY') }}"
+          cases:
+            READY_FOR_MAINLINE_IMPLEMENTATION:
+              - id: eci-mainline-confirm
+                type: gate
+                prompt: "ECI cleared. Re-run readiness, then resume to plan."
+            READY_FOR_SANDBOX_ONLY:
+              - id: eci-sandbox-halt
+                type: gate
+                prompt: "ECI authorization is READY_FOR_SANDBOX_ONLY. Mainline implementation is not authorized. Acknowledge and halt."
+            READY_FOR_SPIKE_ONLY:
+              - id: eci-spike-halt
+                type: gate
+                prompt: "ECI authorization is READY_FOR_SPIKE_ONLY. Mainline implementation is not authorized. Acknowledge and halt."
+          default:
+            - id: eci-not-ready-halt
+              type: gate
+              prompt: "ECI dossier is missing or NOT_READY. Resolve before resuming."
+      ROUTE_TO_REPO_CONTEXT:
+        - id: route-repo-context-halt
+          type: gate
+          prompt: "Readiness emitted repo-context-packet.md. Resolve, re-run readiness, then resume."
+      ROUTE_TO_DECISION:
+        - id: route-decision-halt
+          type: gate
+          prompt: "Readiness emitted decision-record.md. Owner decision required before resume."
+      ROUTE_TO_VALIDATION:
+        - id: route-validation-halt
+          type: gate
+          prompt: "Readiness emitted validation-contract.md. Define evidence-of-done before resume."
+      ROUTE_TO_ACCESS:
+        - id: route-access-halt
+          type: gate
+          prompt: "Readiness emitted access-setup-checklist.md. Resolve operational prerequisites before resume."
+      EXPLORATORY_ONLY:
+        - id: exploratory-halt
+          type: gate
+          prompt: "Readiness classifies feature as EXPLORATORY_ONLY. Mainline planning not authorized."
+      NOT_READY:
+        - id: not-ready-halt
+          type: gate
+          prompt: "Readiness is NOT_READY. Resolve hard blockers before resume."
+    default:
+      - id: status-default-halt
+        type: gate
+        prompt: "Readiness primary status is unknown. Resolve and resume."
+
+  # 5. Plan -------------------------------------------------------------------
+  - id: stage-plan-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-plan.ps1
+    args: ["-Json"]
+    capture: { json: true }
+
+  - id: stage-plan
+    type: command
+    dispatch: agent
+    agent_command: /speckit.plan
+    expected_artifact: "specs/{{ inputs.feature }}/plan.md"
+    operator_message: "Run /speckit.plan to produce plan.md with a Version field, then resume."
+
+  # 6. Tasks ------------------------------------------------------------------
+  - id: stage-tasks-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-tasks.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-tasks
+    type: command
+    dispatch: agent
+    agent_command: /speckit.tasks
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    operator_message: "Run /speckit.tasks to produce dependency-ordered tasks.md, then resume."
+
+  # 7. Analyze ----------------------------------------------------------------
+  - id: stage-analyze-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-analyze.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-analyze
+    type: command
+    dispatch: agent
+    agent_command: /speckit.analyze
+    expected_artifact: "specs/{{ inputs.feature }}/analysis-checklist.md"
+    operator_message: "Run /speckit.analyze, capture findings into analysis-checklist.md, then resume."
+
+  # 8. Implement --------------------------------------------------------------
+  - id: stage-implement-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-implement.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-implement
+    type: command
+    dispatch: agent
+    agent_command: /speckit.implement
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    operator_message: "Run /speckit.implement to execute the task list, then resume to mark the workflow complete."

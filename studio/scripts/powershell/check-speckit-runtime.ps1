@@ -144,6 +144,12 @@ function Invoke-PathContractChecks {
 
 $paths = Get-StudioSharedLayerPaths -StartDir $PSScriptRoot
 $validator = Invoke-JsonScript -ScriptPath $paths.EXTENSIONS_VALIDATOR_PATH -Arguments @('-Json')
+$listWorkflowsScript = Join-Path $paths.SHARED_SCRIPTS_DIR 'list-workflows.ps1'
+$workflowList = if (Test-Path -LiteralPath $listWorkflowsScript) { Invoke-JsonScript -ScriptPath $listWorkflowsScript -Arguments @('-Json') } else { $null }
+$workflowYamlAvailable = [bool](Get-Module -ListAvailable -Name 'powershell-yaml' | Select-Object -First 1)
+if ($workflowList -and -not $workflowYamlAvailable) {
+    $warnings += 'powershell-yaml module is not installed; the workflow runtime requires it. Install: Install-Module -Name powershell-yaml -Scope CurrentUser'
+}
 $runtimeSources = Get-ExtensionAwareRuntimeSources -StartDir $PSScriptRoot
 $updateAgentContextPath = Join-Path $paths.SHARED_SCRIPTS_DIR 'update-agent-context.ps1'
 $supportedAgentContexts = Get-SupportedAgentContexts -Path $updateAgentContextPath
@@ -338,6 +344,10 @@ if (-not $contract) {
     $scriptContractResult = Invoke-PathContractChecks -Entries ($contract.scriptInvariants ?? @()) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'script-semantics' -MissingMessage 'Shared script required by semantic contract is missing.'
     $scriptSemanticChecks = @($scriptContractResult.Checks)
     $failures += @($scriptContractResult.Failures)
+
+    $workflowContractResult = Invoke-PathContractChecks -Entries ($contract.workflowInvariants ?? @()) -RootPath $paths.WORKSPACE_ROOT -FailureCategory 'workflow-semantics' -MissingMessage 'Workflow definition required by semantic contract is missing.'
+    $workflowSemanticChecks = @($workflowContractResult.Checks)
+    $failures += @($workflowContractResult.Failures)
 }
 
 $agentBootstrapScript = Join-Path $paths.SHARED_SCRIPTS_DIR 'check-agent-bootstrap.ps1'
@@ -439,6 +449,12 @@ $result = [ordered]@{
     ENABLED_EXTENSIONS        = $enabledExtensions
     EXTENSION_ERRORS          = $validator.ERROR_COUNT
     EXTENSION_WARNINGS        = $validator.WARNING_COUNT
+    STUDIO_WORKFLOW_REGISTRY_VALID = if ($workflowList) { [bool]$workflowList.VALID } else { $false }
+    STUDIO_WORKFLOW_COUNT          = if ($workflowList) { [int]$workflowList.COUNT } else { 0 }
+    STUDIO_WORKFLOW_ENABLED        = if ($workflowList) { @($workflowList.WORKFLOWS | Where-Object { $_.enabled -eq $true } | ForEach-Object { $_.id }) } else { @() }
+    STUDIO_WORKFLOW_ERRORS         = if ($workflowList) { [int]$workflowList.ERROR_COUNT } else { 0 }
+    STUDIO_WORKFLOW_WARNINGS       = 0
+    STUDIO_WORKFLOW_YAML_AVAILABLE = $workflowYamlAvailable
     COMMAND_CHECKS            = $commandChecks
     PROMPT_STUB_CHECKS        = $promptStubChecks
     CLAUDE_AGENT_CHECKS       = $claudeAgentChecks
@@ -447,6 +463,7 @@ $result = [ordered]@{
     AGENT_SEMANTIC_CHECKS     = $agentSemanticChecks
     TEMPLATE_SEMANTIC_CHECKS  = $templateSemanticChecks
     SCRIPT_SEMANTIC_CHECKS    = $scriptSemanticChecks
+    WORKFLOW_SEMANTIC_CHECKS  = $workflowSemanticChecks
     AGENT_BOOTSTRAP_CHECKS    = $agentBootstrapChecks
     HOOK_CHECKS               = $hookChecks
     SKILL_TARGETS             = $skillTargets

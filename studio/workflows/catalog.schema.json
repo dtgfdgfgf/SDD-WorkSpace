@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/studio/workflows/catalog.schema.json",
+  "title": "Studio Workflow Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated", "policy", "workflows"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "curatedOnly", "autoEnableNewWorkflows", "reviewStatuses", "trustLevels", "stateSources"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "studio-first"
+        },
+        "curatedOnly": {
+          "type": "boolean"
+        },
+        "autoEnableNewWorkflows": {
+          "type": "boolean"
+        },
+        "reviewStatuses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["draft", "approved", "experimental", "deprecated", "rejected"]
+          },
+          "uniqueItems": true
+        },
+        "trustLevels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["core", "curated", "experimental"]
+          },
+          "uniqueItems": true
+        },
+        "stateSources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["default", "manual", "sync"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "version",
+          "title",
+          "sourcePath",
+          "reviewStatus",
+          "trustLevel",
+          "defaultEnabled",
+          "owner",
+          "approvedBy",
+          "approvedAt",
+          "stepTypesUsed",
+          "notes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "sourcePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reviewStatus": {
+            "type": "string",
+            "enum": ["draft", "approved", "experimental", "deprecated", "rejected"]
+          },
+          "trustLevel": {
+            "type": "string",
+            "enum": ["core", "curated", "experimental"]
+          },
+          "defaultEnabled": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "approvedBy": {
+            "type": ["string", "null"]
+          },
+          "approvedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "stepTypesUsed": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["command", "gate", "if", "switch", "prompt", "shell", "while", "do-while", "fan-out", "fan-in"]
+            },
+            "uniqueItems": true
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

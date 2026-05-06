@@ -43,6 +43,10 @@ $HAS_GIT       = $envData.HAS_GIT
 $IMPL_PLAN     = $envData.IMPL_PLAN
 $NEW_PLAN = $IMPL_PLAN
 
+# Path boundary defense: $CURRENT_BRANCH from SPECIFY_FEATURE env var could be tampered to escape REPO_ROOT.
+Assert-PathInsideRoot -Root $REPO_ROOT -Candidate $envData.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes REPO_ROOT'
+Assert-PathInsideRoot -Root $REPO_ROOT -Candidate $NEW_PLAN -MessagePrefix 'IMPL_PLAN escapes REPO_ROOT'
+
 # Agent file paths
 $CLAUDE_FILE   = Join-Path $REPO_ROOT 'CLAUDE.md'
 $GEMINI_FILE   = Join-Path $REPO_ROOT 'GEMINI.md'

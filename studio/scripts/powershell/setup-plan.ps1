@@ -53,9 +53,15 @@ function Assert-ReadyForPlan {
 # Get all paths and variables from common functions
 $paths = Get-FeaturePathsEnv
 
+# Path boundary defense: SPECIFY_FEATURE env var or git branch could be tampered to escape REPO_ROOT.
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes REPO_ROOT'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.IMPL_PLAN -MessagePrefix 'IMPL_PLAN escapes REPO_ROOT'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.INTENT_LEDGER -MessagePrefix 'INTENT_LEDGER escapes REPO_ROOT'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.ECI_DIR -MessagePrefix 'ECI_DIR escapes REPO_ROOT'
+
 # Check if we're on a proper feature branch (only for git repos)
-if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit $paths.HAS_GIT)) { 
-    exit 1 
+if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit $paths.HAS_GIT)) {
+    exit 1
 }
 
 Assert-ReadyForPlan -Paths $paths

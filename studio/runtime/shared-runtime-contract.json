@@ -802,6 +802,143 @@
         "SELECTED_TASK",
         "Force"
       ]
+    },
+    {
+      "id": "create-new-feature-path-boundary",
+      "path": "studio/scripts/powershell/create-new-feature.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$specsDir",
+        "$featureDir",
+        "$specFile"
+      ]
+    },
+    {
+      "id": "setup-plan-path-boundary",
+      "path": "studio/scripts/powershell/setup-plan.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$paths.REPO_ROOT",
+        "$paths.FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "setup-readiness-path-boundary",
+      "path": "studio/scripts/powershell/setup-readiness.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$projectRootForBoundary",
+        "$paths.READINESS_DIR"
+      ]
+    },
+    {
+      "id": "setup-tasks-path-boundary",
+      "path": "studio/scripts/powershell/setup-tasks.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$projectRootForBoundary",
+        "$paths.TASKS"
+      ]
+    },
+    {
+      "id": "setup-analyze-path-boundary",
+      "path": "studio/scripts/powershell/setup-analyze.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$projectRootForBoundary",
+        "$paths.FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "setup-implement-path-boundary",
+      "path": "studio/scripts/powershell/setup-implement.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$projectRootForBoundary",
+        "$paths.ANALYSIS_CHECKLIST"
+      ]
+    },
+    {
+      "id": "update-agent-context-path-boundary",
+      "path": "studio/scripts/powershell/update-agent-context.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$REPO_ROOT",
+        "$envData.FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "sync-agent-bootstrap-path-boundary",
+      "path": "studio/scripts/powershell/sync-agent-bootstrap.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$context.ProjectRoot",
+        "adapter path escapes project root"
+      ]
+    },
+    {
+      "id": "workflow-engine-step-types",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "Invoke-CommandStep",
+        "Invoke-GateStep",
+        "Invoke-IfStep",
+        "Invoke-SwitchStep",
+        "Assert-PathInsideRoot",
+        "schema_version",
+        "RunState"
+      ]
+    },
+    {
+      "id": "run-workflow-cli-surface",
+      "path": "studio/scripts/powershell/run-workflow.ps1",
+      "mustContainAll": [
+        "-Id",
+        "-Feature",
+        "-Resume",
+        "-ConfirmGate"
+      ]
+    },
+    {
+      "id": "validate-workflow-schema-binding",
+      "path": "studio/scripts/powershell/validate-workflow.ps1",
+      "mustContainAll": [
+        "manifest.schema.json",
+        "powershell-yaml"
+      ]
+    }
+  ],
+  "workflowInvariants": [
+    {
+      "id": "sdd-pipeline-readiness-statuses",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "READY_FOR_PLAN",
+        "ROUTE_TO_ECI",
+        "ROUTE_TO_REPO_CONTEXT",
+        "ROUTE_TO_DECISION",
+        "ROUTE_TO_VALIDATION",
+        "ROUTE_TO_ACCESS",
+        "EXPLORATORY_ONLY",
+        "NOT_READY",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "READY_FOR_SANDBOX_ONLY",
+        "READY_FOR_SPIKE_ONLY"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-stage-coverage",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "/speckit.specify",
+        "/speckit.clarify",
+        "/speckit.readiness",
+        "/speckit.plan",
+        "/speckit.tasks",
+        "/speckit.analyze",
+        "/speckit.implement",
+        "/speckit.eci"
+      ]
     }
   ],
   "sharedGatePaths": [
@@ -834,6 +971,12 @@
     "studio/scripts/powershell/upgrade-studio-runtime.ps1",
     "studio/scripts/powershell/generate-impact-registry.ps1",
     "studio/runtime/impact-registry.json",
+    "studio/workflows/",
+    "studio/scripts/powershell/workflow-engine.ps1",
+    "studio/scripts/powershell/run-workflow.ps1",
+    "studio/scripts/powershell/validate-workflow.ps1",
+    "studio/scripts/powershell/list-workflows.ps1",
+    "studio/scripts/powershell/set-workflow-state.ps1",
     "docs/change-manifests/"
   ]
 }

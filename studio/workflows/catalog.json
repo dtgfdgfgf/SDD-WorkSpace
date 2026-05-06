@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-05-05T00:00:00+08:00",
+  "policy": {
+    "mode": "studio-first",
+    "curatedOnly": true,
+    "autoEnableNewWorkflows": false,
+    "reviewStatuses": [
+      "draft",
+      "approved",
+      "experimental",
+      "deprecated",
+      "rejected"
+    ],
+    "trustLevels": [
+      "core",
+      "curated",
+      "experimental"
+    ],
+    "stateSources": [
+      "default",
+      "manual",
+      "sync"
+    ]
+  },
+  "workflows": [
+    {
+      "id": "sdd-pipeline",
+      "version": "1.0.0",
+      "title": "SDD Seven-Stage Pipeline",
+      "sourcePath": "workflows/sdd-pipeline",
+      "reviewStatus": "approved",
+      "trustLevel": "core",
+      "defaultEnabled": true,
+      "owner": "studio",
+      "approvedBy": "studio",
+      "approvedAt": "2026-05-05T00:00:00+08:00",
+      "stepTypesUsed": ["command", "gate", "switch"],
+      "notes": "First studio-first workflow runtime artifact. Encodes the seven-stage SDD flow with all 8 readiness statuses and 3 ECI authorization outcomes."
+    }
+  ]
+}

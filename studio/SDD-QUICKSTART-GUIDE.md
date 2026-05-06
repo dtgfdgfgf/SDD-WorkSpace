@@ -737,6 +737,19 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
+## 補充：可選的 Workflow Runtime（Wave 3）
+
+七階段流程的 canonical 驅動方式仍然是 agent prompt + setup-*.ps1 entry gate。Wave 3 引入額外的可選編排層 `studio/workflows/sdd-pipeline/`，把這條鏈寫成單一可宣告 / 可驗證 / 可恢復的 yaml workflow。
+
+它**不取代**七階段：
+
+- 七階段語意仍由 constitution Section 2、agent prompt、stage-entry gate 強制。
+- workflow runtime 只做 orchestration：順序、readiness 8 種 status 的 switch 路由、ECI 3 種 authorization outcome 的 nested switch、gate halt、agent halt 的 RunState persistence。
+
+進階使用見 `studio/QUICKSTART.md` 的「Optional: Workflow Runtime」段、`studio/workflows/POLICY.md` 與 `studio/workflows/sdd-pipeline/docs/README.md`。
+
+---
+
 ## 12. Git 工作流程
 
 ### 12.1 Branch Naming

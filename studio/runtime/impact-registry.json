@@ -315,6 +315,53 @@
           "target": ".githooks/pre-commit.ps1",
           "impact": "maybe_review",
           "reason": "Pre-commit invokes check-speckit-runtime.ps1"
+        },
+        {
+          "target": "studio/tests/path-traversal-hardening.Tests.ps1",
+          "impact": "must_review",
+          "reason": "Path-boundary script invariants must be covered by regression tests"
+        }
+      ]
+    },
+    {
+      "changeType": "workflow_change",
+      "trigger": "studio/workflows/",
+      "description": "Any change to studio workflow definitions, catalog, state, schemas, or per-workflow assets",
+      "rules": [
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "workflowInvariants may need new or updated entries"
+        },
+        {
+          "target": "studio/scripts/powershell/workflow-engine.ps1",
+          "impact": "must_review",
+          "reason": "Engine may need updates to handle new step shapes"
+        },
+        {
+          "target": "studio/scripts/powershell/validate-workflow.ps1",
+          "impact": "must_review",
+          "reason": "Validator must accept any new or changed schema fields"
+        },
+        {
+          "target": "studio/tests/sdd-pipeline.Tests.ps1",
+          "impact": "must_review",
+          "reason": "First built-in workflow must remain schema-valid and cover required statuses"
+        },
+        {
+          "target": "studio/tests/workflow-schema.Tests.ps1",
+          "impact": "must_review",
+          "reason": "Schema fixtures may need updates"
+        },
+        {
+          "target": "WORKSPACE_STRUCTURE.md",
+          "impact": "maybe_review",
+          "reason": "Workspace structure may reference workflow surface"
+        },
+        {
+          "target": "studio/QUICKSTART.md",
+          "impact": "maybe_review",
+          "reason": "Quickstart may reference workflow runtime"
         }
       ]
     },

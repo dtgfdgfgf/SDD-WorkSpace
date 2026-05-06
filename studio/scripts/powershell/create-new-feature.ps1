@@ -251,6 +251,8 @@ try {
 Set-Location $repoRoot
 
 $specsDir = Join-Path $repoRoot 'specs'
+# Defense in depth: ensure constructed specs root cannot escape $repoRoot.
+Assert-PathInsideRoot -Root $repoRoot -Candidate $specsDir -MessagePrefix 'specs directory escapes the allowed root'
 New-Item -ItemType Directory -Path $specsDir -Force | Out-Null
 
 # Function to generate branch name with stop word filtering and length filtering
@@ -353,6 +355,8 @@ if ($hasGit) {
 }
 
 $featureDir = Join-Path $specsDir $branchName
+# Reject any branchName whose normalized path escapes $specsDir even after ConvertTo-CleanBranchName.
+Assert-PathInsideRoot -Root $specsDir -Candidate $featureDir -MessagePrefix 'feature directory escapes the allowed root'
 New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
 
 $template = Join-Path $repoRoot '.specify/templates/spec-template.md'
@@ -365,7 +369,8 @@ if ($studioRoot) {
     }
 }
 $specFile = Join-Path $featureDir 'spec.md'
-if (Test-Path $template) { 
+Assert-PathInsideRoot -Root $featureDir -Candidate $specFile -MessagePrefix 'spec file escapes the allowed root'
+if (Test-Path $template) {
     Copy-Item $template $specFile -Force 
 } else { 
     New-Item -ItemType File -Path $specFile | Out-Null 

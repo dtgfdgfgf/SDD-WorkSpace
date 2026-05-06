@@ -1,0 +1,29 @@
+{
+  "id": "sdd-pipeline",
+  "version": "1.0.0",
+  "title": "SDD Seven-Stage Pipeline",
+  "description": "Studio-first executable representation of the SDD seven-stage flow with readiness routing all 8 primary statuses and ECI re-entry handling all 3 authorization outcomes.",
+  "kind": "workflow",
+  "status": "active",
+  "owner": "studio",
+  "tags": ["sdd", "studio-first", "wave-3"],
+  "capabilities": [
+    "stage-orchestration",
+    "readiness-status-routing",
+    "eci-authorization-re-entry"
+  ],
+  "runtimeScopes": ["scripts", "agents", "docs"],
+  "compatibility": {
+    "mode": "studio-first",
+    "minStudioConstitutionVersion": "1.8.0"
+  },
+  "entryPoints": {
+    "scripts": [
+      "scripts/run-workflow.ps1"
+    ],
+    "docs": [
+      "docs/README.md"
+    ]
+  },
+  "notes": "Wave-3 baseline. Step types in scope: command/gate/if/switch. Agent steps halt with exit 42; gates halt with exit 43."
+}

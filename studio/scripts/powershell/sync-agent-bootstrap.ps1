@@ -314,6 +314,13 @@ function Set-TextFileIfChanged {
 $context = Get-AgentBootstrapContext -Root $ProjectRoot
 $adapterPaths = Get-AdapterPaths -ProjectRootPath $context.ProjectRoot
 
+# Path boundary defense: every adapter target file must resolve inside $context.ProjectRoot.
+# Get-AdapterPaths uses hardcoded leaf names so this is paranoid, but it locks the contract
+# and rejects any future code path that constructs adapter targets from tainted input.
+foreach ($adapterKey in $adapterPaths.Keys) {
+    Assert-PathInsideRoot -Root $context.ProjectRoot -Candidate $adapterPaths[$adapterKey] -MessagePrefix "$adapterKey adapter path escapes project root"
+}
+
 $block = $null
 if ($From) {
     $fromFullPath = Resolve-FromPath -ProjectRootPath $context.ProjectRoot -FromPath $From

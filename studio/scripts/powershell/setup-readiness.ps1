@@ -78,6 +78,24 @@ function Get-NeedsClarificationMarkers {
 }
 
 $paths = Resolve-FeatureContext -Override $FeatureDir
+
+# Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
+# SDD requires feature dirs to live at <project>/specs/<feature>; we derive the project root from that structure.
+$projectRootForBoundary = if ($FeatureDir) {
+    $specsParent = Split-Path -Parent $paths.FEATURE_DIR
+    if ((Split-Path -Leaf $specsParent) -ne 'specs') {
+        throw "FEATURE_DIR escapes project root: $($paths.FEATURE_DIR) must be located at <project>/specs/<feature>"
+    }
+    Split-Path -Parent $specsParent
+} else {
+    Get-RepoRoot
+}
+if (-not $projectRootForBoundary) { throw 'Unable to resolve project root for path boundary check.' }
+Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.READINESS_DIR -MessagePrefix 'READINESS_DIR escapes project root'
+Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.READINESS_ASSESSMENT -MessagePrefix 'READINESS_ASSESSMENT escapes project root'
+Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.ECI_DIR -MessagePrefix 'ECI_DIR escapes project root'
+
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]
 

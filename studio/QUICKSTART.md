@@ -96,6 +96,27 @@ code projects/studio-automation/studio-automation.code-workspace
 - [ ] T001 [P1] [Risk: Low] [Story: Foundation] 建立專案基礎結構
 ```
 
+## Optional: Workflow Runtime（Wave 3）
+
+七階段流程仍以 agent prompt + setup-*.ps1 entry gate 為主流程驅動。`studio/workflows/sdd-pipeline/` 額外提供一份**可選**的編排層，把七階段、readiness 8 種 primary status、ECI 3 種 authorization outcome 寫成單一 yaml workflow，並由 `run-workflow.ps1` 帶 RunState（`specs/<feature>/.workflow/state.json`）做 halt-and-resume。
+
+依賴：
+
+```powershell
+Install-Module -Name powershell-yaml -Scope CurrentUser
+```
+
+常用呼叫：
+
+```powershell
+pwsh ./studio/scripts/powershell/list-workflows.ps1 -Json
+pwsh ./studio/scripts/powershell/validate-workflow.ps1 -Id sdd-pipeline -Json
+pwsh ./studio/scripts/powershell/run-workflow.ps1 -Id sdd-pipeline -Feature 001-foo -Json
+pwsh ./studio/scripts/powershell/run-workflow.ps1 -Id sdd-pipeline -Feature 001-foo -Resume -ConfirmGate <gate-id>
+```
+
+引擎是 operator-in-the-loop：`dispatch: agent` step 會 halt 並回 exit 42，由操作者在 agent IDE 跑對應 slash command 產出 `expected_artifact`，再以 `-Resume` 推進。`gate` step halt 並回 exit 43，需 `-ConfirmGate` 或 `-RejectGate`。
+
 ## 常用指令
 
 | 類別 | 指令 | 用途 |

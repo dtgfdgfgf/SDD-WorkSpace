@@ -46,6 +46,7 @@ Design priorities:
 | `studio/constitution/constitution.md` | Highest-authority studio governance |
 | `studio/runtime/shared-runtime-contract.json` | Machine-verifiable shared runtime contract for studio-only convergence |
 | `studio/extensions/` | Canonical shared extension source, manifest schema, catalog, and state |
+| `studio/workflows/` | Canonical shared workflow runtime: schemas, catalog, state, POLICY, and built-in `sdd-pipeline/` |
 | `studio/templates/project-init/` | Project bootstrap skeleton |
 | `studio/templates/sdd-docs/` | Canonical document templates |
 | `studio/knowledge-base/learnings.md` | Cross-project learning capture |
