@@ -3,8 +3,8 @@
 **Date**: 2026-07-11
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: TBD
+**Status**: Ready
+**Related Commits**: `6e80ed0`
 **Related PR**: N/A
 
 ## Summary
@@ -73,8 +73,8 @@ acceptance entrypoints (outcome verification, zero prompt-side cost), consistent
 
 ## Merge Notes
 
-- Not yet committed; note remains Draft until the commit exists (per the Status state machine and
-  the self-violation lesson: a Ready note with TBD commits is invalid).
+- Committed as `6e80ed0`; note flipped to Ready in the immediate follow-up commit (per the Status
+  state machine and the self-violation lesson: a Ready note with TBD commits is invalid).
 - No conflict risk expected: all paths are new files except the index.
 
 ## Follow-ups
