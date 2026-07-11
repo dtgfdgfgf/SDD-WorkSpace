@@ -1,0 +1,47 @@
+name: governance
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-and-tests:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install required PowerShell modules
+        shell: pwsh
+        run: |
+          Install-Module Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module powershell-yaml -Force -Scope CurrentUser
+
+      - name: Shared runtime audit (check-speckit-runtime -Json)
+        shell: pwsh
+        run: |
+          ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
+          exit $LASTEXITCODE
+
+      - name: Governance tests (Pester)
+        shell: pwsh
+        run: |
+          ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal
+          exit $LASTEXITCODE
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-test-results
+          path: studio/tests/_artifacts/testResults.xml
+          if-no-files-found: ignore

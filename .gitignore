@@ -82,3 +82,8 @@ projects/
 # ===========================
 testResults.xml
 studio/tests/_artifacts/
+
+# ===========================
+# Personal data (never commit)
+# ===========================
+履歷/
