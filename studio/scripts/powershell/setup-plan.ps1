@@ -83,8 +83,13 @@ if (-not $template) {
     $template = Join-Path $paths.REPO_ROOT '.specify/templates/plan-template.md'
 }
 
-if (Test-Path $template) { 
-    Copy-Item $template $paths.IMPL_PLAN -Force
+if (Test-Path -LiteralPath $paths.IMPL_PLAN -PathType Leaf) {
+    # Idempotent scaffold: never overwrite an existing plan.md. Matches setup-readiness /
+    # setup-tasks / setup-analyze, and prevents a workflow resume from clobbering agent-authored
+    # plan content back to the template.
+    Write-Output "plan.md already exists; left untouched: $($paths.IMPL_PLAN)"
+} elseif (Test-Path $template) {
+    Copy-Item $template $paths.IMPL_PLAN
     Write-Output "Copied plan template to $($paths.IMPL_PLAN)"
 } else {
     Write-Warning "Plan template not found at $template"

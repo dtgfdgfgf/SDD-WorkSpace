@@ -333,6 +333,57 @@ function Initialize-RunState {
         vars              = @{ steps = @{} }
         history           = @()
         gates             = @{}
+        completed_steps   = @()
+    }
+}
+
+function Get-ArtifactFingerprint {
+    <#
+    .SYNOPSIS
+        Returns a content fingerprint used to prove an agent step actually produced work,
+        rather than merely finding a file that a prep step scaffolded. Missing or empty
+        artifacts return an empty hash so "scaffold -> agent edit" is always a detectable change.
+    #>
+    param([Parameter(Mandatory)] [string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return [ordered]@{ exists = $false; empty = $true; hash = '' }
+    }
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    if ($bytes.Length -eq 0) {
+        return [ordered]@{ exists = $true; empty = $true; hash = '' }
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = [System.BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '')
+    } finally {
+        $sha.Dispose()
+    }
+    return [ordered]@{ exists = $true; empty = $false; hash = $hash }
+}
+
+function Invoke-ArtifactExtraction {
+    <#
+    .SYNOPSIS
+        Populates RunState.vars.<name> from fields in a completed agent step's artifact so
+        downstream switch subjects (e.g. readiness_primary_status) can route. Reuses the shared
+        Get-MarkdownField parser and only accepts a single resolved enum token; an unfilled
+        template placeholder (e.g. "A | B | C") fails validation and leaves the var unset, so the
+        switch safely falls back to its default.
+    #>
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ArtifactPath)
+    if (-not $Step.Contains('extract')) { return }
+    if (-not (Test-Path -LiteralPath $ArtifactPath -PathType Leaf)) { return }
+    $content = Get-Content -LiteralPath $ArtifactPath -Raw
+    foreach ($rule in $Step.extract) {
+        $var = [string]$rule.var
+        $field = [string]$rule.field
+        if (-not $var -or -not $field) { continue }
+        $value = Get-MarkdownField -Content $content -Field $field
+        if ($null -eq $value) { continue }
+        $value = ([string]$value).Trim()
+        if ($value -match '^[A-Z][A-Z0-9_]*$') {
+            $RunState.vars[$var] = $value
+        }
     }
 }
 
@@ -356,6 +407,7 @@ function Invoke-CommandStep {
     param(
         $Step,
         $RunState,
+        [hashtable]$AgentActions = @{},
         [Parameter(Mandatory)] [string]$ProjectRoot,
         [Parameter(Mandatory)] [string]$WorkspaceRoot,
         [switch]$DryRun
@@ -396,14 +448,38 @@ function Invoke-CommandStep {
         $expected = Resolve-Interpolation -Template ([string]$Step.expected_artifact) -Context $RunState
         $artifactPath = if ([System.IO.Path]::IsPathRooted($expected)) { $expected } else { Join-Path $ProjectRoot $expected }
         Assert-PathInsideRoot -Root $ProjectRoot -Candidate $artifactPath -MessagePrefix 'expected_artifact escapes project root'
-        if (Test-Path -LiteralPath $artifactPath -PathType Leaf) {
-            Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'success' -Extras @{ artifact = $artifactPath }
+
+        if ($DryRun) {
+            Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'dry-run-skipped' -Extras @{ artifact = $artifactPath }
             return @{ Status = 'success' }
         }
+
+        if (-not $RunState.vars.steps.ContainsKey($Step.id)) { $RunState.vars.steps[$Step.id] = @{} }
+        $stepVars = $RunState.vars.steps[$Step.id]
+        $current = Get-ArtifactFingerprint -Path $artifactPath
+        $accepted = ($AgentActions.ContainsKey($Step.id) -and $AgentActions[$Step.id] -eq 'accept')
+
+        # First arrival this run: record the pre-agent baseline (scaffold or prior-stage state) and
+        # halt. Mere existence of a scaffolded artifact is NOT completion; the agent must change it.
+        if (-not $stepVars.ContainsKey('agent_baseline')) {
+            $stepVars['agent_baseline'] = $current.hash
+            $RunState.vars.steps[$Step.id] = $stepVars
+        } else {
+            $baseline = [string]$stepVars['agent_baseline']
+            $changed = ($current.exists -and -not $current.empty -and ($current.hash -ne $baseline))
+            if ($changed -or ($accepted -and $current.exists -and -not $current.empty)) {
+                Invoke-ArtifactExtraction -Step $Step -RunState $RunState -ArtifactPath $artifactPath
+                $outcome = if ($changed) { 'success' } else { 'success-accepted' }
+                Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras @{ artifact = $artifactPath }
+                return @{ Status = 'success' }
+            }
+        }
+
+        $reason = if ($accepted) { "artifact missing or empty; cannot accept: $artifactPath" } else { "artifact unchanged since prep; run the agent to produce real content" }
         $msg = if ($Step.Contains('operator_message')) { Resolve-Interpolation -Template ([string]$Step.operator_message) -Context $RunState } else { "Run $agentCommand in your agent IDE, then re-run with -Resume." }
         $RunState.status = 'awaiting_agent'
         $RunState.current_step_id = $Step.id
-        $RunState.halt_reason = "Awaiting agent step: $($Step.id)"
+        $RunState.halt_reason = "Awaiting agent step: $($Step.id) ($reason)"
         $RunState.halt_dispatch = [ordered]@{
             type = 'agent'
             agent_command = $agentCommand
@@ -418,7 +494,7 @@ function Invoke-CommandStep {
 }
 
 function Invoke-GateStep {
-    param($Step, $RunState, [hashtable]$GateActions, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
+    param($Step, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     $gateId = [string]$Step.id
     $existing = $null
     if ($RunState.gates.ContainsKey($gateId)) { $existing = $RunState.gates[$gateId] }
@@ -432,14 +508,14 @@ function Invoke-GateStep {
         $RunState.gates[$gateId] = [ordered]@{ status = 'rejected'; decided_at = Get-IsoTimestamp; decided_by = 'operator' }
         Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'gate-rejected'
         if ($Step.Contains('on_reject') -and $Step.on_reject) {
-            return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+            return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
         }
         return @{ Status = 'success' }
     }
     if ($existing -and $existing.status -in 'confirmed', 'rejected') {
         Add-RunStateHistory -RunState $RunState -Step $Step -Outcome ("gate-" + $existing.status) -Extras @{}
         if ($existing.status -eq 'rejected' -and $Step.Contains('on_reject') -and $Step.on_reject) {
-            return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+            return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
         }
         return @{ Status = 'success' }
     }
@@ -453,21 +529,21 @@ function Invoke-GateStep {
 }
 
 function Invoke-IfStep {
-    param($Step, $RunState, [hashtable]$GateActions, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
+    param($Step, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     $cond = Test-WorkflowCondition -Expression ([string]$Step.condition) -Context $RunState
     if ($cond) {
         Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'branched-then'
-        return Invoke-StepList -Steps $Step.then -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+        return Invoke-StepList -Steps $Step.then -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
     }
     Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'branched-else'
     if ($Step.Contains('else') -and $Step.else) {
-        return Invoke-StepList -Steps $Step.else -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+        return Invoke-StepList -Steps $Step.else -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
     }
     return @{ Status = 'success' }
 }
 
 function Invoke-SwitchStep {
-    param($Step, $RunState, [hashtable]$GateActions, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
+    param($Step, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     $subjectValue = (Resolve-Interpolation -Template ([string]$Step.subject) -Context $RunState).Trim()
     $subList = $null
     $matched = $null
@@ -487,7 +563,7 @@ function Invoke-SwitchStep {
         return @{ Status = 'success' }
     }
     Add-RunStateHistory -RunState $RunState -Step $Step -Outcome "matched-case:$matched" -Extras @{ subject = $subjectValue }
-    return Invoke-StepList -Steps $subList -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+    return Invoke-StepList -Steps $subList -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
 }
 
 function Invoke-NotImplementedStep {
@@ -497,21 +573,34 @@ function Invoke-NotImplementedStep {
 }
 
 function Invoke-Step {
-    param($Step, $RunState, [hashtable]$GateActions, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
-    $RunState.current_step_id = [string]$Step.id
+    param($Step, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
+    $sid = [string]$Step.id
+    # Resume idempotency: a command step (script or agent) that already succeeded is not re-run.
+    # This prevents a resume from re-scaffolding / overwriting agent-authored artifacts and defeats
+    # the "prep re-creates the expected artifact" false-completion path. if/switch re-route and
+    # gates are idempotent on their own, so only command steps are skipped here.
+    if (($sid) -and ([string]$Step.type -eq 'command') -and (@($RunState.completed_steps) -contains $sid)) {
+        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'skipped-completed'
+        return @{ Status = 'success' }
+    }
+    $RunState.current_step_id = $sid
     switch ([string]$Step.type) {
-        'command' { return Invoke-CommandStep -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
-        'gate'    { return Invoke-GateStep    -Step $Step -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
-        'if'      { return Invoke-IfStep      -Step $Step -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
-        'switch'  { return Invoke-SwitchStep  -Step $Step -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
+        'command' {
+            $r = Invoke-CommandStep -Step $Step -RunState $RunState -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+            if ($r.Status -eq 'success' -and (@($RunState.completed_steps) -notcontains $sid)) { $RunState.completed_steps += $sid }
+            return $r
+        }
+        'gate'    { return Invoke-GateStep    -Step $Step -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
+        'if'      { return Invoke-IfStep      -Step $Step -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
+        'switch'  { return Invoke-SwitchStep  -Step $Step -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun }
         default   { return Invoke-NotImplementedStep -Step $Step -RunState $RunState }
     }
 }
 
 function Invoke-StepList {
-    param($Steps, $RunState, [hashtable]$GateActions, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
+    param($Steps, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     foreach ($step in $Steps) {
-        $r = Invoke-Step -Step $step -RunState $RunState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+        $r = Invoke-Step -Step $step -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
         if ($r.Status -in 'awaiting_agent', 'awaiting_gate', 'failed') { return $r }
     }
     return @{ Status = 'success' }
@@ -530,6 +619,7 @@ function Invoke-Workflow {
         [Parameter(Mandatory)] [string]$WorkspaceRoot,
         [hashtable]$Inputs = @{},
         [hashtable]$GateActions = @{},
+        [hashtable]$AgentActions = @{},
         [switch]$Resume,
         [switch]$DryRun
     )
@@ -554,13 +644,16 @@ function Invoke-Workflow {
             $runState.status = 'running'
             $runState.halt_reason = $null
             $runState.halt_dispatch = $null
+            if (-not $runState.ContainsKey('completed_steps') -or $null -eq $runState.completed_steps) {
+                $runState.completed_steps = @()
+            }
         } else {
             $effectiveInputs = @{ feature = $Feature }
             foreach ($k in $Inputs.Keys) { $effectiveInputs[$k] = $Inputs[$k] }
             $runState = Initialize-RunState -Workflow $workflow -Feature $Feature -Inputs $effectiveInputs
         }
 
-        $r = Invoke-StepList -Steps $workflow.steps -RunState $runState -GateActions $GateActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+        $r = Invoke-StepList -Steps $workflow.steps -RunState $runState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
         if ($r.Status -eq 'awaiting_agent') {
             Save-RunState -RunState $runState -Path $statePath
             return [ordered]@{ Status = 'awaiting_agent'; ExitCode = 42; RunStatePath = $statePath; HaltDispatch = $runState.halt_dispatch }

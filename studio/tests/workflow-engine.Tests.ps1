@@ -116,6 +116,156 @@ steps:
     }
 }
 
+Describe 'workflow-engine: agent step requires a change, not mere existence (C1/C2)' -Skip:(-not $script:yamlAvailable) {
+    BeforeEach {
+        $script:fixture = New-WorkflowFixtureProject -WorkflowYaml @"
+schema_version: "1.0.0"
+workflow:
+  id: change-test
+  name: Change Test
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: stage-agent
+    type: command
+    dispatch: agent
+    agent_command: /speckit.specify
+    expected_artifact: "specs/{{ inputs.feature }}/spec.md"
+"@
+        # The fixture pre-creates spec.md with '# spec'. We deliberately KEEP it to prove that a
+        # pre-existing (e.g. scaffolded) artifact does NOT count as agent completion.
+        $script:specPath = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture/spec.md'
+    }
+    AfterEach { Remove-WorkflowFixture -Fixture $script:fixture }
+
+    It 'halts even though the artifact already exists, then completes after a real change' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+        $r.Json.STATUS | Should -Be 'awaiting_agent'
+
+        '# spec produced by the agent with real content' | Set-Content -LiteralPath $script:specPath
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 0
+        $r2.Json.STATUS | Should -Be 'completed'
+    }
+
+    It 'stays halted on resume when the artifact is unchanged, and -AcceptAgent overrides' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+
+        $r3 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume', '-AcceptAgent', 'stage-agent')
+        $r3.ExitCode | Should -Be 0
+        $r3.Json.STATUS | Should -Be 'completed'
+    }
+}
+
+Describe 'workflow-engine: resume does not re-run a completed prep (C5)' -Skip:(-not $script:yamlAvailable) {
+    BeforeEach {
+        $artifactsDir = Join-Path $WorkspaceRoot 'studio/tests/_artifacts'
+        New-Item -ItemType Directory -Path $artifactsDir -Force | Out-Null
+        $script:counterScript = Join-Path $artifactsDir ("wf-counter-{0}.ps1" -f ([System.Guid]::NewGuid().ToString('N')))
+        @'
+param([string]$Counter, [string]$Artifact)
+Add-Content -LiteralPath $Counter -Value 'x'
+Set-Content -LiteralPath $Artifact -Value 'SCAFFOLD' -Force
+'@ | Set-Content -LiteralPath $script:counterScript
+
+        $script:fixture = New-WorkflowFixtureProject -WorkflowYaml 'PLACEHOLDER'
+        $script:counterFile = Join-Path $TestDrive ("counter-{0}.txt" -f ([System.Guid]::NewGuid().ToString('N')))
+        $script:genArtifact = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture/gen.md'
+        $scriptRel = 'studio/tests/_artifacts/' + (Split-Path -Leaf $script:counterScript)
+        $counterFwd = ($script:counterFile -replace '\\', '/')
+        $genFwd = ($script:genArtifact -replace '\\', '/')
+        $yaml = @"
+schema_version: "1.0.0"
+workflow:
+  id: resume-skip
+  name: Resume Skip
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: prep
+    type: command
+    dispatch: script
+    script: $scriptRel
+    args: ["-Counter", "$counterFwd", "-Artifact", "$genFwd"]
+  - id: stage-agent
+    type: command
+    dispatch: agent
+    agent_command: /gen
+    expected_artifact: "specs/{{ inputs.feature }}/gen.md"
+"@
+        $yaml | Set-Content -LiteralPath (Join-Path $script:fixture.WorkflowDir 'workflow.yml') -NoNewline
+    }
+    AfterEach {
+        Remove-WorkflowFixture -Fixture $script:fixture
+        if (Test-Path -LiteralPath $script:counterScript) { Remove-Item -LiteralPath $script:counterScript -Force }
+    }
+
+    It 'skips the completed prep on resume so it cannot overwrite agent output' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+        (Get-Content -LiteralPath $script:counterFile).Count | Should -Be 1
+        (Get-Content -LiteralPath $script:genArtifact -Raw).Trim() | Should -Be 'SCAFFOLD'
+
+        # Operator runs the agent: replace the scaffold with real content.
+        'AGENT REAL OUTPUT' | Set-Content -LiteralPath $script:genArtifact
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 0
+        $r2.Json.STATUS | Should -Be 'completed'
+        # Prep did NOT run again (counter still 1) and did NOT clobber the agent output.
+        (Get-Content -LiteralPath $script:counterFile).Count | Should -Be 1
+        (Get-Content -LiteralPath $script:genArtifact -Raw).Trim() | Should -Be 'AGENT REAL OUTPUT'
+    }
+}
+
+Describe 'workflow-engine: extract populates a switch subject (C3)' -Skip:(-not $script:yamlAvailable) {
+    BeforeEach {
+        $script:fixture = New-WorkflowFixtureProject -WorkflowYaml @"
+schema_version: "1.0.0"
+workflow:
+  id: extract-test
+  name: Extract Test
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: stage-readiness
+    type: command
+    dispatch: agent
+    agent_command: /speckit.readiness
+    expected_artifact: "specs/{{ inputs.feature }}/readiness.md"
+    extract:
+      - var: readiness_primary_status
+        field: Primary Status
+  - id: branch
+    type: switch
+    subject: "{{ vars.readiness_primary_status | default('NOT_READY') }}"
+    cases:
+      ROUTE_TO_DECISION:
+        - { id: decision-gate, type: gate, prompt: "decision" }
+    default:
+      - { id: default-gate, type: gate, prompt: "default" }
+"@
+        $script:readinessPath = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture/readiness.md'
+    }
+    AfterEach { Remove-WorkflowFixture -Fixture $script:fixture }
+
+    It 'routes the switch by the value extracted from the agent artifact' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        # Operator produces a readiness artifact with a concrete primary status.
+        "# Readiness`n`n**Primary Status**: ``ROUTE_TO_DECISION``" | Set-Content -LiteralPath $script:readinessPath
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 43
+        $r2.Json.HALT_DISPATCH.gate_id | Should -Be 'decision-gate'
+    }
+}
+
 Describe 'workflow-engine: gate halts then accepts -ConfirmGate' -Skip:(-not $script:yamlAvailable) {
     BeforeEach {
         $script:fixture = New-WorkflowFixtureProject -WorkflowYaml @"

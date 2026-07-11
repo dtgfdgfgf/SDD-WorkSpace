@@ -919,13 +919,25 @@
       ]
     },
     {
+      "id": "workflow-engine-completion-integrity",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "Get-ArtifactFingerprint",
+        "agent_baseline",
+        "completed_steps",
+        "skipped-completed",
+        "Invoke-ArtifactExtraction"
+      ]
+    },
+    {
       "id": "run-workflow-cli-surface",
       "path": "studio/scripts/powershell/run-workflow.ps1",
       "mustContainAll": [
         "-Id",
         "-Feature",
         "-Resume",
-        "-ConfirmGate"
+        "-ConfirmGate",
+        "-AcceptAgent"
       ]
     },
     {

@@ -53,6 +53,9 @@ steps:
     agent_command: /speckit.readiness
     expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
     operator_message: "Produce readiness-assessment.md with one of the 8 primary statuses set, then resume."
+    extract:
+      - var: readiness_primary_status
+        field: Primary Status
 
   # 4. Branch on readiness's 8 primary statuses -------------------------------
   - id: branch-readiness-status
@@ -70,6 +73,9 @@ steps:
           agent_command: /speckit.eci
           expected_artifact: "specs/{{ inputs.feature }}/readiness/eci/authorization-record.md"
           operator_message: "Run /speckit.eci to produce the ECI dossier, then resume."
+          extract:
+            - var: eci_authorization_outcome
+              field: Authorization Outcome
         - id: branch-eci-authorization
           type: switch
           subject: "{{ vars.eci_authorization_outcome | default('NOT_READY') }}"
@@ -177,4 +183,4 @@ steps:
     dispatch: agent
     agent_command: /speckit.implement
     expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
-    operator_message: "Run /speckit.implement to execute the task list, then resume to mark the workflow complete."
+    operator_message: "Run /speckit.implement to execute the task list (which checks tasks off in tasks.md), then resume. Completion is detected from the tasks.md change; if no task state changed, use -AcceptAgent stage-implement to confirm."

@@ -111,7 +111,19 @@
         },
         "agent_command": { "type": "string" },
         "expected_artifact": { "type": "string" },
-        "operator_message": { "type": "string" }
+        "operator_message": { "type": "string" },
+        "extract": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["var", "field"],
+            "properties": {
+              "var": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]{0,63}$" },
+              "field": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
       },
       "allOf": [
         {

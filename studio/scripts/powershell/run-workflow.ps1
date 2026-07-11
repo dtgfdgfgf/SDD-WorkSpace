@@ -52,6 +52,7 @@ param(
     [switch]$Resume,
     [string]$ConfirmGate,
     [string]$RejectGate,
+    [string]$AcceptAgent,
     [string]$Inputs,
     [switch]$DryRun,
     [switch]$Json,
@@ -61,7 +62,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($Help) {
-    Write-Output 'Usage: ./run-workflow.ps1 -Id <workflow-id> -Feature <feature> [-Resume] [-ConfirmGate <id>] [-RejectGate <id>] [-Inputs "k=v;k=v"] [-DryRun] [-Json] [-Help]'
+    Write-Output 'Usage: ./run-workflow.ps1 -Id <workflow-id> -Feature <feature> [-Resume] [-ConfirmGate <id>] [-RejectGate <id>] [-AcceptAgent <id>] [-Inputs "k=v;k=v"] [-DryRun] [-Json] [-Help]'
+    Write-Output '  -AcceptAgent <id>  Accept the current artifact of a halted agent step as its output (use when the artifact was already produced and change-detection would otherwise loop).'
     exit 0
 }
 
@@ -95,6 +97,8 @@ if ($Inputs) {
 $gateActions = @{}
 if ($ConfirmGate) { $gateActions[$ConfirmGate] = 'confirm' }
 if ($RejectGate)  { $gateActions[$RejectGate] = 'reject' }
+$agentActions = @{}
+if ($AcceptAgent) { $agentActions[$AcceptAgent] = 'accept' }
 
 try {
     $result = Invoke-Workflow `
@@ -104,6 +108,7 @@ try {
         -WorkspaceRoot $workspaceRoot `
         -Inputs $inputHash `
         -GateActions $gateActions `
+        -AgentActions $agentActions `
         -Resume:$Resume `
         -DryRun:$DryRun
 } catch {
