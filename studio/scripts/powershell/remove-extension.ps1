@@ -31,7 +31,13 @@ $paths = Get-StudioSharedLayerPaths -StartDir $PSScriptRoot
 $catalog = Read-JsonFile -Path $paths.EXTENSIONS_CATALOG_PATH
 $state = Read-JsonFile -Path $paths.EXTENSIONS_STATE_PATH
 
+if ($Id -notmatch '^[a-z0-9][a-z0-9-]{1,63}$') {
+    Write-Error "Invalid extension id '$Id'. Expected lowercase letters, digits, and hyphens matching ^[a-z0-9][a-z0-9-]{1,63}$."
+    exit 1
+}
+
 $targetDir = Join-Path $paths.EXTENSIONS_ROOT $Id
+Assert-PathInsideRoot -Root $paths.EXTENSIONS_ROOT -Candidate $targetDir -MessagePrefix 'Extension target escapes extensions root'
 $catalogEntry = @($catalog.extensions | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
 $hasManifest = Test-Path -LiteralPath (Join-Path $targetDir 'manifest.json')
 

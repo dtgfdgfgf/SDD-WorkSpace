@@ -91,6 +91,46 @@ Describe 'sync-agent-bootstrap.ps1 paranoid adapter-path boundary' {
     }
 }
 
+Describe 'extension lifecycle scripts reject malicious ids before any mutation' {
+    BeforeAll {
+        $script:addExt = Join-Path $WorkspaceRoot 'studio/scripts/powershell/add-extension.ps1'
+        $script:removeExt = Join-Path $WorkspaceRoot 'studio/scripts/powershell/remove-extension.ps1'
+        # Source fixture must live inside the workspace (SourceDir boundary), so use the
+        # gitignored test artifacts directory.
+        $script:evilSrc = Join-Path $WorkspaceRoot 'studio/tests/_artifacts/evil-ext-fixture'
+    }
+
+    AfterEach {
+        if (Test-Path -LiteralPath $script:evilSrc) {
+            Remove-Item -LiteralPath $script:evilSrc -Recurse -Force
+        }
+    }
+
+    It 'add-extension.ps1 rejects a manifest id containing path traversal' {
+        New-Item -ItemType Directory -Path $script:evilSrc -Force | Out-Null
+        $manifest = @{
+            id = '../../pwn-target'; version = '1.0.0'; title = 'Evil'; description = 'x'
+            kind = 'commands'; status = 'draft'; compatibility = 'studio-first'
+        } | ConvertTo-Json
+        Set-Content -LiteralPath (Join-Path $script:evilSrc 'manifest.json') -Value $manifest
+        $output = pwsh -NoProfile -File $script:addExt -SourceDir $script:evilSrc -Force -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Invalid extension id'
+    }
+
+    It 'remove-extension.ps1 rejects an id containing path traversal' {
+        $output = pwsh -NoProfile -File $script:removeExt -Id '../../studio' -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Invalid extension id'
+    }
+
+    It 'remove-extension.ps1 still reaches normal not-found handling for well-formed ids' {
+        $output = pwsh -NoProfile -File $script:removeExt -Id 'no-such-extension' -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Extension not found'
+    }
+}
+
 Describe 'create-new-feature.ps1 contains Assert-PathInsideRoot at construction sites' {
     # ConvertTo-CleanBranchName already strips traversal characters, so the runtime
     # boundary checks are defense-in-depth. We assert the helper calls are present.

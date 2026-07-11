@@ -57,7 +57,13 @@ foreach ($field in @('id', 'version', 'title', 'description', 'kind', 'status', 
     }
 }
 
+if ([string]$manifest.id -notmatch '^[a-z0-9][a-z0-9-]{1,63}$') {
+    Write-Error "Invalid extension id '$($manifest.id)'. Expected lowercase letters, digits, and hyphens matching ^[a-z0-9][a-z0-9-]{1,63}$."
+    exit 1
+}
+
 $targetDir = Join-Path $paths.EXTENSIONS_ROOT $manifest.id
+Assert-PathInsideRoot -Root $paths.EXTENSIONS_ROOT -Candidate $targetDir -MessagePrefix 'Extension target escapes extensions root'
 $sourceIsTarget = ([System.IO.Path]::GetFullPath($resolvedSourceDir) -eq [System.IO.Path]::GetFullPath($targetDir))
 
 if (-not $sourceIsTarget) {

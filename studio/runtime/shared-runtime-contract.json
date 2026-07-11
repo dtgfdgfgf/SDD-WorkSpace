@@ -877,6 +877,24 @@
       ]
     },
     {
+      "id": "add-extension-path-boundary",
+      "path": "studio/scripts/powershell/add-extension.ps1",
+      "mustContainAll": [
+        "^[a-z0-9][a-z0-9-]{1,63}$",
+        "Assert-PathInsideRoot",
+        "Extension target escapes extensions root"
+      ]
+    },
+    {
+      "id": "remove-extension-path-boundary",
+      "path": "studio/scripts/powershell/remove-extension.ps1",
+      "mustContainAll": [
+        "^[a-z0-9][a-z0-9-]{1,63}$",
+        "Assert-PathInsideRoot",
+        "Extension target escapes extensions root"
+      ]
+    },
+    {
       "id": "workflow-engine-step-types",
       "path": "studio/scripts/powershell/workflow-engine.ps1",
       "mustContainAll": [
