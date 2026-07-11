@@ -73,7 +73,6 @@
 | `resources/` | 共享資源與匯出產物 |
 | `archive/` | 歷史或封存內容 |
 | `WORKSPACE_STRUCTURE.md` | 工作區結構設計說明 |
-| `features.txt` | 當前工作區目標與演進方向 |
 
 ## 專案分類
 

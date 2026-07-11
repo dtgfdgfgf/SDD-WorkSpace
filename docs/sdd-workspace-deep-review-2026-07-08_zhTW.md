@@ -283,9 +283,14 @@ learnings.md 是純 LLM 維護模式下「系統的長期記憶體」。每次 s
 
 ## 10. 建議行動清單(彙總)
 
+> 2026-07-12 執行進度增補:CI(Batch 0)、extension 路徑安全(Batch 1)、analyze 完成機器閘門
+> (Batch 2)已完成並推送,CI 首輪與後續皆綠。剩餘為 agent-layer 決策(A1/A2/A5 需 owner 定奪)、
+> workflow engine 假完成重構(C 組,實驗性、無 consumer)、Trading consumer 憲章違規(E5)、
+> 以及若干安全 doc drift 修正(F 組)。詳見各批 mainline note。
+
 | 順序 | 行動 | 狀態(2026-07-08) |
 |---|---|---|
-| 1 | 加 GitHub Actions CI(runtime audit + Pester) | 未做 |
+| 1 | 加 GitHub Actions CI(runtime audit + Pester) | 已完成(2026-07-11,commit 6e80ed0,CI 首輪 2m3s 綠) |
 | 2 | 清理過期 testResults 與根目錄雜物,gitignore 測試產物 | 未做 |
 | 3 | 回填 learnings.md(5 至 10 條真實教訓) | 已完成(2026-07-11,回填 9 個日期區段約 25 條,經 34 條對抗式驗證) |
 | 4 | 重驗 spec-kit 0.12.x 的 extension/preset CLI 能力面 | 未做(既有障礙文件基於 0.8.7,已過期) |

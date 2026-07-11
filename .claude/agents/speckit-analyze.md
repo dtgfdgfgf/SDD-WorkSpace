@@ -290,6 +290,22 @@ Output a Markdown report (no file writes) with the following structure:
 - Duplication Count
 - Critical Issues Count
 
+**Mainline-Bound Shared-Layer Change Manifest:** (if applicable)
+
+When the analyzed feature touches workspace-level shared-layer surfaces — `studio/constitution/`,
+`studio/runtime/`, `studio/templates/sdd-docs/`, `.githooks/`, `studio/scripts/powershell/`,
+`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/agents/`, `.claude/agents/`,
+or `studio/QUICKSTART.md` / `studio/SDD-QUICKSTART-GUIDE.md` / `WORKSPACE_STRUCTURE.md` — the
+report MUST include a one-line prompt:
+
+> Mainline-bound shared-layer change detected. Author a change-manifest from
+> `studio/templates/sdd-docs/change-manifest-template.md` and a mainline-update note from
+> `studio/templates/sdd-docs/mainline-update-note-template.md` before merging to `main`
+> (constitution §12).
+
+This is advisory only; analyze does not write files. Skip the prompt entirely when the change is
+purely consumer-project (`projects/`, `learning/`).
+
 ### 7. Provide Next Actions
 
 At end of report, output a concise Next Actions block:

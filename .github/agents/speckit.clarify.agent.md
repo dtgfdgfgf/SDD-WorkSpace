@@ -25,7 +25,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Goal: Detect and reduce ambiguity or missing decision points in the active feature specification and record the clarifications directly in the spec file.
 
-Note: This clarification workflow is expected to run (and be completed) BEFORE invoking `/speckit.readiness`. If the user explicitly states they are skipping clarification (e.g., exploratory spike), you may proceed, but must warn that downstream rework risk increases.
+Note: This clarification workflow is a mandatory SDD stage (Studio Constitution Section 2 and Section 10) and MUST run and be completed BEFORE `/speckit.readiness`. It MUST NOT be skipped, and skipping MUST NOT be suggested. When the active spec has no material ambiguities, this stage still runs but completes quickly: confirm in the spec that no high-risk clarifications remain, then proceed. An exploratory spike is not an exemption from running the stage.
 
 Execution steps:
 

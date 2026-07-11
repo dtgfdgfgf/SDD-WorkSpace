@@ -37,7 +37,6 @@ Design priorities:
 | `resources/` | Shared resources |
 | `resources/agent-skill-packs/` | Generated AI skill packs exported from shared runtime sources |
 | `WORKSPACE_STRUCTURE.md` | This document |
-| `features.txt` | Current development goals |
 
 ## Studio Canonical Sources
 

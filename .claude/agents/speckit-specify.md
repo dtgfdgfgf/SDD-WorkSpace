@@ -76,18 +76,22 @@ Given that feature description, do this:
     2. Extract key concepts from description
        Identify: actors, actions, data, constraints
     3. For unclear aspects:
-       - Make informed guesses based on context and industry standards
-       - Only mark with [NEEDS CLARIFICATION: specific question] if:
-         - The choice significantly impacts feature scope or user experience
-         - Multiple reasonable interpretations exist with different implications
-         - No reasonable default exists
-       - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
+       - Do NOT invent requirements. Studio Constitution Section 10 forbids assuming missing
+         requirements. Mark [NEEDS CLARIFICATION: specific question] for any unclear aspect that
+         materially defines the feature — scope, actors, functional/non-functional requirements,
+         primary scenarios, success criteria, or a named capability.
+       - A conventional default MAY be used ONLY for a purely local, non-scope-defining detail, and
+         then it MUST be recorded in the Assumptions section as a provisional assumption to be
+         confirmed in /speckit.clarify (never silently baked in).
+       - Do not cap the number of markers for material unknowns; record every material unknown.
        - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
     4. Fill User Scenarios & Testing section
        If no clear user flow: ERROR "Cannot determine user scenarios"
     5. Generate Functional Requirements
        Each requirement must be testable
-       Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
+       Mark unspecified scope-defining details with [NEEDS CLARIFICATION]; use conventional
+       defaults only for purely local details, recorded as provisional assumptions in the
+       Assumptions section
     6. Define Success Criteria
        Create measurable, technology-agnostic outcomes
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
@@ -212,26 +216,32 @@ Given that feature description, do this:
 
 When creating this spec from a user prompt:
 
-1. **Make informed guesses**: Use context, industry standards, and common patterns to fill gaps
-2. **Document assumptions**: Record reasonable defaults in the Assumptions section
-3. **Limit clarifications**: Maximum 3 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
+1. **Do not invent requirements**: Studio Constitution Section 10 forbids assuming missing
+   requirements. For scope-defining gaps, mark [NEEDS CLARIFICATION] instead of guessing.
+2. **Provisional assumptions only for local details**: A conventional default MAY fill a purely
+   local, non-scope-defining detail, but it MUST be recorded in the Assumptions section as
+   provisional and confirmed in /speckit.clarify — never silently baked into the spec.
+3. **Mark every material unknown**: Do not cap markers for scope-defining unknowns. Use
+   [NEEDS CLARIFICATION] for decisions that:
    - Significantly impact feature scope or user experience
    - Have multiple reasonable interpretations with different implications
-   - Lack any reasonable default
+   - Affect security, privacy, compliance, retention, authentication, or integration boundaries
 4. **Prioritize clarifications**: scope > security/privacy > user experience > technical details
 5. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
-6. **Common areas needing clarification** (only if no reasonable default exists):
+6. **Common areas that usually need clarification** (mark rather than assume):
    - Feature scope and boundaries (include/exclude specific use cases)
-   - User types and permissions (if multiple conflicting interpretations possible)
-   - Security/compliance requirements (when legally/financially significant)
+   - User types and permissions
+   - Security/compliance requirements
 
-**Examples of reasonable defaults** (don't ask about these):
+**Areas that MUST NOT be silently defaulted** (they materially define the feature — mark them):
 
-- Data retention: Industry-standard practices for the domain
-- Performance targets: Standard web/mobile app expectations unless specified
-- Error handling: User-friendly messages with appropriate fallbacks
-- Authentication method: Standard session-based or OAuth2 for web apps
-- Integration patterns: RESTful APIs unless specified otherwise
+- Data retention (legal/compliance impact)
+- Authentication method (security impact)
+- Performance/availability targets (define success criteria)
+- Integration patterns and external dependencies (scope-defining)
+
+Purely presentational or internal-only details (e.g. default error-message wording) MAY use a
+conventional default, recorded as a provisional assumption.
 
 ### Success Criteria Guidelines
 
