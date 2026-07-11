@@ -263,18 +263,66 @@ Describe 'setup-analyze entry gate' {
 }
 
 Describe 'setup-implement entry gate' {
-    It 'reports READY when tasks.md has at least one pending canonical task' {
+    BeforeAll {
+        $script:completeChecklist = @"
+# Analysis Checklist: Fixture
+
+## Findings
+
+| ID | Severity | Finding | Resolution |
+|----|----------|---------|------------|
+| F001 | Minor | Cosmetic wording | Accepted |
+
+## Analyze Gate
+
+**Analysis Status**: COMPLETE
+"@
+    }
+
+    It 'reports READY when tasks are pending and analyze is complete' {
         $featureDir = New-FeatureFixture -With @{
-            Spec  = $script:cleanSpec
-            Plan  = $script:cleanPlan
-            Tasks = $script:cleanTasks
+            Spec              = $script:cleanSpec
+            Plan              = $script:cleanPlan
+            Tasks             = $script:cleanTasks
+            AnalysisChecklist = $script:completeChecklist
         }
         $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Json
         $LASTEXITCODE | Should -Be 0
         $result = ($output | ConvertFrom-Json)
         $result.READY | Should -BeTrue
+        $result.ANALYZE_STATE | Should -Be 'complete'
         $result.PENDING_TASKS.Count | Should -BeGreaterThan 0
         $result.PENDING_TASKS[0].Id | Should -Be 'T001'
+    }
+
+    It 'blocks when analysis-checklist.md is missing (analyze never ran)' {
+        $featureDir = New-FeatureFixture -With @{
+            Spec  = $script:cleanSpec
+            Plan  = $script:cleanPlan
+            Tasks = $script:cleanTasks
+        }
+        $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'analyze has not run|analysis-checklist\.md is missing'
+    }
+
+    It 'blocks when analyze is scaffolded but still PENDING' {
+        $pendingChecklist = @"
+# Analysis Checklist: Fixture
+
+## Analyze Gate
+
+**Analysis Status**: PENDING
+"@
+        $featureDir = New-FeatureFixture -With @{
+            Spec              = $script:cleanSpec
+            Plan              = $script:cleanPlan
+            Tasks             = $script:cleanTasks
+            AnalysisChecklist = $pendingChecklist
+        }
+        $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'not complete|COMPLETE'
     }
 
     It 'blocks when tasks.md has no pending canonical tasks' {
@@ -297,9 +345,10 @@ Describe 'setup-implement entry gate' {
 
     It 'rejects -Task when the requested ID is not pending' {
         $featureDir = New-FeatureFixture -With @{
-            Spec  = $script:cleanSpec
-            Plan  = $script:cleanPlan
-            Tasks = $script:cleanTasks
+            Spec              = $script:cleanSpec
+            Plan              = $script:cleanPlan
+            Tasks             = $script:cleanTasks
+            AnalysisChecklist = $script:completeChecklist
         }
         $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Task 'T999' -Json 2>&1
         $LASTEXITCODE | Should -Not -Be 0
@@ -308,9 +357,10 @@ Describe 'setup-implement entry gate' {
 
     It 'accepts a valid -Task ID' {
         $featureDir = New-FeatureFixture -With @{
-            Spec  = $script:cleanSpec
-            Plan  = $script:cleanPlan
-            Tasks = $script:cleanTasks
+            Spec              = $script:cleanSpec
+            Plan              = $script:cleanPlan
+            Tasks             = $script:cleanTasks
+            AnalysisChecklist = $script:completeChecklist
         }
         $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Task 'T001' -Json
         $LASTEXITCODE | Should -Be 0
@@ -327,6 +377,10 @@ Describe 'setup-implement entry gate' {
 | ID | Severity | Finding | Resolution |
 |----|----------|---------|------------|
 | F001 | Critical | Missing test coverage for FR-002 | TBD |
+
+## Analyze Gate
+
+**Analysis Status**: COMPLETE
 "@
         $featureDir = New-FeatureFixture -With @{
             Spec              = $script:cleanSpec

@@ -804,6 +804,17 @@
       ]
     },
     {
+      "id": "setup-implement-analyze-gate",
+      "path": "studio/scripts/powershell/setup-implement.ps1",
+      "mustContainAll": [
+        "Get-AnalyzeCompletionState",
+        "Analysis Status",
+        "has not run",
+        "is not complete",
+        "ANALYZE_STATE"
+      ]
+    },
+    {
       "id": "create-new-feature-path-boundary",
       "path": "studio/scripts/powershell/create-new-feature.ps1",
       "mustContainAll": [

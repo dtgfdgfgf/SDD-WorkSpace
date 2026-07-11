@@ -5,10 +5,15 @@
 
 .DESCRIPTION
     Confirms that tasks.md contains at least one canonical `- [ ] T### ...`
-    checklist line, that the analysis-checklist.md (when present) has no
-    unresolved Critical findings, and that validate-feature-structure.ps1
-    reports VALID. Optionally accepts a `-Task T###` filter and surfaces the
-    next pending tasks for dry-run inspection.
+    checklist line, that /speckit.analyze has actually completed (analysis-checklist.md
+    exists and its `**Analysis Status**` reads COMPLETE with no unresolved Critical
+    findings), and that validate-feature-structure.ps1 reports VALID. Optionally
+    accepts a `-Task T###` filter and surfaces the next pending tasks for dry-run
+    inspection.
+
+    The analyze completion check closes a gap where a missing analysis-checklist.md
+    was indistinguishable from "analyzed, no Critical findings": a missing checklist
+    now blocks (analyze never ran) and a PENDING status blocks (analyze not signed off).
 
     Hard gate (constitution §2 + §8 + §9): /speckit.implement depends on every
     prior stage and on Critical analyze findings being resolved before
@@ -114,6 +119,20 @@ function Get-UnresolvedCriticalFindings {
     return $unresolved
 }
 
+function Get-AnalyzeCompletionState {
+    # Distinguishes "never analyzed" (missing) from "analyzed but not signed off" (pending)
+    # from "analyzed and complete" (complete). Without this, a missing checklist looked
+    # identical to "analyzed, no Critical findings" and let /speckit.implement run un-analyzed.
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return 'missing' }
+    $content = Get-Content -LiteralPath $Path -Raw
+    if ([string]::IsNullOrWhiteSpace($content)) { return 'pending' }
+    $m = [regex]::Match($content, '(?im)^\*\*Analysis Status\*\*:\s*(?<v>[A-Za-z_]+)')
+    if (-not $m.Success) { return 'pending' }
+    if ($m.Groups['v'].Value.Trim().ToUpperInvariant() -eq 'COMPLETE') { return 'complete' }
+    return 'pending'
+}
+
 $paths = Resolve-FeatureContext -Override $FeatureDir
 
 # Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
@@ -158,6 +177,16 @@ if ($Task) {
     }
 }
 
+$analyzeState = Get-AnalyzeCompletionState -Path $paths.ANALYSIS_CHECKLIST
+switch ($analyzeState) {
+    'missing' {
+        $blockers.Add("/speckit.analyze has not run: analysis-checklist.md is missing. Run /speckit.analyze before /speckit.implement: $($paths.ANALYSIS_CHECKLIST)") | Out-Null
+    }
+    'pending' {
+        $blockers.Add("/speckit.analyze is not complete: set '**Analysis Status**: COMPLETE' in analysis-checklist.md after recording findings (currently PENDING). This gate distinguishes an analyzed feature from one that was never analyzed.") | Out-Null
+    }
+}
+
 $criticalFindings = Get-UnresolvedCriticalFindings -Path $paths.ANALYSIS_CHECKLIST
 if ($criticalFindings.Count -gt 0) {
     foreach ($cf in $criticalFindings) {
@@ -191,6 +220,7 @@ $result = [ordered]@{
     IMPL_PLAN          = $paths.IMPL_PLAN
     TASKS              = $paths.TASKS
     ANALYSIS_CHECKLIST = $paths.ANALYSIS_CHECKLIST
+    ANALYZE_STATE      = $analyzeState
     PENDING_TASKS      = @($pendingTasks)
     SELECTED_TASK      = $selectedTask
     UNRESOLVED_CRITICAL = @($criticalFindings)

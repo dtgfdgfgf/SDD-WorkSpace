@@ -70,6 +70,20 @@
 
 ---
 
+## Analyze Gate
+
+<!--
+  Machine gate (setup-implement.ps1): /speckit.implement is blocked until this reads COMPLETE.
+  Flip PENDING to COMPLETE only after /speckit.analyze findings are recorded in the Findings
+  table above and every Critical finding is resolved. A missing checklist or a PENDING status
+  means analyze has not been completed for this feature, and implementation MUST NOT start.
+  This distinguishes "analyzed, no Critical findings" from "never analyzed".
+-->
+
+**Analysis Status**: PENDING
+
+---
+
 ## Notes
 
 - Check items off as completed: `[x]`
