@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+#Requires -Version 7.0
+
 [CmdletBinding()]
 param(
     [string]$WorkspaceRoot,
@@ -10,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 
 . "$PSScriptRoot/common.ps1"
 
-$Utf8 = [System.Text.UTF8Encoding]::new($true)
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false, $true)
 $resolvedWorkspaceRoot = if ($WorkspaceRoot) {
     Resolve-AbsolutePath -Path $WorkspaceRoot
 } else {
@@ -38,7 +40,7 @@ function Get-FrontMatterAndBody {
         [string]$Path
     )
 
-    $lines = [System.IO.File]::ReadAllLines($Path, $Utf8)
+    $lines = [System.IO.File]::ReadAllLines($Path, $Utf8NoBom)
     if ($lines.Count -lt 3 -or $lines[0] -ne '---') {
         Write-Warning "Frontmatter missing or malformed in '$Path' (no leading '---' delimiter); skipping."
         return $null
@@ -234,7 +236,8 @@ function Write-ClaudeAgentFile {
     }
 
     $outputPath = Join-Path $OutputDir "$name.md"
-    [System.IO.File]::WriteAllLines($outputPath, $lines, $Utf8)
+    $content = ($lines -join "`n") + "`n"
+    [System.IO.File]::WriteAllText($outputPath, $content, $Utf8NoBom)
 
     return [ordered]@{
         name       = $name

@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+#Requires -Version 7.0
+
 [CmdletBinding()]
 param(
     [switch]$Json,
@@ -142,13 +144,53 @@ function Invoke-PathContractChecks {
     }
 }
 
+$warnings = @()
+$failures = @()
+$commandChecks = @()
+$githubAgentChecks = @()
+$promptStubChecks = @()
+$claudeAgentChecks = @()
+$templateChecks = @()
+$docSemanticChecks = @()
+$agentSemanticChecks = @()
+$templateSemanticChecks = @()
+$scriptSemanticChecks = @()
+$workflowSemanticChecks = @()
+$hookChecks = @()
+$agentBootstrapChecks = @()
+$mainlineNoteChecks = @()
+
 $paths = Get-StudioSharedLayerPaths -StartDir $PSScriptRoot
 $validator = Invoke-JsonScript -ScriptPath $paths.EXTENSIONS_VALIDATOR_PATH -Arguments @('-Json')
 $listWorkflowsScript = Join-Path $paths.SHARED_SCRIPTS_DIR 'list-workflows.ps1'
-$workflowList = if (Test-Path -LiteralPath $listWorkflowsScript) { Invoke-JsonScript -ScriptPath $listWorkflowsScript -Arguments @('-Json') } else { $null }
+$workflowListInvocation = if (Test-Path -LiteralPath $listWorkflowsScript -PathType Leaf) {
+    Invoke-JsonScriptDetailed -ScriptPath $listWorkflowsScript -Arguments @('-Json')
+} else {
+    [ordered]@{ EXIT_CODE = 1; RAW = $null; OUTPUT = $null }
+}
+$workflowList = $workflowListInvocation.OUTPUT
+$studioWorkflowEnabled = @()
+if ($workflowList) {
+    $studioWorkflowEnabled = @($workflowList.WORKFLOWS | Where-Object { $_.enabled -eq $true } | ForEach-Object { $_.id })
+}
+
+if (-not (Test-Path -LiteralPath $listWorkflowsScript -PathType Leaf)) {
+    $failures += New-AuditFailure -Category 'workflow-registry' -Id 'workflow-list-script-missing' -Message 'Workflow registry list/validation script is missing.' -Path $listWorkflowsScript
+} elseif (-not $workflowList) {
+    $failures += New-AuditFailure -Category 'workflow-registry' -Id 'workflow-registry-output-invalid' -Message 'Workflow registry validation did not return structured JSON output.' -Path $listWorkflowsScript
+} elseif ($workflowListInvocation.EXIT_CODE -ne 0 -or -not [bool]$workflowList.VALID) {
+    $workflowErrors = @($workflowList.ERRORS | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+    if ($workflowErrors.Count -eq 0) {
+        $workflowErrors = @('Workflow registry validation failed without a structured error message.')
+    }
+    foreach ($workflowError in $workflowErrors) {
+        $failures += New-AuditFailure -Category 'workflow-registry' -Id 'workflow-registry-invalid' -Message ([string]$workflowError) -Path (Join-Path $paths.STUDIO_ROOT 'workflows')
+    }
+}
+
 $workflowYamlAvailable = [bool](Get-Module -ListAvailable -Name 'powershell-yaml' | Select-Object -First 1)
-if ($workflowList -and -not $workflowYamlAvailable) {
-    $warnings += 'powershell-yaml module is not installed; the workflow runtime requires it. Install: Install-Module -Name powershell-yaml -Scope CurrentUser'
+if (-not $workflowYamlAvailable) {
+    $failures += New-AuditFailure -Category 'workflow-dependency' -Id 'powershell-yaml-missing' -Message 'powershell-yaml module is not installed; the workflow runtime requires it. Install: Install-Module -Name powershell-yaml -Scope CurrentUser' -Path $null
 }
 $runtimeSources = Get-ExtensionAwareRuntimeSources -StartDir $PSScriptRoot
 $updateAgentContextPath = Join-Path $paths.SHARED_SCRIPTS_DIR 'update-agent-context.ps1'
@@ -172,9 +214,6 @@ $toolChecks = @(
     'qodercli'
 ) | ForEach-Object { Get-ToolCheck -Name $_ }
 
-$warnings = @()
-$failures = @()
-
 $enabledExtensions = @($validator.EXTENSIONS | Where-Object { $_.enabled -eq $true } | ForEach-Object { $_.id })
 if ($enabledExtensions.Count -gt 0 -and $runtimeSources.MODE -ne 'merged') {
     $warnings += 'Enabled extensions exist but no merged runtime mirror is currently active.'
@@ -189,23 +228,32 @@ foreach ($extensionWarning in @($validator.WARNINGS)) {
     $warnings += [string]$extensionWarning
 }
 
-$commandChecks = @()
-$promptStubChecks = @()
-$claudeAgentChecks = @()
-$templateChecks = @()
-$docSemanticChecks = @()
-$agentSemanticChecks = @()
-$templateSemanticChecks = @()
-$scriptSemanticChecks = @()
-$hookChecks = @()
-$agentBootstrapChecks = @()
 
 if (-not $contract) {
     $failures += New-AuditFailure -Category 'contract' -Id 'missing-contract' -Message 'Shared runtime contract not found or unreadable.' -Path $paths.SHARED_RUNTIME_CONTRACT
 } else {
-    $actualCommandFiles = @(Get-ChildItem -LiteralPath $paths.SHARED_AGENTS_DIR -File -Filter 'speckit.*.agent.md' | Select-Object -ExpandProperty Name)
-    $actualCommands = @($actualCommandFiles | ForEach-Object { $_ -replace '\.agent\.md$', '' } | Sort-Object -Unique)
     $requiredCommands = @($contract.requiredCommands | ForEach-Object { [string]$_ })
+    $mandatoryStageCommands = @($contract.mandatoryStageCommands | ForEach-Object { [string]$_ })
+    $auxiliaryCommands = @($contract.auxiliaryCommands | ForEach-Object { [string]$_ })
+    $expectedRequiredCommands = @($mandatoryStageCommands + $auxiliaryCommands | Sort-Object -Unique)
+    $normalizedRequiredCommands = @($requiredCommands | Sort-Object -Unique)
+    $commandLayerOverlap = @($mandatoryStageCommands | Where-Object { $_ -in $auxiliaryCommands } | Sort-Object -Unique)
+
+    if (($expectedRequiredCommands -join "`n") -ne ($normalizedRequiredCommands -join "`n")) {
+        $failures += New-AuditFailure -Category 'contract' -Id 'required-command-layering-mismatch' -Message 'requiredCommands must equal the union of mandatoryStageCommands and auxiliaryCommands.' -Path $paths.SHARED_RUNTIME_CONTRACT
+    }
+    if ($commandLayerOverlap.Count -gt 0) {
+        $failures += New-AuditFailure -Category 'contract' -Id 'command-layering-overlap' -Message ("mandatoryStageCommands and auxiliaryCommands must be disjoint: {0}" -f ($commandLayerOverlap -join ', ')) -Path $paths.SHARED_RUNTIME_CONTRACT
+    }
+
+    $actualGitHubAgentFiles = if (Test-Path -LiteralPath $paths.SHARED_AGENTS_DIR -PathType Container) {
+        @(Get-ChildItem -LiteralPath $paths.SHARED_AGENTS_DIR -File -Force | Select-Object -ExpandProperty Name)
+    } else {
+        @()
+    }
+    $requiredCommandFiles = @($requiredCommands | ForEach-Object { "{0}.agent.md" -f $_ })
+    $requiredNonCommandGitHubAgentFiles = @($contract.requiredNonCommandGitHubAgentFiles | ForEach-Object { [string]$_ })
+    $requiredGitHubAgentFiles = @($requiredCommandFiles + $requiredNonCommandGitHubAgentFiles | Sort-Object -Unique)
 
     foreach ($requiredCommand in $requiredCommands) {
         $agentPath = Join-Path $paths.SHARED_AGENTS_DIR ("{0}.agent.md" -f $requiredCommand)
@@ -221,15 +269,29 @@ if (-not $contract) {
         }
     }
 
-    foreach ($unexpectedCommand in @($actualCommands | Where-Object { $_ -notin $requiredCommands })) {
-        $agentPath = Join-Path $paths.SHARED_AGENTS_DIR ("{0}.agent.md" -f $unexpectedCommand)
-        $commandChecks += [ordered]@{
-            name       = $unexpectedCommand
-            path       = $agentPath
-            exists     = $true
-            inContract = $false
+    foreach ($requiredAgentFile in $requiredNonCommandGitHubAgentFiles) {
+        $agentPath = Join-Path $paths.SHARED_AGENTS_DIR $requiredAgentFile
+        $exists = Test-Path -LiteralPath $agentPath -PathType Leaf
+        $githubAgentChecks += [ordered]@{
+            name     = $requiredAgentFile
+            path     = $agentPath
+            exists   = $exists
+            declared = $true
         }
-        $failures += New-AuditFailure -Category 'commands' -Id ("unexpected-{0}" -f $unexpectedCommand) -Message "Unexpected shared runtime command not declared in contract: $unexpectedCommand" -Path $agentPath
+        if (-not $exists) {
+            $failures += New-AuditFailure -Category 'github-agents' -Id ("missing-{0}" -f $requiredAgentFile) -Message "Required non-command GitHub agent file is missing: $requiredAgentFile" -Path $agentPath
+        }
+    }
+
+    foreach ($unexpectedAgentFile in @($actualGitHubAgentFiles | Where-Object { $_ -notin $requiredGitHubAgentFiles })) {
+        $agentPath = Join-Path $paths.SHARED_AGENTS_DIR $unexpectedAgentFile
+        $githubAgentChecks += [ordered]@{
+            name     = $unexpectedAgentFile
+            path     = $agentPath
+            exists   = $true
+            declared = $false
+        }
+        $failures += New-AuditFailure -Category 'github-agents' -Id ("unexpected-{0}" -f $unexpectedAgentFile) -Message "Unexpected GitHub agent file is not declared by the closed-directory policy: $unexpectedAgentFile" -Path $agentPath
     }
 
     $actualPromptFiles = @(Get-ChildItem -LiteralPath $paths.SHARED_PROMPTS_DIR -File -Filter 'speckit.*.prompt.md' | Select-Object -ExpandProperty Name)
@@ -261,7 +323,7 @@ if (-not $contract) {
     }
 
     $actualClaudeAgentFiles = if (Test-Path -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR) {
-        @(Get-ChildItem -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR -File -Filter '*.md' | Select-Object -ExpandProperty Name)
+        @(Get-ChildItem -LiteralPath $paths.SHARED_CLAUDE_AGENTS_DIR -File -Force | Select-Object -ExpandProperty Name)
     } else {
         @()
     }
@@ -364,6 +426,30 @@ if (-not (Test-Path -LiteralPath $agentBootstrapScript)) {
     }
 }
 
+$mainlineNoteScript = Join-Path $paths.SHARED_SCRIPTS_DIR 'validate-mainline-notes.ps1'
+if (-not (Test-Path -LiteralPath $mainlineNoteScript -PathType Leaf)) {
+    $failures += New-AuditFailure -Category 'mainline-notes' -Id 'validator-missing' -Message 'Mainline update-note validator is missing.' -Path $mainlineNoteScript
+} else {
+    $mainlineNoteResult = Invoke-JsonScriptDetailed -ScriptPath $mainlineNoteScript -Arguments @('-WorkspaceRoot', $paths.WORKSPACE_ROOT, '-Json')
+    if ($mainlineNoteResult.OUTPUT) {
+        $mainlineNoteChecks = @($mainlineNoteResult.OUTPUT)
+    }
+
+    if (-not $mainlineNoteResult.OUTPUT) {
+        $failures += New-AuditFailure -Category 'mainline-notes' -Id 'validator-output-invalid' -Message 'Mainline update-note validator did not return structured JSON.' -Path $mainlineNoteScript
+    } elseif ($mainlineNoteResult.EXIT_CODE -ne 0 -or -not [bool]$mainlineNoteResult.OUTPUT.VALID) {
+        $noteErrors = @($mainlineNoteResult.OUTPUT.ERRORS)
+        if ($noteErrors.Count -eq 0) {
+            $failures += New-AuditFailure -Category 'mainline-notes' -Id 'validation-failed' -Message 'Mainline update-note validation failed without a structured error.' -Path (Join-Path $paths.WORKSPACE_ROOT 'docs/mainline-updates')
+        } else {
+            foreach ($noteError in $noteErrors) {
+                $notePath = if ($noteError.path) { Join-Path $paths.WORKSPACE_ROOT ([string]$noteError.path) } else { Join-Path $paths.WORKSPACE_ROOT 'docs/mainline-updates' }
+                $failures += New-AuditFailure -Category 'mainline-notes' -Id ([string]$noteError.category) -Message ([string]$noteError.message) -Path $notePath
+            }
+        }
+    }
+}
+
 $skillTargets = @()
 foreach ($target in @('codex', 'claude')) {
     try {
@@ -451,11 +537,12 @@ $result = [ordered]@{
     EXTENSION_WARNINGS        = $validator.WARNING_COUNT
     STUDIO_WORKFLOW_REGISTRY_VALID = if ($workflowList) { [bool]$workflowList.VALID } else { $false }
     STUDIO_WORKFLOW_COUNT          = if ($workflowList) { [int]$workflowList.COUNT } else { 0 }
-    STUDIO_WORKFLOW_ENABLED        = if ($workflowList) { @($workflowList.WORKFLOWS | Where-Object { $_.enabled -eq $true } | ForEach-Object { $_.id }) } else { @() }
+    STUDIO_WORKFLOW_ENABLED        = $studioWorkflowEnabled
     STUDIO_WORKFLOW_ERRORS         = if ($workflowList) { [int]$workflowList.ERROR_COUNT } else { 0 }
     STUDIO_WORKFLOW_WARNINGS       = 0
     STUDIO_WORKFLOW_YAML_AVAILABLE = $workflowYamlAvailable
     COMMAND_CHECKS            = $commandChecks
+    GITHUB_AGENT_CHECKS        = $githubAgentChecks
     PROMPT_STUB_CHECKS        = $promptStubChecks
     CLAUDE_AGENT_CHECKS       = $claudeAgentChecks
     TEMPLATE_CHECKS           = $templateChecks
@@ -465,6 +552,10 @@ $result = [ordered]@{
     SCRIPT_SEMANTIC_CHECKS    = $scriptSemanticChecks
     WORKFLOW_SEMANTIC_CHECKS  = $workflowSemanticChecks
     AGENT_BOOTSTRAP_CHECKS    = $agentBootstrapChecks
+    MAINLINE_NOTE_CHECKS      = $mainlineNoteChecks
+    MAINLINE_NOTE_VALID       = if ($mainlineNoteChecks.Count -gt 0) { [bool]$mainlineNoteChecks[0].VALID } else { $false }
+    MAINLINE_NOTE_ERROR_COUNT = if ($mainlineNoteChecks.Count -gt 0) { [int]$mainlineNoteChecks[0].ERROR_COUNT } else { 0 }
+    MAINLINE_NOTE_LEGACY_BASELINE_COUNT = if ($mainlineNoteChecks.Count -gt 0) { [int]$mainlineNoteChecks[0].LEGACY_BASELINE_COUNT } else { 0 }
     HOOK_CHECKS               = $hookChecks
     SKILL_TARGETS             = $skillTargets
     REGISTRY_FRESHNESS        = $registryFreshnessCheck

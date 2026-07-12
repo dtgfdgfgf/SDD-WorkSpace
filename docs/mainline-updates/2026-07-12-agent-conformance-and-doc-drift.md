@@ -7,9 +7,19 @@
 **Date**: 2026-07-12
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `60556ef`
 **Related PR**: N/A
+
+## Revalidation
+
+The later [2026-07-12 governance review](../sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md)
+refuted the conformance claim through GOV-05: the Specify agent still capped clarification markers,
+guessed remaining material unknowns, and offered Readiness as a next stage. This note therefore
+records a historical partial repair and is not current conformance evidence.
+
+Promotion requires the R3 source-agent fix, regenerated mirrors, and machine-checked handoff and
+next-stage invariants.
 
 ## Summary
 

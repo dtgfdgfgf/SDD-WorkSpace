@@ -1,4 +1,4 @@
-﻿---
+---
 name: speckit-implement
 description: "Execute the implementation plan by processing and executing all tasks defined in tasks.md"
 model: claude-opus-4-7

@@ -3,7 +3,7 @@
 
 BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
-    . (Get-ScriptFunctionsBlock -ScriptPath (Join-Path $WorkspaceRoot 'studio/scripts/powershell/common.ps1'))
+    . (Join-Path $WorkspaceRoot 'studio/scripts/powershell/common.ps1')
 }
 
 # ============================================================
@@ -64,6 +64,22 @@ Describe 'Read-JsonFile' {
     It 'returns null for non-existent file' {
         $result = Read-JsonFile -Path (Join-Path $TestDrive 'missing.json')
         $result | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'UTF-8 no-BOM LF writers' {
+    It 'writes JSON with LF, no BOM, and a final newline' {
+        $jsonPath = Join-Path $TestDrive 'lf-output.json'
+        Write-JsonFile -Path $jsonPath -Data ([ordered]@{
+            name = 'fixture'
+            values = @(1, 2)
+        })
+
+        $bytes = [System.IO.File]::ReadAllBytes($jsonPath)
+        ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) | Should -BeFalse
+        ([Array]::IndexOf($bytes, [byte]0x0D) -ge 0) | Should -BeFalse
+        $bytes[-1] | Should -Be 0x0A
+        (Read-JsonFile -Path $jsonPath).name | Should -Be 'fixture'
     }
 }
 

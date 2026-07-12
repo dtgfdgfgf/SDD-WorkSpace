@@ -8,8 +8,11 @@
   Status state machine:
   - Draft: in progress; Related Commits MAY be TBD.
   - Ready: this batch is finalized and the commits exist. Related Commits MUST list at least
-    one concrete commit hash (or PR link). A Ready note with all-TBD commit metadata is invalid.
+    one concrete commit hash (or PR link), and Reconciliation Status MUST be Closed. A Ready note
+    with all-TBD commit metadata or unresolved must_update reconciliation is invalid.
   - Merged: the batch has been merged into main. Related Commits MUST list the final hash(es).
+  - Reopened: when later evidence refutes a material Ready or Merged claim, immediately change the
+    Status back to Draft and add a Revalidation section naming the evidence and re-entry conditions.
 -->
 
 **Date**: YYYY-MM-DD
@@ -18,6 +21,7 @@
 **Status**: Draft / Ready / Merged
 **Related Commits**: [hashes or `TBD` only while Status: Draft]
 **Related PR**: [link or `N/A`]
+**Reconciliation Status**: Open / Closed
 
 ## Summary
 
@@ -44,11 +48,22 @@
 - [User or maintainer-visible effect]
 - [Governance / workflow / migration effect]
 
+## Impact Reconciliation
+
+Record every aggregate branch-diff route that requires `must_update`. A `must_update` row closes
+only when the target is present in the branch diff, Disposition is `updated`, and Evidence is
+concrete. Use `reviewed-no-change` or `deferred-owner-approved` only for non-`must_update` review
+records; they do not weaken a `must_update` route. Ready or Merged requires no `pending` rows.
+
+| Target | Impact | Disposition | Evidence |
+|--------|--------|-------------|----------|
+| [exact impact-registry target] | `must_update` / `must_review` / `maybe_review` | `updated` / `reviewed-no-change` / `deferred-owner-approved` / `pending` | [changed path, test, owner approval, or other concrete evidence] |
+
 ## Validation
 
 - `git diff --check`
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`
-- Change manifests: [all closed / N deferred with reason / none required]
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef <base> -HeadRef <head> -RequireReady -Json`
 - [Any additional validation command or manual check]
 
 ## Merge Notes

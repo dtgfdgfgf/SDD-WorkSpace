@@ -1,4 +1,4 @@
-﻿---
+---
 name: spec-kit-qa-bot
 description: "專精於 Spec Kit 與 Specification-Driven Development 的 VS Code 子代理，用於回答 spec、plan、tasks、憲章、SDD 流程與 /speckit.* 指令相關問題。"
 model: claude-opus-4-7

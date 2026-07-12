@@ -3,9 +3,18 @@
 **Date**: 2026-07-12
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `6e8df83`
 **Related PR**: N/A
+
+## Revalidation
+
+The later [2026-07-12 governance review](../sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md)
+refuted the machine-gate claim through GOV-04: the direct Implement agent entrypoint did not invoke
+`setup-implement.ps1`, and the Critical finding parser did not match the canonical Analyze output.
+This note therefore records a historical partial implementation, not a non-bypassable gate.
+
+Promotion requires the R3 entrypoint and shared-schema repair plus direct-entry negative tests.
 
 ## Summary
 

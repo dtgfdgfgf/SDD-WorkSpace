@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
 Validate runtime agent bootstrap adapters for one project root.
@@ -119,6 +121,55 @@ function Test-ContainsInlineStudioConstitution {
     return ($Content -match '(?m)^#\s+Studio Constitution\s*$')
 }
 
+function Test-AgentScopedSubsetAdapter {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $subsetFailures = @()
+    $exists = Test-Path -LiteralPath $Path -PathType Leaf
+    $content = if ($exists) { Get-Content -LiteralPath $Path -Raw } else { '' }
+    $leadingAuthorityValid = $false
+    $containsIndependentBootstrap = $false
+    $referencesWorkspaceAdapter = $false
+
+    if ($exists) {
+        $leadingComment = [regex]::Match(
+            $content,
+            '\A(?:\uFEFF)?\s*(?<comment><!--(?:(?!-->)[\s\S])*-->)'
+        )
+        $leadingAuthorityValid = (
+            $leadingComment.Success -and
+            $leadingComment.Groups['comment'].Value -match 'Authority:\s*dependent\s*\(agent-scoped subset\)'
+        )
+        $containsIndependentBootstrap = (
+            $content.IndexOf($script:BeginMarker, [System.StringComparison]::Ordinal) -ge 0 -or
+            $content.IndexOf($script:EndMarker, [System.StringComparison]::Ordinal) -ge 0
+        )
+        $referencesWorkspaceAdapter = $content.IndexOf('.github/copilot-instructions.md', [System.StringComparison]::Ordinal) -ge 0
+
+        if (-not $leadingAuthorityValid) {
+            $subsetFailures += New-BootstrapFailure -Id 'agent-scoped-subset-authority-invalid' -Message 'Agent-scoped subset adapter must begin with an HTML comment declaring Authority: dependent (agent-scoped subset).' -Path $Path
+        }
+        if ($containsIndependentBootstrap) {
+            $subsetFailures += New-BootstrapFailure -Id 'agent-scoped-subset-bootstrap-forbidden' -Message 'Agent-scoped subset adapter must not contain an independent generated governance bootstrap block.' -Path $Path
+        }
+        if (-not $referencesWorkspaceAdapter) {
+            $subsetFailures += New-BootstrapFailure -Id 'agent-scoped-subset-parent-reference-missing' -Message 'Agent-scoped subset adapter must identify .github/copilot-instructions.md as its workspace-level parent adapter.' -Path $Path
+        }
+    }
+
+    return [ordered]@{
+        Check = [ordered]@{
+            name                         = 'AgentScopedSubset'
+            path                         = $Path
+            exists                       = $exists
+            leadingAuthorityValid        = $leadingAuthorityValid
+            containsIndependentBootstrap = $containsIndependentBootstrap
+            referencesWorkspaceAdapter   = $referencesWorkspaceAdapter
+        }
+        Failures = @($subsetFailures)
+    }
+}
+
 $context = Get-AgentBootstrapCheckContext -Root $ProjectRoot
 $failures = @()
 $checks = @()
@@ -192,6 +243,11 @@ if (-not [string]::IsNullOrWhiteSpace($claudeContent)) {
         $failures += New-BootstrapFailure -Id 'missing-claude-project-import' -Message 'CLAUDE.md is missing the direct project constitution @path import.' -Path $context.AdapterPaths.Claude
     }
 }
+
+$agentScopedSubsetPath = Join-Path $context.ProjectRoot '.github/agents/copilot-instructions.md'
+$agentScopedSubsetResult = Test-AgentScopedSubsetAdapter -Path $agentScopedSubsetPath
+$checks += $agentScopedSubsetResult.Check
+$failures += @($agentScopedSubsetResult.Failures)
 
 $result = [ordered]@{
     VALID = ($failures.Count -eq 0)

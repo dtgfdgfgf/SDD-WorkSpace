@@ -45,6 +45,5 @@
 | Path | Purpose |
 |------|---------|
 | `docs/mainline-updates/` | main-bound shared-layer update notes |
-| `docs/change-manifests/` | Legacy surface pending retirement under R-G06；不再建立新 manifest，R1 將把 reconciliation 併入 mainline note / merge CI |
 | `docs/readiness_source/` | readiness 設計參考資料，不是 runtime acceptance source |
 | `docs/0308upstreams/` | upstream alignment records |

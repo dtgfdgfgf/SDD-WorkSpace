@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Generates studio/runtime/impact-registry.json from built-in rules and local drift-governance metadata.
@@ -453,8 +455,9 @@ function Build-Registry {
 function ConvertTo-RegistryJson {
     param([object]$Registry)
 
-    # Use ConvertTo-Json with sufficient depth
-    return $Registry | ConvertTo-Json -Depth 10
+    # ConvertTo-Json follows the host platform's newline convention. Normalize the
+    # generated source to LF so repeated writes are byte-stable on every platform.
+    return (($Registry | ConvertTo-Json -Depth 10) -replace "`r`n?", "`n")
 }
 
 # ============================================================

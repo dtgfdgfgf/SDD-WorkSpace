@@ -32,6 +32,12 @@
     "speckit.taskstoissues",
     "speckit.version"
   ],
+  "_githubAgentClosureNote": "Every file in .github/agents is closed by requiredCommands or this explicit non-command allowlist. Undeclared files are audit failures.",
+  "requiredNonCommandGitHubAgentFiles": [
+    "async-python-reviewer.md",
+    "copilot-instructions.md",
+    "spec-kit.agent.md"
+  ],
   "requiredClaudeAgentsNote": "spec-kit-qa-bot.md derives its name from the frontmatter 'name' field in .github/agents/spec-kit.agent.md, not from a filename pattern match",
   "requiredClaudeAgents": [
     "async-python-reviewer.md",
@@ -69,7 +75,6 @@
     "agent-file-template.md",
     "agents-md-template.md",
     "access-setup-checklist-template.md",
-    "change-manifest-template.md",
     "checklist-template.md",
     "claude-md-template.md",
     "copilot-instructions-template.md",
@@ -110,7 +115,6 @@
         "check-speckit-runtime.ps1",
         "shared runtime audit",
         "impact-registry.json",
-        "Change manifest completeness",
         "Impact routing advisory",
         "Agent bootstrap synchronized",
         "sync-agent-bootstrap.ps1",
@@ -142,6 +146,65 @@
       "mustContainAll": [
         "# External source intake (never vendor a working checkout)",
         "resources/github-copilot-configs/"
+      ]
+    },
+    {
+      "id": "workspace-repository-hygiene-ignore",
+      "path": ".gitignore",
+      "mustContainAll": [
+        ".claude/settings.local.json",
+        ".claude/.agent-*-backup/"
+      ]
+    },
+    {
+      "id": "project-template-repository-hygiene-ignore",
+      "path": "studio/templates/project-init/.gitignore",
+      "mustContainAll": [
+        "/packages/",
+        ".claude/settings.local.json",
+        ".claude/.agent-*-backup/"
+      ]
+    },
+    {
+      "id": "repository-gitattributes-policy",
+      "path": ".gitattributes",
+      "mustContainAll": [
+        "* text=auto",
+        "*.ps1 text eol=lf",
+        "*.md text eol=lf",
+        "*.json text eol=lf",
+        "*.png binary"
+      ]
+    },
+    {
+      "id": "project-template-gitattributes-policy",
+      "path": "studio/templates/project-init/.gitattributes",
+      "mustContainAll": [
+        "* text=auto",
+        "*.ps1 text eol=lf",
+        "*.md text eol=lf",
+        "*.json text eol=lf",
+        "*.png binary"
+      ]
+    },
+    {
+      "id": "repository-editorconfig-policy",
+      "path": ".editorconfig",
+      "mustContainAll": [
+        "root = true",
+        "charset = utf-8",
+        "end_of_line = lf",
+        "insert_final_newline = true"
+      ]
+    },
+    {
+      "id": "project-template-editorconfig-policy",
+      "path": "studio/templates/project-init/.editorconfig",
+      "mustContainAll": [
+        "root = true",
+        "charset = utf-8",
+        "end_of_line = lf",
+        "insert_final_newline = true"
       ]
     },
     {
@@ -180,6 +243,39 @@
         "THIRD_PARTY_NOTICES.md",
         "LICENSE",
         "only in older Git history"
+      ]
+    },
+    {
+      "id": "readme-powershell-and-text-policy",
+      "path": "README.md",
+      "mustContainAll": [
+        "PowerShell 7 或更新版本，命令名稱為 `pwsh`",
+        "powershell-yaml` 0.4.12",
+        "Pester 5.7.1",
+        "UTF-8 without BOM and LF line endings",
+        "`.gitattributes`",
+        "`.editorconfig`"
+      ]
+    },
+    {
+      "id": "quickstart-powershell-runtime",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "PowerShell 7 或更新版本，命令名稱為 `pwsh`",
+        "powershell-yaml` 0.4.12",
+        "Pester 5.7.1",
+        "pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json"
+      ]
+    },
+    {
+      "id": "sdd-guide-powershell-runtime",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "| PowerShell | 7 或更新版本；命令名稱為 `pwsh` |",
+        "| powershell-yaml | 0.4.12 |",
+        "| Pester | 5.7.1 |",
+        "pwsh --version",
+        "pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json"
       ]
     },
     {
@@ -536,27 +632,13 @@
       "mustContainAll": [
         "Create under docs/mainline-updates/YYYY-MM-DD-short-topic.md",
         "**Target Branch**: `main`",
+        "**Reconciliation Status**: Open / Closed",
         "## Summary",
+        "## Impact Reconciliation",
         "## Validation",
         "## Merge Notes",
-        "Change manifests:"
-      ]
-    },
-    {
-      "id": "change-manifest-template-semantics",
-      "path": "studio/templates/sdd-docs/change-manifest-template.md",
-      "mustContainAll": [
-        "**Change Type**:",
-        "**Origin Document**:",
-        "**Status**: open | propagating | closed",
-        "## Impact Assessment",
-        "must_update",
-        "must_review",
-        "maybe_review",
-        "reference",
-        "## Propagation Order",
-        "## Completion Criteria",
-        "studio/runtime/impact-registry.json"
+        "validate-mainline-notes.ps1",
+        "Reopened: when later evidence refutes a material Ready or Merged claim"
       ]
     },
     {
@@ -645,7 +727,10 @@
         "CLAUDE.md",
         ".github/copilot-instructions.md",
         "-From",
-        "-StudioConstitutionVersion"
+        "-StudioConstitutionVersion",
+        "governance-anchor: agents-tool-notes",
+        "governance-anchor: claude-direct-imports",
+        "governance-anchor: claude-tool-notes"
       ]
     },
     {
@@ -657,7 +742,66 @@
         "AGENTS.md",
         "CLAUDE.md",
         ".github/copilot-instructions.md",
-        "@path import"
+        "@path import",
+        "Authority: dependent (agent-scoped subset)",
+        "agent-scoped-subset-bootstrap-forbidden",
+        "agent-scoped-subset-parent-reference-missing"
+      ]
+    },
+    {
+      "id": "validate-mainline-notes-gate",
+      "path": "studio/scripts/powershell/validate-mainline-notes.ps1",
+      "mustContainAll": [
+        "mainline-note-validation-baseline.json",
+        "Merged requires a concrete final commit hash.",
+        "Reconciliation Status: Closed",
+        "reconciliation-section-missing",
+        "reconciliation-section-malformed",
+        "legacy-baseline-note-changed",
+        "must-update-target-missing",
+        "must-update-reconciliation-missing",
+        "must_update requires disposition updated with concrete evidence"
+      ]
+    },
+    {
+      "id": "shared-runtime-audit-fail-closed",
+      "path": "studio/scripts/powershell/check-speckit-runtime.ps1",
+      "mustContainAll": [
+        "powershell-yaml-missing",
+        "workflow-registry-invalid",
+        "required-command-layering-mismatch",
+        "requiredNonCommandGitHubAgentFiles",
+        "validate-mainline-notes.ps1",
+        "MAINLINE_NOTE_VALID"
+      ]
+    },
+    {
+      "id": "run-governance-tests-coverage",
+      "path": "studio/scripts/powershell/run-governance-tests.ps1",
+      "mustContainAll": [
+        "[switch]$CodeCoverage",
+        "CodeCoverage.OutputFormat = 'Cobertura'",
+        "codeCoverage.xml",
+        "Run.Exit = $true",
+        "Import-Module Pester -RequiredVersion 5.7.1"
+      ]
+    },
+    {
+      "id": "governance-ci-enforcement",
+      "path": ".github/workflows/governance.yml",
+      "mustContainAll": [
+        "audit-and-tests:",
+        "pull_request:",
+        "schedule:",
+        "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "Install-Module Pester -RequiredVersion 5.7.1",
+        "Install-Module powershell-yaml -RequiredVersion 0.4.12",
+        "validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -Json"
+      ],
+      "mustMatchAll": [
+        "(?s)Mainline note and impact reconciliation \\(pull request\\).*?github\\.event_name == 'pull_request'.*?validate-mainline-notes\\.ps1.*?-RequireReady",
+        "(?s)Mainline note and impact reconciliation \\(main push\\).*?github\\.event_name == 'push'.*?validate-mainline-notes\\.ps1.*?-RequireReady"
       ]
     },
     {
@@ -695,6 +839,17 @@
         "ECI_DIR              = $eciDir",
         "Initialize-ProjectGitRepository",
         "core.hooksPath"
+      ]
+    },
+    {
+      "id": "common-governed-text-writer",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Write-Utf8NoBomLfFile",
+        "ConvertTo-LfText",
+        "UTF8Encoding]::new($false, $true)",
+        "Write-Utf8NoBomLfFile -Path $constitutionPath",
+        "Write-Utf8NoBomLfFile -Path $workspaceFile"
       ]
     },
     {
@@ -782,7 +937,10 @@
       "mustContainAll": [
         ".claude/agents",
         "copilot-instructions.md",
-        "Claude shared runtime authority after generation"
+        "Claude shared runtime authority after generation",
+        "UTF8Encoding]::new($false, $true)",
+        "WriteAllText",
+        "-join \"`n\""
       ]
     },
     {
@@ -1033,6 +1191,21 @@
         "manifest.schema.json",
         "powershell-yaml"
       ]
+    },
+    {
+      "id": "list-workflows-registry-validation",
+      "path": "studio/scripts/powershell/list-workflows.ps1",
+      "mustContainAll": [
+        "catalog.schema.json",
+        "state.schema.json",
+        "Test-Json",
+        "canonical object shape",
+        "Duplicate workflow catalog id",
+        "unknown catalog id",
+        "pinnedVersion",
+        "defaultEnabled=true requires",
+        "enabled state requires"
+      ]
     }
   ],
   "workflowInvariants": [
@@ -1071,18 +1244,24 @@
   "sharedGatePaths": [
     "AGENTS.md",
     "CLAUDE.md",
+    ".gitattributes",
+    ".editorconfig",
     ".gitignore",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     ".github/agents/",
     ".claude/agents/",
     ".github/prompts/",
+    ".github/workflows/governance.yml",
     ".github/copilot-instructions.md",
     ".githooks/pre-commit",
     ".githooks/pre-commit.ps1",
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
+    "studio/runtime/mainline-note-validation-baseline.json",
     "studio/templates/project-init/.gitignore",
+    "studio/templates/project-init/.gitattributes",
+    "studio/templates/project-init/.editorconfig",
     "studio/templates/project-init/README.md",
     "studio/templates/sdd-docs/",
     "studio/QUICKSTART.md",
@@ -1093,6 +1272,7 @@
     "studio/scripts/powershell/common.ps1",
     "studio/scripts/powershell/check-prerequisites.ps1",
     "studio/scripts/powershell/check-speckit-runtime.ps1",
+    "studio/scripts/powershell/validate-mainline-notes.ps1",
     "studio/scripts/powershell/sync-agent-bootstrap.ps1",
     "studio/scripts/powershell/check-agent-bootstrap.ps1",
     "studio/scripts/powershell/update-constitution.ps1",
@@ -1107,7 +1287,6 @@
     "studio/scripts/powershell/run-workflow.ps1",
     "studio/scripts/powershell/validate-workflow.ps1",
     "studio/scripts/powershell/list-workflows.ps1",
-    "studio/scripts/powershell/set-workflow-state.ps1",
-    "docs/change-manifests/"
+    "studio/scripts/powershell/set-workflow-state.ps1"
   ]
 }

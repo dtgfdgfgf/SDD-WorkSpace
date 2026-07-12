@@ -1,8 +1,28 @@
 # SDD-WorkSpace
 
+[![Governance CI](https://github.com/dtgfdgfgf/SDD-WorkSpace/actions/workflows/governance.yml/badge.svg?branch=main)](https://github.com/dtgfdgfgf/SDD-WorkSpace/actions/workflows/governance.yml)
+
 一個以 Specification-Driven Development (SDD) 為核心的 studio-first 工作區，目標是把個人 AI 工程實踐、共享治理、專案初始化、知識回饋與 AI agent runtime 集中在同一個 workspace 內管理。
 
 這個 repo 不是單一產品專案，而是整個 SDD 工作室的基礎設施。`studio/` 放 canonical sources，`.github/` 放 Copilot runtime assets，`.claude/` 放 Claude runtime assets，`learning/` 與 `projects/` 放實際練習和交付專案。
+
+## 環境需求
+
+- PowerShell 7 或更新版本，命令名稱為 `pwsh`
+- `powershell-yaml` 0.4.12（shared runtime audit 與 workflow YAML 驗證）
+- Pester 5.7.1（governance test suite）
+- Git
+- VS Code 與 GitHub Copilot Chat（使用互動式 agent workflow 時）
+
+Governed text files use UTF-8 without BOM and LF line endings. `.gitattributes` defines the Git
+normalization boundary, while `.editorconfig` keeps compatible editors aligned before commit.
+
+可用 `pwsh --version` 確認版本。本 repo 的 shared PowerShell 腳本不支援 Windows PowerShell 5.1；請以 `pwsh ./studio/scripts/powershell/<script>.ps1` 形式執行。
+
+```powershell
+pwsh -NoProfile -Command "Install-Module powershell-yaml -RequiredVersion 0.4.12 -Scope CurrentUser -Force"
+pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force"
+```
 
 ## 為什麼有這個 repo
 
@@ -128,24 +148,24 @@
 ### 2. 啟用 Git hooks
 
 ```powershell
-.\studio\scripts\powershell\setup-hooks.ps1
+pwsh ./studio/scripts/powershell/setup-hooks.ps1
 ```
 
-Workspace repo 使用上列命令。新建 consumer project 會由初始化腳本自動設定 hooks；既有 project repo 可用 `.\studio\scripts\powershell\setup-hooks.ps1 -ProjectRoot <project-root>` 補設定。
+Workspace repo 使用上列命令。新建 consumer project 會由初始化腳本自動設定 hooks；既有 project repo 可用 `pwsh ./studio/scripts/powershell/setup-hooks.ps1 -ProjectRoot <project-root>` 補設定。
 
 ### 3. 建立新專案
 
 Practice:
 
 ```powershell
-.\studio\scripts\powershell\init-practice.ps1 -Name "my-demo"
+pwsh ./studio/scripts/powershell/init-practice.ps1 -Name "my-demo"
 ```
 
 Internal / Client:
 
 ```powershell
-.\studio\scripts\powershell\init-project.ps1 -Name "studio-automation" -Type Internal
-.\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client
+pwsh ./studio/scripts/powershell/init-project.ps1 -Name "studio-automation" -Type Internal
+pwsh ./studio/scripts/powershell/init-project.ps1 -Name "2025-client-x" -Type Client
 ```
 
 上述初始化腳本會建立 project-local Git repo、設定 workspace hooks、產生 runtime adapters，並建立 shared agent junction；不會自動建立 initial commit。

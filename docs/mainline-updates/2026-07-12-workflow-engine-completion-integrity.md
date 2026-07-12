@@ -3,9 +3,19 @@
 **Date**: 2026-07-12
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `78893e2`
 **Related PR**: N/A
+
+## Revalidation
+
+The later [2026-07-12 governance review](../sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md)
+refuted this note's acceptance claim through GOV-02: changing any portion of `tasks.md` could still
+complete the Implement step. This note therefore records a historical implementation batch, not a
+current delivery acceptance signal.
+
+Promotion requires the R2 completion-integrity fixes, their negative tests, and the R6 fresh-fixture
+end-to-end evidence described by the repair inventory.
 
 ## Summary
 

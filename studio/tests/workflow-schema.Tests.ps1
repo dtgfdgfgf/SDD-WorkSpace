@@ -27,6 +27,37 @@ BeforeAll {
         $Yaml | Set-Content -LiteralPath $file -NoNewline
         return $file
     }
+
+    function script:New-WorkflowRegistryFixture {
+        $studioRoot = Join-Path $TestDrive ("workflow-registry-{0}/studio" -f ([System.Guid]::NewGuid().ToString('N')))
+        $workflowsRoot = Join-Path $studioRoot 'workflows'
+        New-Item -ItemType Directory -Path (Join-Path $workflowsRoot 'sdd-pipeline') -Force | Out-Null
+
+        foreach ($name in @('catalog.json', 'catalog.schema.json', 'state.json', 'state.schema.json')) {
+            Copy-Item -LiteralPath (Join-Path $WorkspaceRoot "studio/workflows/$name") -Destination (Join-Path $workflowsRoot $name) -Force
+        }
+
+        return $studioRoot
+    }
+
+    function script:Invoke-WorkflowRegistryFixture {
+        param([Parameter(Mandatory)] [string]$StudioRoot)
+
+        $output = & pwsh -NoProfile -Command '& { param($listScript, $studioRoot) $env:SDD_STUDIO_ROOT = $studioRoot; & $listScript -Json; exit $LASTEXITCODE }' $script:listScript $StudioRoot 2>&1
+        $exitCode = $LASTEXITCODE
+        $raw = $output -join [Environment]::NewLine
+        try {
+            $result = $raw | ConvertFrom-Json
+        } catch {
+            throw "Workflow registry fixture did not return JSON. Exit=$exitCode Output=$raw"
+        }
+
+        return [PSCustomObject]@{
+            ExitCode = $exitCode
+            Result   = $result
+            Raw      = $raw
+        }
+    }
 }
 
 Describe 'studio/workflows/ scaffolding presence' {
@@ -82,7 +113,171 @@ Describe 'list-workflows.ps1 against the live catalog' {
     }
 }
 
-Describe 'validate-workflow.ps1 detection-only behavior when powershell-yaml is missing' -Skip:($script:yamlAvailable) {
+Describe 'list-workflows.ps1 registry schema and cross-ledger failures' {
+    It 'returns non-zero when state.json is missing' {
+        $studioRoot = New-WorkflowRegistryFixture
+        Remove-Item -LiteralPath (Join-Path $studioRoot 'workflows/state.json') -Force
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'state.*missing|missing.*state'
+    }
+
+    It 'returns non-zero when catalog.json violates catalog.schema.json' {
+        $studioRoot = New-WorkflowRegistryFixture
+        $catalogPath = Join-Path $studioRoot 'workflows/catalog.json'
+        $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
+        $catalog.workflows[0].reviewStatus = 'not-a-review-status'
+        $catalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $catalogPath -Encoding utf8
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'catalog.*schema|schema.*catalog'
+    }
+
+    It 'returns non-zero when the catalog schema is missing' {
+        $studioRoot = New-WorkflowRegistryFixture
+        Remove-Item -LiteralPath (Join-Path $studioRoot 'workflows/catalog.schema.json') -Force
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'catalog schema missing|schema missing.*catalog'
+    }
+
+    It 'returns structured non-zero output when a registry document is JSON null' {
+        $studioRoot = New-WorkflowRegistryFixture
+        [System.IO.File]::WriteAllText(
+            (Join-Path $studioRoot 'workflows/catalog.json'),
+            "null`n",
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'catalog.*schema|schema.*catalog'
+    }
+
+    It 'returns structured non-zero output when a registry document is a JSON scalar' {
+        $studioRoot = New-WorkflowRegistryFixture
+        [System.IO.File]::WriteAllText(
+            (Join-Path $studioRoot 'workflows/state.json'),
+            "42`n",
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'state.*schema|schema.*state'
+    }
+
+    It 'rejects a permissive boolean schema instead of trusting it' {
+        $studioRoot = New-WorkflowRegistryFixture
+        [System.IO.File]::WriteAllText(
+            (Join-Path $studioRoot 'workflows/catalog.schema.json'),
+            "true`n",
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'canonical object shape'
+    }
+
+    It 'rejects default-enabled experimental workflows even when each JSON document matches its schema' {
+        $studioRoot = New-WorkflowRegistryFixture
+        $catalogPath = Join-Path $studioRoot 'workflows/catalog.json'
+        $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
+        $catalog.workflows[0].defaultEnabled = $true
+        $catalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $catalogPath -Encoding utf8
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'defaultEnabled=true requires'
+    }
+
+    It 'rejects state activation for an experimental workflow' {
+        $studioRoot = New-WorkflowRegistryFixture
+        $statePath = Join-Path $studioRoot 'workflows/state.json'
+        $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -AsHashtable
+        $state.states['sdd-pipeline'] = [ordered]@{
+            enabled       = $true
+            pinnedVersion = '1.0.0'
+            changedAt     = '2026-07-13T00:00:00+08:00'
+            source        = 'manual'
+        }
+        $state | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $statePath -Encoding utf8
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'enabled state requires'
+    }
+
+    It 'returns non-zero when state.json references an unknown workflow id' {
+        $studioRoot = New-WorkflowRegistryFixture
+        $statePath = Join-Path $studioRoot 'workflows/state.json'
+        $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -AsHashtable
+        $state.states['unknown-workflow'] = [ordered]@{
+            enabled       = $false
+            pinnedVersion = '1.0.0'
+            changedAt     = '2026-07-13T00:00:00+08:00'
+            source        = 'manual'
+        }
+        $state | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $statePath -Encoding utf8
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'unknown catalog id'
+    }
+
+    It 'returns non-zero when a state pin differs from the catalog version' {
+        $studioRoot = New-WorkflowRegistryFixture
+        $statePath = Join-Path $studioRoot 'workflows/state.json'
+        $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -AsHashtable
+        $state.states['sdd-pipeline'] = [ordered]@{
+            enabled       = $false
+            pinnedVersion = '9.9.9'
+            changedAt     = '2026-07-13T00:00:00+08:00'
+            source        = 'manual'
+        }
+        $state | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $statePath -Encoding utf8
+        $listing = Invoke-WorkflowRegistryFixture -StudioRoot $studioRoot
+
+        $listing.ExitCode | Should -Not -Be 0
+        $listing.Result.VALID | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'pinnedVersion.*differs'
+    }
+
+    It 'validates every catalog sourcePath even when Id filters the output' {
+        $studioRoot = New-WorkflowRegistryFixture
+        $catalogPath = Join-Path $studioRoot 'workflows/catalog.json'
+        $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json -AsHashtable
+        $copy = [ordered]@{}
+        foreach ($key in $catalog.workflows[0].Keys) { $copy[$key] = $catalog.workflows[0][$key] }
+        $copy.id = 'other-workflow'
+        $copy.sourcePath = 'workflows/missing-other'
+        $catalog.workflows = @($catalog.workflows[0], $copy)
+        $catalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $catalogPath -Encoding utf8
+
+        $output = & pwsh -NoProfile -Command '& { param($listScript, $studioRoot) $env:SDD_STUDIO_ROOT = $studioRoot; & $listScript -Id sdd-pipeline -Json; exit $LASTEXITCODE }' $script:listScript $studioRoot 2>&1
+        $exitCode = $LASTEXITCODE
+        $listing = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+
+        $exitCode | Should -Not -Be 0
+        $listing.VALID | Should -BeFalse
+        ($listing.ERRORS -join "`n") | Should -Match 'missing-other'
+    }
+}
+
+Describe 'validate-workflow.ps1 detection-only behavior when powershell-yaml is missing' {
     It 'reports YAML_AVAILABLE=false and exits non-zero with install hint' {
         $valid = @"
 schema_version: "1.0.0"
@@ -98,7 +293,7 @@ steps:
     script: studio/scripts/powershell/check-speckit-runtime.ps1
 "@
         $file = New-WorkflowFixture -Yaml $valid
-        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
+        $output = pwsh -NoProfile -Command '& { param($validator, $workflow) $env:PSModulePath = ''C:\__sdd_fixture_no_modules__''; & $validator -Path $workflow -Json; exit $LASTEXITCODE }' $script:validateScript $file 2>&1
         $LASTEXITCODE | Should -Not -Be 0
         ($output -join "`n") | Should -Match 'powershell-yaml'
         ($output -join "`n") | Should -Match 'Install-Module'

@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+#Requires -Version 7.0
+
 [CmdletBinding()]
 param(
     [switch]$Json,
@@ -167,4 +169,3 @@ $result.DEFERRED_CAPABILITIES | ForEach-Object { Write-Output "- $_" }
 Write-Output ''
 Write-Output 'Non-Goals:'
 $result.NON_GOALS | ForEach-Object { Write-Output "- $_" }
-

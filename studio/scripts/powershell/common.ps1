@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 # Common PowerShell functions for SDD workflow
 # Modified for multi-project workspace structure (Studio-level)
 
@@ -221,7 +223,7 @@ This constitution defines project-specific rules that add to the Studio Constitu
 | 1.0.0 | $CreatedDate | Initial project constitution stub |
 "@
 
-    Set-Content -LiteralPath $constitutionPath -Value $content -Encoding utf8
+    Write-Utf8NoBomLfFile -Path $constitutionPath -Content $content
     return $constitutionPath
 }
 
@@ -485,6 +487,32 @@ function Get-IsoTimestamp {
     return (Get-Date).ToString('o')
 }
 
+function ConvertTo-LfText {
+    param([AllowEmptyString()] [string]$Content)
+
+    if ($null -eq $Content) { return '' }
+    return ($Content -replace "`r`n?", "`n")
+}
+
+function Write-Utf8NoBomLfFile {
+    param(
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [AllowEmptyString()] [string]$Content,
+        [switch]$NoFinalNewline
+    )
+
+    $parent = Split-Path -Parent $Path
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $normalized = ConvertTo-LfText -Content $Content
+    if (-not $NoFinalNewline -and -not $normalized.EndsWith("`n", [System.StringComparison]::Ordinal)) {
+        $normalized += "`n"
+    }
+    [System.IO.File]::WriteAllText($Path, $normalized, [System.Text.UTF8Encoding]::new($false, $true))
+}
+
 function Read-JsonFile {
     param(
         [Parameter(Mandatory = $true)]
@@ -512,7 +540,8 @@ function Write-JsonFile {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
 
-    ([PSCustomObject]$Data | ConvertTo-Json -Depth $Depth) | Set-Content -LiteralPath $Path -Encoding UTF8
+    $json = [PSCustomObject]$Data | ConvertTo-Json -Depth $Depth
+    Write-Utf8NoBomLfFile -Path $Path -Content $json
 }
 
 function Test-DirectoryHasEntries {
@@ -1062,7 +1091,7 @@ function Initialize-ProjectFromTemplate {
         $readmeContent = $readmeContent -replace '\[PROJECT_TYPE\]', $Type
         $readmeContent = $readmeContent -replace '\[PROJECT_DESCRIPTION\]', $Description
         $readmeContent = $readmeContent -replace '\[CREATED_DATE\]', $createdDate
-        Set-Content -LiteralPath $readmePath -Value $readmeContent -NoNewline
+        Write-Utf8NoBomLfFile -Path $readmePath -Content $readmeContent
     }
 
     $projectConstPath = $null
@@ -1082,14 +1111,14 @@ function Initialize-ProjectFromTemplate {
         $retroPath = Join-Path $TargetDir 'retrospective.md'
         if ($PSCmdlet.ShouldProcess($retroPath, 'Scaffold retrospective.md')) {
             $retroContent = Get-RetrospectiveContent -ProjectName $Name -ProjectType $Type -StudioRoot $StudioRoot -CreatedDate $createdDate
-            Set-Content -LiteralPath $retroPath -Value $retroContent -NoNewline
+            Write-Utf8NoBomLfFile -Path $retroPath -Content $retroContent
         }
     }
 
     $workspaceFile = Join-Path $TargetDir "$Name.code-workspace"
     if ($PSCmdlet.ShouldProcess($workspaceFile, 'Write multi-root code-workspace JSON')) {
         $workspaceContent = New-CodeWorkspaceContent -ProjectName $Name
-        Set-Content -LiteralPath $workspaceFile -Value $workspaceContent -Encoding UTF8
+        Write-Utf8NoBomLfFile -Path $workspaceFile -Content $workspaceContent
     }
 
     $junctionResults = @()

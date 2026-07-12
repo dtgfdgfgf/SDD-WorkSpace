@@ -47,6 +47,27 @@ Describe 'requiredClaudeAgents completeness' {
     }
 }
 
+Describe 'required non-command GitHub agent files completeness' {
+    It 'declares the three governed non-command files explicitly' {
+        $contract.ContainsKey('requiredNonCommandGitHubAgentFiles') | Should -BeTrue
+        $expected = @(
+            'async-python-reviewer.md',
+            'copilot-instructions.md',
+            'spec-kit.agent.md'
+        ) | Sort-Object
+        $actual = @($contract.requiredNonCommandGitHubAgentFiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
+
+        ($actual -join "`n") | Should -Be ($expected -join "`n")
+    }
+
+    It 'every declared non-command GitHub agent file exists on disk' {
+        $agentsDir = Join-Path $WorkspaceRoot '.github/agents'
+        foreach ($agent in @($contract.requiredNonCommandGitHubAgentFiles)) {
+            Join-Path $agentsDir ([string]$agent) | Should -Exist -Because "non-command GitHub agent file '$agent' is required by contract"
+        }
+    }
+}
+
 Describe 'documentAuthority consistency' {
     It 'registry does not contain removed sdd-agents template mirror entry' {
         $entry = $registry.documentAuthority | Where-Object { $_.path -eq 'studio/templates/sdd-agents/*.md' }

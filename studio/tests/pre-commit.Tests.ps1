@@ -648,36 +648,6 @@ Describe 'staged snapshot audit fails on broken contract (H3)' {
     }
 }
 
-Describe 'Get-ManifestPendingItems' {
-    # Regression: M1 — Status regex \w+ could not match hyphenated values
-
-    It 'parses simple status value' {
-        $content = "**Status**: open`n"
-        $result = Get-ManifestPendingItems -Content $content
-        $result.Status | Should -Be 'open'
-    }
-
-    It 'parses hyphenated status value (M1 regression)' {
-        $content = "**Status**: in-progress`n"
-        $result = Get-ManifestPendingItems -Content $content
-        $result.Status | Should -Be 'in-progress'
-    }
-
-    It 'returns unknown when no status found' {
-        $content = "No status here"
-        $result = Get-ManifestPendingItems -Content $content
-        $result.Status | Should -Be 'unknown'
-    }
-
-    It 'extracts pending must_update items' {
-        $content = Get-Content (Get-FixturePath 'sample-manifest.md') -Raw
-        $result = Get-ManifestPendingItems -Content $content
-        $result.Status | Should -Be 'in-progress'
-        $result.PendingMustUpdate.Count | Should -Be 1
-        $result.PendingMustReview.Count | Should -Be 1
-    }
-}
-
 # ============================================================
 # Tier 2: High-risk functions
 # ============================================================

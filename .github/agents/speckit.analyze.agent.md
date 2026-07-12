@@ -287,7 +287,7 @@ Output a Markdown report (no file writes) with the following structure:
 - Duplication Count
 - Critical Issues Count
 
-**Mainline-Bound Shared-Layer Change Manifest:** (if applicable)
+**Mainline-Bound Shared-Layer Reconciliation:** (if applicable)
 
 When the analyzed feature touches workspace-level shared-layer surfaces — `studio/constitution/`,
 `studio/runtime/`, `studio/templates/sdd-docs/`, `.githooks/`, `studio/scripts/powershell/`,
@@ -295,10 +295,10 @@ When the analyzed feature touches workspace-level shared-layer surfaces — `stu
 or `studio/QUICKSTART.md` / `studio/SDD-QUICKSTART-GUIDE.md` / `WORKSPACE_STRUCTURE.md` — the
 report MUST include a one-line prompt:
 
-> Mainline-bound shared-layer change detected. Author a change-manifest from
-> `studio/templates/sdd-docs/change-manifest-template.md` and a mainline-update note from
-> `studio/templates/sdd-docs/mainline-update-note-template.md` before merging to `main`
-> (constitution §12).
+> Mainline-bound shared-layer change detected. Author a mainline-update note from
+> `studio/templates/sdd-docs/mainline-update-note-template.md`, complete its aggregate branch-diff
+> Impact Reconciliation, and close every `must_update` route before merging to `main`
+> (constitution §12 and merge CI).
 
 This is advisory only; analyze does not write files. Skip the prompt entirely when the change is
 purely consumer-project (`projects/`, `learning/`).

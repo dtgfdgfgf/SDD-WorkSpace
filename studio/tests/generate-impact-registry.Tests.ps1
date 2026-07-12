@@ -59,3 +59,15 @@ Describe 'Read-DriftGovernanceBlock' {
         $result | Should -BeNullOrEmpty
     }
 }
+
+Describe 'ConvertTo-RegistryJson text hygiene' {
+    It 'normalizes host newlines to LF' {
+        $json = ConvertTo-RegistryJson -Registry ([ordered]@{
+            alpha = 1
+            beta = [ordered]@{ value = 2 }
+        })
+
+        $json | Should -Match "`n"
+        $json | Should -Not -Match "`r"
+    }
+}

@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#!
 .SYNOPSIS
 Update agent context files with information from plan.md (PowerShell version)
@@ -273,11 +275,11 @@ function New-AgentFile {
     
     $content = $content -replace '\[LAST 3 FEATURES AND WHAT THEY ADDED\]',$recentChangesForTemplate
     # Convert literal \n sequences introduced by Escape to real newlines
-    $content = $content -replace '\\n',[Environment]::NewLine
+    $content = $content -replace '\\n',"`n"
 
     $parent = Split-Path -Parent $TargetFile
     if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }
-    Set-Content -LiteralPath $TargetFile -Value $content -NoNewline -Encoding utf8
+    Write-Utf8NoBomLfFile -Path $TargetFile -Content $content
     Remove-Item $temp -Force
     return $true
 }
@@ -351,7 +353,7 @@ function Update-ExistingAgentFile {
         $newTechEntries | ForEach-Object { $output.Add($_) }
     }
 
-    Set-Content -LiteralPath $TargetFile -Value ($output -join [Environment]::NewLine) -Encoding utf8
+    Write-Utf8NoBomLfFile -Path $TargetFile -Content ($output -join "`n")
     return $true
 }
 
@@ -470,6 +472,4 @@ function Main {
 }
 
 Main
-
-
 

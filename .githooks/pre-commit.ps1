@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Pre-commit hook for SDD document validation and commit message format checking.
@@ -10,9 +12,8 @@
     3. plan.md files contain required sections
     4. tasks.md files follow checklist format
     5. Commit messages follow Conventional Commits format
-    6. Change manifest completeness advisory (warning only)
-    7. Impact routing advisory via impact-registry.json (warning only)
-    8. Staged paths do not enter a protected personal-data directory
+    6. Impact routing advisory via impact-registry.json (warning only)
+    7. Staged paths do not enter a protected personal-data directory
 
 .NOTES
     To enable: git config core.hooksPath .githooks
@@ -923,41 +924,6 @@ function Get-ChangeTypesFromPaths {
     return $matchedTypes
 }
 
-function Get-ManifestPendingItems {
-    param([string]$Content)
-
-    $result = @{
-        Status            = 'unknown'
-        PendingMustUpdate = @()
-        PendingMustReview = @()
-    }
-
-    if ($Content -match '\*\*Status\*\*:\s*([\w-]+)') {
-        $result.Status = $Matches[1].ToLower()
-    }
-
-    # Parse impact assessment table rows
-    # Format: | Document | Authority | Impact Level | Status | Notes |
-    $rowPattern = '(?m)^\|\s*([^|]+?)\s*\|\s*[^|]+?\s*\|\s*(must_update|must_review)\s*\|\s*(pending|done|skipped)\s*\|'
-    $tableMatches = [regex]::Matches($Content, $rowPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-    foreach ($m in $tableMatches) {
-        $doc = $m.Groups[1].Value.Trim()
-        $impact = $m.Groups[2].Value.Trim().ToLower()
-        $status = $m.Groups[3].Value.Trim().ToLower()
-
-        if ($status -eq 'pending') {
-            if ($impact -eq 'must_update') {
-                $result.PendingMustUpdate += $doc
-            } elseif ($impact -eq 'must_review') {
-                $result.PendingMustReview += $doc
-            }
-        }
-    }
-
-    return $result
-}
-
 # ========================================
 # Get staged files
 # ========================================
@@ -1071,45 +1037,6 @@ if ($projectConstitutionFiles.Count -gt 0) {
 
     foreach ($projectRoot in $projectRoots.Keys) {
         Test-StagedAgentBootstrapForProject -ProjectRoot $projectRoot -Changes $stagedChanges -RequireAllAdaptersStaged
-    }
-    Write-Host ''
-}
-
-# ========================================
-# Change manifest completeness (advisory)
-# ========================================
-$manifestFiles = @($stagedFiles | Where-Object {
-    $_ -match '(?:specs/[^/]+/change-manifests|docs/change-manifests)/.*\.md$'
-})
-
-if ($manifestFiles.Count -gt 0) {
-    Write-HookInfo 'Checking change manifest completeness...'
-
-    foreach ($file in $manifestFiles) {
-        $content = Get-StagedFileContent -Path $file
-        if (-not $content) { continue }
-
-        $parsed = Get-ManifestPendingItems -Content $content
-
-        if ($parsed.Status -in @('open', 'propagating')) {
-            if ($parsed.PendingMustUpdate.Count -gt 0) {
-                Write-HookWarning "[$file] Open manifest has $($parsed.PendingMustUpdate.Count) pending must_update:"
-                foreach ($doc in $parsed.PendingMustUpdate) {
-                    Write-Host "    - $doc" -ForegroundColor Yellow
-                }
-            }
-            if ($parsed.PendingMustReview.Count -gt 0) {
-                Write-HookInfo "[$file] Open manifest has $($parsed.PendingMustReview.Count) pending must_review"
-            }
-        }
-
-        if ($parsed.Status -eq 'closed' -and ($parsed.PendingMustUpdate.Count -gt 0 -or $parsed.PendingMustReview.Count -gt 0)) {
-            Write-HookWarning "[$file] Manifest marked closed but has pending items"
-        }
-
-        if ($parsed.PendingMustUpdate.Count -eq 0 -and $parsed.PendingMustReview.Count -eq 0 -and $parsed.Status -ne 'unknown') {
-            Write-HookSuccess "[$file] Change manifest complete"
-        }
     }
     Write-Host ''
 }

@@ -2,20 +2,35 @@
 
 本指南說明 studio-first Spec Kit 工作區的最短上手路徑。
 
+## 環境需求
+
+- PowerShell 7 或更新版本，命令名稱為 `pwsh`
+- `powershell-yaml` 0.4.12（shared runtime audit 與 workflow YAML 驗證）
+- Pester 5.7.1（governance test suite）
+- Git
+- VS Code 與 GitHub Copilot Chat（使用互動式 agent workflow 時）
+
+先執行 `pwsh --version` 確認版本。本工作區的 shared PowerShell 腳本不支援 Windows PowerShell 5.1；以下可執行範例一律明確透過 `pwsh` 呼叫。
+
+```powershell
+pwsh -NoProfile -Command "Install-Module powershell-yaml -RequiredVersion 0.4.12 -Scope CurrentUser -Force"
+pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force"
+```
+
 ## 建立新專案
 
 ### Practice
 
 ```powershell
-.\studio\scripts\powershell\init-practice.ps1 -Name "my-demo"
-.\studio\scripts\powershell\init-practice.ps1 -Name "chatbot-demo" -Description "LINE Bot 聊天機器人練習"
+pwsh ./studio/scripts/powershell/init-practice.ps1 -Name "my-demo"
+pwsh ./studio/scripts/powershell/init-practice.ps1 -Name "chatbot-demo" -Description "LINE Bot 聊天機器人練習"
 ```
 
 ### Internal / Client
 
 ```powershell
-.\studio\scripts\powershell\init-project.ps1 -Name "studio-automation" -Type Internal
-.\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client -Description "電商平台開發"
+pwsh ./studio/scripts/powershell/init-project.ps1 -Name "studio-automation" -Type Internal
+pwsh ./studio/scripts/powershell/init-project.ps1 -Name "2025-client-x" -Type Client -Description "電商平台開發"
 ```
 
 新建專案預設會建立成獨立 Git repo，初始化腳本會在 project root 執行 `git init -b main`、設定 `core.hooksPath` 指向 workspace `.githooks`，並產生三個 runtime adapter。初始化不會自動建立 initial commit。
@@ -103,7 +118,7 @@ code projects/studio-automation/studio-automation.code-workspace
 依賴：
 
 ```powershell
-Install-Module -Name powershell-yaml -Scope CurrentUser
+pwsh -NoProfile -Command "Install-Module powershell-yaml -RequiredVersion 0.4.12 -Scope CurrentUser -Force"
 ```
 
 常用呼叫：
@@ -121,10 +136,10 @@ pwsh ./studio/scripts/powershell/run-workflow.ps1 -Id sdd-pipeline -Feature 001-
 
 | 類別 | 指令 | 用途 |
 |------|------|------|
-| 初始化 | `init-practice.ps1 -Name <name>` | 建立 Practice 專案 |
-| 初始化 | `init-project.ps1 -Name <name> -Type Internal` | 建立 Internal 專案 |
-| 初始化 | `init-project.ps1 -Name <name> -Type Client` | 建立 Client 專案 |
-| 初始化 | `setup-hooks.ps1 -ProjectRoot <project-root>` | 為既有 project repo 設定 workspace hooks |
+| 初始化 | `pwsh ./studio/scripts/powershell/init-practice.ps1 -Name <name>` | 建立 Practice 專案 |
+| 初始化 | `pwsh ./studio/scripts/powershell/init-project.ps1 -Name <name> -Type Internal` | 建立 Internal 專案 |
+| 初始化 | `pwsh ./studio/scripts/powershell/init-project.ps1 -Name <name> -Type Client` | 建立 Client 專案 |
+| 初始化 | `pwsh ./studio/scripts/powershell/setup-hooks.ps1 -ProjectRoot <project-root>` | 為既有 project repo 設定 workspace hooks |
 | 主流程 | `/speckit.specify <描述>` | 建立規格 |
 | 主流程 | `/speckit.clarify` | 釐清需求 |
 | 主流程 | `/speckit.readiness` | 進行前規劃 readiness triage |
@@ -222,8 +237,8 @@ Internal / Client 專案完成後：
 ### 如何啟用 Git hooks？
 
 ```powershell
-.\studio\scripts\powershell\setup-hooks.ps1
-.\studio\scripts\powershell\setup-hooks.ps1 -ProjectRoot projects/studio-automation
+pwsh ./studio/scripts/powershell/setup-hooks.ps1
+pwsh ./studio/scripts/powershell/setup-hooks.ps1 -ProjectRoot projects/studio-automation
 ```
 
 不帶 `-ProjectRoot` 時設定 workspace repo；帶 `-ProjectRoot` 時設定指定 project repo。新建專案已由初始化腳本自動設定。
@@ -233,7 +248,7 @@ Internal / Client 專案完成後：
 使用 `check-speckit-runtime.ps1` 作為 shared-layer 的主要驗證腳本：
 
 ```powershell
-.\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
+pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
 ```
 
 shared-layer convergence 的主要驗收方式是 studio runtime audit，不是要求同步治理 consumer project artifacts。

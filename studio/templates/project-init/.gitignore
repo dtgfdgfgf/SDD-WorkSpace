@@ -40,7 +40,7 @@ htmlcov/
 *.user
 *.suo
 *.cache
-packages/
+/packages/
 *.nupkg
 
 # ===========================
@@ -77,6 +77,7 @@ logs/
 # AI Tools Local Settings
 # ===========================
 .claude/settings.local.json
+.claude/.agent-*-backup/
 # Note: .claude/agents/ and .github/agents/ are workspace junctions linked to shared runtime
 # sources (per docs/project-worktree-parity-governance.md). They MUST be present in derived
 # worktrees. We do NOT ignore the directories themselves; only purely-local sub-state is ignored.

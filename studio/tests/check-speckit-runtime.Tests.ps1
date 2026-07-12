@@ -5,7 +5,62 @@ BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
     # check-speckit-runtime.ps1 dot-sources common.ps1 internally,
     # but we import functions directly to avoid running main logic.
-    . (Get-ScriptFunctionsBlock -ScriptPath (Join-Path $WorkspaceRoot 'studio/scripts/powershell/check-speckit-runtime.ps1'))
+    $script:auditScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/check-speckit-runtime.ps1'
+    . (Get-ScriptFunctionsBlock -ScriptPath $script:auditScript)
+
+    function script:New-RuntimeAuditFixture {
+        $fixtureRoot = Join-Path $TestDrive ("runtime-audit-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
+        New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
+
+        $workspacePaths = @(& git -C $WorkspaceRoot ls-files --cached --others --exclude-standard)
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to enumerate workspace files for the runtime audit fixture.'
+        }
+
+        foreach ($relativePath in $workspacePaths) {
+            $sourcePath = Join-Path $WorkspaceRoot $relativePath
+            if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+                continue
+            }
+
+            $destinationPath = Join-Path $fixtureRoot $relativePath
+            $destinationParent = Split-Path -Parent $destinationPath
+            if (-not (Test-Path -LiteralPath $destinationParent)) {
+                New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
+            }
+            Copy-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
+        }
+
+        return $fixtureRoot
+    }
+
+    function script:Invoke-RuntimeAuditFixture {
+        param(
+            [Parameter(Mandatory)] [string]$FixtureRoot,
+            [switch]$WithoutYamlModule
+        )
+
+        $fixtureAuditScript = Join-Path $FixtureRoot 'studio/scripts/powershell/check-speckit-runtime.ps1'
+        if ($WithoutYamlModule) {
+            $output = & pwsh -NoProfile -Command '& { param($audit) $env:PSModulePath = ''C:\__sdd_fixture_no_modules__''; & $audit -Json; exit $LASTEXITCODE }' $fixtureAuditScript 2>&1
+        } else {
+            $output = & pwsh -NoProfile -File $fixtureAuditScript -Json 2>&1
+        }
+        $exitCode = $LASTEXITCODE
+        $raw = $output -join [Environment]::NewLine
+
+        try {
+            $result = $raw | ConvertFrom-Json
+        } catch {
+            throw "Runtime audit fixture did not return JSON. Exit=$exitCode Output=$raw"
+        }
+
+        return [PSCustomObject]@{
+            ExitCode = $exitCode
+            Result   = $result
+            Raw      = $raw
+        }
+    }
 }
 
 # ============================================================
@@ -53,5 +108,160 @@ Describe 'Test-ContentContract' {
     It 'ignores null/whitespace entries in mustContainAll' {
         $result = Test-ContentContract -Content 'anything' -MustContainAll @($null, '', '  ')
         $result.Count | Should -Be 0
+    }
+}
+
+Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
+    It 'passes against an isolated copy of the current shared runtime' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Be 0 -Because $audit.Raw
+        $audit.Result.VALID | Should -BeTrue
+        $audit.Result.ERROR_COUNT | Should -Be 0
+        $audit.Raw | Should -Match '"STUDIO_WORKFLOW_ENABLED"\s*:\s*\[\s*\]'
+    }
+
+    It 'fails closed when powershell-yaml is unavailable' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot -WithoutYamlModule
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.VALID | Should -BeFalse
+        $audit.Result.STUDIO_WORKFLOW_YAML_AVAILABLE | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'powershell-yaml-missing'
+    }
+
+    It 'promotes a missing workflow state ledger to an audit failure' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Remove-Item -LiteralPath (Join-Path $fixtureRoot 'studio/workflows/state.json') -Force
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.STUDIO_WORKFLOW_REGISTRY_VALID | Should -BeFalse
+        @($audit.Result.FAILURES | Where-Object category -eq 'workflow-registry').Count | Should -BeGreaterThan 0
+        ($audit.Result.FAILURES.message -join "`n") | Should -Match 'state.*missing|missing.*state'
+    }
+
+    It 'promotes an invalid workflow catalog schema to an audit failure' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $catalogPath = Join-Path $fixtureRoot 'studio/workflows/catalog.json'
+        $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
+        $catalog.workflows[0].reviewStatus = 'not-a-review-status'
+        $catalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $catalogPath -Encoding utf8
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.STUDIO_WORKFLOW_REGISTRY_VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'workflow-registry-invalid'
+        ($audit.Result.FAILURES.message -join "`n") | Should -Match 'catalog.*schema|schema.*catalog'
+    }
+
+    It 'fails when a required GitHub runtime command is absent' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Remove-Item -LiteralPath (Join-Path $fixtureRoot '.github/agents/speckit.plan.agent.md') -Force
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'speckit.plan'
+    }
+
+    It 'fails when the derived impact registry is stale' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $registryPath = Join-Path $fixtureRoot 'studio/runtime/impact-registry.json'
+        $registryContent = Get-Content -LiteralPath $registryPath -Raw
+        $registryContent = $registryContent.Replace('Highest governance authority for all projects and workflows', 'Fixture-only stale authority description')
+        Set-Content -LiteralPath $registryPath -Value $registryContent -NoNewline -Encoding utf8
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'impact-registry-stale'
+    }
+
+    It 'returns an empty workflow semantic array when the shared contract is missing' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Remove-Item -LiteralPath (Join-Path $fixtureRoot 'studio/runtime/shared-runtime-contract.json') -Force
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'missing-contract'
+        $audit.Raw | Should -Match '"WORKFLOW_SEMANTIC_CHECKS"\s*:\s*\[\s*\]'
+        @($audit.Result.WORKFLOW_SEMANTIC_CHECKS).Count | Should -Be 0
+    }
+
+    It 'rejects an undeclared file in the closed GitHub agents directory' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $roguePath = Join-Path $fixtureRoot '.github/agents/rogue-agent.md'
+        Set-Content -LiteralPath $roguePath -Value '# Rogue fixture agent' -Encoding utf8
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'unexpected-rogue-agent.md'
+    }
+
+    It 'checks requiredCommands layering inside the audit itself' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $contractPath = Join-Path $fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json
+        $contract.requiredCommands = @($contract.requiredCommands | Where-Object { $_ -ne 'speckit.version' })
+        $contract | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $contractPath -Encoding utf8
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'required-command-layering-mismatch'
+    }
+
+    It 'fails when a Ready mainline note has no concrete commit or PR evidence' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $notePath = Join-Path $fixtureRoot 'docs/mainline-updates/2026-07-13-r1-validation-and-merge-enforcement.md'
+        $noteContent = Get-Content -LiteralPath $notePath -Raw
+        $noteContent = $noteContent.Replace('**Status**: Draft', '**Status**: Ready')
+        [System.IO.File]::WriteAllText($notePath, ($noteContent -replace "`r`n?", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+        $indexPath = Join-Path $fixtureRoot 'docs/mainline-updates/README.md'
+        $indexContent = Get-Content -LiteralPath $indexPath -Raw
+        $indexContent = $indexContent.Replace('| `feature/wave-3-security-and-workflows` | Draft | Repair audit false-green paths', '| `feature/wave-3-security-and-workflows` | Ready | Repair audit false-green paths')
+        [System.IO.File]::WriteAllText($indexPath, ($indexContent -replace "`r`n?", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'ready-evidence'
+        $audit.Result.MAINLINE_NOTE_VALID | Should -BeFalse
+    }
+
+    It 'fails when Governance CI no longer invokes branch reconciliation' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $workflowPath = Join-Path $fixtureRoot '.github/workflows/governance.yml'
+        $workflowContent = Get-Content -LiteralPath $workflowPath -Raw
+        $workflowContent = $workflowContent.Replace('validate-mainline-notes.ps1', 'removed-mainline-validator.ps1')
+        [System.IO.File]::WriteAllText($workflowPath, ($workflowContent -replace "`r`n?", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'governance-ci-enforcement'
+    }
+}
+
+Describe 'governance test coverage configuration' {
+    It 'supports Cobertura coverage for the shared PowerShell scripts' {
+        $runnerContent = Get-Content -LiteralPath (Join-Path $WorkspaceRoot 'studio/scripts/powershell/run-governance-tests.ps1') -Raw
+
+        $runnerContent | Should -Match '\[switch\]\$CodeCoverage'
+        $runnerContent | Should -Match "CodeCoverage\.OutputFormat\s*=\s*'Cobertura'"
+        $runnerContent | Should -Match "codeCoverage\.xml"
+        $runnerContent | Should -Match 'Run\.Exit\s*=\s*\$true'
+        $runnerContent | Should -Match 'Import-Module Pester -RequiredVersion 5\.7\.1'
+    }
+
+    It 'enables coverage in the governance CI job and uploads the artifacts directory' {
+        $workflowContent = Get-Content -LiteralPath (Join-Path $WorkspaceRoot '.github/workflows/governance.yml') -Raw
+
+        $workflowContent | Should -Match 'run-governance-tests\.ps1 -Output Normal -CodeCoverage'
+        $workflowContent | Should -Match 'path:\s*studio/tests/_artifacts/'
+        ([regex]::Matches($workflowContent, 'validate-mainline-notes\.ps1 .*?-RequireReady')).Count | Should -Be 2
+        $workflowContent | Should -Match 'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5'
+        $workflowContent | Should -Match 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02'
     }
 }

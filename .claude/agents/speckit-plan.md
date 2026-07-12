@@ -1,4 +1,4 @@
-﻿---
+---
 name: speckit-plan
 description: "Execute the implementation planning workflow after readiness gate clearance using the plan template to generate design artifacts."
 model: claude-opus-4-7

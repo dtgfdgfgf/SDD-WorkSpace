@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 # Setup implementation plan for a feature
 
 [CmdletBinding()]

@@ -71,13 +71,18 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 
 ## 2. 開始之前：環境準備
 
-### 2.1 VS Code 環境確認
+### 2.1 Runtime 與 VS Code 環境確認
 
 | 項目 | 要求 | 檢查方式 |
 |------|------|----------|
+| PowerShell | 7 或更新版本；命令名稱為 `pwsh` | `pwsh --version` |
+| powershell-yaml | 0.4.12 | `pwsh -NoProfile -Command "Get-Module powershell-yaml -ListAvailable"` |
+| Pester | 5.7.1 | `pwsh -NoProfile -Command "Get-Module Pester -ListAvailable"` |
 | VS Code 版本 | 1.107+ | Help > About |
 | GitHub Copilot Chat | 已安裝並登入 | Extensions 面板 |
 | Custom Agents | 已載入 | Chat 中輸入 `@` 查看 agent 列表 |
+
+本工作區的 shared PowerShell 腳本不支援 Windows PowerShell 5.1。可執行範例應以 `pwsh ./studio/scripts/powershell/<script>.ps1` 形式呼叫，讓版本不符時在腳本進入點立即失敗。
 
 ### 2.2 啟用 SDD 優化設定
 
@@ -135,7 +140,7 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 主要機器驗證入口是：
 
 ```powershell
-.\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
+pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
 ```
 
 另外，`.claude/agents/` 是 shared Claude runtime authority，`<project>/.claude/agents` 是 direct junction consumption path。Claude skills install root 與 workspace shared agents runtime 是不同層。
@@ -1252,5 +1257,3 @@ project-root/
 ---
 
 > **注意**：本指南會隨著 SDD 實踐經驗持續更新。如有建議或發現問題，請更新 `studio/knowledge-base/learnings.md`。
-
-

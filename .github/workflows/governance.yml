@@ -2,7 +2,14 @@ name: governance
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
+  schedule:
+    # Mondays at 03:17 UTC (11:17 Asia/Taipei); avoid the top-of-hour load peak.
+    - cron: '17 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -18,13 +25,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install required PowerShell modules
         shell: pwsh
         run: |
-          Install-Module Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -Scope CurrentUser
-          Install-Module powershell-yaml -Force -Scope CurrentUser
+          Install-Module Pester -RequiredVersion 5.7.1 -Repository PSGallery -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module powershell-yaml -RequiredVersion 0.4.12 -Repository PSGallery -Force -Scope CurrentUser
 
       - name: Shared runtime audit (check-speckit-runtime -Json)
         shell: pwsh
@@ -32,16 +42,37 @@ jobs:
           ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
           exit $LASTEXITCODE
 
+      - name: Mainline note and impact reconciliation (pull request)
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+          HEAD_REVISION: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -Json
+          exit $LASTEXITCODE
+
+      - name: Mainline note and impact reconciliation (main push)
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          BASE_REVISION: ${{ github.event.before }}
+          HEAD_REVISION: ${{ github.sha }}
+        run: |
+          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -Json
+          exit $LASTEXITCODE
+
       - name: Governance tests (Pester)
         shell: pwsh
         run: |
-          ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal
+          ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal -CodeCoverage
           exit $LASTEXITCODE
 
-      - name: Upload test results
+      - name: Upload governance test artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: governance-test-results
-          path: studio/tests/_artifacts/testResults.xml
+          name: governance-test-artifacts
+          path: studio/tests/_artifacts/
           if-no-files-found: ignore
+          retention-days: 14

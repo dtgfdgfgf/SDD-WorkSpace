@@ -35,7 +35,6 @@ Hard rules:
 - Keep shared governance additions inside the generated bootstrap block so AGENTS.md and CLAUDE.md can be synchronized.
 
 <!-- MANUAL ADDITIONS START -->
-
 <!-- Authority: dependent runtime adapter for workspace-level Copilot agent context.
      The agent-scoped subset at .github/agents/copilot-instructions.md is a dependent
      document and should derive from this file's guidance, not compete with it. -->

@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+#Requires -Version 7.0
+
 # Consolidated prerequisite checking script (PowerShell)
 #
 # This script provides unified prerequisite checking for Spec-Driven Development workflow.

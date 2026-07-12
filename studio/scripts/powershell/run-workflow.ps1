@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Drive a studio workflow end-to-end: start, halt at gates / agent steps,
