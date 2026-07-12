@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.2.1"
+version: "1.3.0"
 date: "2026-07-12"
 last_updated: "2026-07-13"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "60768f3"
+head_commit: "e543f6a"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -278,7 +278,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 4 | R-H08 | 退役 `setup-copilot-agents.ps1` | 與 R-H02 同批移除 README 入口；不保留可對 user home 做無治理覆寫的舊 installer | COMPLETED |
 | 5 | R-H13 | 刪除空 `archive/` 預留結構 | 移除 README / WORKSPACE_STRUCTURE 宣稱；未來若重建，先以 README 定義保存規則 | COMPLETED |
 | 6 | R-H17 | 刪除漂移繁中 agent 目錄 | 不因非 ASCII 名稱而刪；理由是治理內容矛盾。未來翻譯需有來源 commit、banner 與 parity | COMPLETED |
-| 7 | R-G06 | 退役 change-manifest 鏈 | 將 impact reconciliation 併入 mainline note，並由 merge CI 強制；不補裝飾性首份 manifest | DECIDED |
+| 7 | R-G06 | 退役 change-manifest 鏈 | 將 impact reconciliation 併入 mainline note，並由 merge CI 強制；不補裝飾性首份 manifest | COMPLETED |
 | 8 | R-G10 | 直接刪除 `basic-prompt.txt` | 不把低資訊內容搬入 `studio/prompts/`；prompts 只從已驗證 candidates 提取 | COMPLETED |
 | 9 | R-F04 / R-H15 | 退役 agent-skills export/install capability | 連同 scripts、upgrade caller、audit、contract、tests、docs 與空輸出目錄一起收斂；未來需要時重新立 spec | DECIDED |
 | 10 | R-B16 | RunState 為本機暫態 | 與 R-B06 同批 relocation 後再 ignore；修正 POLICY/README；跨機需求改走顯式 checkpoint export/import | DECIDED |
@@ -288,12 +288,12 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 14 | R-I03 | 保留模板並接上 route-aware consumer | Readiness 每次只 scaffold 所選 route 的最小 packet；ECI scaffold 必需四件；validator 檢查 placeholders/必填欄 | DECIDED |
 | 15 | R-I07 | 刪除本機空 `feature-packs/` | 無 repo 變更需求；未來需要先立 spec | COMPLETED |
 | 16 | R-I08 | 刪除本機空 `pain-points/`，保留 optional 定義 | 不加 `.gitkeep`；用到再建立 | COMPLETED |
-| 17 | R-E05 | 保留 `must_update`，在 merge/CI 才 blocking | Commit-time 保持 advisory；PR/merge 以 branch aggregate reconciliation 阻擋，避免逐 commit false positive | DECIDED |
-| 18 | R-J02 | 未來公開工作使用 GitHub noreply，不重寫歷史 | 使用 workspace conditional include 或適當 global policy 涵蓋 nested repos；啟用 GitHub privacy / push blocking | IN_PROGRESS |
+| 17 | R-E05 | 保留 `must_update`，在 merge/CI 才 blocking | Commit-time 保持 advisory；PR/merge 以 branch aggregate reconciliation 阻擋，避免逐 commit false positive | COMPLETED |
+| 18 | R-J02 | 未來公開工作使用 GitHub noreply，不重寫歷史 | 使用 workspace conditional include 或適當 global policy 涵蓋 nested repos；啟用 GitHub privacy / push blocking | COMPLETED |
 
 ## 7. 已知限制
 
-1. GitHub 側修復（R-J01 protection/ruleset、R-J02 account email privacy/push blocking）需在 GitHub UI 或以 gh api 帶權限執行；Git noreply conditional config 可在本地完成，但不能替代帳戶設定。
+1. R-J02 的 GitHub account email privacy / push blocking 已由 owner 於 2026-07-13 確認完成。R-J01 protection/ruleset 仍須在 hosted `audit-and-tests` 成功後以 GitHub API 啟用並驗證。
 2. 行號以 head 60768f3 為準，修復過程會位移；以 ID 與 commit snapshot 追溯。
 3. 上游與模型外部事實最後查證於 2026-07-13；Wave-4（R-F02）與模型 policy 實作時必須重新確認最新 release、client、plan 與組織 policy 可用性。
 4. 本清單原則上排除 `projects/` 與 `learning/` 的 consumer drift；R-D12 是唯一已裁定的受控例外，因 shared agent 移除必須先確保 japanese-learning 的 project-local runtime 不退化。不得藉此擴張成舊 consumer 全面修復。
@@ -329,12 +329,13 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.1.0 | 2026-07-13 | 第三輪獨立複核；把初版錯算的 95 條修正為實際 109 條與正確嚴重度分布；修正 8 類錯誤/過時前提；記錄 18 項 owner decisions；改成 7 個風險優先批次；更新工期、依賴、限制、ledger 狀態與外部依據。 |
 | 1.2.0 | 2026-07-13 | 啟動 R0：完成本機實作與驗證前置；staged hook 發現並修正 R-A14，current ledger 成為 110 條；新增日期化執行增補；待 implementation commit 存在後再把可關閉項目改為 COMPLETED 並回填 hash。 |
 | 1.2.1 | 2026-07-13 | 以 implementation commit `bdd2780` 完成 R0 帳務：可關閉 findings 與 owner decisions 改為 COMPLETED；R-J02 保持 IN_PROGRESS，因 GitHub account privacy / push-blocking 仍需 owner 操作。 |
+| 1.3.0 | 2026-07-13 | R1 本機與 CI implementation commit `e543f6a`：audit/registry/note gate fail-closed、PowerShell 7 與 UTF-8/LF、change-manifest 原子退役、branch reconciliation、CI hardening 與 320-test coverage baseline；R-J02 依 owner 確認完成，R-J01 等 hosted check 後啟用 ruleset。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
 本節是第 3 節對應 findings 的日期化狀態記錄，不改寫原始問題證據。R0 本機實作與完整
 驗證已由 implementation commit `bdd2780` 留證；能由本批關閉的項目標為 `COMPLETED`。
-R-J02 只完成本機 conditional include，帳戶側設定尚待 owner，因此維持 `IN_PROGRESS`。
+R-J02 的 workspace-scoped conditional include 與 GitHub account email privacy / push blocking 均已完成；既有歷史依裁定不重寫。
 
 | ID | 目前狀態 | 已落地處置 | 驗收證據 / 尚待事項 |
 |---|---|---|---|
@@ -352,6 +353,37 @@ R-J02 只完成本機 conditional include，帳戶側設定尚待 owner，因此
 | R-G10 | COMPLETED | `docs/basic-prompt.txt` 已刪除且未搬入 prompts | commit `bdd2780` |
 | R-I07 | COMPLETED | 本機空 `studio/templates/feature-packs/` 已刪除 | 無 tracked directory；batch note 與 commit `bdd2780` 留證 |
 | R-I08 | COMPLETED | 本機空 `studio/knowledge-base/pain-points/` 已刪除 | 憲法 optional 定義保留；batch note 與 commit `bdd2780` 留證 |
-| R-J02 | IN_PROGRESS | workspace-scoped conditional include 已套用 GitHub noreply，7/7 discovered repos 驗證通過；未重寫歷史、未覆寫既有 global identity | GitHub account privacy 與 push-blocking toggle 尚需 owner 在帳戶設定完成 |
+| R-J02 | COMPLETED | workspace-scoped conditional include 已套用 GitHub noreply，7/7 discovered repos 驗證通過；未重寫歷史、未覆寫既有 global identity；owner 已確認 GitHub account privacy 與 push-blocking | 本機與帳戶側均於 2026-07-13 完成；既有歷史依裁定不重寫 |
 
 R0 mainline note：`docs/mainline-updates/2026-07-13-r0-containment-and-source-cleanup.md`。
+
+## 12. 2026-07-13 R1 執行增補
+
+R1 本機與 CI 實作由 commit `e543f6a` 留證。下列 findings 已完成本機機器驗收；R-J01
+保留 `IN_PROGRESS`，直到 GitHub PR 最新 SHA 的 `audit-and-tests` 成功且 `main-governance`
+ruleset 已啟用並經 API 複驗。
+
+| ID | 目前狀態 | 已落地處置 | 驗收證據 / 尚待事項 |
+|---|---|---|---|
+| R-A01 | COMPLETED | issue collections 在首次使用前初始化，missing powershell-yaml 不再被清空 | isolated module negative fixture；commit `e543f6a` |
+| R-A02 | COMPLETED | workflow catalog/state/schema、canonical schema shape、cross-ledger policy 與 dependency invalid 全部升格 failure | missing/null/scalar/permissive schema、invalid catalog、activation policy negative fixtures；commit `e543f6a` |
+| R-A03 | COMPLETED | 所有 audit output collections 預設為穩定陣列 | missing-contract 與 empty workflow array shape tests；commit `e543f6a` |
+| R-A04 | COMPLETED | `.github/agents/` 改為 contract 顯式封閉清單 | undeclared file negative fixture、3-file non-command allowlist；commit `e543f6a` |
+| R-A05 | COMPLETED | 全部 non-test runtime PS1 宣告 PowerShell 7，文件與命令統一 `pwsh` | AST 掃描與 Windows PowerShell 5.1 fail-fast test；commit `e543f6a` |
+| R-A06 | COMPLETED | audit 建立隔離壞狀態 workspace fixtures | missing module/state/agent、invalid registry、stale generated registry、invalid Ready note、CI disconnect 均非零；commit `e543f6a` |
+| R-A07 | COMPLETED | audit 本身驗 requiredCommands 聯集與 disjoint | contract mutation negative fixture；commit `e543f6a` |
+| R-A08 | COMPLETED | CI 產 NUnit 與 Cobertura artifact，runner/CI 固定 Pester 5.7.1 | 320 passed；command 0.71%，line 42/5,206（0.81%）；child-process 歸因限制已寫入 R1 note |
+| R-A09 | COMPLETED | note 狀態機、index parity 與 hash-bound R5 migration ledger 進 audit | Ready/Merged、index、baseline mutation negative tests；18 份歷史債務未冒充修復 |
+| R-A10 | COMPLETED | agent-scoped subset 強制 leading authority、禁獨立 bootstrap、要求 parent adapter reference | 4 個 bootstrap negative/positive tests；commit `e543f6a` |
+| R-A11 | COMPLETED | seed writer 改 UTF-8 no-BOM/LF，重建 15 mirrors，刪除 16 個 backup 檔並加 ignore | deterministic seed 與 byte scan tests；commit `e543f6a` |
+| R-A12 | COMPLETED | root/project-init `.gitattributes`、`.editorconfig` 與 LF writers 落地 | tracked text 0 BOM/CR/missing-final-LF；fresh project sync idempotent；commit `e543f6a` |
+| R-E05 | COMPLETED | commit-time advisory 保留，PR/main aggregate diff 對 `must_update` blocking | 17 個 note/reconciliation tests含 hidden-comment/fence bypass；commit `e543f6a` |
+| R-E10 | COMPLETED | template 加 Reopened 回滾語義，3 份被 GOV-02/04/05 推翻的 notes 降為 Draft | note/index parity validator；commit `e543f6a` |
+| R-G06 | COMPLETED | change-manifest hook/template/fixture/目錄/contract/prompt 全鏈退役，reconciliation 併入 mainline note | active runtime references 0；CI wiring invariant；commit `e543f6a` |
+| R-H10 | COMPLETED | root 與 project-init 加 `.editorconfig` | policy parity test；commit `e543f6a` |
+| R-H16 | COMPLETED | root 移除過寬 .NET ignores，template 將 `/packages/` 錨定；保留實際必要的 settings.local 規則 | ignore behavior tests；commit `e543f6a` |
+| R-H19 | COMPLETED | weekly、main-only push/PR、SHA-pinned actions、模組固定版、coverage artifacts 與 badge | YAML parse、contract/negative fixture、commit `e543f6a` |
+| R-I06 | COMPLETED | README 與兩份 quickstart 的 executable examples 統一 `pwsh ./...` | contract 與全文掃描；commit `e543f6a` |
+| R-J01 | IN_PROGRESS | PR/main CI 已接 branch reconciliation，ruleset payload與 required context `audit-and-tests` 已確認 | 待 push、PR hosted green、建立 active ruleset並複驗 main protected |
+
+R1 mainline note：`docs/mainline-updates/2026-07-13-r1-validation-and-merge-enforcement.md`。

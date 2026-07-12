@@ -3,10 +3,10 @@
 **Date**: 2026-07-13
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: TBD
+**Status**: Ready
+**Related Commits**: `e543f6a`
 **Related PR**: N/A
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -91,7 +91,11 @@ surface with one branch-level reconciliation record that the merge CI can enforc
 
 ## Merge Notes
 
-- Draft while implementation and remote enforcement are in progress.
+- Local implementation commit `e543f6a` exists and the branch-diff reconciliation is closed. The
+  code batch is ready for hosted validation.
+- R-J01 remains operationally incomplete until the PR's latest SHA has a successful
+  `audit-and-tests` check and the `main-governance` ruleset is active. Do not merge before both are
+  verified.
 - R-G06 and R-E05 must land atomically; neither the retired manifest surface nor the new merge gate
   is considered complete by itself.
 
