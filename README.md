@@ -71,7 +71,6 @@
 | `projects/` | Internal / Client / sample projects |
 | `docs/project-governance-status.md` | 專案治理相容性中央台帳 |
 | `resources/` | 共享資源與匯出產物 |
-| `archive/` | 歷史或封存內容 |
 | `WORKSPACE_STRUCTURE.md` | 工作區結構設計說明 |
 
 ## 專案分類
@@ -191,7 +190,6 @@ Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer�
 | `studio/scripts/powershell/check-speckit-runtime.ps1` | 驗證 shared runtime contract、mirror parity、templates、hooks 與 canonical docs |
 | `studio/scripts/powershell/seed-claude-agents.ps1` | 從現有 Copilot shared agent surface seed workspace Claude shared agents |
 | `studio/scripts/powershell/update-agent-context.ps1` | 更新 agent context / runtime 對齊 |
-| `setup-copilot-agents.ps1` | 安裝或更新 GitHub Copilot custom agents |
 
 ## 這個 workspace 期待的專案結構
 
@@ -237,3 +235,16 @@ Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer�
 - `studio/constitution/constitution.md`
 - `spec-kit-upstream-wave2-transition-guide.md`
 - `spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`
+
+## 授權 / License
+
+除 `THIRD_PARTY_NOTICES.md` 所列第三方材料，以及另帶獨立授權或 notice 的檔案外，本
+repository 的原創內容依 `LICENSE` 中的 MIT License 授權。第三方材料仍受其各自條款
+約束；repository-level MIT License 不授予外部 runtime dependencies 或只存在於舊 Git
+history 之第三方材料的權利。
+
+Except for third-party materials identified in `THIRD_PARTY_NOTICES.md` and files that carry a
+separate license or notice, the original content of this repository is licensed under the MIT
+License. Third-party materials remain subject to their respective terms. The repository-level MIT
+License does not grant rights in external runtime dependencies or in third-party material that
+exists only in older Git history.

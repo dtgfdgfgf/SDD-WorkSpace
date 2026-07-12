@@ -129,6 +129,72 @@
   ],
   "docInvariants": [
     {
+      "id": "workspace-personal-data-ignore",
+      "path": ".gitignore",
+      "mustContainAll": [
+        "# Personal data (never commit)",
+        "履歷/"
+      ]
+    },
+    {
+      "id": "workspace-external-source-intake-ignore",
+      "path": ".gitignore",
+      "mustContainAll": [
+        "# External source intake (never vendor a working checkout)",
+        "resources/github-copilot-configs/"
+      ]
+    },
+    {
+      "id": "project-template-personal-data-ignore",
+      "path": "studio/templates/project-init/.gitignore",
+      "mustContainAll": [
+        "# Personal data (never commit)",
+        "履歷/"
+      ]
+    },
+    {
+      "id": "repository-mit-license",
+      "path": "LICENSE",
+      "mustContainAll": [
+        "MIT License",
+        "Permission is hereby granted, free of charge",
+        "THE SOFTWARE IS PROVIDED \"AS IS\""
+      ]
+    },
+    {
+      "id": "repository-third-party-provenance",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "mustContainAll": [
+        "github/spec-kit",
+        "Copyright GitHub, Inc.",
+        "Removed Historical Snapshot: doggy8088/github-copilot-configs",
+        "not covered by this repository's MIT License",
+        "Runtime and CI Dependencies Not Bundled Here"
+      ]
+    },
+    {
+      "id": "readme-license-boundary",
+      "path": "README.md",
+      "mustContainAll": [
+        "## 授權 / License",
+        "THIRD_PARTY_NOTICES.md",
+        "LICENSE",
+        "only in older Git history"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-catalog-demotion",
+      "path": "studio/workflows/catalog.json",
+      "mustContainAll": [
+        "\"reviewStatus\": \"experimental\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"approvedBy\": null",
+        "\"approvedAt\": null",
+        "Runner authorization enforcement remains a separate R2 gate."
+      ]
+    },
+    {
       "id": "readme-seven-stage-sequence",
       "path": "README.md",
       "mustContainAll": [
@@ -642,6 +708,26 @@
       ]
     },
     {
+      "id": "pre-commit-personal-data-path-gate",
+      "path": ".githooks/pre-commit.ps1",
+      "mustContainAll": [
+        "Get-ProtectedPersonalDataPaths",
+        "Staged paths under a directory named '履歷' are not allowed",
+        "$stagedFiles",
+        "Unable to evaluate staged paths safely.",
+        "exit 1"
+      ]
+    },
+    {
+      "id": "pre-commit-removed-project-adapter-guard",
+      "path": ".githooks/pre-commit.ps1",
+      "mustContainAll": [
+        "Test-ShouldValidateAgentBootstrapProjectRoot",
+        "Test-Path -LiteralPath $ProjectRoot -PathType Container",
+        "if (-not (Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $projectRoot)) { continue }"
+      ]
+    },
+    {
       "id": "init-project-independent-git-repo",
       "path": "studio/scripts/powershell/init-project.ps1",
       "mustContainAll": [
@@ -985,6 +1071,9 @@
   "sharedGatePaths": [
     "AGENTS.md",
     "CLAUDE.md",
+    ".gitignore",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     ".github/agents/",
     ".claude/agents/",
     ".github/prompts/",
@@ -993,6 +1082,7 @@
     ".githooks/pre-commit.ps1",
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
+    "studio/templates/project-init/.gitignore",
     "studio/templates/project-init/README.md",
     "studio/templates/sdd-docs/",
     "studio/QUICKSTART.md",

@@ -12,6 +12,7 @@
     5. Commit messages follow Conventional Commits format
     6. Change manifest completeness advisory (warning only)
     7. Impact routing advisory via impact-registry.json (warning only)
+    8. Staged paths do not enter a protected personal-data directory
 
 .NOTES
     To enable: git config core.hooksPath .githooks
@@ -60,6 +61,19 @@ function Convert-ToRepoRelativePath {
     }
 
     return ($Path -replace '\\', '/') -replace '^\.\/', ''
+}
+
+function Get-ProtectedPersonalDataPaths {
+    param([string[]]$Paths)
+
+    $matches = foreach ($path in @($Paths)) {
+        $normalizedPath = Convert-ToRepoRelativePath -Path $path
+        if ($normalizedPath -match '(^|/)履歷(/|$)') {
+            $normalizedPath
+        }
+    }
+
+    return @($matches | Sort-Object -Unique)
 }
 
 function Get-SharedGatePaths {
@@ -355,6 +369,16 @@ function Get-AgentBootstrapProjectRootForPath {
     }
 
     return $null
+}
+
+function Test-ShouldValidateAgentBootstrapProjectRoot {
+    param([string]$ProjectRoot)
+
+    if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+        return $false
+    }
+
+    return (Test-Path -LiteralPath $ProjectRoot -PathType Container)
 }
 
 function Invoke-AgentBootstrapJsonTool {
@@ -937,10 +961,14 @@ function Get-ManifestPendingItems {
 # ========================================
 # Get staged files
 # ========================================
-$stagedChanges = Get-StagedChanges
+$stagedChanges = @(Get-StagedChanges)
 $stagedFiles = Get-StagedActivePaths -Changes $stagedChanges
 $stagedTouchedFiles = Get-StagedTouchedPaths -Changes $stagedChanges
-if (-not $stagedChanges) {
+if ($script:hasErrors) {
+    Write-Host '[ERROR] Unable to evaluate staged paths safely.' -ForegroundColor Red
+    exit 1
+}
+if ($stagedChanges.Count -eq 0) {
     Write-HookInfo 'No staged files to validate'
     exit 0
 }
@@ -950,6 +978,14 @@ Write-Host '========================================' -ForegroundColor Cyan
 Write-Host '  SDD Pre-Commit Validation' -ForegroundColor Cyan
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
+
+$protectedPersonalDataPaths = @(Get-ProtectedPersonalDataPaths -Paths $stagedFiles)
+if ($protectedPersonalDataPaths.Count -gt 0) {
+    Write-Host "[ERROR] Staged paths under a directory named '履歷' are not allowed. Keep personal data outside Git repositories." -ForegroundColor Red
+    Write-Host "  Protected path matches: $($protectedPersonalDataPaths.Count)" -ForegroundColor Red
+    Write-Host ''
+    exit 1
+}
 
 $sharedGatePaths = Get-SharedGatePaths
 $sharedLayerFiles = @()
@@ -1008,7 +1044,7 @@ if ($adapterFiles.Count -gt 0) {
     $adapterGroups = @{}
     foreach ($adapterFile in $adapterFiles) {
         $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $adapterFile
-        if (-not $projectRoot) { continue }
+        if (-not (Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $projectRoot)) { continue }
         if (-not $adapterGroups.ContainsKey($projectRoot)) {
             $adapterGroups[$projectRoot] = @()
         }
@@ -1028,7 +1064,9 @@ if ($projectConstitutionFiles.Count -gt 0) {
     $projectRoots = @{}
     foreach ($projectConstitutionFile in $projectConstitutionFiles) {
         $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $projectConstitutionFile
-        if ($projectRoot) { $projectRoots[$projectRoot] = $true }
+        if (Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $projectRoot) {
+            $projectRoots[$projectRoot] = $true
+        }
     }
 
     foreach ($projectRoot in $projectRoots.Keys) {

@@ -33,7 +33,6 @@ Design priorities:
 | `docs/project-governance-status.md` | Central governance compatibility ledger for consumer projects |
 | `docs/project-worktree-parity-governance.md` | Canonical governance policy for consumer-project derived worktree parity |
 | `docs/mainline-updates/` | Centralized explanation notes for main-bound shared-layer update batches |
-| `archive/` | Archived or deprecated items |
 | `resources/` | Shared resources |
 | `resources/agent-skill-packs/` | Generated AI skill packs exported from shared runtime sources |
 | `WORKSPACE_STRUCTURE.md` | This document |

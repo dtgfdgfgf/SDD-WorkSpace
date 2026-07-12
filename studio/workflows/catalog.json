@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "updated": "2026-05-05T00:00:00+08:00",
+  "version": "1.0.1",
+  "updated": "2026-07-13T00:00:00+08:00",
   "policy": {
     "mode": "studio-first",
     "curatedOnly": true,
@@ -29,14 +29,14 @@
       "version": "1.0.0",
       "title": "SDD Seven-Stage Pipeline",
       "sourcePath": "workflows/sdd-pipeline",
-      "reviewStatus": "approved",
-      "trustLevel": "core",
-      "defaultEnabled": true,
+      "reviewStatus": "experimental",
+      "trustLevel": "experimental",
+      "defaultEnabled": false,
       "owner": "studio",
-      "approvedBy": "studio",
-      "approvedAt": "2026-05-05T00:00:00+08:00",
+      "approvedBy": null,
+      "approvedAt": null,
       "stepTypesUsed": ["command", "gate", "switch"],
-      "notes": "First studio-first workflow runtime artifact. Encodes the seven-stage SDD flow with all 8 readiness statuses and 3 ECI authorization outcomes."
+      "notes": "Catalog and listing demoted on 2026-07-13 pending closure of GOV-01 through GOV-13 and fresh-fixture promotion gates. This workflow is experimental, not approved, and not default-enabled. Runner authorization enforcement remains a separate R2 gate."
     }
   ]
 }

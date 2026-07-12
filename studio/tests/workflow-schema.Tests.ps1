@@ -64,6 +64,22 @@ Describe 'list-workflows.ps1 against the live catalog' {
         $r.ERROR_COUNT | Should -Be 0
         @($r.WORKFLOWS.id) | Should -Contain 'sdd-pipeline'
     }
+
+    It 'advertises sdd-pipeline as experimental and disabled until promotion' {
+        $catalog = Get-Content -LiteralPath $script:catalogPath -Raw | ConvertFrom-Json
+        $entry = @($catalog.workflows | Where-Object id -eq 'sdd-pipeline')[0]
+
+        $entry.reviewStatus | Should -Be 'experimental'
+        $entry.trustLevel | Should -Be 'experimental'
+        $entry.defaultEnabled | Should -BeFalse
+        $entry.approvedBy | Should -BeNullOrEmpty
+        $entry.approvedAt | Should -BeNullOrEmpty
+
+        $output = pwsh -NoProfile -File $script:listScript -Id 'sdd-pipeline' -Json
+        $LASTEXITCODE | Should -Be 0
+        $listed = (($output -join "`n") | ConvertFrom-Json).WORKFLOWS[0]
+        $listed.enabled | Should -BeFalse
+    }
 }
 
 Describe 'validate-workflow.ps1 detection-only behavior when powershell-yaml is missing' -Skip:($script:yamlAvailable) {

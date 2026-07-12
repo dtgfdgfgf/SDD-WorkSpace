@@ -57,6 +57,149 @@ Describe 'Convert-ToRepoRelativePath' {
     }
 }
 
+Describe 'Get-ProtectedPersonalDataPaths' {
+    It 'blocks the protected directory at repository root' {
+        @(Get-ProtectedPersonalDataPaths -Paths @('履歷/example.pdf')) | Should -Be @('履歷/example.pdf')
+    }
+
+    It 'blocks the protected directory inside a nested repository path' {
+        @(Get-ProtectedPersonalDataPaths -Paths @('projects/example/履歷/profile.md')) | Should -Be @('projects/example/履歷/profile.md')
+    }
+
+    It 'normalizes Windows separators before matching' {
+        @(Get-ProtectedPersonalDataPaths -Paths @('projects\example\履歷\profile.md')) | Should -Be @('projects/example/履歷/profile.md')
+    }
+
+    It 'does not block a near-match directory name' {
+        @(Get-ProtectedPersonalDataPaths -Paths @('docs/履歷範本/example.md')).Count | Should -Be 0
+    }
+
+    It 'deduplicates paths from staged rename or delete records' {
+        @(Get-ProtectedPersonalDataPaths -Paths @('履歷/example.pdf', '履歷/example.pdf')).Count | Should -Be 1
+    }
+
+    It 'allows deletion and rename-out by evaluating active destination paths only' {
+        $raw = "D`0履歷/old.pdf`0R100`0履歷/move.md`0docs/move.md`0"
+        $changes = ConvertFrom-GitNameStatusZ -Raw $raw
+        $activePaths = Get-StagedActivePaths -Changes $changes
+
+        @(Get-ProtectedPersonalDataPaths -Paths $activePaths).Count | Should -Be 0
+    }
+
+    It 'blocks a rename into the protected directory' {
+        $raw = "R100`0docs/profile.md`0履歷/profile.md`0"
+        $changes = ConvertFrom-GitNameStatusZ -Raw $raw
+        $activePaths = Get-StagedActivePaths -Changes $changes
+
+        @(Get-ProtectedPersonalDataPaths -Paths $activePaths) | Should -Be @('履歷/profile.md')
+    }
+}
+
+Describe 'personal-data staged-path gate integration' {
+    BeforeAll {
+        function script:New-PrivacyHookFixture {
+            param(
+                [Parameter(Mandatory)] [string]$Name,
+                [switch]$IndependentConsumer
+            )
+
+            $fixtureWorkspace = Join-Path $TestDrive $Name
+            $hookDir = Join-Path $fixtureWorkspace '.githooks'
+            New-Item -ItemType Directory -Path $hookDir -Force | Out-Null
+            $hookPath = Join-Path $hookDir 'pre-commit.ps1'
+            Copy-Item -LiteralPath (Join-Path $WorkspaceRoot '.githooks/pre-commit.ps1') -Destination $hookPath -Force
+
+            $repoRoot = if ($IndependentConsumer) {
+                $path = Join-Path $fixtureWorkspace 'consumer'
+                New-Item -ItemType Directory -Path $path -Force | Out-Null
+                $path
+            } else {
+                $fixtureWorkspace
+            }
+
+            git init -b main $repoRoot 2>&1 | Out-Null
+            git -C $repoRoot config user.email 'privacy-test@example.invalid' | Out-Null
+            git -C $repoRoot config user.name 'Privacy Test' | Out-Null
+
+            return [pscustomobject]@{
+                Workspace = $fixtureWorkspace
+                RepoRoot  = $repoRoot
+                HookPath  = $hookPath
+            }
+        }
+
+        function script:Invoke-PrivacyHookFixture {
+            param(
+                [Parameter(Mandatory)] $Fixture,
+                [Parameter(Mandatory)] [string]$RelativePath,
+                [Parameter(Mandatory)] [string]$SyntheticName
+            )
+
+            $target = Join-Path $Fixture.RepoRoot $RelativePath
+            New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
+            Set-Content -LiteralPath $target -Value 'synthetic test content' -Encoding UTF8
+            git -C $Fixture.RepoRoot add -f -- $RelativePath 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to stage privacy fixture.' }
+
+            Push-Location $Fixture.RepoRoot
+            try {
+                $output = pwsh -NoProfile -File $Fixture.HookPath 2>&1
+                $exitCode = $LASTEXITCODE
+            } finally {
+                Pop-Location
+            }
+
+            return [pscustomobject]@{
+                ExitCode = $exitCode
+                Output   = ($output -join "`n")
+                Name     = $SyntheticName
+            }
+        }
+    }
+
+    It 'rejects a forced protected path in the workspace repo without printing its filename' {
+        $name = 'synthetic-root-private-name.txt'
+        $fixture = New-PrivacyHookFixture -Name 'privacy-root'
+        $result = Invoke-PrivacyHookFixture -Fixture $fixture -RelativePath "履歷/$name" -SyntheticName $name
+
+        $result.ExitCode | Should -Not -Be 0
+        $result.Output | Should -Match 'protected personal-data|Staged paths under'
+        $result.Output | Should -Not -Match ([regex]::Escape($name))
+        $result.Output | Should -Not -Match ([regex]::Escape($fixture.RepoRoot))
+    }
+
+    It 'rejects a forced protected path in an independent consumer without printing its filename' {
+        $name = 'synthetic-consumer-private-name.txt'
+        $fixture = New-PrivacyHookFixture -Name 'privacy-consumer' -IndependentConsumer
+        $result = Invoke-PrivacyHookFixture -Fixture $fixture -RelativePath "assets/履歷/$name" -SyntheticName $name
+
+        $result.ExitCode | Should -Not -Be 0
+        $result.Output | Should -Match 'protected personal-data|Staged paths under'
+        $result.Output | Should -Not -Match ([regex]::Escape($name))
+        $result.Output | Should -Not -Match ([regex]::Escape($fixture.RepoRoot))
+    }
+
+    It 'fails closed when Git cannot read the staged index' {
+        $fixture = New-PrivacyHookFixture -Name 'privacy-corrupt-index'
+        $corruptIndex = Join-Path $fixture.Workspace 'corrupt.index'
+        Set-Content -LiteralPath $corruptIndex -Value 'not a git index' -Encoding UTF8
+        $previousIndex = $env:GIT_INDEX_FILE
+
+        Push-Location $fixture.RepoRoot
+        try {
+            $env:GIT_INDEX_FILE = $corruptIndex
+            $output = pwsh -NoProfile -File $fixture.HookPath 2>&1
+            $exitCode = $LASTEXITCODE
+        } finally {
+            $env:GIT_INDEX_FILE = $previousIndex
+            Pop-Location
+        }
+
+        $exitCode | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'Unable to evaluate staged paths safely'
+    }
+}
+
 Describe 'Get-EdgeCaseCount' {
     Context 'with dedicated Edge Cases section' {
         It 'counts bullet items under Edge Cases heading' {
@@ -265,6 +408,11 @@ Describe 'agent bootstrap path helpers' {
         Test-IsAgentAdapterPath -Path 'projects/example/.github/copilot-instructions.md' | Should -BeTrue
         Test-IsProjectConstitutionPath -Path 'projects/example/.specify/memory/constitution.md' | Should -BeTrue
         Test-IsAgentAdapterPath -Path '.github/agents/copilot-instructions.md' | Should -BeFalse
+    }
+
+    It 'validates an adapter group only while its project root still exists' {
+        Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $WorkspaceRoot | Should -BeTrue
+        Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot (Join-Path $TestDrive 'removed-project') | Should -BeFalse
     }
 }
 

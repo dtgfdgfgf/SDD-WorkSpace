@@ -77,6 +77,9 @@ logs/
 learning/
 projects/
 
+# External source intake (never vendor a working checkout)
+resources/github-copilot-configs/
+
 # ===========================
 # Test Artifacts
 # ===========================
