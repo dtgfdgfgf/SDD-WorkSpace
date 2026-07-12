@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.2.0"
+version: "1.2.1"
 date: "2026-07-12"
 last_updated: "2026-07-13"
 language: "zh-TW"
@@ -272,22 +272,22 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 
 | # | ID | 最終裁定 | 執行邊界 / 驗收重點 | 狀態 |
 |---:|---|---|---|---|
-| 1 | R-H01 | 公開並採 MIT | 先完成 R-H02 與第三方來源盤點；再加 root LICENSE、README License 段、`THIRD_PARTY_NOTICES.md`，不得用 root MIT 覆蓋無權授權的內容 | IN_PROGRESS |
-| 2 | R-H02 | 完整移除 vendored `github-copilot-configs` | 真正移除 tracked snapshot 與舊工作副本；未來只從具明確授權的來源選取、pin commit/hash、保留 LICENSE/manifest | IN_PROGRESS |
-| 3 | R-H05 | 刪除 `bone.ini` 與空 `studio/tools/` | 不搬 archive；確認無其他 live structure references；Git history 保留史料 | IN_PROGRESS |
-| 4 | R-H08 | 退役 `setup-copilot-agents.ps1` | 與 R-H02 同批移除 README 入口；不保留可對 user home 做無治理覆寫的舊 installer | IN_PROGRESS |
-| 5 | R-H13 | 刪除空 `archive/` 預留結構 | 移除 README / WORKSPACE_STRUCTURE 宣稱；未來若重建，先以 README 定義保存規則 | IN_PROGRESS |
-| 6 | R-H17 | 刪除漂移繁中 agent 目錄 | 不因非 ASCII 名稱而刪；理由是治理內容矛盾。未來翻譯需有來源 commit、banner 與 parity | IN_PROGRESS |
+| 1 | R-H01 | 公開並採 MIT | 先完成 R-H02 與第三方來源盤點；再加 root LICENSE、README License 段、`THIRD_PARTY_NOTICES.md`，不得用 root MIT 覆蓋無權授權的內容 | COMPLETED |
+| 2 | R-H02 | 完整移除 vendored `github-copilot-configs` | 真正移除 tracked snapshot 與舊工作副本；未來只從具明確授權的來源選取、pin commit/hash、保留 LICENSE/manifest | COMPLETED |
+| 3 | R-H05 | 刪除 `bone.ini` 與空 `studio/tools/` | 不搬 archive；確認無其他 live structure references；Git history 保留史料 | COMPLETED |
+| 4 | R-H08 | 退役 `setup-copilot-agents.ps1` | 與 R-H02 同批移除 README 入口；不保留可對 user home 做無治理覆寫的舊 installer | COMPLETED |
+| 5 | R-H13 | 刪除空 `archive/` 預留結構 | 移除 README / WORKSPACE_STRUCTURE 宣稱；未來若重建，先以 README 定義保存規則 | COMPLETED |
+| 6 | R-H17 | 刪除漂移繁中 agent 目錄 | 不因非 ASCII 名稱而刪；理由是治理內容矛盾。未來翻譯需有來源 commit、banner 與 parity | COMPLETED |
 | 7 | R-G06 | 退役 change-manifest 鏈 | 將 impact reconciliation 併入 mainline note，並由 merge CI 強制；不補裝飾性首份 manifest | DECIDED |
-| 8 | R-G10 | 直接刪除 `basic-prompt.txt` | 不把低資訊內容搬入 `studio/prompts/`；prompts 只從已驗證 candidates 提取 | IN_PROGRESS |
+| 8 | R-G10 | 直接刪除 `basic-prompt.txt` | 不把低資訊內容搬入 `studio/prompts/`；prompts 只從已驗證 candidates 提取 | COMPLETED |
 | 9 | R-F04 / R-H15 | 退役 agent-skills export/install capability | 連同 scripts、upgrade caller、audit、contract、tests、docs 與空輸出目錄一起收斂；未來需要時重新立 spec | DECIDED |
 | 10 | R-B16 | RunState 為本機暫態 | 與 R-B06 同批 relocation 後再 ignore；修正 POLICY/README；跨機需求改走顯式 checkpoint export/import | DECIDED |
 | 11 | R-D06 | 移除 blanket exact model pin，預設 inherit | 建 per-runtime 單一 policy；audit 驗 policy/parity，不鎖某一代 model literal；高風險 override 需有量測證據 | DECIDED |
 | 12 | R-D07 | 以 artifact 類型明文化狹義 prompt 例外 | Runtime prompt source/mirror 可少量使用語義符號；SDD outputs 與治理文件仍禁止；裝飾性符號漸進清理 | DECIDED |
 | 13 | R-D12 | 將專案 reviewer 移出 shared，但先解決 Copilot overlay | Claude project-local 已存在；Copilot junction 未解前不得破壞功能。完成 overlay 或裁定 Claude-only 後再刪 shared source/mirror/contract entry | DECIDED |
 | 14 | R-I03 | 保留模板並接上 route-aware consumer | Readiness 每次只 scaffold 所選 route 的最小 packet；ECI scaffold 必需四件；validator 檢查 placeholders/必填欄 | DECIDED |
-| 15 | R-I07 | 刪除本機空 `feature-packs/` | 無 repo 變更需求；未來需要先立 spec | IN_PROGRESS |
-| 16 | R-I08 | 刪除本機空 `pain-points/`，保留 optional 定義 | 不加 `.gitkeep`；用到再建立 | IN_PROGRESS |
+| 15 | R-I07 | 刪除本機空 `feature-packs/` | 無 repo 變更需求；未來需要先立 spec | COMPLETED |
+| 16 | R-I08 | 刪除本機空 `pain-points/`，保留 optional 定義 | 不加 `.gitkeep`；用到再建立 | COMPLETED |
 | 17 | R-E05 | 保留 `must_update`，在 merge/CI 才 blocking | Commit-time 保持 advisory；PR/merge 以 branch aggregate reconciliation 阻擋，避免逐 commit false positive | DECIDED |
 | 18 | R-J02 | 未來公開工作使用 GitHub noreply，不重寫歷史 | 使用 workspace conditional include 或適當 global policy 涵蓋 nested repos；啟用 GitHub privacy / push blocking | IN_PROGRESS |
 
@@ -328,29 +328,30 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.0.0 | 2026-07-12 | 初版宣稱 95 條 repair inventory（後由 v1.1.0 重算為 109 條）、9 批次草案與未裁定 owner decision 表。 |
 | 1.1.0 | 2026-07-13 | 第三輪獨立複核；把初版錯算的 95 條修正為實際 109 條與正確嚴重度分布；修正 8 類錯誤/過時前提；記錄 18 項 owner decisions；改成 7 個風險優先批次；更新工期、依賴、限制、ledger 狀態與外部依據。 |
 | 1.2.0 | 2026-07-13 | 啟動 R0：完成本機實作與驗證前置；staged hook 發現並修正 R-A14，current ledger 成為 110 條；新增日期化執行增補；待 implementation commit 存在後再把可關閉項目改為 COMPLETED 並回填 hash。 |
+| 1.2.1 | 2026-07-13 | 以 implementation commit `bdd2780` 完成 R0 帳務：可關閉 findings 與 owner decisions 改為 COMPLETED；R-J02 保持 IN_PROGRESS，因 GitHub account privacy / push-blocking 仍需 owner 操作。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
-本節是第 3 節對應 findings 的日期化狀態記錄，不改寫原始問題證據。R0 實作已在工作樹
-完成，尚待完整驗證與 implementation commit，因此本表先標 `IN_PROGRESS`；commit 後
-必須以實際 hash 更新。
+本節是第 3 節對應 findings 的日期化狀態記錄，不改寫原始問題證據。R0 本機實作與完整
+驗證已由 implementation commit `bdd2780` 留證；能由本批關閉的項目標為 `COMPLETED`。
+R-J02 只完成本機 conditional include，帳戶側設定尚待 owner，因此維持 `IN_PROGRESS`。
 
 | ID | 目前狀態 | 已落地處置 | 驗收證據 / 尚待事項 |
 |---|---|---|---|
-| R-G13 | IN_PROGRESS | 四份 workspace 分析與索引已納入本批 | 待 commit hash |
-| R-A14 | IN_PROGRESS | removed nested source root 不再被誤當成仍存在的 adapter project；project root 尚存在時仍照常驗證 | removed-root regression test 與 contract invariant 已加；待 staged hook 與 commit hash |
-| R-B09 | IN_PROGRESS | catalog 已降為 experimental、非 approved、非 default-enabled，approval 欄位清空 | listing/schema negative test 已加；runner authorization 仍是 R-B05 的 R2 範圍，不在本 finding 冒充關閉 |
-| R-H01 | IN_PROGRESS | root MIT、README License 段與 conservative `THIRD_PARTY_NOTICES.md` 已建立 | Spec Kit notice 保留完整 MIT；待 commit hash |
-| R-H02 | IN_PROGRESS | 392-file tracked vendor snapshot 已完整移除，來源取證已留存，原路徑加入 external-intake ignore | 391/392 blobs 對應來源 commit `e5969f1cc89a60c931049bd41dce55eaa8e6037f`；唯一差異為來源工作設定檔；待 commit hash |
-| R-H05 | IN_PROGRESS | `bone.ini` 與空 `studio/tools/` 已刪除 | 已確認無 live structure reference；待 commit hash |
-| R-H08 | IN_PROGRESS | 舊 installer 與 README 入口已移除 | 待 commit hash |
-| R-H11 | IN_PROGRESS | root 與 project template ignore 加固；pre-commit 對 active protected destinations fail-closed，且不列印檔名 | privacy suite 63/63；full governance 265 passed、0 failed、1 expected skip；待 commit hash |
-| R-H12 | IN_PROGRESS | 只刪除 root ignored `testResults.xml` 殘留 | `studio/tests/_artifacts/` 保留；本機處置無 tracked deletion hash，隨批次 note 留證 |
-| R-H13 | IN_PROGRESS | 本機空 `archive/` 已刪除，README 與 WORKSPACE_STRUCTURE 列項已移除 | 待 commit hash |
-| R-H17 | IN_PROGRESS | 漂移的單一繁中 agent 與目錄已刪除 | canonical agents 未變；待 commit hash |
-| R-G10 | IN_PROGRESS | `docs/basic-prompt.txt` 已刪除且未搬入 prompts | 待 commit hash |
-| R-I07 | IN_PROGRESS | 本機空 `studio/templates/feature-packs/` 已刪除 | 無 tracked directory；隨批次 note 留證 |
-| R-I08 | IN_PROGRESS | 本機空 `studio/knowledge-base/pain-points/` 已刪除 | 憲法 optional 定義保留；隨批次 note 留證 |
+| R-G13 | COMPLETED | 四份 workspace 分析與索引已納入本批 | commit `bdd2780` |
+| R-A14 | COMPLETED | removed nested source root 不再被誤當成仍存在的 adapter project；project root 尚存在時仍照常驗證 | removed-root regression test、contract invariant 與 staged hook 全綠；commit `bdd2780` |
+| R-B09 | COMPLETED | catalog 已降為 experimental、非 approved、非 default-enabled，approval 欄位清空 | listing/schema negative test 已加；runner authorization 仍是 R-B05 的 R2 範圍，不在本 finding 冒充關閉；commit `bdd2780` |
+| R-H01 | COMPLETED | root MIT、README License 段與 conservative `THIRD_PARTY_NOTICES.md` 已建立 | Spec Kit notice 保留完整 MIT；commit `bdd2780` |
+| R-H02 | COMPLETED | 392-file tracked vendor snapshot 已完整移除，來源取證已留存，原路徑加入 external-intake ignore | 391/392 blobs 對應來源 commit `e5969f1cc89a60c931049bd41dce55eaa8e6037f`；唯一差異為來源工作設定檔；commit `bdd2780` |
+| R-H05 | COMPLETED | `bone.ini` 與空 `studio/tools/` 已刪除 | 已確認無 live structure reference；commit `bdd2780` |
+| R-H08 | COMPLETED | 舊 installer 與 README 入口已移除 | commit `bdd2780` |
+| R-H11 | COMPLETED | root 與 project template ignore 加固；pre-commit 對 active protected destinations fail-closed，且不列印檔名 | privacy suite 63/63；full governance 265 passed、0 failed、1 expected skip；staged hook 綠；commit `bdd2780` |
+| R-H12 | COMPLETED | 只刪除 root ignored `testResults.xml` 殘留 | `studio/tests/_artifacts/` 保留；本機處置由 batch note 與 commit `bdd2780` 留證 |
+| R-H13 | COMPLETED | 本機空 `archive/` 已刪除，README 與 WORKSPACE_STRUCTURE 列項已移除 | commit `bdd2780` |
+| R-H17 | COMPLETED | 漂移的單一繁中 agent 與目錄已刪除 | canonical agents 未變；commit `bdd2780` |
+| R-G10 | COMPLETED | `docs/basic-prompt.txt` 已刪除且未搬入 prompts | commit `bdd2780` |
+| R-I07 | COMPLETED | 本機空 `studio/templates/feature-packs/` 已刪除 | 無 tracked directory；batch note 與 commit `bdd2780` 留證 |
+| R-I08 | COMPLETED | 本機空 `studio/knowledge-base/pain-points/` 已刪除 | 憲法 optional 定義保留；batch note 與 commit `bdd2780` 留證 |
 | R-J02 | IN_PROGRESS | workspace-scoped conditional include 已套用 GitHub noreply，7/7 discovered repos 驗證通過；未重寫歷史、未覆寫既有 global identity | GitHub account privacy 與 push-blocking toggle 尚需 owner 在帳戶設定完成 |
 
 R0 mainline note：`docs/mainline-updates/2026-07-13-r0-containment-and-source-cleanup.md`。

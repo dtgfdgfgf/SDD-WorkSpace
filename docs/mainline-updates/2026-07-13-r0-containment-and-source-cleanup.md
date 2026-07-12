@@ -3,8 +3,8 @@
 **Date**: 2026-07-13
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `bdd2780`
 **Related PR**: N/A
 
 ## Summary
@@ -100,6 +100,7 @@ Explicitly out of scope:
 - Full governance suite: 265 passed, 0 failed, 1 expected skip
 - Contract-focused Pester tests: 20 passed, 0 failed
 - Changed-document relative links: 31 checked, 0 broken
+- Staged pre-commit: passed, including the shared runtime audit against the staged snapshot
 - Deletion inventory: 396 tracked deletions, including all 392 vendor files; all nine local cleanup
   targets absent; active generated test artifact path retained
 - Noreply verification: 7 of 7 discovered workspace repositories resolve the expected noreply
@@ -108,9 +109,8 @@ Explicitly out of scope:
 
 ## Merge Notes
 
-- Keep this note in Draft until the implementation commit exists and all final validation results are
-  recorded. Then replace `TBD` with the concrete commit hash and mark the note Ready in a follow-up
-  documentation commit.
+- Implementation commit `bdd2780` exists and the final validation results are recorded. This batch is
+  ready for review and eventual merge with the broader repair branch.
 - No Git history rewrite and no push are part of R0.
 
 ## Follow-ups
