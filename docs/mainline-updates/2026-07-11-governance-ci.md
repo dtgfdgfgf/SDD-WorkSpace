@@ -15,6 +15,11 @@
   (`run-governance-tests.ps1`) on `windows-latest` for every push, pull request, and manual dispatch.
 - Test results (`testResults.xml`) are uploaded as a build artifact on every run, including failures.
 
+Supersession on 2026-07-13: R1 narrows push and PR triggers to `main`, adds a weekly schedule and
+branch-reconciliation steps, pins Pester and powershell-yaml, uploads NUnit plus Cobertura artifacts,
+and pins the Node 24 releases of checkout v7.0.0 and upload-artifact v7.0.1 by commit. The original
+behavior below remains the historical scope of commit `6e80ed0`.
+
 ## Why This Update Exists
 
 Until now every governance check ran only on the local machine (pre-commit hook or manual
@@ -87,6 +92,6 @@ own note.
 
 ## Follow-ups
 
-- Consider a status badge in `README.md` after first green run.
+- Completed in R1: add the status badge and coverage artifacts after hosted validation.
 - Consider `Install-Module` caching if runner minutes become a concern.
-- Branch protection on `main` (require green governance check) once CI proves stable.
+- Completed in R1: active ruleset `18842326` requires PR plus strict `audit-and-tests` on `main`.

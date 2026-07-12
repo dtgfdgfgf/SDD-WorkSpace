@@ -266,7 +266,7 @@ Describe 'governance test coverage configuration' {
         $workflowContent | Should -Match 'run-governance-tests\.ps1 -Output Normal -CodeCoverage'
         $workflowContent | Should -Match 'path:\s*studio/tests/_artifacts/'
         ([regex]::Matches($workflowContent, 'validate-mainline-notes\.ps1 .*?-RequireReady')).Count | Should -Be 2
-        $workflowContent | Should -Match 'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5'
-        $workflowContent | Should -Match 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02'
+        $workflowContent | Should -Match 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0'
+        $workflowContent | Should -Match 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
     }
 }

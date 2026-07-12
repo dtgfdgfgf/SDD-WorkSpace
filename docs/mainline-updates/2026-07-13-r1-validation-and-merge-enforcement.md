@@ -4,8 +4,8 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Ready
-**Related Commits**: `e543f6a`
-**Related PR**: N/A
+**Related Commits**: `e543f6a`, `f601685`
+**Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 
 ## Summary
@@ -25,7 +25,9 @@ surface with one branch-level reconciliation record that the merge CI can enforc
 
 ## Scope
 
-- R-A01 through R-A12, R-E05, R-E10, R-G06, R-H10, R-H16, R-H19, R-I06, and R-J01.
+- R-A01 through R-A12, R-E05, R-E10, R-G06, R-H10, R-H16, R-H19, and R-I06.
+- R-J01 includes both the local/CI wiring and remote activation: hosted validation must succeed
+  before the active `main-governance` ruleset can close the finding.
 - Completion of the account-side portion of R-J02 confirmed by the owner before R1 began.
 - R-E09 history archaeology remains assigned to R5. Its 18 existing Ready/TBD notes are isolated
   by an explicit SHA-256 migration baseline and cannot use that exception after any content change.
@@ -87,15 +89,25 @@ surface with one branch-level reconciliation record that the merge CI can enforc
 - Repository hygiene: no tracked governed text has BOM, CR, or a missing final LF; project-init
   outputs are LF/no-BOM and immediately sync-idempotent.
 - `git diff --check`: passed.
-- Pending: hosted `audit-and-tests` success on the final PR SHA and active GitHub ruleset evidence.
+- Hosted PR run `29209698022` succeeded on head `f601685`: runtime audit, aggregate
+  reconciliation, 320 governance tests, and artifact upload all passed. An earlier clean-runner
+  failure exposed a fixture that depended on this note remaining Draft; commit `f601685` makes the
+  fixture force and assert `Ready + TBD + N/A` before testing the negative path.
+- GitHub ruleset `18842326` (`main-governance`) is active for `~DEFAULT_BRANCH`, reports no bypass
+  actor, and requires a PR plus strict `audit-and-tests` from integration `15368`. It also blocks
+  branch deletion and non-fast-forward updates. Repository and branch-rule APIs report
+  `main.protected=true` and all four rules active.
+- The hosted run above established the check before ruleset activation. Every later PR head,
+  including documentation-only closure commits, is blocked by GitHub until its own fresh
+  `audit-and-tests` result succeeds; the live PR status is the canonical final-SHA evidence.
 
 ## Merge Notes
 
-- Local implementation commit `e543f6a` exists and the branch-diff reconciliation is closed. The
-  code batch is ready for hosted validation.
-- R-J01 remains operationally incomplete until the PR's latest SHA has a successful
-  `audit-and-tests` check and the `main-governance` ruleset is active. Do not merge before both are
-  verified.
+- Local implementation commit `e543f6a`, clean-runner fixture repair `f601685`, hosted validation,
+  and remote ruleset evidence exist; R-J01 is operationally complete.
+- PR #3 remains open for owner review. The active ruleset, rather than this note, is the
+  authoritative enforcement point for the latest SHA; do not merge if GitHub reports its required
+  check pending or failed.
 - R-G06 and R-E05 must land atomically; neither the retired manifest surface nor the new merge gate
   is considered complete by itself.
 

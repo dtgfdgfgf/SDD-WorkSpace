@@ -56,8 +56,12 @@ Explicitly out of scope:
   protection and required CI are R-J01 work in R1.
 - Retirement of the agent-skills chain selected in owner decision 2A. That remains an atomic R4
   change with its scripts, callers, contract, audit, tests, documentation, and output directory.
-- GitHub account email privacy and push-blocking toggles, which require an authenticated account
-  settings action. The workspace-scoped Git identity is complete; the account toggle remains manual.
+- GitHub account email privacy and push-blocking toggles, which required an authenticated account
+  settings action. At the R0 implementation snapshot, the workspace-scoped Git identity was
+  complete and the account toggle remained manual.
+
+Revalidation on 2026-07-13: the owner confirmed both account toggles complete. This preserves the
+R0-time scope statement while closing R-J02 in the current repair ledger.
 
 ## Affected Paths
 
@@ -123,8 +127,8 @@ in commit `bdd2780`.
 
 ## Follow-ups
 
-- Complete the GitHub account email privacy and command-line push-blocking toggles.
-- R1: repair audit false-green paths and add server-side branch and merge enforcement.
+- Completed on 2026-07-13: GitHub account email privacy and command-line push-blocking toggles.
+- Completed in R1: repair audit false-green paths and add server-side branch and merge enforcement.
 - R2: make the workflow runner consume catalog and state authorization before it creates any feature
   or RunState artifacts.
 - R4: retire the owner-selected agent-skills capability as one atomic change.
