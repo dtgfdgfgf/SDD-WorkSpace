@@ -215,12 +215,17 @@ Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
         $fixtureRoot = New-RuntimeAuditFixture
         $notePath = Join-Path $fixtureRoot 'docs/mainline-updates/2026-07-13-r1-validation-and-merge-enforcement.md'
         $noteContent = Get-Content -LiteralPath $notePath -Raw
-        $noteContent = $noteContent.Replace('**Status**: Draft', '**Status**: Ready')
+        $noteContent = $noteContent -replace '(?m)^\*\*Status\*\*:.*$', '**Status**: Ready'
+        $noteContent = $noteContent -replace '(?m)^\*\*Related Commits\*\*:.*$', '**Related Commits**: TBD'
+        $noteContent = $noteContent -replace '(?m)^\*\*Related PR\*\*:.*$', '**Related PR**: N/A'
+        $noteContent | Should -Match '(?m)^\*\*Status\*\*: Ready$'
+        $noteContent | Should -Match '(?m)^\*\*Related Commits\*\*: TBD$'
+        $noteContent | Should -Match '(?m)^\*\*Related PR\*\*: N/A$'
         [System.IO.File]::WriteAllText($notePath, ($noteContent -replace "`r`n?", "`n"), [System.Text.UTF8Encoding]::new($false))
 
         $indexPath = Join-Path $fixtureRoot 'docs/mainline-updates/README.md'
         $indexContent = Get-Content -LiteralPath $indexPath -Raw
-        $indexContent = $indexContent.Replace('| `feature/wave-3-security-and-workflows` | Draft | Repair audit false-green paths', '| `feature/wave-3-security-and-workflows` | Ready | Repair audit false-green paths')
+        $indexContent = $indexContent -replace '(?m)(r1-validation-and-merge-enforcement.*\| `feature/wave-3-security-and-workflows` \| )(?:Draft|Ready|Merged)( \|)', '$1Ready$2'
         [System.IO.File]::WriteAllText($indexPath, ($indexContent -replace "`r`n?", "`n"), [System.Text.UTF8Encoding]::new($false))
 
         $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
