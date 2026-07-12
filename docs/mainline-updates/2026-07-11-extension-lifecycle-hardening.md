@@ -6,6 +6,7 @@
 **Status**: Ready
 **Related Commits**: `6e858d4`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -56,6 +57,12 @@ lifecycle pair.
   exit before mutation.
 - `check-speckit-runtime.ps1`: Errors 0 / Warnings 0 with the two new invariants active.
 - Change manifests: none required.
+
+## Impact Reconciliation
+
+The isolated extension-hardening diff was compared with the current impact registry. It has no
+`must_update` target: the two lifecycle scripts, their contract invariants, regression tests, this
+note, and the index were updated together in commit `6e858d4`.
 
 ## Merge Notes
 

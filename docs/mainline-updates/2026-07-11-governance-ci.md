@@ -6,6 +6,7 @@
 **Status**: Ready
 **Related Commits**: `6e80ed0`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -70,6 +71,13 @@ acceptance entrypoints (outcome verification, zero prompt-side cost), consistent
 - First real acceptance happens on the first push to GitHub: the Actions run itself is the
   remaining unverified step and may surface runner-environment differences (module versions,
   missing local tools). Tool-availability probes in the audit are report-only and do not fail.
+
+## Impact Reconciliation
+
+The isolated initial-CI diff was compared with the current impact registry. It has no
+`must_update` target: the workflow, its validation record, and the mainline-note index were updated
+together. R1 subsequently hardens the same workflow and records that broader reconciliation in its
+own note.
 
 ## Merge Notes
 

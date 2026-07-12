@@ -6,6 +6,7 @@
 **Status**: Ready
 **Related Commits**: `bdd2780`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -106,6 +107,13 @@ Explicitly out of scope:
 - Noreply verification: 7 of 7 discovered workspace repositories resolve the expected noreply
   identity, with no repo-local email override
 - Change manifests: none created; this batch records reconciliation in this mainline note
+
+## Impact Reconciliation
+
+The isolated R0 diff was compared with the current impact registry. It has no unresolved
+`must_update` target: its runtime contract, staged hook, regression tests, catalog metadata,
+licensing and provenance records, and current structural documentation were updated as one batch
+in commit `bdd2780`.
 
 ## Merge Notes
 
