@@ -3,8 +3,8 @@
 **Date**: 2026-07-14
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: TBD
+**Status**: Ready
+**Related Commits**: `df31106`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 
@@ -99,8 +99,8 @@ An independent read-only verification of the R2 partial repair (`e4fa153..ccb773
 ## Merge Notes
 
 - This batch does not promote the experimental workflow runtime.
-- Backfill Related Commits and flip Status to Ready in the follow-up accounting commit,
-  after hosted validation of the pushed SHA.
+- Implementation commit `df31106` exists and all local validation is green; hosted
+  `audit-and-tests` validates the pushed SHA on PR #3 before merge.
 
 ## Follow-ups
 

@@ -1,17 +1,17 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.3.2"
+version: "1.4.0"
 date: "2026-07-12"
-last_updated: "2026-07-13"
+last_updated: "2026-07-14"
 language: "zh-TW"
 owner: "元熙"
 status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "29adc67 (R2 partial R-B06 implementation head)"
+head_commit: "df31106 (R2 verification-hardening implementation head)"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
-analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。"
+analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
 related_documents:
   - "docs/sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md"
@@ -23,7 +23,7 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14，因此目前為 110 條，編為 R-A01 至 R-A14、其餘區域至 R-J03。現況分佈：Critical 6、High 20、Medium 46、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 則是後續實作中有獨立回歸證據的新 finding。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條，因此目前為 114 條，編為 R-A01 至 R-A16、R-B01 至 R-B18、其餘區域至 R-J03。現況分佈：Critical 6、High 21、Medium 49、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -43,6 +43,10 @@ strict `audit-and-tests`，且禁止刪除與 non-fast-forward 更新。第 2 �
 process 的 ProjectRoot cwd，並把 plan prep、operator handoff 與 plan agent path discovery 綁定
 至明確 workflow feature。這只關閉 R-B06 的兩個 dispatch/context 子問題；RunState relocation、
 canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與 R2 均保持 IN_PROGRESS。
+
+2026-07-13 的唯讀獨立驗證（第四輪）確認上述兩項修復屬實、PR #3 兩個 review threads 可維持
+resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復（見第 14 節），R-B18
+保持 open。
 
 建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 110 條完整收斂粗估仍為 21 至 35 人天。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；R3 至 R6 在實作時仍須依當下證據調整。
 
@@ -103,6 +107,8 @@ canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與
 | R-A12 | Medium | 無 .gitattributes：行尾一致性只靠本機 core.autocrlf=input，他機 clone（Windows 預設 autocrlf=true）工作樹會變 CRLF，影響 hash/parity 驗證與 hook 行為；BOM 政策亦無 repo 層宣告 | 新增 .gitattributes（`* text=auto`、ps1/md/yml/json 定 eol=lf、影像標 binary）；文件明文化「UTF-8 無 BOM、LF」政策；與 R-A11 同批 |
 | R-A13 | Low | 377 條 mustContainAll 字串斷言防刪除不防矛盾，維護成本隨文件改寫成長；anchor 機制僅 7 個試點 | 策略項：訂 anchor 全面替換路線圖或明文接受字串斷言邊界（與 R-E06 敘述精確化呼應） |
 | R-A14 | Medium | [R0 DISCOVERED 2026-07-13] pre-commit 對所有 staged-touched 的 nested `.github/copilot-instructions.md` 都推導 project root；整個 nested source tree 已刪除時仍對不存在目錄做 `Resolve-Path`，誤報三個 adapter 必須同步並阻擋合法清理 | 只對 commit 後仍存在的推導 project root 執行 adapter bootstrap 驗證；刪單一 adapter 而 project root 仍存在時繼續 fail；新增 removed-root regression test 與 contract invariant |
+| R-A15 | High | [R2-VERIFY DISCOVERED 2026-07-13] pre-commit 個資 gate 在非 UTF-8 console（zh-TW CP950）下靜默放行 `履歷/`：git 原始 UTF-8 路徑 bytes 經 `[Console]::OutputEncoding` 錯解為確定性亂碼，regex 永不命中且 fail-closed 防線不觸發；CI 綠燈僅因 runner console 是 UTF-8，本機全套曾為 326 passed / 2 failed | hook 開頭強制 UTF-8 解碼並 fail closed；check-speckit-runtime 於輸出重導時對稱強制 UTF-8；新增 CP437 console 回歸測試與 contract token |
+| R-A16 | Medium | [R2-VERIFY DISCOVERED 2026-07-13] `sdd-pipeline-plan-feature-context` 的 args token 在 workflow.yml 出現 6 次（5 次先於 R-B06 修復存在），單獨 revert stage-plan-prep 該行 audit 仍綠；能抓到 revert 的 Pester 斷言掛在 powershell-yaml 可用性 skip 上 | 以錨定 stage-plan-prep 區塊的多行 token 取代三個鬆散 token；以模擬 revert 驗證 token 會斷 |
 
 ### B. Workflow engine 與 workflow registry
 
@@ -124,6 +130,8 @@ canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與
 | R-B14 | Medium | POLICY.md 宣稱 runs/ 是 active run index 但程式碼零寫入；宣稱支援的 prompt/shell/while/fan-out/fan-in 全部 deferred | 實作 runs/ index 或從 POLICY 刪除宣稱；deferred 能力在 POLICY 明確標注現況（surface truthfulness） |
 | R-B15 | Medium | sdd-pipeline/manifest.json 宣告 entryPoints `scripts/run-workflow.ps1` 但該路徑不存在（實際 runner 在 studio/scripts/powershell/）；validate-workflow 不檢查 entryPoints 存在性 | 修正 manifest；validate-workflow 加 entryPoints 存在性驗證與 negative test |
 | R-B16 | Medium | RunState 政策不是未定義而是互相矛盾：POLICY 稱 generated/disposable，sdd-pipeline README 卻明文稱由 Git 追蹤以支援跨機 resume；兩份 .gitignore 皆無規則，state 又會保存本機絕對路徑、gate/history 與尚未安全的 DryRun 結果 | [OWNER DECIDED 2026-07-13] 定位為本機暫態；與 R-B06 同批把 state 移出 `specs/<feature>/`，對最終 runtime 位置加 gitignore，修正 POLICY/README；日後若需要跨機續跑，另設計 checkpoint export/import |
+| R-B17 | Medium | [R2-VERIFY DISCOVERED 2026-07-13] `run-workflow -Inputs "feature=X"` 可覆蓋已驗證的 `-Feature`：RunState 錨在 A feature、所有 templated 步驟打 B feature，且覆蓋值繞過 feature-id regex；resume 路徑完全信任 saved state 的 `inputs.feature`，可被竄改或 pre-guard 殘留 state 重新綁定（live 重現） | fresh 與 resume 統一拒絕 feature 覆蓋；resume 驗證 state `inputs.feature` 與錨定 feature 一致，legacy 缺值回填；4 條回歸測試 + contract invariant |
+| R-B18 | Medium | [R2-VERIFY DISCOVERED 2026-07-13] `-FeatureDir` 家族存在三種邊界等級：強（setup-plan/check-prerequisites：REPO_ROOT 基準 + specs 直接子目錄等值）、弱（setup-readiness/tasks/analyze/implement：cwd 基準 + 僅驗父目錄名為 `specs` 的形狀檢查，Assert 以候選路徑自身祖父為 root 恆真、任意 `*/specs/<x>` 可過且會寫檔）、無（setup-clarify：零邊界，唯讀）；且僅 plan 階段 operator handoff 帶 `-FeatureDir`，其餘階段 agent handoff 仍由 branch/SPECIFY_FEATURE 推導 | 收斂 sibling 腳本至 setup-plan 的強邊界語義；評估非 plan 階段 operator_message 與 agent 文件補 named option（R2/R3 批次） |
 
 ### C. Extensions 系統
 
@@ -342,6 +350,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.3.0 | 2026-07-13 | R1 本機與 CI implementation commit `e543f6a`：audit/registry/note gate fail-closed、PowerShell 7 與 UTF-8/LF、change-manifest 原子退役、branch reconciliation、CI hardening 與 320-test coverage baseline；R-J02 依 owner 確認完成，R-J01 等 hosted check 後啟用 ruleset。 |
 | 1.3.1 | 2026-07-13 | 完成 R1 遠端驗收：PR #3 hosted run `29209698022` 在 head `f601685` 成功；active ruleset `18842326` 要求 PR 與 strict `audit-and-tests`，禁止 deletion/non-fast-forward，無 bypass actor，且 API 複驗 `main.protected=true`；同步修復 Ready-note fixture 的狀態依賴並升級 Node 24 action pins。 |
 | 1.3.2 | 2026-07-13 | 啟動 R2 並以 commit `29adc67` 部分修復 R-B06：script dispatch 固定 ProjectRoot cwd；plan prep、operator handoff 與 plan agent path discovery 使用明確 feature context；新增 cross-feature、off-cwd、direct-child 與 path-boundary tests。RunState relocation 與 canonical feature-ID 分裂仍 open，R-B16 維持 DECIDED。 |
+| 1.4.0 | 2026-07-14 | R2 唯讀獨立驗證（5 代理對抗驗證 + 舊實作 mutation 實測 8/8 discriminating）確認 R-B06 兩項修復屬實、PR #3 threads 維持 resolved；新增 R-A15/R-A16/R-B17/R-B18（總數 110 至 114）。commit `df31106` 修復前三條：hook UTF-8 fail-closed 解碼、engine feature rebind 防護（含 resume 竄改驗證）、contract 錨定多行 token；R-B18 保持 open。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -412,3 +421,21 @@ shared runtime audit 為 `VALID=true`、0 errors、0 warnings。本節不把部�
 | R-B16 | DECIDED | 本批未移動 RunState，也未提前對舊位置寫入永久政策 | 依 owner 決策等待 R-B06 final relocation，再把最終 state 位置設為 local transient、加 gitignore 並同步 POLICY/README；跨機 resume 另走顯式 checkpoint export/import。 |
 
 R2 partial mainline note：`docs/mainline-updates/2026-07-13-r2-r-b06-dispatch-consistency.md`。
+
+## 14. 2026-07-14 R2 驗證加固增補
+
+2026-07-13 對 R2 partial（`e4fa153..ccb7738`）完成唯讀獨立驗證：兩個 PR #3 review threads
+的修復屬實（以 git archive 舊樹疊加新測試實測，8/8 新測試在舊實作失敗、新實作全綠；單獨
+revert `-WorkingDirectory` 亦使測試轉紅），同意 threads 維持 resolved。驗證發現四條新
+findings（R-A15、R-A16、R-B17、R-B18），前三條由 implementation commit `df31106` 修復。
+提交前的對抗 review（2 代理）另發現 resume 路徑的 feature rebind 缺口與 audit 子程序編碼
+不對稱，均已併入同批修復。本節不把部分處置冒充整項關閉。
+
+| ID | 目前狀態 | 已落地處置 | 驗收證據 / 尚待事項 |
+|---|---|---|---|
+| R-A15 | COMPLETED | hook 強制 UTF-8 解碼並 fail closed；check-speckit-runtime 於輸出重導時對稱強制 UTF-8；CP437 console 回歸測試；contract token | 先前在 CP950 本機失敗的 2 條個資測試轉綠；完整 suite 由同機 326/2 變 333/0；commit `df31106`。殘餘：audit 互動式（非重導）輸出仍依 console 編碼，僅影響非 ASCII 錯誤訊息可讀性且 fail-closed |
+| R-B17 | COMPLETED | fresh/resume 統一拒絕 operator feature 覆蓋；resume 驗證 saved `inputs.feature` 與錨定 feature 一致，legacy 缺值回填 | override、redundant-equal、resume-tamper、resume-override 4 條回歸測試全綠；contract invariant `workflow-engine-feature-input-guard`；commit `df31106` |
+| R-A16 | COMPLETED | stage-plan-prep 以錨定多行 token 取代三個鬆散 token | audit VALID=true 0/0；模擬 revert 確認 token 會斷；commit `df31106` |
+| R-B18 | OPEN | 本批僅記錄，未動 sibling 腳本與非 plan handoff | 待 R2/R3：收斂三種邊界等級、決定非 plan 階段 handoff 是否帶 `-FeatureDir` |
+
+R2 verification-hardening mainline note：`docs/mainline-updates/2026-07-14-r2-verification-hardening.md`。
