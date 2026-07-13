@@ -100,6 +100,19 @@ steps:
         $expectedFeatureDir = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture'
         [System.IO.Path]::GetFullPath($capturedFeatureDir) | Should -Be ([System.IO.Path]::GetFullPath($expectedFeatureDir))
     }
+
+    It 'rejects an operator input overriding the run feature' {
+        $r = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Inputs', 'feature=888-other', '-DryRun')
+        $r.ExitCode | Should -Not -Be 0
+        $r.Json.STATUS | Should -Be 'error'
+        $r.Json.ERROR | Should -Match "may not override 'feature'"
+    }
+
+    It 'accepts a redundant feature input equal to the run feature' {
+        $r = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Inputs', 'feature=999-fixture;scope=full', '-DryRun')
+        $r.ExitCode | Should -Be 0
+        $r.Json.STATUS | Should -Be 'completed'
+    }
 }
 
 Describe 'workflow-engine: agent dispatch halts and resumes' -Skip:(-not $script:yamlAvailable) {
@@ -137,6 +150,39 @@ steps:
         $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
         $r2.ExitCode | Should -Be 0
         $r2.Json.STATUS | Should -Be 'completed'
+    }
+
+    It 'rejects resuming when the saved state rebinds the run feature' {
+        $specPath = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture/spec.md'
+        Remove-Item -LiteralPath $specPath -Force
+
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        # Tamper the persisted inputs the way a pre-guard halted run (or a hand edit)
+        # could leave them: the state anchored at 999-fixture claims another feature.
+        $statePath = $r.Json.RUN_STATE_PATH
+        $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -AsHashtable
+        $state.inputs.feature = '888-other'
+        $state | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath $statePath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Not -Be 0
+        $r2.Json.STATUS | Should -Be 'error'
+        $r2.Json.ERROR | Should -Match 'Resume mismatch: state inputs\.feature'
+    }
+
+    It 'rejects a resume whose operator inputs override the run feature' {
+        $specPath = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture/spec.md'
+        Remove-Item -LiteralPath $specPath -Force
+
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume', '-Inputs', 'feature=777-x')
+        $r2.ExitCode | Should -Not -Be 0
+        $r2.Json.STATUS | Should -Be 'error'
+        $r2.Json.ERROR | Should -Match "may not override 'feature'"
     }
 }
 

@@ -11,6 +11,16 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# When a parent process (e.g. the pre-commit hook) captures this script's output, emit
+# UTF-8 regardless of the inherited console codepage so non-ASCII text in audit messages
+# survives the pipe. Redirected-only: the setter does not touch a shared console here,
+# and interactive display keeps the host's own encoding.
+if ([Console]::IsOutputRedirected) {
+    try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {
+        # Legacy console-decoding behavior remains; audit verdicts are ASCII-only either way.
+    }
+}
+
 if ($Help) {
     $helpLines = @(
         'Usage: ./check-speckit-runtime.ps1 [-Json] [-Fix] [-Help]',

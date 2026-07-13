@@ -630,6 +630,13 @@ function Invoke-Workflow {
     [void](Test-WorkflowSchema -Document $workflow -SchemaPath $schemaPath)
 
     $statePath = Get-RunStatePath -ProjectRoot $ProjectRoot -Feature $Feature
+
+    # The run feature is validated and anchors the RunState path; an operator input must
+    # not rebind it to a second feature context, on fresh runs or resumes.
+    if ($Inputs.ContainsKey('feature') -and [string]$Inputs['feature'] -ne [string]$Feature) {
+        throw "Operator inputs may not override 'feature' (run feature: $Feature, input: $($Inputs['feature']))."
+    }
+
     $lock = $null
     try {
         $lock = Lock-RunState -Path $statePath
@@ -643,6 +650,16 @@ function Invoke-Workflow {
             if ($runState.status -in 'completed', 'failed') {
                 throw "Cannot resume a $($runState.status) run."
             }
+            # Persisted inputs feed step templating; a saved state must not rebind the
+            # resumed run to a feature other than the one anchoring this RunState path.
+            $stateFeature = if ($runState.ContainsKey('inputs') -and $runState.inputs -and $runState.inputs.ContainsKey('feature')) { [string]$runState.inputs.feature } else { $null }
+            if ($stateFeature -and $stateFeature -ne [string]$Feature) {
+                throw "Resume mismatch: state inputs.feature=$stateFeature, requested=$Feature"
+            }
+            if (-not $stateFeature) {
+                if (-not $runState.ContainsKey('inputs') -or -not $runState.inputs) { $runState.inputs = @{} }
+                $runState.inputs.feature = $Feature
+            }
             $runState.status = 'running'
             $runState.halt_reason = $null
             $runState.halt_dispatch = $null
@@ -651,7 +668,10 @@ function Invoke-Workflow {
             }
         } else {
             $effectiveInputs = @{ feature = $Feature }
-            foreach ($k in $Inputs.Keys) { $effectiveInputs[$k] = $Inputs[$k] }
+            foreach ($k in $Inputs.Keys) {
+                if ($k -eq 'feature') { continue }
+                $effectiveInputs[$k] = $Inputs[$k]
+            }
             $runState = Initialize-RunState -Workflow $workflow -Feature $Feature -Inputs $effectiveInputs
         }
 

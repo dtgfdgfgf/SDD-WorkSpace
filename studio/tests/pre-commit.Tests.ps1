@@ -179,6 +179,33 @@ Describe 'personal-data staged-path gate integration' {
         $result.Output | Should -Not -Match ([regex]::Escape($fixture.RepoRoot))
     }
 
+    It 'rejects a forced protected path even when the console codepage is not UTF-8' {
+        $name = 'synthetic-codepage-private-name.txt'
+        $fixture = New-PrivacyHookFixture -Name 'privacy-codepage'
+        $target = Join-Path $fixture.RepoRoot "履歷/$name"
+        New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
+        Set-Content -LiteralPath $target -Value 'synthetic test content' -Encoding UTF8
+        git -C $fixture.RepoRoot add -f -- "履歷/$name" 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to stage privacy fixture.' }
+
+        # Reproduce a non-UTF-8 console (CP437): before the hook forced UTF-8 decoding,
+        # git's UTF-8 path bytes garbled here and the gate silently passed.
+        $originalCodePage = [Console]::OutputEncoding.CodePage
+        Push-Location $fixture.RepoRoot
+        try {
+            $output = cmd /c "chcp 437 >nul && pwsh -NoProfile -File `"$($fixture.HookPath)`" 2>&1"
+            $exitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+            cmd /c "chcp $originalCodePage >nul"
+        }
+
+        $exitCode | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'protected personal-data|Staged paths under'
+        ($output -join "`n") | Should -Not -Match ([regex]::Escape($name))
+        ($output -join "`n") | Should -Not -Match ([regex]::Escape($fixture.RepoRoot))
+    }
+
     It 'fails closed when Git cannot read the staged index' {
         $fixture = New-PrivacyHookFixture -Name 'privacy-corrupt-index'
         $corruptIndex = Join-Path $fixture.Workspace 'corrupt.index'

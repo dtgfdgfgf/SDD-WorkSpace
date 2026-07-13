@@ -22,6 +22,19 @@
 
 $ErrorActionPreference = 'Continue'
 $script:hasErrors = $false
+
+# Git emits raw UTF-8 bytes on stdout. Force UTF-8 decoding: when the inherited console
+# codepage is not UTF-8 (e.g. zh-TW CP950), the default [Console]::OutputEncoding garbles
+# non-ASCII staged paths such as 履歷/ into deterministic mojibake, which silently
+# fail-opens the personal-data path gate below.
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+} catch {
+    Write-Host '[ERROR] Unable to force UTF-8 decoding of git output; staged paths cannot be evaluated safely.' -ForegroundColor Red
+    exit 1
+}
+
 $script:workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $script:repoRoot = (& git rev-parse --show-toplevel 2>$null)
 if ($LASTEXITCODE -ne 0 -or -not $script:repoRoot) {

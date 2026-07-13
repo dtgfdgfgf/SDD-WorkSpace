@@ -874,6 +874,7 @@
       "id": "pre-commit-personal-data-path-gate",
       "path": ".githooks/pre-commit.ps1",
       "mustContainAll": [
+        "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)",
         "Get-ProtectedPersonalDataPaths",
         "Staged paths under a directory named '履歷' are not allowed",
         "$stagedFiles",
@@ -1193,6 +1194,16 @@
       ]
     },
     {
+      "id": "workflow-engine-feature-input-guard",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "$effectiveInputs = @{ feature = $Feature }",
+        "if ($k -eq 'feature') { continue }",
+        "Operator inputs may not override 'feature'",
+        "Resume mismatch: state inputs.feature=$stateFeature, requested=$Feature"
+      ]
+    },
+    {
       "id": "workflow-engine-completion-integrity",
       "path": "studio/scripts/powershell/workflow-engine.ps1",
       "mustContainAll": [
@@ -1274,9 +1285,7 @@
       "id": "sdd-pipeline-plan-feature-context",
       "path": "studio/workflows/sdd-pipeline/workflow.yml",
       "mustContainAll": [
-        "stage-plan-prep",
-        "script: studio/scripts/powershell/setup-plan.ps1",
-        "args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-Json\"]",
+        "  - id: stage-plan-prep\n    type: command\n    dispatch: script\n    script: studio/scripts/powershell/setup-plan.ps1\n    args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-Json\"]",
         "operator_message: \"Run /speckit.plan -FeatureDir specs/{{ inputs.feature }}"
       ]
     }
