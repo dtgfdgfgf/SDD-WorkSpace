@@ -19,9 +19,12 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When a workflow supplies `-FeatureDir <path>` in the user input, treat that named option as the
+authoritative feature context. Do not infer a feature path from other free-form user text.
+
 ## Outline
 
-1. **Read feature paths**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root once and parse `REPO_ROOT`, `FEATURE_DIR`, `FEATURE_SPEC`, `INTENT_LEDGER`, `READINESS_DIR`, `READINESS_ASSESSMENT`, `ECI_DIR`, `STUDIO_ROOT`, and `CONSTITUTIONS`. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Read feature paths**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root once and parse `REPO_ROOT`, `FEATURE_DIR`, `FEATURE_SPEC`, `INTENT_LEDGER`, `READINESS_DIR`, `READINESS_ASSESSMENT`, `ECI_DIR`, `STUDIO_ROOT`, and `CONSTITUTIONS`. When the named user option is present, run `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly` instead. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Enforce readiness gate before any planning work**:
    - Confirm `READINESS_DIR = FEATURE_DIR/readiness`
@@ -43,7 +46,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      - If it is absent or ambiguous: ERROR and instruct the user to reconcile `/speckit.eci` outputs before planning
      - If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR, report the authorization outcome, and instruct the user to re-run `/speckit.readiness` after reconciling the ECI boundary
 
-3. **Setup plan workspace**: Run `studio/scripts/powershell/setup-plan.ps1 -Json` from repo root and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH`, `STUDIO_ROOT`, and `CONSTITUTIONS`.
+3. **Setup plan workspace**: Run `studio/scripts/powershell/setup-plan.ps1 -Json` from repo root, or `studio/scripts/powershell/setup-plan.ps1 -FeatureDir <path> -Json` when the named user option is present, and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH`, `STUDIO_ROOT`, and `CONSTITUTIONS`. Confirm that `SPECS_DIR` equals the `FEATURE_DIR` selected in step 1 before writing planning artifacts.
 
 4. **Load context (Dual-Layer Constitution)**:
    - Read `REPO_ROOT/README.md` if present for umbrella-feature naming and existing coverage disclosure
@@ -129,5 +132,4 @@ You **MUST** consider the user input before proceeding (if not empty).
 - Require concrete re-entry triggers; do **not** accept generic placeholders such as `v1+`
 - If feature naming exceeds current coverage, require explicit README / quickstart disclosure rather than letting the representative subset masquerade as the full umbrella capability
 - ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`
-
 

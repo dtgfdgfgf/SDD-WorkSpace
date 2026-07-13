@@ -64,8 +64,8 @@ steps:
   - id: stage-script
     type: command
     dispatch: script
-    script: studio/scripts/powershell/check-speckit-runtime.ps1
-    args: ["-Json"]
+    script: studio/scripts/powershell/setup-clarify.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
     capture: { json: true }
 "@
     }
@@ -75,6 +75,30 @@ steps:
         $r = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-DryRun')
         $r.ExitCode | Should -Be 0
         $r.Json.STATUS | Should -Be 'completed'
+
+        $state = Get-Content -LiteralPath $r.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $history = @($state.history)
+        $history[-1].outcome | Should -Be 'dry-run-skipped'
+        ($history[-1].args -join '|') | Should -Be '-FeatureDir|specs/999-fixture|-Json'
+    }
+
+    It 'runs a script step from ProjectRoot when caller cwd differs' {
+        $callerDir = Join-Path $TestDrive 'outside-caller'
+        New-Item -ItemType Directory -Path $callerDir -Force | Out-Null
+
+        Push-Location -LiteralPath $callerDir
+        try {
+            $r = Invoke-Run -Fixture $script:fixture
+        } finally {
+            Pop-Location
+        }
+
+        $r.ExitCode | Should -Be 0
+        $r.Json.STATUS | Should -Be 'completed'
+        $state = Get-Content -LiteralPath $r.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $capturedFeatureDir = $state.vars.steps.'stage-script'.json.FEATURE_DIR
+        $expectedFeatureDir = Join-Path $script:fixture.ProjectRoot 'specs/999-fixture'
+        [System.IO.Path]::GetFullPath($capturedFeatureDir) | Should -Be ([System.IO.Path]::GetFullPath($expectedFeatureDir))
     }
 }
 

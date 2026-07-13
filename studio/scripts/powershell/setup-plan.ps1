@@ -3,8 +3,24 @@
 #Requires -Version 7.0
 # Setup implementation plan for a feature
 
+<#
+.SYNOPSIS
+    Stage entry gate for /speckit.plan.
+
+.PARAMETER FeatureDir
+    Optional feature directory override, resolved relative to the configured
+    project root. The target must be a direct child of <project>/specs/.
+
+.PARAMETER Json
+    Emit a single structured JSON object instead of human-readable text.
+
+.PARAMETER Help
+    Show this help message.
+#>
+
 [CmdletBinding()]
 param(
+    [string]$FeatureDir,
     [switch]$Json,
     [switch]$Help
 )
@@ -13,9 +29,10 @@ $ErrorActionPreference = 'Stop'
 
 # Show help if requested
 if ($Help) {
-    Write-Output "Usage: ./setup-plan.ps1 [-Json] [-Help]"
-    Write-Output "  -Json     Output results in JSON format"
-    Write-Output "  -Help     Show this help message"
+    Write-Output "Usage: ./setup-plan.ps1 [-FeatureDir <path>] [-Json] [-Help]"
+    Write-Output "  -FeatureDir  Override feature directory (defaults to current branch)."
+    Write-Output "  -Json        Output results in JSON format"
+    Write-Output "  -Help        Show this help message"
     exit 0
 }
 
@@ -52,8 +69,39 @@ function Assert-ReadyForPlan {
     }
 }
 
-# Get all paths and variables from common functions
-$paths = Get-FeaturePathsEnv
+function Resolve-FeatureContext {
+    param([string]$Override)
+
+    $basePaths = Get-FeaturePathsEnv
+    if (-not $Override) {
+        return $basePaths
+    }
+
+    $resolved = Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT
+    $specsRoot = [System.IO.Path]::GetFullPath((Join-Path $basePaths.REPO_ROOT 'specs'))
+    $featureParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $resolved))
+    if (-not $featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "FEATURE_DIR escapes project root: $resolved must be located at <project>/specs/<feature>"
+    }
+
+    $readinessDir = Join-Path $resolved 'readiness'
+    return [PSCustomObject]@{
+        REPO_ROOT            = $basePaths.REPO_ROOT
+        CURRENT_BRANCH       = $basePaths.CURRENT_BRANCH
+        HAS_GIT              = $basePaths.HAS_GIT
+        FEATURE_DIR          = $resolved
+        FEATURE_SPEC         = Join-Path $resolved 'spec.md'
+        INTENT_LEDGER        = Join-Path $resolved 'intent-ledger.md'
+        READINESS_DIR        = $readinessDir
+        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
+        ECI_DIR              = Join-Path $readinessDir 'eci'
+        IMPL_PLAN            = Join-Path $resolved 'plan.md'
+    }
+}
+
+# Get all paths and variables from common functions, while allowing a workflow
+# to bind plan preparation to its explicit feature input instead of the branch.
+$paths = Resolve-FeatureContext -Override $FeatureDir
 
 # Path boundary defense: SPECIFY_FEATURE env var or git branch could be tampered to escape REPO_ROOT.
 Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes REPO_ROOT'
@@ -61,8 +109,10 @@ Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.IMPL_PLAN -Messag
 Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.INTENT_LEDGER -MessagePrefix 'INTENT_LEDGER escapes REPO_ROOT'
 Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.ECI_DIR -MessagePrefix 'ECI_DIR escapes REPO_ROOT'
 
-# Check if we're on a proper feature branch (only for git repos)
-if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit $paths.HAS_GIT)) {
+# Check if we're on a proper feature branch (only for git repos). An explicit
+# workflow feature is already validated against <project>/specs/<feature> and
+# intentionally may differ from the current branch.
+if (-not $FeatureDir -and -not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit $paths.HAS_GIT)) {
     exit 1
 }
 

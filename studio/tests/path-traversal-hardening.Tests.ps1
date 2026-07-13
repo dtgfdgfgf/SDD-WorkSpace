@@ -14,6 +14,7 @@ BeforeAll {
         SetupAnalyze   = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-analyze.ps1'
         SetupImplement = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-implement.ps1'
         SetupPlan      = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-plan.ps1'
+        CheckPrereqs   = Join-Path $WorkspaceRoot 'studio/scripts/powershell/check-prerequisites.ps1'
         SyncBootstrap  = Join-Path $WorkspaceRoot 'studio/scripts/powershell/sync-agent-bootstrap.ps1'
         UpdateAgentCtx = Join-Path $WorkspaceRoot 'studio/scripts/powershell/update-agent-context.ps1'
         CreateFeature  = Join-Path $WorkspaceRoot 'studio/scripts/powershell/create-new-feature.ps1'
@@ -48,6 +49,34 @@ Describe '-FeatureDir parameter rejects paths outside the workspace' {
         $output = pwsh -NoProfile -File $script:scripts.SetupImplement -FeatureDir $script:outside -Json 2>&1
         $LASTEXITCODE | Should -Not -Be 0
         ($output -join "`n") | Should -Match 'escapes project root'
+    }
+
+    It 'setup-plan.ps1 rejects -FeatureDir outside configured project specs' {
+        $oldProjectRoot = $env:SDD_PROJECT_ROOT
+        $projectRoot = Join-Path $TestDrive 'configured-project'
+        New-Item -ItemType Directory -Path (Join-Path $projectRoot 'specs') -Force | Out-Null
+        $env:SDD_PROJECT_ROOT = $projectRoot
+        try {
+            $output = pwsh -NoProfile -File $script:scripts.SetupPlan -FeatureDir $script:outside -Json 2>&1
+            $LASTEXITCODE | Should -Not -Be 0
+            ($output -join "`n") | Should -Match 'escapes project root'
+        } finally {
+            $env:SDD_PROJECT_ROOT = $oldProjectRoot
+        }
+    }
+
+    It 'check-prerequisites.ps1 rejects -FeatureDir outside configured project specs' {
+        $oldProjectRoot = $env:SDD_PROJECT_ROOT
+        $projectRoot = Join-Path $TestDrive 'configured-prereq-project'
+        New-Item -ItemType Directory -Path (Join-Path $projectRoot 'specs') -Force | Out-Null
+        $env:SDD_PROJECT_ROOT = $projectRoot
+        try {
+            $output = pwsh -NoProfile -File $script:scripts.CheckPrereqs -FeatureDir $script:outside -Json -PathsOnly 2>&1
+            $LASTEXITCODE | Should -Not -Be 0
+            ($output -join "`n") | Should -Match 'escapes project root'
+        } finally {
+            $env:SDD_PROJECT_ROOT = $oldProjectRoot
+        }
     }
 }
 

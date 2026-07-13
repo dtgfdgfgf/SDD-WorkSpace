@@ -81,3 +81,19 @@ Describe 'every agent dispatch step targets specs/<feature>/' -Skip:(-not $scrip
         Walk-Steps -Steps $doc.steps
     }
 }
+
+Describe 'plan preparation binds to the workflow feature' -Skip:(-not $script:yamlAvailable) {
+    It 'passes the explicit specs feature directory to setup-plan.ps1' {
+        Import-Module -Name 'powershell-yaml' -ErrorAction Stop
+        $doc = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath $script:workflowPath -Raw) -Ordered
+        $step = @($doc.steps | Where-Object { $_.id -eq 'stage-plan-prep' })
+
+        $step.Count | Should -Be 1
+        $step[0].script | Should -Be 'studio/scripts/powershell/setup-plan.ps1'
+        ($step[0].args -join '|') | Should -Be '-FeatureDir|specs/{{ inputs.feature }}|-Json'
+
+        $agentStep = @($doc.steps | Where-Object { $_.id -eq 'stage-plan' })
+        $agentStep.Count | Should -Be 1
+        $agentStep[0].operator_message | Should -Match '/speckit\.plan -FeatureDir specs/\{\{ inputs\.feature \}\}'
+    }
+}

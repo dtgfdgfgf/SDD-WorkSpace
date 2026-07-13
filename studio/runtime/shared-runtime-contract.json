@@ -568,6 +568,10 @@
         "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`",
         "If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR",
         "If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR",
+        "When a workflow supplies `-FeatureDir <path>`",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
+        "setup-plan.ps1 -FeatureDir <path> -Json",
+        "Confirm that `SPECS_DIR` equals the `FEATURE_DIR` selected in step 1",
         "ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`",
         "Load `Planability Resolved`, `Intent Ledger Requirement`, and `Intent Ledger Path`",
         "Fill `Intent Recovery Obligations` from `intent-ledger.md` when required",
@@ -827,7 +831,11 @@
         "# Get feature paths only (used by clarify/readiness/eci/plan gate logic)",
         "INTENT_LEDGER        = $paths.INTENT_LEDGER",
         "READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT",
-        "REPO_ROOT            = $paths.REPO_ROOT"
+        "REPO_ROOT            = $paths.REPO_ROOT",
+        "[string]$FeatureDir",
+        "Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT",
+        "$featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)",
+        "if (-not $FeatureDir -and -not (Test-FeatureBranch"
       ]
     },
     {
@@ -929,6 +937,19 @@
         "Intent Ledger Requirement",
         "Authorization Outcome",
         "READY_FOR_MAINLINE_IMPLEMENTATION"
+      ]
+    },
+    {
+      "id": "setup-plan-explicit-feature-context",
+      "path": "studio/scripts/powershell/setup-plan.ps1",
+      "mustContainAll": [
+        "[string]$FeatureDir",
+        "Resolve-FeatureContext",
+        "Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT",
+        "$featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)",
+        "if (-not $FeatureDir -and -not (Test-FeatureBranch",
+        "$paths.REPO_ROOT",
+        "$paths.FEATURE_DIR"
       ]
     },
     {
@@ -1163,6 +1184,15 @@
       ]
     },
     {
+      "id": "workflow-command-project-root-cwd",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "Invoke-CommandStep",
+        "-WorkingDirectory $ProjectRoot",
+        "& pwsh -NoProfile -WorkingDirectory $ProjectRoot -File $scriptPath @argv"
+      ]
+    },
+    {
       "id": "workflow-engine-completion-integrity",
       "path": "studio/scripts/powershell/workflow-engine.ps1",
       "mustContainAll": [
@@ -1238,6 +1268,16 @@
         "/speckit.analyze",
         "/speckit.implement",
         "/speckit.eci"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-plan-feature-context",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "stage-plan-prep",
+        "script: studio/scripts/powershell/setup-plan.ps1",
+        "args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-Json\"]",
+        "operator_message: \"Run /speckit.plan -FeatureDir specs/{{ inputs.feature }}"
       ]
     }
   ],

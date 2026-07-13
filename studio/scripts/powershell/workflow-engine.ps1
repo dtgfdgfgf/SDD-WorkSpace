@@ -425,7 +425,7 @@ function Invoke-CommandStep {
             Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'dry-run-skipped' -Extras @{ script = $scriptPath; args = $argv }
             return @{ Status = 'success' }
         }
-        $stdout = & pwsh -NoProfile -File $scriptPath @argv 2>&1
+        $stdout = & pwsh -NoProfile -WorkingDirectory $ProjectRoot -File $scriptPath @argv 2>&1
         $exitCode = $LASTEXITCODE
         $expectedExit = if ($Step.Contains('expected_exit_code')) { [int]$Step.expected_exit_code } else { 0 }
         $captureJson = $false

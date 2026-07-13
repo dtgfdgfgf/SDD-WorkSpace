@@ -130,7 +130,7 @@ steps:
     type: command
     dispatch: script
     script: studio/scripts/powershell/setup-plan.ps1
-    args: ["-Json"]
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
     capture: { json: true }
 
   - id: stage-plan
@@ -138,7 +138,7 @@ steps:
     dispatch: agent
     agent_command: /speckit.plan
     expected_artifact: "specs/{{ inputs.feature }}/plan.md"
-    operator_message: "Run /speckit.plan to produce plan.md with a Version field, then resume."
+    operator_message: "Run /speckit.plan -FeatureDir specs/{{ inputs.feature }} to produce plan.md with a Version field, then resume."
 
   # 6. Tasks ------------------------------------------------------------------
   - id: stage-tasks-prep

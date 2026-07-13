@@ -4,6 +4,7 @@
 BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
     $script:setupPlanScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-plan.ps1'
+    $script:checkPrerequisitesScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/check-prerequisites.ps1'
 
     function script:Write-ReadinessFixture {
         param(
@@ -84,6 +85,55 @@ Describe 'setup-plan readiness gate' {
         $LASTEXITCODE | Should -Be 0
         $result = ($output[-1] | ConvertFrom-Json)
         $result.IMPL_PLAN | Should -Exist
+    }
+
+    It 'uses explicit FeatureDir when current feature context differs' {
+        Write-ReadinessFixture
+        $env:SPECIFY_FEATURE = '777-other'
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -FeatureDir $script:featureDir -Json
+        $LASTEXITCODE | Should -Be 0
+        $result = ($output[-1] | ConvertFrom-Json)
+
+        [System.IO.Path]::GetFullPath($result.SPECS_DIR) | Should -Be ([System.IO.Path]::GetFullPath($script:featureDir))
+        [System.IO.Path]::GetFullPath($result.FEATURE_SPEC) | Should -Be ([System.IO.Path]::GetFullPath((Join-Path $script:featureDir 'spec.md')))
+        [System.IO.Path]::GetFullPath($result.IMPL_PLAN) | Should -Be ([System.IO.Path]::GetFullPath((Join-Path $script:featureDir 'plan.md')))
+        $result.BRANCH | Should -Be '777-other'
+        $result.IMPL_PLAN | Should -Exist
+        (Join-Path $script:projectRoot 'specs/777-other/plan.md') | Should -Not -Exist
+    }
+
+    It 'discovers explicit FeatureDir for the plan agent handoff' {
+        $env:SPECIFY_FEATURE = '777-other'
+
+        $output = pwsh -NoProfile -File $script:checkPrerequisitesScript -FeatureDir $script:featureDir -Json -PathsOnly
+        $LASTEXITCODE | Should -Be 0
+        $result = (($output -join "`n") | ConvertFrom-Json)
+
+        [System.IO.Path]::GetFullPath($result.FEATURE_DIR) | Should -Be ([System.IO.Path]::GetFullPath($script:featureDir))
+        [System.IO.Path]::GetFullPath($result.FEATURE_SPEC) | Should -Be ([System.IO.Path]::GetFullPath((Join-Path $script:featureDir 'spec.md')))
+        $result.BRANCH | Should -Be '777-other'
+    }
+
+    It 'rejects explicit FeatureDir outside configured project specs' {
+        Write-ReadinessFixture
+        $outsideFeature = Join-Path $TestDrive 'outside/001-fixture'
+        New-Item -ItemType Directory -Path $outsideFeature -Force | Out-Null
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -FeatureDir $outsideFeature -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'FEATURE_DIR escapes project root'
+        (Join-Path $outsideFeature 'plan.md') | Should -Not -Exist
+    }
+
+    It 'rejects a nested path instead of a direct specs feature child' {
+        $nestedFeature = Join-Path $script:featureDir 'nested'
+        New-Item -ItemType Directory -Path $nestedFeature -Force | Out-Null
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -FeatureDir $nestedFeature -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'FEATURE_DIR escapes project root'
+        (Join-Path $nestedFeature 'plan.md') | Should -Not -Exist
     }
 
     It 'fails when readiness assessment is missing' {

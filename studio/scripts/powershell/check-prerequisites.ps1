@@ -10,6 +10,7 @@
 # Usage: ./check-prerequisites.ps1 [OPTIONS]
 #
 # OPTIONS:
+#   -FeatureDir <path>  Override the branch-derived feature directory
 #   -Json               Output in JSON format
 #   -RequireTasks       Require tasks.md to exist (for implementation phase)
 #   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
@@ -18,6 +19,7 @@
 
 [CmdletBinding()]
 param(
+    [string]$FeatureDir,
     [switch]$Json,
     [switch]$RequireTasks,
     [switch]$IncludeTasks,
@@ -35,6 +37,7 @@ Usage: check-prerequisites.ps1 [OPTIONS]
 Consolidated prerequisite checking for Spec-Driven Development workflow.
 
 OPTIONS:
+  -FeatureDir <path>  Override feature directory (resolved from project root)
   -Json               Output in JSON format
   -RequireTasks       Require tasks.md to exist (for implementation phase)
   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
@@ -51,6 +54,9 @@ EXAMPLES:
   # Get feature paths only (used by clarify/readiness/eci/plan gate logic)
   .\check-prerequisites.ps1 -PathsOnly
 
+  # Bind path discovery to an explicit workflow feature
+  .\check-prerequisites.ps1 -FeatureDir specs/001-feature -Json -PathsOnly
+
 "@
     exit 0
 }
@@ -58,10 +64,49 @@ EXAMPLES:
 # Source common functions
 . "$PSScriptRoot/common.ps1"
 
-# Get feature paths and validate branch
-$paths = Get-FeaturePathsEnv
+function Resolve-FeatureContext {
+    param([string]$Override)
 
-if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) { 
+    $basePaths = Get-FeaturePathsEnv
+    if (-not $Override) {
+        return $basePaths
+    }
+
+    $resolved = Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT
+    $specsRoot = [System.IO.Path]::GetFullPath((Join-Path $basePaths.REPO_ROOT 'specs'))
+    $featureParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $resolved))
+    if (-not $featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "FEATURE_DIR escapes project root: $resolved must be located at <project>/specs/<feature>"
+    }
+
+    $readinessDir = Join-Path $resolved 'readiness'
+    return [PSCustomObject]@{
+        REPO_ROOT            = $basePaths.REPO_ROOT
+        CURRENT_BRANCH       = $basePaths.CURRENT_BRANCH
+        HAS_GIT              = $basePaths.HAS_GIT
+        FEATURE_DIR          = $resolved
+        FEATURE_SPEC         = Join-Path $resolved 'spec.md'
+        INTENT_LEDGER        = Join-Path $resolved 'intent-ledger.md'
+        READINESS_DIR        = $readinessDir
+        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
+        ECI_DIR              = Join-Path $readinessDir 'eci'
+        IMPL_PLAN            = Join-Path $resolved 'plan.md'
+        TASKS                = Join-Path $resolved 'tasks.md'
+        RESEARCH             = Join-Path $resolved 'research.md'
+        DATA_MODEL           = Join-Path $resolved 'data-model.md'
+        QUICKSTART           = Join-Path $resolved 'quickstart.md'
+        CONTRACTS_DIR        = Join-Path $resolved 'contracts'
+    }
+}
+
+# Get feature paths and validate branch. Explicit workflow context intentionally
+# takes precedence over a different current branch or SPECIFY_FEATURE value.
+$paths = Resolve-FeatureContext -Override $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.IMPL_PLAN -MessagePrefix 'IMPL_PLAN escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
+
+if (-not $FeatureDir -and -not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
     exit 1 
 }
 
