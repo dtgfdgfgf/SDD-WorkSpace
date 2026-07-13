@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.3.1"
+version: "1.3.2"
 date: "2026-07-12"
 last_updated: "2026-07-13"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f601685 (R1 implementation and hosted-fixture head)"
+head_commit: "29adc67 (R2 partial R-B06 implementation head)"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -38,6 +38,11 @@ related_documents:
 `f601685` 成功，GitHub ruleset `18842326` 已 active 並使 `main.protected=true`；規則要求 PR、
 strict `audit-and-tests`，且禁止刪除與 non-fast-forward 更新。第 2 節仍保留為原始日期快照，
 目前狀態以第 11、12 節的執行增補為準。
+
+2026-07-13 R2 已由 PR #3 的兩個 review threads 啟動。commit `29adc67` 修復 script child
+process 的 ProjectRoot cwd，並把 plan prep、operator handoff 與 plan agent path discovery 綁定
+至明確 workflow feature。這只關閉 R-B06 的兩個 dispatch/context 子問題；RunState relocation、
+canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與 R2 均保持 IN_PROGRESS。
 
 建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 110 條完整收斂粗估仍為 21 至 35 人天。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；R3 至 R6 在實作時仍須依當下證據調整。
 
@@ -336,6 +341,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.2.1 | 2026-07-13 | 以 implementation commit `bdd2780` 完成 R0 帳務：可關閉 findings 與 owner decisions 改為 COMPLETED；R-J02 保持 IN_PROGRESS，因 GitHub account privacy / push-blocking 仍需 owner 操作。 |
 | 1.3.0 | 2026-07-13 | R1 本機與 CI implementation commit `e543f6a`：audit/registry/note gate fail-closed、PowerShell 7 與 UTF-8/LF、change-manifest 原子退役、branch reconciliation、CI hardening 與 320-test coverage baseline；R-J02 依 owner 確認完成，R-J01 等 hosted check 後啟用 ruleset。 |
 | 1.3.1 | 2026-07-13 | 完成 R1 遠端驗收：PR #3 hosted run `29209698022` 在 head `f601685` 成功；active ruleset `18842326` 要求 PR 與 strict `audit-and-tests`，禁止 deletion/non-fast-forward，無 bypass actor，且 API 複驗 `main.protected=true`；同步修復 Ready-note fixture 的狀態依賴並升級 Node 24 action pins。 |
+| 1.3.2 | 2026-07-13 | 啟動 R2 並以 commit `29adc67` 部分修復 R-B06：script dispatch 固定 ProjectRoot cwd；plan prep、operator handoff 與 plan agent path discovery 使用明確 feature context；新增 cross-feature、off-cwd、direct-child 與 path-boundary tests。RunState relocation 與 canonical feature-ID 分裂仍 open，R-B16 維持 DECIDED。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -393,3 +399,16 @@ R1 本機與 CI 實作由 commit `e543f6a` 留證，clean-runner fixture 修復�
 | R-J01 | COMPLETED | PR/main CI 已接 branch reconciliation；active ruleset `18842326` 要求 PR、strict `audit-and-tests`，禁止 deletion/non-fast-forward 且無 bypass actor | PR #3 head `f601685` 的 run `29209698022` 成功；ruleset detail 與 branch rules API 一致，`main.protected=true` |
 
 R1 mainline note：`docs/mainline-updates/2026-07-13-r1-validation-and-merge-enforcement.md`。
+
+## 13. 2026-07-13 R2 部分執行增補
+
+R2 由 PR #3 的兩個 R-B06 review threads 啟動。implementation commit `29adc67` 已完成本節
+所列 dispatch/context 修正；本機 focused suite 61 passed，完整 governance suite 328 passed，
+shared runtime audit 為 `VALID=true`、0 errors、0 warnings。本節不把部分處置冒充整項關閉。
+
+| ID | 目前狀態 | 已落地處置 | 驗收證據 / 尚待事項 |
+|---|---|---|---|
+| R-B06 | IN_PROGRESS | script child `pwsh` 固定於 `ProjectRoot`；setup-plan 與 prerequisite path discovery 支援 project-bounded explicit `FeatureDir`；pipeline prep 與 `/speckit.plan` operator/agent handoff 使用同一 feature context | off-cwd、branch/feature mismatch、outside-project、nested-path、YAML shape 與 mirror/contract tests 全綠；commit `29adc67`。尚待 RunState 移出 `specs/<feature>/` 並消除 fresh-run 預建目錄造成的 canonical feature-ID 分裂。 |
+| R-B16 | DECIDED | 本批未移動 RunState，也未提前對舊位置寫入永久政策 | 依 owner 決策等待 R-B06 final relocation，再把最終 state 位置設為 local transient、加 gitignore 並同步 POLICY/README；跨機 resume 另走顯式 checkpoint export/import。 |
+
+R2 partial mainline note：`docs/mainline-updates/2026-07-13-r2-r-b06-dispatch-consistency.md`。
