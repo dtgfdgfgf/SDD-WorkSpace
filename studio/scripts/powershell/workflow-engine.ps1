@@ -17,8 +17,9 @@
       - Boolean:      and, or, not (with parentheses, short-circuit)
       - Filter:       {{ ref | default('VALUE') }}
 
-    RunState lives at specs/<feature>/.workflow/state.json (atomic write via
-    .tmp + Move-Item -Force, plus a 60-second advisory lock at state.json.lock).
+    RunState lives at <project>/.workflow/runs/<feature>/state.json (local transient,
+    ignored by Git; atomic write via .tmp + Move-Item -Force, plus a 60-second
+    advisory lock at state.json.lock).
 
     The engine never auto-installs powershell-yaml; the operator must install
     it explicitly. Detection-only via Assert-YamlModuleAvailable.
@@ -269,7 +270,9 @@ function Get-RunStatePath {
     if ($Feature -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]*$') {
         throw "Invalid feature name (must match ^[A-Za-z0-9][A-Za-z0-9_.-]*`$): $Feature"
     }
-    $stateDir = Join-Path (Join-Path (Join-Path $ProjectRoot 'specs') $Feature) '.workflow'
+    # RunState is a local transient artifact. It lives outside specs/ so that starting a
+    # run can never pre-create (and thereby allocate) a canonical specs/<feature> ID.
+    $stateDir = Join-Path (Join-Path (Join-Path $ProjectRoot '.workflow') 'runs') $Feature
     Assert-PathInsideRoot -Root $ProjectRoot -Candidate $stateDir -MessagePrefix 'RunState directory escapes project root'
     if (-not (Test-Path -LiteralPath $stateDir)) {
         New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
@@ -363,6 +366,36 @@ function Get-ArtifactFingerprint {
     return [ordered]@{ exists = $true; empty = $false; hash = $hash }
 }
 
+function Test-StepPostcondition {
+    <#
+    .SYNOPSIS
+        Evaluates a declarative step postcondition. Returns $null when satisfied, otherwise a
+        human-readable failure reason. Artifact change detection proves the agent did work;
+        the postcondition proves the work is actually finished (e.g. a terminal implement
+        step is complete only when zero canonical tasks remain unchecked).
+    #>
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot)
+    if (-not $Step.Contains('postcondition') -or -not $Step.postcondition) { return $null }
+    $pc = $Step.postcondition
+    $pcType = [string]$pc.type
+    $fileRel = Resolve-Interpolation -Template ([string]$pc.file) -Context $RunState
+    $filePath = if ([System.IO.Path]::IsPathRooted($fileRel)) { $fileRel } else { Join-Path $ProjectRoot $fileRel }
+    Assert-PathInsideRoot -Root $ProjectRoot -Candidate $filePath -MessagePrefix 'postcondition file escapes project root'
+    switch ($pcType) {
+        'no-pending-tasks' {
+            if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
+                return "postcondition no-pending-tasks: file not found: $filePath"
+            }
+            $pending = @([regex]::Matches((Get-Content -LiteralPath $filePath -Raw), '(?m)^\s*-\s\[\s\]\s+T\d+'))
+            if ($pending.Count -gt 0) {
+                return "postcondition no-pending-tasks: $($pending.Count) unchecked canonical task(s) remain in $filePath"
+            }
+            return $null
+        }
+        default { return "unknown postcondition type: $pcType" }
+    }
+}
+
 function Invoke-ArtifactExtraction {
     <#
     .SYNOPSIS
@@ -403,6 +436,21 @@ function Add-RunStateHistory {
     }
     foreach ($k in $Extras.Keys) { $entry[$k] = $Extras[$k] }
     $RunState.history += $entry
+}
+
+function Add-RunStateHistoryOnce {
+    <#
+    .SYNOPSIS
+        Replay-safe history append: resume replays revisit already-decided steps on every
+        invocation, so replay outcomes are recorded at most once per (step, outcome) to keep
+        history from growing quadratically with the number of resumes.
+    #>
+    param($RunState, $Step, [string]$Outcome, [hashtable]$Extras = @{})
+    $sid = [string]$Step.id
+    foreach ($entry in @($RunState.history)) {
+        if ([string]$entry.step_id -eq $sid -and [string]$entry.outcome -eq $Outcome) { return }
+    }
+    Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $Outcome -Extras $Extras
 }
 
 function Invoke-CommandStep {
@@ -459,7 +507,12 @@ function Invoke-CommandStep {
         if (-not $RunState.vars.steps.ContainsKey($Step.id)) { $RunState.vars.steps[$Step.id] = @{} }
         $stepVars = $RunState.vars.steps[$Step.id]
         $current = Get-ArtifactFingerprint -Path $artifactPath
-        $accepted = ($AgentActions.ContainsKey($Step.id) -and $AgentActions[$Step.id] -eq 'accept')
+        $terminal = ($Step.Contains('terminal') -and [bool]$Step.terminal)
+        $acceptRequested = ($AgentActions.ContainsKey($Step.id) -and $AgentActions[$Step.id] -eq 'accept')
+        # A terminal step's completion must come from real artifact state, never from the
+        # generic operator override.
+        $accepted = ($acceptRequested -and -not $terminal)
+        $postconditionFailure = $null
 
         # First arrival this run: record the pre-agent baseline (scaffold or prior-stage state) and
         # halt. Mere existence of a scaffolded artifact is NOT completion; the agent must change it.
@@ -469,15 +522,35 @@ function Invoke-CommandStep {
         } else {
             $baseline = [string]$stepVars['agent_baseline']
             $changed = ($current.exists -and -not $current.empty -and ($current.hash -ne $baseline))
-            if ($changed -or ($accepted -and $current.exists -and -not $current.empty)) {
-                Invoke-ArtifactExtraction -Step $Step -RunState $RunState -ArtifactPath $artifactPath
-                $outcome = if ($changed) { 'success' } else { 'success-accepted' }
-                Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras @{ artifact = $artifactPath }
-                return @{ Status = 'success' }
+            # A terminal step with a declared postcondition may also complete WITHOUT an
+            # artifact change: the postcondition itself is the completion proof (e.g. all
+            # tasks were already checked off before the run reached this step). Without
+            # this, an already-satisfied terminal step would be permanently locked out.
+            $hasPostcondition = ($Step.Contains('postcondition') -and $Step.postcondition)
+            $completionCandidate = $changed -or
+                ($accepted -and $current.exists -and -not $current.empty) -or
+                ($terminal -and $hasPostcondition -and $current.exists -and -not $current.empty)
+            if ($completionCandidate) {
+                $postconditionFailure = Test-StepPostcondition -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+                if ($null -eq $postconditionFailure) {
+                    Invoke-ArtifactExtraction -Step $Step -RunState $RunState -ArtifactPath $artifactPath
+                    $outcome = if ($changed) { 'success' } elseif ($accepted) { 'success-accepted' } else { 'success-postcondition' }
+                    Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras @{ artifact = $artifactPath }
+                    return @{ Status = 'success' }
+                }
             }
         }
 
-        $reason = if ($accepted) { "artifact missing or empty; cannot accept: $artifactPath" } else { "artifact unchanged since prep; run the agent to produce real content" }
+        $reason = if ($acceptRequested -and $terminal) {
+            $suffix = if ($postconditionFailure) { "; $postconditionFailure" } else { '' }
+            "-AcceptAgent is disabled for terminal step $($Step.id); completion requires the real artifact postcondition$suffix"
+        } elseif ($postconditionFailure) {
+            $postconditionFailure
+        } elseif ($accepted) {
+            "artifact missing or empty; cannot accept: $artifactPath"
+        } else {
+            "artifact unchanged since prep; run the agent to produce real content"
+        }
         $msg = if ($Step.Contains('operator_message')) { Resolve-Interpolation -Template ([string]$Step.operator_message) -Context $RunState } else { "Run $agentCommand in your agent IDE, then re-run with -Resume." }
         $RunState.status = 'awaiting_agent'
         $RunState.current_step_id = $Step.id
@@ -500,7 +573,23 @@ function Invoke-GateStep {
     $gateId = [string]$Step.id
     $existing = $null
     if ($RunState.gates.ContainsKey($gateId)) { $existing = $RunState.gates[$gateId] }
-    $action = if ($GateActions.ContainsKey($gateId)) { $GateActions[$gateId] } else { $null }
+
+    # Replay of an already-decided gate short-circuits before any new decision is consumed.
+    if ($existing -and $existing.status -in 'confirmed', 'rejected') {
+        Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome ("gate-" + $existing.status) -Extras @{}
+        if ($existing.status -eq 'rejected' -and $Step.Contains('on_reject') -and $Step.on_reject) {
+            return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
+        }
+        return @{ Status = 'success' }
+    }
+
+    # Fail-closed decision scope: an operator decision applies only to a gate this run has
+    # actually halted on (status=pending). A decision pre-supplied for a gate that has not
+    # halted yet is ignored, and the gate halts as usual.
+    $action = $null
+    if ($GateActions.ContainsKey($gateId) -and $existing -and $existing.status -eq 'pending') {
+        $action = $GateActions[$gateId]
+    }
     if ($action -eq 'confirm') {
         $RunState.gates[$gateId] = [ordered]@{ status = 'confirmed'; decided_at = Get-IsoTimestamp; decided_by = 'operator' }
         Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'gate-confirmed'
@@ -512,14 +601,13 @@ function Invoke-GateStep {
         if ($Step.Contains('on_reject') -and $Step.on_reject) {
             return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
         }
-        return @{ Status = 'success' }
-    }
-    if ($existing -and $existing.status -in 'confirmed', 'rejected') {
-        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome ("gate-" + $existing.status) -Extras @{}
-        if ($existing.status -eq 'rejected' -and $Step.Contains('on_reject') -and $Step.on_reject) {
-            return Invoke-StepList -Steps $Step.on_reject -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
-        }
-        return @{ Status = 'success' }
+        # No on_reject branch: an operator rejection is a terminal outcome for this run,
+        # never a silent pass-through to the remaining steps.
+        $RunState.status = 'rejected'
+        $RunState.current_step_id = $gateId
+        $RunState.halt_reason = "Gate rejected with no on_reject branch: $gateId"
+        $RunState.halt_dispatch = $null
+        return @{ Status = 'rejected' }
     }
     $RunState.gates[$gateId] = [ordered]@{ status = 'pending'; decided_at = $null; decided_by = $null }
     $prompt = if ($Step.Contains('prompt')) { Resolve-Interpolation -Template ([string]$Step.prompt) -Context $RunState } else { 'Approve?' }
@@ -534,10 +622,10 @@ function Invoke-IfStep {
     param($Step, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     $cond = Test-WorkflowCondition -Expression ([string]$Step.condition) -Context $RunState
     if ($cond) {
-        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'branched-then'
+        Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome 'branched-then'
         return Invoke-StepList -Steps $Step.then -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
     }
-    Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'branched-else'
+    Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome 'branched-else'
     if ($Step.Contains('else') -and $Step.else) {
         return Invoke-StepList -Steps $Step.else -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
     }
@@ -561,10 +649,10 @@ function Invoke-SwitchStep {
         $subList = $Step.default
     }
     if (-not $subList) {
-        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome "no-match:$subjectValue"
+        Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome "no-match:$subjectValue"
         return @{ Status = 'success' }
     }
-    Add-RunStateHistory -RunState $RunState -Step $Step -Outcome "matched-case:$matched" -Extras @{ subject = $subjectValue }
+    Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome "matched-case:$matched" -Extras @{ subject = $subjectValue }
     return Invoke-StepList -Steps $subList -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
 }
 
@@ -582,7 +670,7 @@ function Invoke-Step {
     # the "prep re-creates the expected artifact" false-completion path. if/switch re-route and
     # gates are idempotent on their own, so only command steps are skipped here.
     if (($sid) -and ([string]$Step.type -eq 'command') -and (@($RunState.completed_steps) -contains $sid)) {
-        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'skipped-completed'
+        Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome 'skipped-completed'
         return @{ Status = 'success' }
     }
     $RunState.current_step_id = $sid
@@ -599,11 +687,31 @@ function Invoke-Step {
     }
 }
 
+function Get-WorkflowStepIds {
+    param($Steps)
+    $ids = @()
+    foreach ($step in @($Steps)) {
+        if ($null -eq $step) { continue }
+        if ($step.Contains('id') -and $step.id) { $ids += [string]$step.id }
+        foreach ($branchKey in 'then', 'else', 'on_reject', 'default') {
+            if ($step.Contains($branchKey) -and $step[$branchKey]) {
+                $ids += @(Get-WorkflowStepIds -Steps $step[$branchKey])
+            }
+        }
+        if ($step.Contains('cases') -and $step.cases) {
+            foreach ($caseKey in $step.cases.Keys) {
+                $ids += @(Get-WorkflowStepIds -Steps $step.cases[$caseKey])
+            }
+        }
+    }
+    return $ids
+}
+
 function Invoke-StepList {
     param($Steps, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     foreach ($step in $Steps) {
         $r = Invoke-Step -Step $step -RunState $RunState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
-        if ($r.Status -in 'awaiting_agent', 'awaiting_gate', 'failed') { return $r }
+        if ($r.Status -in 'awaiting_agent', 'awaiting_gate', 'rejected', 'failed') { return $r }
     }
     return @{ Status = 'success' }
 }
@@ -622,14 +730,37 @@ function Invoke-Workflow {
         [hashtable]$Inputs = @{},
         [hashtable]$GateActions = @{},
         [hashtable]$AgentActions = @{},
+        [string]$ExpectedWorkflowId,
+        [string]$ExpectedWorkflowVersion,
         [switch]$Resume,
+        [switch]$Restart,
         [switch]$DryRun
     )
+    if ($Resume -and $Restart) { throw 'Use either -Resume or -Restart, not both.' }
     $schemaPath = Join-Path $WorkspaceRoot 'studio/workflows/manifest.schema.json'
     $workflow = Read-WorkflowYaml -Path $WorkflowYamlPath
     [void](Test-WorkflowSchema -Document $workflow -SchemaPath $schemaPath)
 
+    # Bind the EXECUTED document to the authorized identity: catalog/state/manifest checks
+    # in the runner authorize an id and version, and the workflow.yml actually run must
+    # declare that same identity, or a swapped file executes ungoverned content.
+    if ($ExpectedWorkflowId -and [string]$workflow.workflow.id -ne $ExpectedWorkflowId) {
+        throw "Workflow identity mismatch: workflow.yml declares id '$($workflow.workflow.id)' but the authorized id is '$ExpectedWorkflowId'."
+    }
+    if ($ExpectedWorkflowVersion -and [string]$workflow.workflow.version -ne $ExpectedWorkflowVersion) {
+        throw "Workflow identity mismatch: workflow.yml declares version '$($workflow.workflow.version)' but the catalog authorizes version '$ExpectedWorkflowVersion'."
+    }
+
     $statePath = Get-RunStatePath -ProjectRoot $ProjectRoot -Feature $Feature
+    # DryRun must never pollute the real RunState: it may read the persisted state for a
+    # -Resume preview, but it saves to a sidecar file that a real resume never consumes.
+    $resumeReadPath = $statePath
+    if ($DryRun) { $statePath = $statePath -replace 'state\.json$', 'state.dryrun.json' }
+
+    $duplicateStepIds = @(Get-WorkflowStepIds -Steps $workflow.steps | Group-Object | Where-Object { $_.Count -gt 1 })
+    if ($duplicateStepIds.Count -gt 0) {
+        throw "Duplicate step id(s) in workflow: $(@($duplicateStepIds | ForEach-Object { $_.Name }) -join ', ')"
+    }
 
     # The run feature is validated and anchors the RunState path; an operator input must
     # not rebind it to a second feature context, on fresh runs or resumes.
@@ -642,13 +773,13 @@ function Invoke-Workflow {
         $lock = Lock-RunState -Path $statePath
         $runState = $null
         if ($Resume) {
-            $runState = Read-RunState -Path $statePath
-            if (-not $runState) { throw "No RunState to resume at $statePath" }
+            $runState = Read-RunState -Path $resumeReadPath
+            if (-not $runState) { throw "No RunState to resume at $resumeReadPath" }
             if ($runState.workflow_id -ne [string]$workflow.workflow.id) {
                 throw "Resume mismatch: state workflow_id=$($runState.workflow_id), requested=$($workflow.workflow.id)"
             }
-            if ($runState.status -in 'completed', 'failed') {
-                throw "Cannot resume a $($runState.status) run."
+            if ($runState.status -in 'completed', 'failed', 'rejected') {
+                throw "Cannot resume a $($runState.status) run. Use -Restart to archive the RunState and start over."
             }
             # Persisted inputs feed step templating; a saved state must not rebind the
             # resumed run to a feature other than the one anchoring this RunState path.
@@ -667,6 +798,17 @@ function Invoke-Workflow {
                 $runState.completed_steps = @()
             }
         } else {
+            # A leftover RunState (completed, failed, rejected, or in-flight) is never
+            # silently overwritten: continuing requires -Resume, starting over requires
+            # -Restart, which archives the previous state next to the live path.
+            if (-not $DryRun -and (Test-Path -LiteralPath $resumeReadPath -PathType Leaf)) {
+                if ($Restart) {
+                    $archiveStamp = (Get-Date).ToString('yyyyMMddHHmmss')
+                    Move-Item -LiteralPath $resumeReadPath -Destination "$resumeReadPath.$archiveStamp.restarted.json" -Force
+                } else {
+                    throw "RunState already exists for feature '$Feature' at $resumeReadPath. Use -Resume to continue or -Restart to archive it and start over."
+                }
+            }
             $effectiveInputs = @{ feature = $Feature }
             foreach ($k in $Inputs.Keys) {
                 if ($k -eq 'feature') { continue }
@@ -683,6 +825,10 @@ function Invoke-Workflow {
         if ($r.Status -eq 'awaiting_gate') {
             Save-RunState -RunState $runState -Path $statePath
             return [ordered]@{ Status = 'awaiting_gate'; ExitCode = 43; RunStatePath = $statePath; HaltDispatch = $runState.halt_dispatch }
+        }
+        if ($r.Status -eq 'rejected') {
+            Save-RunState -RunState $runState -Path $statePath
+            return [ordered]@{ Status = 'rejected'; ExitCode = 44; RunStatePath = $statePath }
         }
         if ($r.Status -eq 'failed') {
             $runState.status = 'failed'

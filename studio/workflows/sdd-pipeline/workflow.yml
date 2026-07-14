@@ -183,4 +183,8 @@ steps:
     dispatch: agent
     agent_command: /speckit.implement
     expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
-    operator_message: "Run /speckit.implement to execute the task list (which checks tasks off in tasks.md), then resume. Completion is detected from the tasks.md change; if no task state changed, use -AcceptAgent stage-implement to confirm."
+    terminal: true
+    postcondition:
+      type: no-pending-tasks
+      file: "specs/{{ inputs.feature }}/tasks.md"
+    operator_message: "Run /speckit.implement to execute the task list, then resume. This terminal step completes only when every canonical task in tasks.md is checked off; -AcceptAgent cannot substitute for completion."

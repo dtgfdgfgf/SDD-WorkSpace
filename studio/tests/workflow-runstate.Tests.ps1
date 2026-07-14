@@ -17,11 +17,12 @@ BeforeAll {
 }
 
 Describe 'Get-RunStatePath' {
-    It 'creates .workflow/ inside the feature directory' {
+    It 'creates the run directory outside specs/ so no canonical feature ID is allocated' {
         $root = New-FixtureProjectRoot
-        $path = Get-RunStatePath -ProjectRoot $root -Feature '001-foo'
-        $path | Should -Be (Join-Path $root 'specs/001-foo/.workflow/state.json')
+        $path = Get-RunStatePath -ProjectRoot $root -Feature '002-new'
+        $path | Should -Be (Join-Path $root '.workflow/runs/002-new/state.json')
         Test-Path -LiteralPath (Split-Path -Parent $path) | Should -BeTrue
+        (Join-Path $root 'specs/002-new') | Should -Not -Exist
     }
 
     It 'rejects feature names that escape the project root' {
@@ -59,7 +60,7 @@ Describe 'Save-RunState / Read-RunState round-trip' {
 
     It 'returns null when state.json does not exist' {
         $root = New-FixtureProjectRoot
-        $missing = Join-Path $root 'specs/001-foo/.workflow/state.json'
+        $missing = Join-Path $root '.workflow/runs/001-foo/state.json'
         Read-RunState -Path $missing | Should -BeNullOrEmpty
     }
 }

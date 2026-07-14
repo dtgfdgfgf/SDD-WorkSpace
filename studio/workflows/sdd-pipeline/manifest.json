@@ -12,18 +12,15 @@
     "readiness-status-routing",
     "eci-authorization-re-entry"
   ],
-  "runtimeScopes": ["scripts", "agents", "docs"],
+  "runtimeScopes": ["agents", "docs"],
   "compatibility": {
     "mode": "studio-first",
     "minStudioConstitutionVersion": "1.8.0"
   },
   "entryPoints": {
-    "scripts": [
-      "scripts/run-workflow.ps1"
-    ],
     "docs": [
       "docs/README.md"
     ]
   },
-  "notes": "Wave-3 baseline. Step types in scope: command/gate/if/switch. Agent steps halt with exit 42; gates halt with exit 43."
+  "notes": "Wave-3 baseline. Step types in scope: command/gate/if/switch. Agent steps halt with exit 42; gates halt with exit 43. Execution goes through the shared runner studio/scripts/powershell/run-workflow.ps1, which is workspace infrastructure, not a workflow-owned entry point."
 }

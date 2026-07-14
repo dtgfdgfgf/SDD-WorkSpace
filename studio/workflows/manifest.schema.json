@@ -112,6 +112,16 @@
         "agent_command": { "type": "string" },
         "expected_artifact": { "type": "string" },
         "operator_message": { "type": "string" },
+        "terminal": { "type": "boolean", "default": false },
+        "postcondition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "file"],
+          "properties": {
+            "type": { "type": "string", "enum": ["no-pending-tasks"] },
+            "file": { "type": "string", "minLength": 1 }
+          }
+        },
         "extract": {
           "type": "array",
           "items": {
@@ -128,7 +138,10 @@
       "allOf": [
         {
           "if": { "properties": { "dispatch": { "const": "script" } }, "required": ["dispatch"] },
-          "then": { "required": ["script"] }
+          "then": {
+            "required": ["script"],
+            "not": { "anyOf": [{ "required": ["terminal"] }, { "required": ["postcondition"] }] }
+          }
         },
         {
           "if": { "properties": { "dispatch": { "const": "agent" } }, "required": ["dispatch"] },

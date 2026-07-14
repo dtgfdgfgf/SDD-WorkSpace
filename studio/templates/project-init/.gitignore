@@ -92,6 +92,11 @@ logs/
 *.bak
 
 # ===========================
+# Workflow RunState (local transient, never tracked)
+# ===========================
+.workflow/
+
+# ===========================
 # Personal data (never commit)
 # ===========================
 履歷/

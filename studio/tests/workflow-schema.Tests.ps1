@@ -405,3 +405,79 @@ steps:
         $LASTEXITCODE | Should -Not -Be 0
     }
 }
+
+Describe 'validate-workflow.ps1 manifest entryPoints existence (R-B15)' -Skip:(-not $script:yamlAvailable) {
+    BeforeAll {
+        $script:entryYaml = @"
+schema_version: "1.0.0"
+workflow:
+  id: entrypoint-fixture
+  name: EntryPoint Fixture
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: review
+    type: gate
+    prompt: "Approve?"
+"@
+    }
+
+    It 'fails when manifest.json advertises a nonexistent entry point' {
+        $file = New-WorkflowFixture -Yaml $script:entryYaml
+        '{"id":"entrypoint-fixture","version":"1.0.0","entryPoints":{"scripts":["scripts/does-not-exist.ps1"]}}' |
+            Set-Content -LiteralPath (Join-Path (Split-Path -Parent $file) 'manifest.json')
+
+        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
+        $LASTEXITCODE | Should -Be 1
+        $result = ($output -join "`n") | ConvertFrom-Json
+        $result.VALID | Should -BeFalse
+        ($result.ERRORS -join "`n") | Should -Match 'entryPoint does not exist'
+    }
+
+    It 'passes when every advertised entry point exists' {
+        $file = New-WorkflowFixture -Yaml $script:entryYaml
+        $wfDir = Split-Path -Parent $file
+        New-Item -ItemType Directory -Path (Join-Path $wfDir 'docs') -Force | Out-Null
+        '# fixture doc' | Set-Content -LiteralPath (Join-Path $wfDir 'docs/README.md')
+        '{"id":"entrypoint-fixture","version":"1.0.0","entryPoints":{"docs":["docs/README.md"]}}' |
+            Set-Content -LiteralPath (Join-Path $wfDir 'manifest.json')
+
+        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
+        $LASTEXITCODE | Should -Be 0
+        $result = ($output -join "`n") | ConvertFrom-Json
+        $result.VALID | Should -BeTrue
+    }
+
+    It 'validates the live sdd-pipeline manifest entry points' {
+        $output = pwsh -NoProfile -File $script:validateScript -Id sdd-pipeline -Json 2>&1
+        $LASTEXITCODE | Should -Be 0
+        $result = ($output -join "`n") | ConvertFrom-Json
+        $result.VALID | Should -BeTrue
+    }
+}
+
+Describe 'validate-workflow.ps1 restricts terminal/postcondition to agent dispatch' -Skip:(-not $script:yamlAvailable) {
+    It 'rejects a script step carrying a postcondition' {
+        $bad = @"
+schema_version: "1.0.0"
+workflow:
+  id: bad-postcondition
+  name: Bad Postcondition
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/check-speckit-runtime.ps1
+    args: ["-Json"]
+    terminal: true
+    postcondition:
+      type: no-pending-tasks
+      file: "specs/{{ inputs.feature }}/tasks.md"
+"@
+        $file = New-WorkflowFixture -Yaml $bad
+        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+    }
+}

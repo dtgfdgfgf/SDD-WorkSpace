@@ -113,7 +113,7 @@ code projects/studio-automation/studio-automation.code-workspace
 
 ## Optional: Workflow Runtime（Wave 3）
 
-七階段流程仍以 agent prompt + setup-*.ps1 entry gate 為主流程驅動。`studio/workflows/sdd-pipeline/` 額外提供一份**可選**的編排層，把七階段、readiness 8 種 primary status、ECI 3 種 authorization outcome 寫成單一 yaml workflow，並由 `run-workflow.ps1` 帶 RunState（`specs/<feature>/.workflow/state.json`）做 halt-and-resume。
+七階段流程仍以 agent prompt + setup-*.ps1 entry gate 為主流程驅動。`studio/workflows/sdd-pipeline/` 額外提供一份**可選**的編排層，把七階段、readiness 8 種 primary status、ECI 3 種 authorization outcome 寫成單一 yaml workflow，並由 `run-workflow.ps1` 帶 RunState（`<project>/.workflow/runs/<feature>/state.json`，本機暫態、不進 Git）做 halt-and-resume。此編排層目前為 experimental、預設停用，需經 catalog 授權才能執行。
 
 依賴：
 

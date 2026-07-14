@@ -20,8 +20,10 @@ Each `dispatch: agent` step halts with exit code `42`; the operator runs the sla
 pwsh ./studio/scripts/powershell/run-workflow.ps1 -Id sdd-pipeline -Feature 001-foo -Resume -Json
 ```
 
-Each `gate` step halts with exit code `43`; resume with `-ConfirmGate <gate-id>` to advance or `-RejectGate <gate-id>` to trigger the on-reject branch.
+Each `gate` step halts with exit code `43`; resume with `-ConfirmGate <gate-id>` to advance. A `-RejectGate <gate-id>` runs the gate's `on_reject` branch when it declares one; this pipeline's gates declare none, so a rejection is terminal (status `rejected`, exit code `44`) and the run can only be started over with `-Restart` (which archives the RunState). Reject a gate only when you intend to abandon the current run.
+
+This pipeline is currently `experimental` and default-disabled in `catalog.json` pending the wave-3 promotion gates; `run-workflow.ps1 -Id sdd-pipeline` is denied until it is re-promoted. The `## Run` commands above describe the intended surface once enabled.
 
 ## Operator-in-the-loop
 
-This workflow is not transparent automation. The engine drives ordering and gate enforcement; the operator drives every LLM-side stage by running the corresponding slash command. RunState lives at `specs/<feature>/.workflow/state.json` and is tracked by Git so resumes survive machine boundaries.
+This workflow is not transparent automation. The engine drives ordering and gate enforcement; the operator drives every LLM-side stage by running the corresponding slash command. RunState lives at `<project>/.workflow/runs/<feature>/state.json`. It is a local transient artifact ignored by Git: resumes are same-machine only, and starting a run never creates anything under `specs/`.

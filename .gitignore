@@ -74,6 +74,11 @@ testResults.xml
 studio/tests/_artifacts/
 
 # ===========================
+# Workflow RunState (local transient, never tracked)
+# ===========================
+.workflow/
+
+# ===========================
 # Personal data (never commit)
 # ===========================
 履歷/

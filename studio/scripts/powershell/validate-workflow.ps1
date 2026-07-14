@@ -145,6 +145,30 @@ if ($parsed -and $parsed.workflow) {
     }
 }
 
+# manifest.json entryPoints must reference real workflow-owned files (relative to the
+# workflow directory). A manifest that advertises a nonexistent entry point is a
+# surface-truthfulness violation, not a warning.
+$workflowDir = Split-Path -Parent $resolvedPath
+$manifestFile = Join-Path $workflowDir 'manifest.json'
+if (Test-Path -LiteralPath $manifestFile -PathType Leaf) {
+    try {
+        $manifestDoc = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json -AsHashtable
+        if ($manifestDoc.ContainsKey('entryPoints') -and $manifestDoc.entryPoints) {
+            foreach ($groupKey in @($manifestDoc.entryPoints.Keys)) {
+                foreach ($entryRel in @($manifestDoc.entryPoints[$groupKey])) {
+                    $entryPath = Join-Path $workflowDir ([string]$entryRel)
+                    Assert-PathInsideRoot -Root $workflowDir -Candidate $entryPath -MessagePrefix 'manifest entryPoint escapes the workflow directory'
+                    if (-not (Test-Path -LiteralPath $entryPath -PathType Leaf)) {
+                        $errors += "manifest entryPoint does not exist: $groupKey/$entryRel (resolved: $entryPath)"
+                    }
+                }
+            }
+        }
+    } catch {
+        $errors += "Unable to evaluate manifest entryPoints: $($_.Exception.Message)"
+    }
+}
+
 $result = [ordered]@{
     VALID                  = (($errors.Count -eq 0) -and ($schemaValid -eq $true))
     SCHEMA_PATH            = $schemaPath

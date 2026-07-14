@@ -1221,8 +1221,86 @@
         "-Id",
         "-Feature",
         "-Resume",
+        "-Restart",
         "-ConfirmGate",
         "-AcceptAgent"
+      ]
+    },
+    {
+      "id": "run-workflow-runner-authorization",
+      "path": "studio/scripts/powershell/run-workflow.ps1",
+      "mustContainAll": [
+        "Deny-WorkflowRun",
+        "is not cataloged in",
+        "reviewStatus 'rejected' and is retained for audit history only",
+        "Workflow identity mismatch",
+        "$effectiveEnabled = [bool]$catalogEntry.defaultEnabled",
+        "is not enabled (reviewStatus",
+        "violates the default-enable policy",
+        "which cannot be enabled via the state ledger",
+        "-ExpectedWorkflowId $Id",
+        "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path"
+      ]
+    },
+    {
+      "id": "workflow-engine-gate-fail-closed",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "$GateActions.ContainsKey($gateId) -and $existing -and $existing.status -eq 'pending'",
+        "Gate rejected with no on_reject branch",
+        "return @{ Status = 'rejected' }",
+        "if ($r.Status -in 'awaiting_agent', 'awaiting_gate', 'rejected', 'failed') { return $r }",
+        "Cannot resume a $($runState.status) run. Use -Restart to archive the RunState and start over."
+      ]
+    },
+    {
+      "id": "workflow-engine-terminal-postcondition",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Test-StepPostcondition",
+        "no-pending-tasks",
+        "$accepted = ($acceptRequested -and -not $terminal)",
+        "$postconditionFailure = Test-StepPostcondition -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot",
+        "($terminal -and $hasPostcondition -and $current.exists -and -not $current.empty)",
+        "-AcceptAgent is disabled for terminal step"
+      ]
+    },
+    {
+      "id": "workflow-engine-runstate-hygiene",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "$stateDir = Join-Path (Join-Path (Join-Path $ProjectRoot '.workflow') 'runs') $Feature",
+        "state.dryrun.json",
+        "Duplicate step id(s) in workflow",
+        "Use -Resume to continue or -Restart to archive it and start over.",
+        "function Add-RunStateHistoryOnce",
+        "Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome 'skipped-completed'",
+        "Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome \"matched-case:$matched\""
+      ]
+    },
+    {
+      "id": "workflow-engine-executed-identity-binding",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "[string]$ExpectedWorkflowId",
+        "$ExpectedWorkflowId -and [string]$workflow.workflow.id -ne $ExpectedWorkflowId",
+        "the catalog authorizes version"
+      ]
+    },
+    {
+      "id": "workflow-policy-runstate-transient",
+      "path": "studio/workflows/POLICY.md",
+      "mustContainAll": [
+        "Per-project `.workflow/runs/<feature>/state.json`",
+        "never intended for Git",
+        "starting a run never creates anything under `specs/`"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-implement-terminal",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  - id: stage-implement\n    type: command\n    dispatch: agent\n    agent_command: /speckit.implement\n    expected_artifact: \"specs/{{ inputs.feature }}/tasks.md\"\n    terminal: true\n    postcondition:\n      type: no-pending-tasks\n      file: \"specs/{{ inputs.feature }}/tasks.md\""
       ]
     },
     {
@@ -1230,7 +1308,8 @@
       "path": "studio/scripts/powershell/validate-workflow.ps1",
       "mustContainAll": [
         "manifest.schema.json",
-        "powershell-yaml"
+        "powershell-yaml",
+        "manifest entryPoint does not exist"
       ]
     },
     {

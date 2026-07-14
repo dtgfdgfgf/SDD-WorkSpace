@@ -5,8 +5,7 @@
 - `studio/workflows/<id>/` is the canonical source for workflow-owned assets (`manifest.json`, `workflow.yml`, docs).
 - `studio/workflows/catalog.json` is the workspace governance ledger for review, trust, and rollout.
 - `studio/workflows/state.json` is the workspace enable/disable ledger.
-- Per-feature `specs/<feature>/.workflow/state.json` holds RunState for an executing workflow. It is generated and operator-controlled; never hand-edited as governance authority.
-- `studio/workflows/runs/` is a disposable index pointer for active runs. It is generated only.
+- Per-project `.workflow/runs/<feature>/state.json` (under the executing project root, outside `specs/`) holds RunState for an executing workflow. It is a local transient artifact: generated, operator-controlled, never hand-edited as governance authority, and never intended for Git. The workspace repo and the `project-init` template ignore `.workflow/`; a pre-existing standalone consumer repo must add the same ignore before running a workflow inside it. Cross-machine resume is out of scope; if it is ever needed it will be an explicit checkpoint export/import capability, not Git tracking.
 
 ## Review Status
 
@@ -34,8 +33,16 @@
 - Validation: `validate-workflow.ps1 -Id <id>` parses the YAML and asserts the schema.
 - Governance: register the workflow in `catalog.json` with `reviewStatus=draft` or stricter.
 - Activation: write `state.json` via `set-workflow-state.ps1`.
-- Execution: drive the runtime with `run-workflow.ps1 -Id <id> -Feature <feature>`. RunState is persisted at `specs/<feature>/.workflow/state.json` for `-Resume` / `-ConfirmGate` / `-RejectGate`.
+- Execution: drive the runtime with `run-workflow.ps1 -Id <id> -Feature <feature>`. The runner authorizes the workflow against `catalog.json`, `state.json`, and `manifest.json` (fail-closed) before dispatch: an uncataloged, rejected, not-enabled, policy-violating, or identity-mismatched workflow is denied even if its directory exists. RunState is persisted at `<project>/.workflow/runs/<feature>/state.json` for `-Resume` / `-ConfirmGate` / `-RejectGate` / `-Restart`; starting a run never creates anything under `specs/`.
 - Removal: remove catalog entry, state entry, and workflow directory together.
+
+## Run Outcomes and Exit Codes
+
+- `0` completed; `1` failed or authorization denied.
+- `42` awaiting_agent: run the agent slash command, then `-Resume`.
+- `43` awaiting_gate: `-ConfirmGate <id>` to advance, or `-RejectGate <id>`.
+- `44` rejected: a gate was rejected and declares no `on_reject` branch, so the run is terminal. Start over with `-Restart`, which archives the prior RunState next to the live path.
+- A terminal step (e.g. the implement stage) completes only when its declared `postcondition` holds; `-AcceptAgent` cannot substitute for a terminal step's completion.
 
 ## Step Types Supported in Wave 3
 
@@ -49,7 +56,7 @@
 
 `command` steps cross an operator-in-the-loop boundary:
 
-- `dispatch: script` runs an authorized PowerShell script via `& pwsh -NoProfile -File`. Args are positional; no shell interpolation. Exit code is compared to `expected_exit_code`. Captured stdout JSON, when `capture.json=true`, is parsed and stored under `vars.steps.<id>.json`.
+- `dispatch: script` runs an authorized PowerShell script via `& pwsh -NoProfile -File`. "Authorized" means the script resolves inside the workspace root (the runner anchors the workspace root to the runner's own location, so `SDD_STUDIO_ROOT` may redirect the governed workflows tree but never the dispatchable script surface). Args are positional; no shell interpolation. The child process working directory is the configured project root. Exit code is compared to `expected_exit_code`. Captured stdout JSON, when `capture.json=true`, is parsed and stored under `vars.steps.<id>.json`.
 - `dispatch: agent` halts the run with `status=awaiting_agent` and exit code `42`. The operator runs the agent slash command in their IDE, produces the declared `expected_artifact`, and resumes via `run-workflow.ps1 -Resume`. The engine asserts the artifact path inside the workspace before re-checking existence.
 
 ## Dependencies
