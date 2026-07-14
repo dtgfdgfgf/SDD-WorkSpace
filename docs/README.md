@@ -34,6 +34,7 @@
 
 | Date | Record | Status | Scope |
 |------|--------|--------|-------|
+| 2026-07-14 | [`sdd-workspace-wave-3-plan-context-and-progress-2026-07-14_zhTW.md`](./sdd-workspace-wave-3-plan-context-and-progress-2026-07-14_zhTW.md) | Context record | Wave-3 戰役完整脈絡快照（head `50ce886`）：原始目的、07-08 至 07-14 時間線、已完成批次 commit 對照（R0/R1/R2 部分/驗證加固/R2 主批/R2.1）、被推翻重開的宣稱、未完成批次 RB-1 至 R6 與估算、目前狀態與決策點；informational，單一真相仍是 ledger 與 remediation plan |
 | 2026-07-14 | [`sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`](./sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md) | Plan | 依 2026-07-14 re-review 的 12 條 RVR findings 制定的分批修復計畫；三聯表對映 ledger、標出被推翻的 R-B02/R-B05 closure，排定 R2.1 誠實性還原 + RB-1 至 RB-5 + R6 合併 main |
 | 2026-07-14 | [`sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md`](./sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md) | Review record; not ready to merge | `feature/wave-3-security-and-workflows` 相對 `main` 的 26 commits 治理導向 re-review；記錄 workflow completion/authorization、mandatory gates、mainline evidence、ECI、extension trust、consumer isolation 與 upgrade atomicity findings |
 | 2026-07-12 | [`sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md`](./sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md) | R0/R1 completed; R2 partial (R-B02/B05 reopened); R2.1 done | 共享層 123 條修復總清單（v1.6.0）；2026-07-14 re-review 以反例推翻 R-B02/B05 closure，兩者重開並移交 R-B19/B20；新增 9 條 RVR findings；後續 RB-1 至 RB-5 + R6 見 remediation plan；分支目前 NOT READY TO MERGE |
