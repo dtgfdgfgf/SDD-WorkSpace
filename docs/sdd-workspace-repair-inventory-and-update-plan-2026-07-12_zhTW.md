@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.4.0"
+version: "1.5.0"
 date: "2026-07-12"
 last_updated: "2026-07-14"
 language: "zh-TW"
@@ -351,6 +351,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.3.1 | 2026-07-13 | 完成 R1 遠端驗收：PR #3 hosted run `29209698022` 在 head `f601685` 成功；active ruleset `18842326` 要求 PR 與 strict `audit-and-tests`，禁止 deletion/non-fast-forward，無 bypass actor，且 API 複驗 `main.protected=true`；同步修復 Ready-note fixture 的狀態依賴並升級 Node 24 action pins。 |
 | 1.3.2 | 2026-07-13 | 啟動 R2 並以 commit `29adc67` 部分修復 R-B06：script dispatch 固定 ProjectRoot cwd；plan prep、operator handoff 與 plan agent path discovery 使用明確 feature context；新增 cross-feature、off-cwd、direct-child 與 path-boundary tests。RunState relocation 與 canonical feature-ID 分裂仍 open，R-B16 維持 DECIDED。 |
 | 1.4.0 | 2026-07-14 | R2 唯讀獨立驗證（5 代理對抗驗證 + 舊實作 mutation 實測 8/8 discriminating）確認 R-B06 兩項修復屬實、PR #3 threads 維持 resolved；新增 R-A15/R-A16/R-B17/R-B18（總數 110 至 114）。commit `df31106` 修復前三條：hook UTF-8 fail-closed 解碼、engine feature rebind 防護（含 resume 竄改驗證）、contract 錨定多行 token；R-B18 保持 open。 |
+| 1.5.0 | 2026-07-14 | R2 主批 workflow engine 執行完整性實作：關閉 R-B01 至 R-B06（剩餘）、R-B10 至 R-B16（見第 15 節）。提交前 3 代理對抗 review 發現並修復 5 缺陷。完整 governance suite 361 passed / 0 failed，audit VALID=true。sdd-pipeline 仍 experimental/denied，R-B07/B08 留 R3、R-B09 留 R6。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -439,3 +440,32 @@ findings（R-A15、R-A16、R-B17、R-B18），前三條由 implementation commit
 | R-B18 | OPEN | 本批僅記錄，未動 sibling 腳本與非 plan handoff | 待 R2/R3：收斂三種邊界等級、決定非 plan 階段 handoff 是否帶 `-FeatureDir` |
 
 R2 verification-hardening mainline note：`docs/mainline-updates/2026-07-14-r2-verification-hardening.md`。
+
+## 15. 2026-07-14 R2 Workflow engine 執行完整性增補
+
+R2 主批（engine 執行完整性）已實作，關閉 GOV-01 至 GOV-13 對應的 R-B01 至 R-B06（剩餘）、
+R-B10 至 R-B16。提交前 3 代理對抗 review 另發現 5 個缺陷（terminal 已滿足即鎖死、if/switch
+replay history 未去重、executed workflow.yml 未綁定授權身分、runner 未強制 POLICY default-enable
+不變量、runtime script header 與 QUICKSTART 的 RunState 路徑過期），全部於同批修復並補回歸測試。
+本機 audit VALID=true、0/0；完整 governance suite 361 passed / 0 failed（批前同機 333）。
+
+| ID | 目前狀態 | 已落地處置 | 驗收證據 |
+|---|---|---|---|
+| R-B01 | COMPLETED | gate decision 只作用於已 halt 的 pending gate；無 on_reject 的 reject 進 terminal `rejected`（exit 44）而非 pass-through | pre-supplied confirm 被忽略、reject-terminal、on_reject routing 回歸測試全綠 |
+| R-B02 | COMPLETED | terminal implement step 加 `no-pending-tasks` postcondition；terminal step 禁 generic `-AcceptAgent`；已滿足但未變更時以 postcondition 為完成證據 | 部分打勾不完成、全勾完成、已滿足即完成、terminal 拒 AcceptAgent 四條測試 |
+| R-B03 | COMPLETED | DryRun 寫入 `state.dryrun.json` sidecar，正式 resume 永不讀取 | DryRun 後 resume 報 No RunState、正式 state 不受污染測試 |
+| R-B04 | COMPLETED | 執行前遞迴收集全 step ID（含 then/else/on_reject/cases/default）拒絕碰撞 | 巢狀 duplicate id 拒絕測試 |
+| R-B05 | COMPLETED | runner 執行前 fail-closed 驗 catalog/state/manifest；executed workflow.yml 綁定授權 id/version；再驗 POLICY default-enable 不變量 | uncataloged/not-enabled/rejected/identity-mismatch/pin-mismatch/draft-defaultEnabled/experimental-state-enable/impostor-yaml 八條 denied 測試 |
+| R-B06 | COMPLETED | dispatch/context（`29adc67`）+ RunState 移至 `<project>/.workflow/runs/<feature>/`、fresh run 不再預建 `specs/<feature>` | 不配置 canonical feature ID 測試；本批完成 relocation |
+| R-B10 | COMPLETED | 新增 `-Restart`：completed/failed/rejected/in-flight 皆需顯式 restart，舊 state 以 timestamped `.restarted.json` 封存 | reject-terminal 後 -Restart 復原、無 -Restart 拒覆蓋既有 state 測試 |
+| R-B11 | COMPLETED | failed/denied payload 於 JSON 與 text 兩模式帶 ERROR 細節 | 失敗 payload ERROR.ExitCode 測試 |
+| R-B12 | COMPLETED | command/gate/if/switch replay 以 `Add-RunStateHistoryOnce` 去重 | gate skip 與 switch matched-case 各記一次測試 |
+| R-B13 | COMPLETED | 測試 fixture 改用 TestDrive 隔離 mini studio root（含 catalog/state/manifest），不寫真實 `studio/workflows/` | git status 零殘留；workspace root 由腳本自身位置錨定 |
+| R-B14 | COMPLETED | 刪除未實作的 `runs/` index placeholder 與 POLICY 宣稱；POLICY 補 exit code 與授權說明 | audit 綠；repo 無 `workflows/runs` 引用 |
+| R-B15 | COMPLETED | validate-workflow 驗 manifest entryPoints 存在性；修正 sdd-pipeline manifest（移除不存在的 scripts entry） | 不存在 entryPoint 失敗、live manifest 通過測試 |
+| R-B16 | COMPLETED | RunState 定位本機暫態；workspace 與 project-init `.gitignore` 加 `.workflow/`；POLICY/README 同步 | 既有 consumer repo 需自行加 ignore 已於 POLICY 誠實揭露 |
+
+殘留（已記錄非吸收）：R-B07/R-B08 留 R3、R-B09 re-promotion 留 R6；DryRun sidecar lock 與既有
+consumer repo 的 `.workflow/` ignore 為選擇性強化項。
+
+R2 engine-integrity mainline note：`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md`。

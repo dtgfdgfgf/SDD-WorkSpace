@@ -34,7 +34,7 @@
 
 | Date | Record | Status | Scope |
 |------|--------|--------|-------|
-| 2026-07-12 | [`sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md`](./sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md) | R0 and R1 completed; R2 in progress | 共享層現有 114 條修復總清單、18 項 owner decisions 與 7 個風險優先批次；R2 commit `29adc67` 部分修復 R-B06，獨立驗證確認屬實並新增 R-A15/R-A16/R-B17/R-B18，前三條由 commit `df31106` 修復；RunState relocation、R-B18 與其餘 R2 findings 仍待處理 |
+| 2026-07-12 | [`sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md`](./sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md) | R0, R1, R2 completed; R3 next | 共享層現有 114 條修復總清單、18 項 owner decisions 與 7 個風險優先批次；R2 engine 執行完整性主批已實作（R-B01 至 R-B06、R-B10 至 R-B16），含獨立驗證加固（R-A15/A16/B17）；R-B07/B08 留 R3、R-B09 re-promotion 留 R6、R-B18 待收斂 |
 | 2026-07-12 | [`sdd-workspace-deep-analysis-and-career-value-2026-07-12_zhTW.md`](./sdd-workspace-deep-analysis-and-career-value-2026-07-12_zhTW.md) | Analysis | 整體環境深度分析、上游同步策略、面試方視角與求職價值評估、優先序改善路線圖 |
 | 2026-07-12 | [`sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md`](./sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md) | Review record | `feature/wave-3-security-and-workflows` 相對 `main` 的 13 commits 治理導向 review |
 | 2026-07-11 | [`sdd-workspace-purpose-governance-maintenance-usage-analysis-2026-07-11_zhTW.md`](./sdd-workspace-purpose-governance-maintenance-usage-analysis-2026-07-11_zhTW.md) | Analysis | Workspace 目的、治理、維護與使用理念 |
