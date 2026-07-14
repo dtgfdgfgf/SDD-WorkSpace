@@ -3,10 +3,32 @@
 **Date**: 2026-07-14
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `6a53f66`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
+
+## Revalidation
+
+The 2026-07-14 governance re-review
+([`sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md`](../sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md))
+refuted two of this note's material closure claims with reproduced counterexamples, so the note is
+demoted from Ready to Draft per the note state machine's Reopened rule:
+
+- **R-B02 (false-completion closure) refuted by RVR-01.** The `no-pending-tasks` postcondition only
+  checks that no unchecked `T\d+` marker remains; it does not preserve or compare the baseline task-ID
+  inventory. Replacing `tasks.md` with any non-empty non-task text after the Implement step arrives
+  still completes the run (locally reproduced). Closure moves to ledger item R-B19.
+- **R-B05 (runner fail-closed authorization) refuted by RVR-03.** The runner does not apply the
+  `catalog.schema.json` / `state.schema.json` validators and casts `defaultEnabled` / `enabled` with
+  `[bool]`, where `[bool]'false'` is `True` (locally reproduced); a missing `state.json` falls back to
+  `defaultEnabled` instead of failing closed. Closure moves to ledger item R-B20.
+
+The other items in this batch (R-B01, R-B03, R-B04, R-B06 remainder, R-B10 through R-B16) are not
+refuted and stand as implemented. Re-entry condition: this note may return to Ready only after R-B19
+and R-B20 land with baseline-inventory and schema/strict-boolean fail-closed negative tests, and the
+2026-07-14 remediation plan's RB-1 batch closes. Full mapping in
+[`sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`](../sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md).
 
 ## Summary
 
@@ -31,9 +53,11 @@
 
 The 2026-07-12 wave-3 governance review and the repair ledger recorded thirteen workflow-engine
 defects (GOV-01 through GOV-13, ledger R-B01 through R-B16). R0 and R1 closed containment and
-verification; R-B06's dispatch/context half closed on 2026-07-13. This batch closes the remaining
-engine execution-integrity items so the runtime cannot report false completion, run ungoverned
-content, allocate canonical IDs by side effect, or pollute a real run from a preview.
+verification; R-B06's dispatch/context half closed on 2026-07-13. This batch targets the remaining
+engine execution-integrity items. As recorded in the Revalidation section above, the false-completion
+(R-B02) and runner-authorization (R-B05) closures were later refuted and moved to R-B19 / R-B20; the
+remaining items (no canonical-ID side effects, no preview pollution, duplicate-id and gate
+fail-closed guards) stand.
 
 An adversarial pre-commit review (three independent reviewers) found five further defects in the
 first draft of this batch — a terminal step that could never complete when its postcondition was
@@ -72,11 +96,15 @@ fixed and regression-tested inside this batch before commit.
 
 - A run keeps one feature context, never pre-creates `specs/<feature>`, and cannot be resumed from a
   DryRun preview.
-- False completion is closed on the shipped pipeline: the implement stage completes only with zero
-  unchecked canonical tasks, and no directory-on-disk or `-AcceptAgent` shortcut substitutes.
+- (REOPENED, R-B02 / RVR-01) This batch added a `no-pending-tasks` postcondition and a terminal
+  `-AcceptAgent` lockout, but the re-review showed the postcondition does not preserve the baseline
+  task-ID inventory, so false completion is NOT closed. See the Revalidation section; closure moves to
+  R-B19.
 - A rejected gate with no remediation branch stops the run instead of silently completing it.
-- An uncataloged, rejected, not-enabled, policy-violating, identity-mismatched, or content-swapped
-  workflow is denied before any engine side effect.
+- (REOPENED, R-B05 / RVR-03) This batch added catalog/state/manifest existence and identity checks,
+  but the re-review showed the runner does not apply the catalog/state schema and mis-parses string
+  booleans (missing `state.json` falls back to `defaultEnabled`), so runner authorization is NOT
+  fail-closed. See the Revalidation section; closure moves to R-B20.
 - Known residuals, recorded not absorbed: `.workflow/` is ignored only in the workspace repo and the
   project template — a pre-existing standalone consumer repo must add the pattern itself (noted in
   POLICY, and consumer-repo drift is out of this shared-layer batch's scope); the DryRun sidecar uses

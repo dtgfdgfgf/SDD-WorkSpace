@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.5.0"
+version: "1.6.0"
 date: "2026-07-12"
 last_updated: "2026-07-14"
 language: "zh-TW"
@@ -23,7 +23,9 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條，因此目前為 114 條，編為 R-A01 至 R-A16、R-B01 至 R-B18、其餘區域至 R-J03。現況分佈：Critical 6、High 21、Medium 49、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06），因此目前為 123 條，編為 R-A01 至 R-A19、R-B01 至 R-B22、其餘區域至 R-J03。現況分佈：Critical 8、High 28、Medium 49、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+
+**2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -48,7 +50,7 @@ canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與
 resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復（見第 14 節），R-B18
 保持 open。
 
-建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 110 條完整收斂粗估仍為 21 至 35 人天。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；R3 至 R6 在實作時仍須依當下證據調整。
+建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 123 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；R3 至 R6 在實作時仍須依當下證據調整。
 
 ## 1. 範圍與排除
 
@@ -109,6 +111,9 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 | R-A14 | Medium | [R0 DISCOVERED 2026-07-13] pre-commit 對所有 staged-touched 的 nested `.github/copilot-instructions.md` 都推導 project root；整個 nested source tree 已刪除時仍對不存在目錄做 `Resolve-Path`，誤報三個 adapter 必須同步並阻擋合法清理 | 只對 commit 後仍存在的推導 project root 執行 adapter bootstrap 驗證；刪單一 adapter 而 project root 仍存在時繼續 fail；新增 removed-root regression test 與 contract invariant |
 | R-A15 | High | [R2-VERIFY DISCOVERED 2026-07-13] pre-commit 個資 gate 在非 UTF-8 console（zh-TW CP950）下靜默放行 `履歷/`：git 原始 UTF-8 路徑 bytes 經 `[Console]::OutputEncoding` 錯解為確定性亂碼，regex 永不命中且 fail-closed 防線不觸發；CI 綠燈僅因 runner console 是 UTF-8，本機全套曾為 326 passed / 2 failed | hook 開頭強制 UTF-8 解碼並 fail closed；check-speckit-runtime 於輸出重導時對稱強制 UTF-8；新增 CP437 console 回歸測試與 contract token |
 | R-A16 | Medium | [R2-VERIFY DISCOVERED 2026-07-13] `sdd-pipeline-plan-feature-context` 的 args token 在 workflow.yml 出現 6 次（5 次先於 R-B06 修復存在），單獨 revert stage-plan-prep 該行 audit 仍綠；能抓到 revert 的 Pester 斷言掛在 powershell-yaml 可用性 skip 上 | 以錨定 stage-plan-prep 區塊的多行 token 取代三個鬆散 token；以模擬 revert 驗證 token 會斷 |
+| R-A17 | High | [RVR-05 2026-07-14] production `sharedGatePaths` 只列 39 支腳本中的 17 支（add/remove/export extension、init、setup-*、create-new-feature、validate-feature-structure、export-agent-skills 等不在），`.githooks/commit-msg.ps1` 與 `studio/extensions/` 亦無等同封閉集；branch diff 用 `git diff --name-only`，rename detection 只回 destination，governed source 可被 rename 到 gate 外而 validator 看不到舊路徑；測試 fixture 用理想化整層規則遮蔽 production drift | `sharedGatePaths` 改 category-complete path rules（`studio/scripts/powershell/**`、`.githooks/**`、`studio/extensions/**`）；branch diff 改 `--name-status` 保留 rename old+new；fixture 對齊 production contract；補漏列 script 與 rename-out negative tests |
+| R-A18 | High | [RVR-06 2026-07-14] Ready-note validator 只驗字串 shape：任意 7-40 位 hex 算 commit evidence、任意 `#N` 算 PR、reconciliation 只需非空；不驗 commit object 是否存在、是否屬本次 branch diff、PR 是否屬正確 repo、required sections 是否齊備；不存在的 `deadbee` 可通過，fixture 自身用非 Git repo 的 `abcdef1`；主 Wave-3 note 仍 Draft/TBD 時只要其他小 note 是 Ready 整批 aggregate diff 就能通過 `-RequireReady` | validator 驗 commit 存在且在 branch diff、PR 屬正確 repo、required sections（scope/impact/validation）齊備、evidence 覆蓋 branch diff；主 Wave-3 note Draft/TBD 時不得由小 note 代替整批 readiness |
+| R-A19 | High | [RVR-09 2026-07-14] `new-project-worktree.ps1` 在 target 執行一般 `git config core.hooksPath`，但 linked worktree 預設共用 repository config，且寫入值以 target 深度相對計算；不同深度的新 worktree 會改壞 source 與其他 worktree 的 hooks path。project init 建立的 `.github/agents`/`.claude/agents` junction 內容未被 template `.gitignore` 忽略，fresh consumer 一般 `git status` 會列出 shared agent files、`git add .` 可把 canonical agent vendoring 進 consumer——與 `WORKSPACE_STRUCTURE.md` 宣稱矛盾 | worktree 改 worktree-safe hooks 設定（per-worktree 或 extensions.worktreeConfig），不改寫 source/其他 worktree；fresh consumer `git status` 不展開 shared junction 內容；與 WORKSPACE_STRUCTURE 對齊；補不同深度 worktree 與 fresh-consumer status negative tests |
 
 ### B. Workflow engine 與 workflow registry
 
@@ -132,6 +137,10 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 | R-B16 | Medium | RunState 政策不是未定義而是互相矛盾：POLICY 稱 generated/disposable，sdd-pipeline README 卻明文稱由 Git 追蹤以支援跨機 resume；兩份 .gitignore 皆無規則，state 又會保存本機絕對路徑、gate/history 與尚未安全的 DryRun 結果 | [OWNER DECIDED 2026-07-13] 定位為本機暫態；與 R-B06 同批把 state 移出 `specs/<feature>/`，對最終 runtime 位置加 gitignore，修正 POLICY/README；日後若需要跨機續跑，另設計 checkpoint export/import |
 | R-B17 | Medium | [R2-VERIFY DISCOVERED 2026-07-13] `run-workflow -Inputs "feature=X"` 可覆蓋已驗證的 `-Feature`：RunState 錨在 A feature、所有 templated 步驟打 B feature，且覆蓋值繞過 feature-id regex；resume 路徑完全信任 saved state 的 `inputs.feature`，可被竄改或 pre-guard 殘留 state 重新綁定（live 重現） | fresh 與 resume 統一拒絕 feature 覆蓋；resume 驗證 state `inputs.feature` 與錨定 feature 一致，legacy 缺值回填；4 條回歸測試 + contract invariant |
 | R-B18 | Medium | [R2-VERIFY DISCOVERED 2026-07-13] `-FeatureDir` 家族存在三種邊界等級：強（setup-plan/check-prerequisites：REPO_ROOT 基準 + specs 直接子目錄等值）、弱（setup-readiness/tasks/analyze/implement：cwd 基準 + 僅驗父目錄名為 `specs` 的形狀檢查，Assert 以候選路徑自身祖父為 root 恆真、任意 `*/specs/<x>` 可過且會寫檔）、無（setup-clarify：零邊界，唯讀）；且僅 plan 階段 operator handoff 帶 `-FeatureDir`，其餘階段 agent handoff 仍由 branch/SPECIFY_FEATURE 推導 | 收斂 sibling 腳本至 setup-plan 的強邊界語義；評估非 plan 階段 operator_message 與 agent 文件補 named option（R2/R3 批次） |
+| R-B19 | Critical | [RVR-01 2026-07-14，重開 R-B02] terminal `no-pending-tasks` postcondition 只搜尋未勾選的 `T\d+`，不保存 Implement 開始前的 task-ID 集合、不要求完成後保留相同 inventory；本地已復現：進入 Implement 後把 `tasks.md` 換成任意非空非 task 文字，resume 即 `completed`。治理需要的是「原始 task IDs 全存且全勾」，非「找不到 pending regex」 | terminal step 首次抵達時保存 baseline canonical task-ID 集合，完成條件改為所有 baseline ID 仍存在且已勾選；補刪 task、改 ID、破壞 canonical line format、以非 task 文字取代、空白化 negative tests |
+| R-B20 | Critical | [RVR-03 2026-07-14，重開 R-B05] runner 自行 parse catalog/state/manifest 但未套 `catalog.schema.json`/`state.schema.json`；`defaultEnabled`/`enabled` 直接 `[bool]` 轉型，PowerShell `[bool]'false'` = `True`（已復現）；`state.json` 不存在時直接沿用 `defaultEnabled` 而非 fail-closed。runner 與 `list-workflows.ps1`/canonical audit 形成兩套授權判準 | runner 共用 catalog/state schema 做 `Test-Json`；採嚴格布林解析拒絕字串 boolean；missing/wrong-type/null/scalar 全 fail-closed；補對應 negative tests |
+| R-B21 | High | [RVR-04 2026-07-14] fresh execution 只驗 workflow id/version，同 id/version 的不同內容可執行；resume 只比對 `workflow_id` 再依舊 `completed_steps` 跳步，形成新舊 graph 混合的 hybrid run，無內容 digest 可證明跑的是哪份受審 YAML；built-in workflow.yml 已在 4 個 commit 改語義而版本始終 1.0.0 | approval 與 RunState 保存 workflow.yml content digest；resume 遇 graph-hash mismatch 拒絕或要求顯式 migration/restart；補同版內容變更後 resume 被擋的 negative test |
+| R-B22 | High | [RVR-07 2026-07-14，R-B07 subcase] pipeline ECI step 只把 `authorization-record.md` 當 expected artifact，不驗其餘三件 dossier；`READY_FOR_MAINLINE_IMPLEMENTATION` 後只有 gate prompt 提醒 re-run readiness、graph 無第二個 Readiness step 即進 Plan；`validate-feature-structure.ps1` 只在 status 仍 `ROUTE_TO_ECI` 時要求四件 dossier，手改 `READY_FOR_PLAN` 可繞；shared field parser 只回第一個 match，矛盾 status 依行序授權而非 exactly-one fail-closed | ECI step 驗四件 dossier；成功後 graph 進真正第二次 Readiness 再依最新 status routing；validate-feature-structure 不論 status 缺 dossier 一律擋；parser 對重複/矛盾 status fail-closed |
 
 ### C. Extensions 系統
 
@@ -144,6 +153,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 | R-C05 | Medium | GOV-12：Test-PathInsideRoot 只做 GetFullPath 字面前綴比對，不解析 junction/reparse（Windows probe 已證實可匯入外部內容）；add-extension -Force 替換內容仍保留原 approval 與 trust | mutation/execution 前解析每層 reparse target；-Force 替換內容必須使 approval 失效 |
 | R-C06 | Low | set-extension-state 允許啟用 reviewStatus=deprecated（POLICY 說不應新啟用）；state source enum 的 sync 是死值（POLICY 明言無 remote sync） | enable 路徑區分新啟用與維持啟用並拒絕 deprecated 新啟用；刪除 sync 死值 |
 | R-C07 | Low | extension-smoke 的 enable、export、merged mirror、disable 生命週期從未被自動化演練（merged 目錄不存在與 state 空一致，但也代表這條鏈零測試） | 補一條 e2e lifecycle 測試（隔離 fixture）；或把 manifest/catalog notes 的 lifecycle 宣稱改為 registry-shape 驗證 |
+| R-C08 | High | [RVR-08 2026-07-14，C 系列新 failure mode] entry point 只做字串 prefix + extension-root containment，`scripts/../docs/x` 可在來源仍位於 extension root 時越過宣告 scope，export target 未再 assert 位於 `$scopeDir`；`add-extension -Force` 先刪/複製/更新 catalog 才 validation、失敗不 rollback；replacement 內容可沿用舊 `approvedBy`/`approvedAt`/trust/enabled，核准未綁 bytes；`export-extensions -OutputDir -Force` 可清空任意 output 無 workspace 邊界；disable/remove 後既有 merged mirror 不失效，selector 仍採 stale generated source——canonical registry、核准、實際 bytes、mirror 四個真相可分歧 | entry point 以 normalized full-path 驗仍位於宣告 scope，export target assert `$scopeDir`；validate-before-mutate + 失敗 rollback；approval 綁 content hash，replacement 使舊 approval 失效；`-OutputDir` 加 workspace boundary；extension state change 使 merged mirror 失效 |
 
 ### D. Agents 與 prompts
 
@@ -188,6 +198,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 | R-F03 | Medium | /speckit.converge（上游 2026-06-17）與本地 analyze completion gate 功能相鄰，未做 adopt/adapt/reject 決策 | 併入 Wave-4 矩陣做明確決策並記錄理由 |
 | R-F04 | Medium | agent-skills 匯出鏈未被實際採用且無專屬測試，但並非零引用：installer 會呼叫 exporter，`upgrade-studio-runtime.ps1` 也有 active verification caller；目前 Codex/Claude pack 均未產出或安裝，舊文件的上游旗標基準已失效 | [OWNER DECIDED 2026-07-13] 退役整條能力鏈：3 支腳本、upgrade caller、audit `SKILL_TARGETS`、common `SKILL_PACKS_ROOT`、contract/docs/tests 與 `resources/agent-skill-packs/` 一致移除；若未來重新需要，先立 spec 並以當時的 plugin/skills surface 重建 |
 | R-F05 | Medium | 上游 v0.12.x 的 workflow 修正清單（gate validate crash、fan-in wait_for、quote-aware pipe-filter）未與本地 engine 逐項比對——上游修的正是本地同類 bug | 併入 Wave-4：逐項比對並轉成本地迴歸測試候選 |
+| R-F06 | High | [RVR-11 2026-07-14] `upgrade-studio-runtime.ps1` 逐檔覆寫 canonical runtime，完成 mutation 才跑 audit；snapshot 不完整或 audit 失敗時 command 非零結束但已覆寫 target 保留，無 staging/transaction/backup restore/rollback，「upgrade failed」不代表 runtime 保持原狀，重試以半更新狀態為起點——違反 fail-closed、可重複性與 authority update order | upgrade 改 staging + audit + atomic promote，或在 apply 失敗時可證明 rollback 完成；補 apply-failure rollback coverage |
 
 ### G. docs/ 文件時效
 
@@ -271,7 +282,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 | R3 SDD stage gates、routing 與 agent runtime | implement 首步接 fail-closed gate、analyze schema 單一化、specify/priority 語義修正、ECI full dossier 與 readiness re-entry、analyze artifact 收斂、mirror `-Verify`、tool mapping fail-loud；route-aware templates；模型預設 inherit；prompt 格式範圍明文化；D12 先維持 temporary allowlist，直到 Copilot overlay/Claude-only 決策可安全落地 | R-B07、R-B08、R-D01 至 R-D12、R-I03 | 直呼 `/speckit.implement` 不能繞 readiness/ECI/analyze；8 readiness statuses 與 4 ECI outcomes 都有 routing tests；source/mirror body parity；template 只產生 minimum packet；D12 無 consumer regression | 3-5 天 |
 | R4 Extensions、registry 周邊與 skills 退役 | Extensions path/reparse/rollback/schema/version/state/lifecycle 補完；完整退役 skills export/install/generic chain、upgrade caller、audit/contract/docs/tests/empty output；更新 shared-layer map 與正式 operation surface | R-C01 至 R-C07、R-F04、R-H15、R-I01、R-I09 | workspace 外 export/reparse/force replacement/schema violation 全被擋；extension lifecycle e2e 綠；repo 對 skills chain 零可執行/文件/contract 孤兒引用；upgrade runtime 仍可驗收 | 3-5 天 |
 | R5 Authority、文件、上游與知識迴路收斂 | 憲法/adapter authority patch、雙軌治理邊界、changelog/current phase；mainline 帳務；README/WORKSPACE_STRUCTURE/VS Code/語言清理；governance-status 與 historical banners；Wave-4 alignment-state、v0.9 至當下最新 release 決策矩陣、converge 與修正比對；adapter template 單一來源、prompt/learnings 機制；完成 D12 project-local overlay 或明示 Claude-only | R-A13、R-E01 至 R-E04、R-E06 至 R-E09、R-E12、R-F01 至 R-F03、R-F05、R-G01 至 R-G05、R-G07 至 R-G09、R-G11、R-G12、R-H03、R-H04、R-H06、R-H07、R-H09、R-H14、R-H18、R-I02、R-I04、R-I05、R-D12 | authority update order 無漂移；所有 stale docs 有 current/superseded/historical disposition；alignment-state 與決策矩陣指向同一 baseline；root docs 無失效連結/過度宣稱；D12 不再污染 shared source | 5-8 天 |
-| R6 Fresh-fixture 端到端驗收、重新 promotion 與合併 | 以全新 fixture 完整跑七階段含 ECI re-entry、非 READY routes、reject/recovery、implement completion；關閉 wave-3 review Gates；只有全部通過才重新 promotion workflow；回填 notes/ledger/commits；合併 main 後重跑同一套 | R-B09、R-E09、R-E11、R-J03 | 目前 110 條 ledger 各有 completed commit 或 owner-approved disposition；wave-3 9 個 P1 全關；fresh fixture e2e 有保存證據；main 合併後 audit/Pester/negative/e2e 全綠 | 2-4 天 |
+| R6 Fresh-fixture 端到端驗收、重新 promotion 與合併 | 以全新 fixture 完整跑七階段含 ECI re-entry、非 READY routes、reject/recovery、implement completion；關閉 wave-3 review Gates 與 2026-07-14 re-review 第 9.2 節 minimum gates；只有全部通過才重新 promotion workflow；回填 notes/ledger/commits；合併 main 後重跑同一套 | R-B09、R-E09、R-E11、R-J03 | 目前 123 條 ledger 各有 completed commit 或 owner-approved disposition；wave-3 9 個 P1 與 12 條 RVR 全關；fresh fixture e2e 有保存證據；main 合併後 audit/Pester/negative/e2e 全綠 | 2-4 天 |
 
 依賴備註：
 
@@ -281,7 +292,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 4. R-B16 的 gitignore 必須跟隨 R-B06 的最終 relocation，不在舊路徑先做永久政策。
 5. R-G06 與 R-E05 必須原子處理：移除 manifest presence 面時，同批建立 mainline-note reconciliation 與 merge CI。
 6. R-D12 在 R3 只可建立安全遷移前提；若 Copilot overlay 尚未完成，temporary allowlist 必須保留到 R5，不能先刪 shared agent。
-7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 110 條全量收斂粗估仍為 21 至 35 人天。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
+7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 123 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
 8. R-E09 在 R5 處理既有 Ready/Draft notes 的歷史帳務與失真修復；R6 只做本輪 final commit/PR/merge hash 回填與合併後驗證。兩批不得把同一工作重複計為完成。
 
 ## 6. Owner 已裁定的 18 項決策
@@ -352,6 +363,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.3.2 | 2026-07-13 | 啟動 R2 並以 commit `29adc67` 部分修復 R-B06：script dispatch 固定 ProjectRoot cwd；plan prep、operator handoff 與 plan agent path discovery 使用明確 feature context；新增 cross-feature、off-cwd、direct-child 與 path-boundary tests。RunState relocation 與 canonical feature-ID 分裂仍 open，R-B16 維持 DECIDED。 |
 | 1.4.0 | 2026-07-14 | R2 唯讀獨立驗證（5 代理對抗驗證 + 舊實作 mutation 實測 8/8 discriminating）確認 R-B06 兩項修復屬實、PR #3 threads 維持 resolved；新增 R-A15/R-A16/R-B17/R-B18（總數 110 至 114）。commit `df31106` 修復前三條：hook UTF-8 fail-closed 解碼、engine feature rebind 防護（含 resume 竄改驗證）、contract 錨定多行 token；R-B18 保持 open。 |
 | 1.5.0 | 2026-07-14 | R2 主批 workflow engine 執行完整性實作：關閉 R-B01 至 R-B06（剩餘）、R-B10 至 R-B16（見第 15 節）。提交前 3 代理對抗 review 發現並修復 5 缺陷。完整 governance suite 361 passed / 0 failed，audit VALID=true。sdd-pipeline 仍 experimental/denied，R-B07/B08 留 R3、R-B09 留 R6。 |
+| 1.6.0 | 2026-07-14 | R2.1 誠實性還原：2026-07-14 治理 re-review 以本地反例推翻 R-B02（RVR-01）與 R-B05（RVR-03）的 COMPLETED，兩者改回 IN_PROGRESS 並移交 R-B19/R-B20；新增 9 條 RVR findings（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06），ledger 由 114 增至 123（機器重數 Critical 8/High 28/Medium 49/Low 38）；engine-integrity note 降回 Draft 加 Revalidation（見第 16 節）。本批不改 runtime 程式碼。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -452,10 +464,10 @@ replay history 未去重、executed workflow.yml 未綁定授權身分、runner 
 | ID | 目前狀態 | 已落地處置 | 驗收證據 |
 |---|---|---|---|
 | R-B01 | COMPLETED | gate decision 只作用於已 halt 的 pending gate；無 on_reject 的 reject 進 terminal `rejected`（exit 44）而非 pass-through | pre-supplied confirm 被忽略、reject-terminal、on_reject routing 回歸測試全綠 |
-| R-B02 | COMPLETED | terminal implement step 加 `no-pending-tasks` postcondition；terminal step 禁 generic `-AcceptAgent`；已滿足但未變更時以 postcondition 為完成證據 | 部分打勾不完成、全勾完成、已滿足即完成、terminal 拒 AcceptAgent 四條測試 |
+| R-B02 | IN_PROGRESS | [2026-07-14 重開，見 RVR-01/R-B19] 已加 `no-pending-tasks` postcondition 與 terminal `-AcceptAgent` 鎖定，但 postcondition 只驗「找不到 pending regex」，未保存/比對 baseline task-ID inventory；本地復現：換掉 tasks.md 為非 task 文字仍 completed。closure 不成立，改由 R-B19 收斂 | 先前四條測試僅覆蓋部分/全部勾選，未覆蓋刪 task/改 ID/破格/換文字；待 R-B19 baseline-inventory 修復與 negative tests |
 | R-B03 | COMPLETED | DryRun 寫入 `state.dryrun.json` sidecar，正式 resume 永不讀取 | DryRun 後 resume 報 No RunState、正式 state 不受污染測試 |
 | R-B04 | COMPLETED | 執行前遞迴收集全 step ID（含 then/else/on_reject/cases/default）拒絕碰撞 | 巢狀 duplicate id 拒絕測試 |
-| R-B05 | COMPLETED | runner 執行前 fail-closed 驗 catalog/state/manifest；executed workflow.yml 綁定授權 id/version；再驗 POLICY default-enable 不變量 | uncataloged/not-enabled/rejected/identity-mismatch/pin-mismatch/draft-defaultEnabled/experimental-state-enable/impostor-yaml 八條 denied 測試 |
+| R-B05 | IN_PROGRESS | [2026-07-14 重開，見 RVR-03/R-B20] 已加 catalog/state/manifest 存在性與身分/授權檢查與八條 denied 測試，但未套 catalog/state schema `Test-Json`，`defaultEnabled`/`enabled` 用 `[bool]` 轉型（`[bool]'false'`=`True` 已復現），missing-state 沿用 default 非 fail-closed。fail-closed closure 不成立，改由 R-B20 收斂 | 待 R-B20：schema 驗證、嚴格布林、missing/wrong-type/null fail-closed negative tests |
 | R-B06 | COMPLETED | dispatch/context（`29adc67`）+ RunState 移至 `<project>/.workflow/runs/<feature>/`、fresh run 不再預建 `specs/<feature>` | 不配置 canonical feature ID 測試；本批完成 relocation |
 | R-B10 | COMPLETED | 新增 `-Restart`：completed/failed/rejected/in-flight 皆需顯式 restart，舊 state 以 timestamped `.restarted.json` 封存 | reject-terminal 後 -Restart 復原、無 -Restart 拒覆蓋既有 state 測試 |
 | R-B11 | COMPLETED | failed/denied payload 於 JSON 與 text 兩模式帶 ERROR 細節 | 失敗 payload ERROR.ExitCode 測試 |
@@ -469,3 +481,43 @@ replay history 未去重、executed workflow.yml 未綁定授權身分、runner 
 consumer repo 的 `.workflow/` ignore 為選擇性強化項。
 
 R2 engine-integrity mainline note：`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md`。
+
+## 16. 2026-07-14 R2.1 誠實性還原增補
+
+2026-07-14 治理 re-review（`docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md`）以唯讀
+反例檢查 26-commit 分支，確認 12 條 Critical/High findings。其中兩條以本地反例直接推翻本 ledger
+先前的 `COMPLETED` 宣稱；依憲法 Surface Truthfulness 與第 8 節 ledger 維護規則，本批（R2.1）先還原
+帳務真相，不改任何 runtime 程式碼。完整分批修復計畫見
+`docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
+
+**被推翻並重開的項目：**
+
+| ID | 先前宣稱 | 推翻證據 | 現況 |
+|---|---|---|---|
+| R-B02 | COMPLETED（terminal postcondition 關閉 false completion） | RVR-01：進入 Implement 後把 tasks.md 換成非 task 文字，resume 即 completed（本地復現） | IN_PROGRESS，closure 移交 R-B19 |
+| R-B05 | COMPLETED（runner fail-closed 授權） | RVR-03：`[bool]'false'`=`True`（本地復現）、未套 catalog/state schema、missing-state 沿用 default | IN_PROGRESS，closure 移交 R-B20 |
+
+**12 條 RVR 對映與批次（RB-1 至 RB-5 + R6 見修復計畫）：**
+
+| RVR | 對映 ledger | 批次 |
+|---|---|---|
+| RVR-01 假完成 | 重開 R-B02 + R-B19 | RB-1 |
+| RVR-02 direct Implement 跳 gate | R-D02、R-B08 | RB-1 |
+| RVR-03 授權 fail-open | 重開 R-B05 + R-B20 | RB-1 |
+| RVR-04 RunState 未綁 graph | R-B21 | RB-2 |
+| RVR-05 mainline gate 漏 shared paths | R-A17 | RB-3 |
+| RVR-06 Ready-note evidence 只驗字串 | R-A18 | RB-3 |
+| RVR-07 ECI 無 full dossier/re-entry/exactly-one | R-B07 + R-B22 | RB-2 |
+| RVR-08 extension trust/scope/mutation/mirror | R-C01/02/05/07 + R-C08 | RB-4 |
+| RVR-09 worktree/junction isolation | R-A19 | RB-4 |
+| RVR-10 agent source/mirror 漂移 | R-D01、R-D04、R-D05 | RB-5 |
+| RVR-11 upgrade 非原子 | R-F06 | RB-4 |
+| RVR-12 無 SDD evidence + 主 note Draft | R-E07、R-E09 | RB-5 + R6 |
+
+**note 狀態變更：** `docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機
+（template Reopened 規則）由 Ready 降回 Draft 並加 Revalidation section，指明 R-B02/B05 closure 被
+RVR-01/03 推翻、其餘 R-B01/B03/B04/B06/B10-B16 項目仍成立。`2026-07-14-r2-verification-hardening.md`
+（R-A15/A16/B17）與 R1 note 的具體受測宣稱未被推翻，維持 Ready；其 coverage 完整性缺口以新 findings
+R-A17/A18 記錄，不整份降級。
+
+R2.1 mainline note：`docs/mainline-updates/2026-07-14-r2-1-truth-restoration.md`。
