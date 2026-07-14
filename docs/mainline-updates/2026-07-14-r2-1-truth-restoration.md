@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Ready
-**Related Commits**: TBD
+**Related Commits**: `2b7681d`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 
@@ -87,7 +87,7 @@ remediation prevents "fixing on top of a false green".
 - This is a documentation/accounting batch; it does not promote the experimental workflow runtime and
   does not by itself make the branch mergeable. The branch remains NOT READY TO MERGE per the
   2026-07-14 re-review until batches RB-1 through R6 close.
-- Backfill Related Commits after commit.
+- Implementation commit `2b7681d`; all machine gates green (audit VALID 0/0, notes validator VALID 0/0).
 
 ## Follow-ups
 
