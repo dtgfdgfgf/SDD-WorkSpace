@@ -4,18 +4,20 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: `TBD`
+**Related Commits**: `cb43de5`; repair commit `TBD`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 
 ## Summary
 
-- Preserve the canonical task-ID inventory at the first terminal Implement arrival, and require every
-  baseline ID to remain canonical, unique, and checked before completion. Terminal completion also
-  revalidates the Implement authorization evidence so evidence removed between resumes fails closed.
+- Preserve the canonical task-ID inventory at the first terminal Implement arrival in an engine-owned,
+  write-once sidecar, treat the RunState copy only as a checked cache, and require every baseline ID
+  to remain canonical, unique, and checked before completion. Terminal completion also revalidates
+  the Implement authorization evidence so evidence removed between resumes fails closed.
 - Make `/speckit.implement` begin with a non-bypassable readiness, conditional ECI, Analyze-result,
   intent-obligation, artifact-currentness, and feature-structure gate. Analyze now produces a
-  schema-governed machine result; the Markdown checklist is informational only.
+  schema-governed machine result that durably records whether ECI was required and binds the trigger
+  plus four dossier hashes; the Markdown checklist is informational only.
 - Centralize workflow registry authorization for `run-workflow.ps1` and `list-workflows.ps1`, validate
   catalog and state against trusted schemas, parse booleans strictly, and deny missing, null, scalar,
   wrong-type, or schema-substitution inputs.
@@ -47,9 +49,10 @@ reopened R-B02 and R-B05 and assigned closure to R-B19, R-D02 with R-B08, and R-
 | `studio/runtime/shared-runtime-contract.json` | Anchor the RB-1 invariants so reverting the enforcement breaks the runtime audit. |
 | `studio/scripts/powershell/setup-analyze.ps1`, `studio/scripts/powershell/setup-implement.ps1` | Bind trusted schemas; enforce readiness, conditional ECI, Analyze, exact intent accounting, current artifact hashes, and validator exit status. |
 | `studio/scripts/powershell/validate-feature-structure.ps1` | Fail closed when readiness or the ECI container is absent and require a complete dossier when ECI is engaged. |
-| `studio/scripts/powershell/workflow-engine.ps1` | Persist baseline task IDs and revalidate Implement authorization before terminal completion. |
+| `studio/scripts/powershell/workflow-engine.ps1` | Persist baseline task IDs in a write-once identity-bound sidecar, verify the RunState cache, and revalidate Implement authorization before terminal completion. |
 | `studio/scripts/powershell/common.ps1`, `studio/scripts/powershell/run-workflow.ps1`, `studio/scripts/powershell/list-workflows.ps1` | Share strict, trusted-schema workflow authorization between execution and listing. |
 | `studio/workflows/manifest.schema.json`, `studio/workflows/sdd-pipeline/workflow.yml` | Model explicit terminal completion validation and bind it to the Implement gate. |
+| `studio/workflows/POLICY.md` | Document the engine-owned baseline sidecar and its fail-closed resume semantics. |
 | `studio/templates/sdd-docs/checklist-template.md` | Mark the Markdown Analyze checklist informational rather than authoritative. |
 | `studio/tests/*.Tests.ps1`, `studio/tests/fixtures/terminal-completion-validator.ps1` | Add discriminating and regression coverage for every RB-1 bypass class. |
 
@@ -84,7 +87,7 @@ reopened R-B02 and R-B05 and assigned closure to R-B19, R-D02 with R-B08, and R-
 
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`: `VALID=true`, 0 errors,
   0 warnings.
-- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`: 420 passed, 0 failed, 0 skipped;
+- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`: 428 passed, 0 failed, 0 skipped;
   the prior branch baseline was 361 passed, 0 failed.
 - R-B19 discriminating overlay: all five required task-inventory tamper cases completed under the old
   implementation and are denied by the new implementation; the current terminal inventory block is
@@ -95,16 +98,22 @@ reopened R-B02 and R-B05 and assigned closure to R-B19, R-D02 with R-B08, and R-
 - R-B20 discriminating overlay: the original 13 authorization cases were 0 of 13 under the old
   implementation and 13 of 13 under the new implementation. The expanded current set is 15 of 15,
   including shaped permissive schema substitutions.
+- Independent post-commit review found two additional counterexamples against `cb43de5`: deleting
+  the complete ECI trigger and dossier set, and shrinking the RunState baseline cache. Both new tests
+  failed against `cb43de5` with false completion and pass after the repair. Missing, malformed, or
+  identity-mismatched baseline sidecars and changed ECI dossier hashes are also denied.
 - `git diff --check`: no whitespace errors.
 
 ## Merge Notes
 
-- This Draft records the implementation batch before its commit hash exists. Accounting will bind
-  the concrete implementation hash and move the note to Ready only after staged and final-HEAD gates
-  pass.
+- The first implementation commit is `cb43de5`. Independent review then found two closure blockers;
+  this Draft remains open until the repair commit exists and staged plus final-HEAD gates pass.
 - RB-1 completion does not make PR #3 ready to merge. RB-2 through RB-5 and R6 remain mandatory.
 
 ## Follow-ups
 
 - Execute RB-2 through RB-5 and R6 from the dated remediation plan. Do not re-promote
   `sdd-pipeline` before R6 acceptance.
+- Record R-B23 for comprehensive RunState authenticity. RB-1 detects a modified baseline cache via
+  the write-once sidecar, but coordinated modification of transient state and sidecars or direct
+  injection into other RunState authority fields requires a separate design.

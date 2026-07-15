@@ -5,7 +5,7 @@
 - `studio/workflows/<id>/` is the canonical source for workflow-owned assets (`manifest.json`, `workflow.yml`, docs).
 - `studio/workflows/catalog.json` is the workspace governance ledger for review, trust, and rollout.
 - `studio/workflows/state.json` is the workspace enable/disable ledger.
-- Per-project `.workflow/runs/<feature>/state.json` (under the executing project root, outside `specs/`) holds RunState for an executing workflow. It is a local transient artifact: generated, operator-controlled, never hand-edited as governance authority, and never intended for Git. The workspace repo and the `project-init` template ignore `.workflow/`; a pre-existing standalone consumer repo must add the same ignore before running a workflow inside it. Cross-machine resume is out of scope; if it is ever needed it will be an explicit checkpoint export/import capability, not Git tracking.
+- Per-project `.workflow/runs/<feature>/state.json` (under the executing project root, outside `specs/`) holds RunState for an executing workflow. Terminal task baselines are separately preserved in engine-owned, write-once `.workflow/runs/<feature>/baselines/<run-id>/<step-id>.json` sidecars; RunState keeps only a checked cache. These are local transient artifacts: generated, operator-controlled, never hand-edited as governance authority, and never intended for Git. The workspace repo and the `project-init` template ignore `.workflow/`; a pre-existing standalone consumer repo must add the same ignore before running a workflow inside it. Cross-machine resume is out of scope; if it is ever needed it will be an explicit checkpoint export/import capability, not Git tracking.
 
 ## Review Status
 
@@ -42,7 +42,7 @@
 - `42` awaiting_agent: run the agent slash command, then `-Resume`.
 - `43` awaiting_gate: `-ConfirmGate <id>` to advance, or `-RejectGate <id>`.
 - `44` rejected: a gate was rejected and declares no `on_reject` branch, so the run is terminal. Start over with `-Restart`, which archives the prior RunState next to the live path.
-- A terminal step (e.g. the implement stage) completes only when its declared `postcondition` holds; `-AcceptAgent` cannot substitute for a terminal step's completion.
+- A terminal step (e.g. the implement stage) completes only when its declared `postcondition` holds; `-AcceptAgent` cannot substitute for a terminal step's completion. A missing, malformed, identity-mismatched, or cache-mismatched terminal baseline sidecar fails closed and requires `-Restart`.
 
 ## Step Types Supported in Wave 3
 
@@ -70,4 +70,4 @@
 - No direct writes into existing `projects/` or `learning/` from workflow execution; the workflow engine routes side effects through standard `dispatch: script` invocations.
 - No workflow may override core shared files or another workflow's outputs.
 - Any path escaping the workspace root, the project root, or the workflow root is rejected at runtime.
-- RunState writes are atomic (`state.json.tmp` + `Move-Item -Force`). An advisory lock at `state.json.lock` is honored for 60 seconds to surface concurrent invocation conflicts.
+- RunState writes are atomic (`state.json.tmp` + `Move-Item -Force`). Terminal baseline sidecars use an atomic no-overwrite move and are write-once for a run and step identity. An advisory lock at `state.json.lock` is honored for 60 seconds to surface concurrent invocation conflicts.

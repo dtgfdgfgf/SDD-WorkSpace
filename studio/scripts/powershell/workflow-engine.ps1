@@ -400,6 +400,98 @@ function Resolve-StepPostconditionFilePath {
     return $filePath
 }
 
+function Get-StepPostconditionBaselinePath {
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot)
+
+    $runId = [string]$RunState.run_id
+    $feature = [string]$RunState.feature
+    $stepId = [string]$Step.id
+    if ($runId -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]*$' -or
+        $feature -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]*$' -or
+        $stepId -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]*$') {
+        throw 'Cannot resolve terminal baseline sidecar: invalid run, feature, or step identity.'
+    }
+
+    $runRoot = Join-Path (Join-Path (Join-Path $ProjectRoot '.workflow') 'runs') $feature
+    $baselineDir = Join-Path (Join-Path $runRoot 'baselines') $runId
+    $baselinePath = Join-Path $baselineDir "$stepId.json"
+    Assert-PathInsideRoot -Root $ProjectRoot -Candidate $baselinePath -MessagePrefix 'terminal baseline sidecar escapes project root'
+    return $baselinePath
+}
+
+function Read-StepPostconditionBaseline {
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot)
+
+    $path = Get-StepPostconditionBaselinePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return [PSCustomObject]@{ Valid = $false; Path = $path; TaskIds = @(); Error = 'terminal baseline sidecar is missing; restart the run' }
+    }
+
+    try {
+        $document = Get-Content -LiteralPath $path -Raw -ErrorAction Stop | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+    } catch {
+        return [PSCustomObject]@{ Valid = $false; Path = $path; TaskIds = @(); Error = "terminal baseline sidecar is malformed: $($_.Exception.Message); restart the run" }
+    }
+
+    $postconditionPath = Resolve-StepPostconditionFilePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+    $expectedRelativePath = [System.IO.Path]::GetRelativePath($ProjectRoot, $postconditionPath).Replace('\', '/')
+    $identityValid = (
+        $document -is [System.Collections.IDictionary] -and
+        [string]$document['schema_version'] -eq '1.0.0' -and
+        [string]$document['run_id'] -ceq [string]$RunState.run_id -and
+        [string]$document['workflow_id'] -ceq [string]$RunState.workflow_id -and
+        [string]$document['workflow_version'] -ceq [string]$RunState.workflow_version -and
+        [string]$document['feature'] -ceq [string]$RunState.feature -and
+        [string]$document['step_id'] -ceq [string]$Step.id -and
+        [string]$document['postcondition_type'] -ceq [string]$Step.postcondition.type -and
+        [string]$document['postcondition_file'] -ceq $expectedRelativePath
+    )
+    if (-not $identityValid) {
+        return [PSCustomObject]@{ Valid = $false; Path = $path; TaskIds = @(); Error = 'terminal baseline sidecar identity mismatch; restart the run' }
+    }
+
+    $taskIds = @($document['task_ids'] | ForEach-Object { [string]$_ })
+    if ($taskIds.Count -eq 0 -or
+        @($taskIds | Where-Object { $_ -notmatch '^T\d{3}$' }).Count -gt 0 -or
+        @($taskIds | Sort-Object -Unique).Count -ne $taskIds.Count) {
+        return [PSCustomObject]@{ Valid = $false; Path = $path; TaskIds = @(); Error = 'terminal baseline sidecar task inventory is empty or invalid; restart the run' }
+    }
+
+    return [PSCustomObject]@{ Valid = $true; Path = $path; TaskIds = $taskIds; Error = $null }
+}
+
+function New-StepPostconditionBaseline {
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot, [string[]]$TaskIds)
+
+    $path = Get-StepPostconditionBaselinePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+    if (Test-Path -LiteralPath $path) {
+        throw 'terminal baseline sidecar already exists and is write-once; restart the run instead of replacing it'
+    }
+    $directory = Split-Path -Parent $path
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    $postconditionPath = Resolve-StepPostconditionFilePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+    $document = [ordered]@{
+        schema_version     = '1.0.0'
+        run_id             = [string]$RunState.run_id
+        workflow_id        = [string]$RunState.workflow_id
+        workflow_version   = [string]$RunState.workflow_version
+        feature            = [string]$RunState.feature
+        step_id            = [string]$Step.id
+        postcondition_type = [string]$Step.postcondition.type
+        postcondition_file = [System.IO.Path]::GetRelativePath($ProjectRoot, $postconditionPath).Replace('\', '/')
+        task_ids           = @($TaskIds)
+    }
+    $json = $document | ConvertTo-Json -Depth 8
+    $tempPath = "$path.$([guid]::NewGuid().ToString('N')).tmp"
+    try {
+        [System.IO.File]::WriteAllText($tempPath, $json + "`n", [System.Text.UTF8Encoding]::new($false))
+        [System.IO.File]::Move($tempPath, $path, $false)
+    } finally {
+        if (Test-Path -LiteralPath $tempPath) { Remove-Item -LiteralPath $tempPath -Force }
+    }
+    return $path
+}
+
 function Initialize-StepPostconditionBaseline {
     <#
     .SYNOPSIS
@@ -414,7 +506,10 @@ function Initialize-StepPostconditionBaseline {
 
     $filePath = Resolve-StepPostconditionFilePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
     $inventory = @(Get-CanonicalTaskInventory -Path $filePath)
-    $stepVars['baseline_task_ids'] = @($inventory | ForEach-Object { [string]$_.id } | Sort-Object -Unique)
+    $baselineIds = @($inventory | ForEach-Object { [string]$_.id } | Sort-Object -Unique)
+    $sidecarPath = New-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot -TaskIds $baselineIds
+    $stepVars['baseline_task_ids'] = $baselineIds
+    $stepVars['baseline_sidecar'] = $sidecarPath
     $RunState.vars.steps[$Step.id] = $stepVars
 }
 
@@ -446,13 +541,14 @@ function Test-StepPostcondition {
                 return 'postcondition no-pending-tasks: baseline canonical task inventory is missing from RunState; restart the run'
             }
 
-            $baselineIds = @($stepVars['baseline_task_ids'] | ForEach-Object { [string]$_ })
-            if ($baselineIds.Count -eq 0) {
-                return 'postcondition no-pending-tasks: baseline canonical task inventory is empty; restart with a valid tasks.md'
+            $baseline = Read-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+            if (-not $baseline.Valid) {
+                return "postcondition no-pending-tasks: $($baseline.Error)"
             }
-            if (@($baselineIds | Where-Object { $_ -notmatch '^T\d{3}$' }).Count -gt 0 -or
-                @($baselineIds | Sort-Object -Unique).Count -ne $baselineIds.Count) {
-                return 'postcondition no-pending-tasks: baseline canonical task inventory in RunState is invalid; restart the run'
+            $baselineIds = @($baseline.TaskIds)
+            $cachedBaselineIds = @($stepVars['baseline_task_ids'] | ForEach-Object { [string]$_ })
+            if (($cachedBaselineIds -join "`n") -cne ($baselineIds -join "`n")) {
+                return 'postcondition no-pending-tasks: RunState baseline cache does not match the authoritative write-once sidecar; restart the run'
             }
 
             $currentInventory = @(Get-CanonicalTaskInventory -Path $filePath)

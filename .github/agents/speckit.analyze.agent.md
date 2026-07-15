@@ -319,6 +319,9 @@ Use these exact rules:
 - `outcome` is `IMPLEMENTATION_READY` only when readiness is `READY_FOR_PLAN`, every Critical
   finding is resolved, the Intent Drift Check passes, and every retained intent obligation is
   accounted for. Otherwise it is `BLOCKED`.
+- `eciRequired` is `true` when `readiness/eci-trigger.md` or any of the four canonical ECI dossier
+  files exists, or readiness still reports `ROUTE_TO_ECI`. Once true, this durable machine result
+  prevents later deletion of the ECI evidence from silently downgrading the Implement gate.
 - `criticalFindings` contains every Critical finding, including resolved ones. Each entry uses
   `OPEN` or `RESOLVED` and includes a non-empty resolution statement.
 - `intentDriftCheck.status` is `PASS` or `FAIL` and includes a non-empty summary.
@@ -326,7 +329,11 @@ Use these exact rules:
   empty. When it exists, emit one item per ledger row; use overall status `ACCOUNTED` only when no
   item is `BLOCKING`, otherwise use `BLOCKED`.
 - Hashes are lowercase SHA-256. Use raw file bytes for `spec.md`,
-  `readiness/readiness-assessment.md`, optional `intent-ledger.md`, and `plan.md`.
+  `readiness/readiness-assessment.md`, optional `intent-ledger.md`, `plan.md`, and all five ECI
+  artifacts. When `eciRequired` is true, `readiness/eci-trigger.md` plus
+  `readiness/eci/eci-assessment.md`, `source-manifest.md`, `adoption-record.md`, and
+  `authorization-record.md` MUST all exist and carry their current hashes. When it is false, all
+  five ECI hash properties MUST be JSON `null`.
 - For `tasks.md`, hash task definitions rather than progress: decode UTF-8 strictly, normalize only
   canonical task checkbox prefixes `[ ]`, `[x]`, and `[X]` before `T###` to `[ ]`, encode UTF-8
   without BOM, then hash. Checkbox progress therefore does not stale Analyze evidence; any task ID,
@@ -356,9 +363,15 @@ Emit properties in this order:
   "schemaVersion": "1.0.0",
   "featureId": "<FEATURE_DIR leaf>",
   "outcome": "IMPLEMENTATION_READY or BLOCKED",
+  "eciRequired": false,
   "artifactHashes": {
     "spec.md": "<lowercase sha256>",
     "readiness/readiness-assessment.md": "<lowercase sha256>",
+    "readiness/eci-trigger.md": null,
+    "readiness/eci/eci-assessment.md": null,
+    "readiness/eci/source-manifest.md": null,
+    "readiness/eci/adoption-record.md": null,
+    "readiness/eci/authorization-record.md": null,
     "intent-ledger.md": null,
     "plan.md": "<lowercase sha256>",
     "tasks.md": "<lowercase normalized task-definition sha256>"

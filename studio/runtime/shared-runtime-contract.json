@@ -595,6 +595,8 @@
         "### 6.1 Emit the Deterministic Machine Result",
         "Do not write the file yourself.",
         "`outcome` is `IMPLEMENTATION_READY` only when readiness is `READY_FOR_PLAN`",
+        "`eciRequired` is `true` when `readiness/eci-trigger.md` or any of the four canonical ECI dossier",
+        "five ECI hash properties MUST be JSON `null`.",
         "For `tasks.md`, hash task definitions rather than progress",
         "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)",
         "`intentObligations.status` is `NOT_REQUIRED`",
@@ -628,6 +630,8 @@
         "`analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`.",
         "### 6.1 Emit the Deterministic Machine Result",
         "Do not write the file yourself.",
+        "`eciRequired` is `true` when `readiness/eci-trigger.md` or any of the four canonical ECI dossier",
+        "five ECI hash properties MUST be JSON `null`.",
         "For `tasks.md`, hash task definitions rather than progress",
         "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)"
       ]
@@ -1138,6 +1142,8 @@
         "$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))",
         "ANALYSIS_RESULT_SCHEMA",
         "ANALYSIS_CHECKLIST",
+        "ECI_REQUIRED",
+        "ECI_ARTIFACTS",
         "Force"
       ]
     },
@@ -1156,6 +1162,10 @@
         "Get-ArtifactBindingHash",
         "NormalizeTaskCheckboxes",
         "Test-AnalyzeArtifactBindings",
+        "$recordedEciRequired = $analyzeCompletion.Data['eciRequired'] -eq $true",
+        "ECI governance cannot be added or removed without re-running /speckit.analyze",
+        "analysis-result.json records required ECI evidence",
+        "readiness/eci/authorization-record.md",
         "Get-IntentLedgerEntries",
         "intent-ledger.md header must contain the canonical nine columns in canonical order",
         "requires a concrete reentry_trigger for deferred intent",
@@ -1180,6 +1190,12 @@
         "\"IMPLEMENTATION_READY\"",
         "\"artifactHashes\"",
         "\"readiness/readiness-assessment.md\"",
+        "\"eciRequired\"",
+        "\"readiness/eci-trigger.md\"",
+        "\"readiness/eci/eci-assessment.md\"",
+        "\"readiness/eci/source-manifest.md\"",
+        "\"readiness/eci/adoption-record.md\"",
+        "\"readiness/eci/authorization-record.md\"",
         "\"criticalFindings\"",
         "\"intentDriftCheck\"",
         "\"intentObligations\"",
@@ -1363,8 +1379,15 @@
       "path": "studio/scripts/powershell/workflow-engine.ps1",
       "mustContainAll": [
         "function Get-CanonicalTaskInventory",
+        "function Get-StepPostconditionBaselinePath",
+        "function Read-StepPostconditionBaseline",
+        "function New-StepPostconditionBaseline",
         "function Initialize-StepPostconditionBaseline",
         "$stepVars['baseline_task_ids'] =",
+        "$stepVars['baseline_sidecar'] = $sidecarPath",
+        "terminal baseline sidecar already exists and is write-once",
+        "RunState baseline cache does not match the authoritative write-once sidecar",
+        "terminal baseline sidecar identity mismatch",
         "Initialize-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot",
         "baseline canonical task inventory is missing from RunState; restart the run",
         "baseline task ID(s) missing or non-canonical",
@@ -1408,6 +1431,8 @@
       "path": "studio/workflows/POLICY.md",
       "mustContainAll": [
         "Per-project `.workflow/runs/<feature>/state.json`",
+        "write-once `.workflow/runs/<feature>/baselines/<run-id>/<step-id>.json` sidecars",
+        "cache-mismatched terminal baseline sidecar fails closed",
         "never intended for Git",
         "starting a run never creates anything under `specs/`"
       ]

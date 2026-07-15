@@ -8,6 +8,7 @@
     "schemaVersion",
     "featureId",
     "outcome",
+    "eciRequired",
     "artifactHashes",
     "criticalFindings",
     "intentDriftCheck",
@@ -30,12 +31,21 @@
         "BLOCKED"
       ]
     },
+    "eciRequired": {
+      "type": "boolean",
+      "description": "Durable Analyze-time record that ECI governance was required for this feature."
+    },
     "artifactHashes": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "spec.md",
         "readiness/readiness-assessment.md",
+        "readiness/eci-trigger.md",
+        "readiness/eci/eci-assessment.md",
+        "readiness/eci/source-manifest.md",
+        "readiness/eci/adoption-record.md",
+        "readiness/eci/authorization-record.md",
         "intent-ledger.md",
         "plan.md",
         "tasks.md"
@@ -46,6 +56,36 @@
         },
         "readiness/readiness-assessment.md": {
           "$ref": "#/$defs/sha256"
+        },
+        "readiness/eci-trigger.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/eci-assessment.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/source-manifest.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/adoption-record.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/authorization-record.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
         },
         "intent-ledger.md": {
           "oneOf": [
@@ -184,6 +224,42 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eciRequired": { "const": true }
+        },
+        "required": ["eciRequired"]
+      },
+      "then": {
+        "properties": {
+          "artifactHashes": {
+            "properties": {
+              "readiness/eci-trigger.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/eci-assessment.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/source-manifest.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/adoption-record.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/authorization-record.md": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "artifactHashes": {
+            "properties": {
+              "readiness/eci-trigger.md": { "type": "null" },
+              "readiness/eci/eci-assessment.md": { "type": "null" },
+              "readiness/eci/source-manifest.md": { "type": "null" },
+              "readiness/eci/adoption-record.md": { "type": "null" },
+              "readiness/eci/authorization-record.md": { "type": "null" }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "sha256": {
       "type": "string",

@@ -64,12 +64,26 @@ function Resolve-FeatureContext {
         return [PSCustomObject]@{
             FEATURE_DIR          = $resolved
             FEATURE_SPEC         = Join-Path $resolved 'spec.md'
+            READINESS_DIR        = $readinessDir
             READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
+            ECI_DIR              = Join-Path $readinessDir 'eci'
+            ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
             IMPL_PLAN            = Join-Path $resolved 'plan.md'
             TASKS                = Join-Path $resolved 'tasks.md'
         }
     }
-    return Get-FeaturePathsEnv
+    $base = Get-FeaturePathsEnv
+    $readinessDir = Join-Path $base.FEATURE_DIR 'readiness'
+    return [PSCustomObject]@{
+        FEATURE_DIR          = $base.FEATURE_DIR
+        FEATURE_SPEC         = $base.FEATURE_SPEC
+        READINESS_DIR        = $readinessDir
+        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
+        ECI_DIR              = Join-Path $readinessDir 'eci'
+        ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
+        IMPL_PLAN            = $base.IMPL_PLAN
+        TASKS                = $base.TASKS
+    }
 }
 
 function Invoke-FeatureStructureValidation {
@@ -82,6 +96,22 @@ function Invoke-FeatureStructureValidation {
 }
 
 $paths = Resolve-FeatureContext -Override $FeatureDir
+$eciArtifactPaths = [ordered]@{
+    'readiness/eci-trigger.md'                    = $paths.ECI_TRIGGER
+    'readiness/eci/eci-assessment.md'             = Join-Path $paths.ECI_DIR 'eci-assessment.md'
+    'readiness/eci/source-manifest.md'             = Join-Path $paths.ECI_DIR 'source-manifest.md'
+    'readiness/eci/adoption-record.md'             = Join-Path $paths.ECI_DIR 'adoption-record.md'
+    'readiness/eci/authorization-record.md'        = Join-Path $paths.ECI_DIR 'authorization-record.md'
+}
+$readinessStatus = if (Test-Path -LiteralPath $paths.READINESS_ASSESSMENT -PathType Leaf) {
+    Get-MarkdownField -Path $paths.READINESS_ASSESSMENT -Field 'Primary Status'
+} else {
+    $null
+}
+$eciRequired = (
+    $readinessStatus -eq 'ROUTE_TO_ECI' -or
+    @($eciArtifactPaths.Values | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }).Count -gt 0
+)
 
 # Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
 $projectRootForBoundary = if ($FeatureDir) {
@@ -167,6 +197,8 @@ $result = [ordered]@{
     FEATURE_DIR          = $paths.FEATURE_DIR
     FEATURE_SPEC         = $paths.FEATURE_SPEC
     READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT
+    ECI_REQUIRED         = $eciRequired
+    ECI_ARTIFACTS        = $eciArtifactPaths
     IMPL_PLAN            = $paths.IMPL_PLAN
     TASKS                = $paths.TASKS
     ANALYSIS_RESULT      = $analysisResultPath

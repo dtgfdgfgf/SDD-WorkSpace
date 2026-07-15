@@ -188,9 +188,15 @@ BeforeAll {
             schemaVersion = '1.0.0'
             featureId = '999-fixture'
             outcome = 'IMPLEMENTATION_READY'
+            eciRequired = [bool]$WithEci
             artifactHashes = [ordered]@{
                 'spec.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $featureDir 'spec.md')
                 'readiness/readiness-assessment.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $readinessDir 'readiness-assessment.md')
+                'readiness/eci-trigger.md' = if ($WithEci) { Get-WorkflowTestArtifactHash -Path (Join-Path $readinessDir 'eci-trigger.md') } else { $null }
+                'readiness/eci/eci-assessment.md' = if ($WithEci) { Get-WorkflowTestArtifactHash -Path (Join-Path $eciDir 'eci-assessment.md') } else { $null }
+                'readiness/eci/source-manifest.md' = if ($WithEci) { Get-WorkflowTestArtifactHash -Path (Join-Path $eciDir 'source-manifest.md') } else { $null }
+                'readiness/eci/adoption-record.md' = if ($WithEci) { Get-WorkflowTestArtifactHash -Path (Join-Path $eciDir 'adoption-record.md') } else { $null }
+                'readiness/eci/authorization-record.md' = if ($WithEci) { Get-WorkflowTestArtifactHash -Path (Join-Path $eciDir 'authorization-record.md') } else { $null }
                 'intent-ledger.md' = $null
                 'plan.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $featureDir 'plan.md')
                 'tasks.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $featureDir 'tasks.md') -NormalizeTaskCheckboxes
@@ -201,6 +207,15 @@ BeforeAll {
         }
         $analysis | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $featureDir 'analysis-result.json') -Encoding utf8
         return $featureDir
+    }
+
+    function script:Get-TerminalBaselineSidecarPath {
+        param(
+            [Parameter(Mandatory)][string]$RunStatePath,
+            [string]$StepId = 'stage-implement'
+        )
+        $state = Get-Content -LiteralPath $RunStatePath -Raw | ConvertFrom-Json
+        return Join-Path (Join-Path (Join-Path (Split-Path -Parent $RunStatePath) 'baselines') $state.run_id) "$StepId.json"
     }
 }
 
@@ -822,6 +837,12 @@ steps:
         $r.ExitCode | Should -Be 42
         $baselineState = Get-Content -LiteralPath $r.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
         @($baselineState.vars.steps.'stage-implement'.baseline_task_ids) -join ',' | Should -Be 'T001,T002'
+        $sidecarPath = Get-TerminalBaselineSidecarPath -RunStatePath $r.Json.RUN_STATE_PATH
+        Test-Path -LiteralPath $sidecarPath -PathType Leaf | Should -BeTrue
+        $sidecar = Get-Content -LiteralPath $sidecarPath -Raw | ConvertFrom-Json
+        @($sidecar.task_ids) -join ',' | Should -Be 'T001,T002'
+        $sidecar.run_id | Should -Be $baselineState.run_id
+        $sidecar.step_id | Should -Be 'stage-implement'
 
         (Get-Content -LiteralPath $script:tasksPath -Raw) -replace '\- \[ \] T001', '- [x] T001' |
             Set-Content -LiteralPath $script:tasksPath
@@ -843,6 +864,68 @@ steps:
         $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
         $r2.ExitCode | Should -Be 0
         $r2.Json.STATUS | Should -Be 'completed'
+    }
+
+    It 'rejects a RunState baseline cache that is shrunk after first terminal arrival' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+        $statePath = $r.Json.RUN_STATE_PATH
+        $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -AsHashtable
+        $state['vars']['steps']['stage-implement']['baseline_task_ids'] = @('T001')
+        $state | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $statePath -Encoding utf8
+        @(
+            '# Tasks',
+            '- [x] T001 [P1] [Risk: Low] [Story: A] First task'
+        ) -join "`n" | Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        $r2.Json.STATUS | Should -Be 'awaiting_agent'
+        $saved = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+        $saved.halt_reason | Should -Match 'RunState baseline cache does not match the authoritative write-once sidecar'
+        @($saved.completed_steps) | Should -Not -Contain 'stage-implement'
+    }
+
+    It 'rejects a missing terminal baseline sidecar' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+        Remove-Item -LiteralPath (Get-TerminalBaselineSidecarPath -RunStatePath $r.Json.RUN_STATE_PATH) -Force
+        (Get-Content -LiteralPath $script:tasksPath -Raw) -replace '\- \[ \]', '- [x]' |
+            Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        (Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json).halt_reason |
+            Should -Match 'terminal baseline sidecar is missing'
+    }
+
+    It 'rejects a malformed terminal baseline sidecar' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+        '{bad-json' | Set-Content -LiteralPath (Get-TerminalBaselineSidecarPath -RunStatePath $r.Json.RUN_STATE_PATH) -NoNewline
+        (Get-Content -LiteralPath $script:tasksPath -Raw) -replace '\- \[ \]', '- [x]' |
+            Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        (Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json).halt_reason |
+            Should -Match 'terminal baseline sidecar is malformed'
+    }
+
+    It 'rejects a terminal baseline sidecar with the wrong identity' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+        $sidecarPath = Get-TerminalBaselineSidecarPath -RunStatePath $r.Json.RUN_STATE_PATH
+        $sidecar = Get-Content -LiteralPath $sidecarPath -Raw | ConvertFrom-Json -AsHashtable
+        $sidecar['step_id'] = 'other-step'
+        $sidecar | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $sidecarPath -Encoding utf8
+        (Get-Content -LiteralPath $script:tasksPath -Raw) -replace '\- \[ \]', '- [x]' |
+            Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        (Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json).halt_reason |
+            Should -Match 'terminal baseline sidecar identity mismatch'
     }
 
     It 'rejects completion when a baseline task is deleted' {
@@ -1034,6 +1117,14 @@ steps:
                 $path = Join-Path $FeatureDir 'readiness/eci/authorization-record.md'
                 (Get-Content -LiteralPath $path -Raw) -replace 'READY_FOR_MAINLINE_IMPLEMENTATION', 'READY_FOR_SANDBOX_ONLY' |
                     Set-Content -LiteralPath $path -NoNewline
+            }
+        },
+        @{
+            Name = 'all ECI evidence is deleted'; WithEci = $true
+            Mutation = {
+                param($FeatureDir)
+                Remove-Item -LiteralPath (Join-Path $FeatureDir 'readiness/eci-trigger.md') -Force
+                Get-ChildItem -LiteralPath (Join-Path $FeatureDir 'readiness/eci') -File | Remove-Item -Force
             }
         }
     ) {

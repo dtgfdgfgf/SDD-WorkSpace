@@ -81,6 +81,16 @@ BeforeAll {
 
         $intentLedgerPath = Join-Path $FeatureDir 'intent-ledger.md'
         $intentLedgerExists = Test-Path -LiteralPath $intentLedgerPath -PathType Leaf
+        $eciArtifactPaths = [ordered]@{
+            'readiness/eci-trigger.md' = Join-Path $FeatureDir 'readiness/eci-trigger.md'
+            'readiness/eci/eci-assessment.md' = Join-Path $FeatureDir 'readiness/eci/eci-assessment.md'
+            'readiness/eci/source-manifest.md' = Join-Path $FeatureDir 'readiness/eci/source-manifest.md'
+            'readiness/eci/adoption-record.md' = Join-Path $FeatureDir 'readiness/eci/adoption-record.md'
+            'readiness/eci/authorization-record.md' = Join-Path $FeatureDir 'readiness/eci/authorization-record.md'
+        }
+        $eciRequired = @($eciArtifactPaths.Values | Where-Object {
+            Test-Path -LiteralPath $_ -PathType Leaf
+        }).Count -gt 0
         if (-not $PSBoundParameters.ContainsKey('IntentStatus')) {
             $IntentStatus = if ($intentLedgerExists) { 'ACCOUNTED' } else { 'NOT_REQUIRED' }
         }
@@ -100,6 +110,11 @@ BeforeAll {
         $hashes = [ordered]@{
             'spec.md' = Get-TestArtifactBindingHash -Path (Join-Path $FeatureDir 'spec.md')
             'readiness/readiness-assessment.md' = Get-TestArtifactBindingHash -Path (Join-Path $FeatureDir 'readiness/readiness-assessment.md')
+            'readiness/eci-trigger.md' = if (Test-Path -LiteralPath $eciArtifactPaths['readiness/eci-trigger.md'] -PathType Leaf) { Get-TestArtifactBindingHash -Path $eciArtifactPaths['readiness/eci-trigger.md'] } else { $null }
+            'readiness/eci/eci-assessment.md' = if (Test-Path -LiteralPath $eciArtifactPaths['readiness/eci/eci-assessment.md'] -PathType Leaf) { Get-TestArtifactBindingHash -Path $eciArtifactPaths['readiness/eci/eci-assessment.md'] } else { $null }
+            'readiness/eci/source-manifest.md' = if (Test-Path -LiteralPath $eciArtifactPaths['readiness/eci/source-manifest.md'] -PathType Leaf) { Get-TestArtifactBindingHash -Path $eciArtifactPaths['readiness/eci/source-manifest.md'] } else { $null }
+            'readiness/eci/adoption-record.md' = if (Test-Path -LiteralPath $eciArtifactPaths['readiness/eci/adoption-record.md'] -PathType Leaf) { Get-TestArtifactBindingHash -Path $eciArtifactPaths['readiness/eci/adoption-record.md'] } else { $null }
+            'readiness/eci/authorization-record.md' = if (Test-Path -LiteralPath $eciArtifactPaths['readiness/eci/authorization-record.md'] -PathType Leaf) { Get-TestArtifactBindingHash -Path $eciArtifactPaths['readiness/eci/authorization-record.md'] } else { $null }
             'intent-ledger.md' = if ($intentLedgerExists) { Get-TestArtifactBindingHash -Path $intentLedgerPath } else { $null }
             'plan.md' = Get-TestArtifactBindingHash -Path (Join-Path $FeatureDir 'plan.md')
             'tasks.md' = Get-TestArtifactBindingHash -Path (Join-Path $FeatureDir 'tasks.md') -NormalizeTaskCheckboxes
@@ -114,6 +129,7 @@ BeforeAll {
             schemaVersion = '1.0.0'
             featureId = if ($FeatureId) { $FeatureId } else { Split-Path -Leaf $FeatureDir }
             outcome = $Outcome
+            eciRequired = $eciRequired
             artifactHashes = $hashes
             criticalFindings = $normalizedCriticalFindings
             intentDriftCheck = [ordered]@{
@@ -431,6 +447,7 @@ Describe 'setup-implement entry gate' {
 
             $eciDir = Join-Path $FeatureDir 'readiness/eci'
             New-Item -ItemType Directory -Path $eciDir -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $FeatureDir 'readiness/eci-trigger.md') -Value "# ECI Trigger`n" -Encoding utf8
             Set-Content -LiteralPath (Join-Path $eciDir 'eci-assessment.md') -Value "# ECI Assessment`n" -Encoding utf8
             Set-Content -LiteralPath (Join-Path $eciDir 'source-manifest.md') -Value "# Source Manifest`n" -Encoding utf8
             Set-Content -LiteralPath (Join-Path $eciDir 'adoption-record.md') -Value "# Adoption Record`n" -Encoding utf8
@@ -778,6 +795,57 @@ Describe 'setup-implement entry gate' {
         $LASTEXITCODE | Should -Not -Be 0
         $result = ($output -join "`n") | ConvertFrom-Json
         ($result.BLOCKERS -join "`n") | Should -Match 'READY_FOR_SANDBOX_ONLY.*not authorized'
+    }
+
+    It 'accepts complete Analyze-bound ECI evidence for mainline implementation' {
+        $featureDir = New-FeatureFixture -With @{
+            Spec = $script:cleanSpec; Plan = $script:cleanPlan; Tasks = $script:cleanTasks
+            Readiness = $script:cleanReadiness; AnalysisChecklist = $script:completeChecklist
+        }
+        Add-EciDossier -FeatureDir $featureDir
+        Write-AnalysisResult -FeatureDir $featureDir | Out-Null
+
+        $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Json
+        $LASTEXITCODE | Should -Be 0
+        $result = ($output -join "`n") | ConvertFrom-Json
+        $result.READY | Should -BeTrue
+        $result.ECI_REQUIRED | Should -BeTrue
+        $result.ECI_AUTHORIZATION | Should -Be 'READY_FOR_MAINLINE_IMPLEMENTATION'
+    }
+
+    It 'denies completion when all Analyze-bound ECI evidence is deleted' {
+        $featureDir = New-FeatureFixture -With @{
+            Spec = $script:cleanSpec; Plan = $script:cleanPlan; Tasks = $script:cleanTasks
+            Readiness = $script:cleanReadiness; AnalysisChecklist = $script:completeChecklist
+        }
+        Add-EciDossier -FeatureDir $featureDir
+        Write-AnalysisResult -FeatureDir $featureDir | Out-Null
+        (Get-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -Raw) -replace '\- \[ \]', '- [x]' |
+            Set-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -NoNewline
+        Remove-Item -LiteralPath (Join-Path $featureDir 'readiness/eci-trigger.md') -Force
+        Get-ChildItem -LiteralPath (Join-Path $featureDir 'readiness/eci') -File | Remove-Item -Force
+
+        $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -CompletionValidation -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        $result = ($output -join "`n") | ConvertFrom-Json
+        $result.READY | Should -BeFalse
+        $result.ECI_REQUIRED | Should -BeTrue
+        ($result.BLOCKERS -join "`n") | Should -Match 'ECI requirement.*contradicts|records required ECI evidence'
+    }
+
+    It 'denies stale Analyze-bound ECI evidence after a dossier file changes' {
+        $featureDir = New-FeatureFixture -With @{
+            Spec = $script:cleanSpec; Plan = $script:cleanPlan; Tasks = $script:cleanTasks
+            Readiness = $script:cleanReadiness; AnalysisChecklist = $script:completeChecklist
+        }
+        Add-EciDossier -FeatureDir $featureDir
+        Write-AnalysisResult -FeatureDir $featureDir | Out-Null
+        Add-Content -LiteralPath (Join-Path $featureDir 'readiness/eci/eci-assessment.md') -Value 'Tampered after Analyze.'
+
+        $output = pwsh -NoProfile -File $script:setupImplement -FeatureDir $featureDir -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        (($output -join "`n") | ConvertFrom-Json).BLOCKERS -join "`n" |
+            Should -Match 'hash mismatch for readiness/eci/eci-assessment\.md'
     }
 
     It 'rejects -Task when the requested ID is not pending' {

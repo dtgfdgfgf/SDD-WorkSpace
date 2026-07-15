@@ -280,9 +280,23 @@ function Test-AnalyzeArtifactBindings {
         @{ Name = 'plan.md'; Path = $Paths.IMPL_PLAN; NormalizeTasks = $false }
         @{ Name = 'tasks.md'; Path = $Paths.TASKS; NormalizeTasks = $true }
     )
+    if ($AnalyzeResult['eciRequired'] -eq $true) {
+        $bindings += @(
+            @{ Name = 'readiness/eci-trigger.md'; Path = $Paths.ECI_TRIGGER; NormalizeTasks = $false }
+            @{ Name = 'readiness/eci/eci-assessment.md'; Path = (Join-Path $Paths.ECI_DIR 'eci-assessment.md'); NormalizeTasks = $false }
+            @{ Name = 'readiness/eci/source-manifest.md'; Path = (Join-Path $Paths.ECI_DIR 'source-manifest.md'); NormalizeTasks = $false }
+            @{ Name = 'readiness/eci/adoption-record.md'; Path = (Join-Path $Paths.ECI_DIR 'adoption-record.md'); NormalizeTasks = $false }
+            @{ Name = 'readiness/eci/authorization-record.md'; Path = (Join-Path $Paths.ECI_DIR 'authorization-record.md'); NormalizeTasks = $false }
+        )
+    }
 
     foreach ($binding in $bindings) {
-        if (-not (Test-Path -LiteralPath $binding.Path -PathType Leaf)) { continue }
+        if (-not (Test-Path -LiteralPath $binding.Path -PathType Leaf)) {
+            if ($binding.Name -like 'readiness/eci*') {
+                $bindingErrors.Add("analysis-result.json records required ECI evidence, but $($binding.Name) is missing.") | Out-Null
+            }
+            continue
+        }
         $expected = Get-ArtifactBindingHash -Path $binding.Path -NormalizeTaskCheckboxes:$binding.NormalizeTasks
         $actual = [string]$hashes[$binding.Name]
         if (-not [string]::Equals($expected, $actual, [System.StringComparison]::Ordinal)) {
@@ -474,34 +488,20 @@ if ($readinessAssessmentExists -and -not $primaryStatus) {
     $blockers.Add("readiness Primary Status is '$primaryStatus'; /speckit.implement requires READY_FOR_PLAN.") | Out-Null
 }
 
-$eciRequiredNames = @('eci-assessment.md', 'source-manifest.md', 'adoption-record.md', 'authorization-record.md')
-$eciDossierStarted = @($eciRequiredNames | Where-Object {
-    Test-Path -LiteralPath (Join-Path $paths.ECI_DIR $_) -PathType Leaf
-}).Count -gt 0
-$eciRequired = (
-    $primaryStatus -eq 'ROUTE_TO_ECI' -or
-    (Test-Path -LiteralPath $paths.ECI_TRIGGER -PathType Leaf) -or
-    $eciDossierStarted
+$eciArtifactBindings = @(
+    @{ Name = 'readiness/eci-trigger.md'; Path = $paths.ECI_TRIGGER }
+    @{ Name = 'readiness/eci/eci-assessment.md'; Path = (Join-Path $paths.ECI_DIR 'eci-assessment.md') }
+    @{ Name = 'readiness/eci/source-manifest.md'; Path = (Join-Path $paths.ECI_DIR 'source-manifest.md') }
+    @{ Name = 'readiness/eci/adoption-record.md'; Path = (Join-Path $paths.ECI_DIR 'adoption-record.md') }
+    @{ Name = 'readiness/eci/authorization-record.md'; Path = (Join-Path $paths.ECI_DIR 'authorization-record.md') }
 )
+$observedEciRequired = (
+    $primaryStatus -eq 'ROUTE_TO_ECI' -or
+    @($eciArtifactBindings | Where-Object { Test-Path -LiteralPath $_.Path -PathType Leaf }).Count -gt 0
+)
+$recordedEciRequired = $false
+$eciRequired = $observedEciRequired
 $authorizationOutcome = $null
-if ($eciRequired) {
-    foreach ($name in $eciRequiredNames) {
-        $eciPath = Join-Path $paths.ECI_DIR $name
-        if (-not (Test-Path -LiteralPath $eciPath -PathType Leaf)) {
-            $blockers.Add("Triggered ECI governance requires readiness/eci/$name before /speckit.implement.") | Out-Null
-        }
-    }
-
-    $authorizationPath = Join-Path $paths.ECI_DIR 'authorization-record.md'
-    if (Test-Path -LiteralPath $authorizationPath -PathType Leaf) {
-        $authorizationOutcome = Get-MarkdownField -Path $authorizationPath -Field 'Authorization Outcome'
-        if (-not $authorizationOutcome) {
-            $blockers.Add('ECI authorization-record.md has no machine-readable Authorization Outcome.') | Out-Null
-        } elseif ($authorizationOutcome -ne 'READY_FOR_MAINLINE_IMPLEMENTATION') {
-            $blockers.Add("ECI Authorization Outcome is '$authorizationOutcome'; mainline implementation is not authorized.") | Out-Null
-        }
-    }
-}
 
 $pendingTasks = Get-PendingTasks -Path $paths.TASKS
 if (-not $CompletionValidation -and $pendingTasks.Count -eq 0 -and (Test-Path -LiteralPath $paths.TASKS -PathType Leaf)) {
@@ -531,6 +531,12 @@ foreach ($analyzeError in $analyzeCompletion.Errors) {
 
 $criticalFindings = @()
 if ($analyzeCompletion.State -eq 'complete' -and $analyzeCompletion.Data -is [System.Collections.IDictionary]) {
+    $recordedEciRequired = $analyzeCompletion.Data['eciRequired'] -eq $true
+    $eciRequired = $observedEciRequired -or $recordedEciRequired
+    if ($recordedEciRequired -ne $observedEciRequired) {
+        $blockers.Add("analysis-result.json ECI requirement ($recordedEciRequired) contradicts current ECI evidence ($observedEciRequired); ECI governance cannot be added or removed without re-running /speckit.analyze.") | Out-Null
+    }
+
     $expectedFeatureId = Split-Path -Leaf $paths.FEATURE_DIR
     if (-not [string]::Equals([string]$analyzeCompletion.Data['featureId'], $expectedFeatureId, [System.StringComparison]::Ordinal)) {
         $blockers.Add("analysis-result.json featureId does not match feature directory '$expectedFeatureId'.") | Out-Null
@@ -583,6 +589,24 @@ if ($analyzeCompletion.State -eq 'complete' -and $analyzeCompletion.Data -is [Sy
     }
     foreach ($obligation in $blockingObligations) {
         $blockers.Add("Intent obligation is blocking [$($obligation['sourceIntentItem'])]: $($obligation['evidence'])") | Out-Null
+    }
+}
+
+if ($eciRequired) {
+    foreach ($binding in $eciArtifactBindings) {
+        if (-not (Test-Path -LiteralPath $binding.Path -PathType Leaf)) {
+            $blockers.Add("Triggered or Analyze-recorded ECI governance requires $($binding.Name) before /speckit.implement.") | Out-Null
+        }
+    }
+
+    $authorizationPath = Join-Path $paths.ECI_DIR 'authorization-record.md'
+    if (Test-Path -LiteralPath $authorizationPath -PathType Leaf) {
+        $authorizationOutcome = Get-MarkdownField -Path $authorizationPath -Field 'Authorization Outcome'
+        if (-not $authorizationOutcome) {
+            $blockers.Add('ECI authorization-record.md has no machine-readable Authorization Outcome.') | Out-Null
+        } elseif ($authorizationOutcome -ne 'READY_FOR_MAINLINE_IMPLEMENTATION') {
+            $blockers.Add("ECI Authorization Outcome is '$authorizationOutcome'; mainline implementation is not authorized.") | Out-Null
+        }
     }
 }
 
