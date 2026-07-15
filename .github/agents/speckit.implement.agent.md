@@ -18,7 +18,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` from repo root and parse FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.** From the repo root, run `pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json` (pass `-FeatureDir <path>` only when the user supplied an explicit feature context). Parse `FEATURE_DIR`, `IMPL_PLAN`, `TASKS`, `READINESS_STATUS`, `ECI_REQUIRED`, `ANALYSIS_RESULT`, `ANALYZE_STATE`, and `BLOCKERS`. If the process exits non-zero, `READY` is not exactly `true`, output is missing/invalid, or any blocker is present, STOP and report the blocker verbatim. Do not continue on operator confirmation: this gate has no `-Force` bypass. All returned paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
    - Scan all checklist files in the checklists/ directory

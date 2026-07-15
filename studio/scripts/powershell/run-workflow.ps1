@@ -118,26 +118,15 @@ function Deny-WorkflowRun {
 # state.json is the enable/disable ledger. A workflow directory existing on disk
 # is not, by itself, an authorization to execute it.
 # ---------------------------------------------------------------------------
-$catalogPath = Join-Path $studioRoot 'workflows/catalog.json'
-$stateLedgerPath = Join-Path $studioRoot 'workflows/state.json'
 $manifestPath = Join-Path (Join-Path $studioRoot "workflows/$Id") 'manifest.json'
 
-if (-not (Test-Path -LiteralPath $catalogPath -PathType Leaf)) {
-    Deny-WorkflowRun -Message "Workflow catalog not found at $catalogPath; refusing to run without governance metadata."
+$registry = Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot
+$authorization = Get-WorkflowExecutionAuthorization -Registry $registry -Id $Id
+if (-not $authorization.AUTHORIZED) {
+    Deny-WorkflowRun -Message ("Workflow registry authorization denied: {0}" -f (@($authorization.ERRORS) -join ' '))
 }
-try { $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json -AsHashtable } catch {
-    Deny-WorkflowRun -Message "Unable to parse workflow catalog at ${catalogPath}: $($_.Exception.Message)"
-}
-$catalogEntry = $null
-foreach ($wf in @($catalog.workflows)) {
-    if ([string]$wf.id -eq $Id) { $catalogEntry = $wf; break }
-}
-if (-not $catalogEntry) {
-    Deny-WorkflowRun -Message "Workflow '$Id' is not cataloged in $catalogPath; refusing to run an ungoverned workflow."
-}
-if ([string]$catalogEntry.reviewStatus -eq 'rejected') {
-    Deny-WorkflowRun -Message "Workflow '$Id' has reviewStatus 'rejected' and is retained for audit history only."
-}
+$catalogEntry = $authorization.ENTRY.CATALOG_ENTRY
+
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     Deny-WorkflowRun -Message "Workflow manifest not found at $manifestPath."
 }
@@ -146,35 +135,6 @@ try { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 }
 if ([string]$manifest.id -ne $Id -or [string]$manifest.version -ne [string]$catalogEntry.version) {
     Deny-WorkflowRun -Message "Workflow identity mismatch: manifest declares '$($manifest.id)@$($manifest.version)' but the catalog entry is '$Id@$($catalogEntry.version)'."
-}
-$effectiveEnabled = [bool]$catalogEntry.defaultEnabled
-$enableSource = 'defaultEnabled'
-if (Test-Path -LiteralPath $stateLedgerPath -PathType Leaf) {
-    try { $stateLedger = Get-Content -LiteralPath $stateLedgerPath -Raw | ConvertFrom-Json -AsHashtable } catch {
-        Deny-WorkflowRun -Message "Unable to parse workflow state ledger at ${stateLedgerPath}: $($_.Exception.Message)"
-    }
-    if ($stateLedger.states -and $stateLedger.states.ContainsKey($Id)) {
-        $stateEntry = $stateLedger.states[$Id]
-        $effectiveEnabled = [bool]$stateEntry.enabled
-        $enableSource = 'state'
-        if ($stateEntry.pinnedVersion -and [string]$stateEntry.pinnedVersion -ne [string]$catalogEntry.version) {
-            Deny-WorkflowRun -Message "Workflow '$Id' state ledger pins version '$($stateEntry.pinnedVersion)' but the catalog lists '$($catalogEntry.version)'. Re-run set-workflow-state.ps1 after review."
-        }
-    }
-}
-if (-not $effectiveEnabled) {
-    Deny-WorkflowRun -Message "Workflow '$Id' is not enabled (reviewStatus '$($catalogEntry.reviewStatus)', defaultEnabled=$([bool]$catalogEntry.defaultEnabled)). Enable it explicitly with set-workflow-state.ps1 -Id $Id -State enabled."
-}
-# The runner re-checks the POLICY enable invariants instead of trusting ledger authors:
-# defaultEnabled is honored only for approved core/curated workflows, and an explicit
-# state-ledger enable is honored only for reviewStatus approved or deprecated (the same
-# rule set-workflow-state.ps1 enforces on the write path).
-if ($enableSource -eq 'defaultEnabled') {
-    if ([string]$catalogEntry.reviewStatus -ne 'approved' -or [string]$catalogEntry.trustLevel -notin @('core', 'curated')) {
-        Deny-WorkflowRun -Message "Workflow '$Id' is default-enabled but violates the default-enable policy (requires reviewStatus 'approved' and trustLevel core/curated; found '$($catalogEntry.reviewStatus)'/'$($catalogEntry.trustLevel)')."
-    }
-} elseif ([string]$catalogEntry.reviewStatus -notin @('approved', 'deprecated')) {
-    Deny-WorkflowRun -Message "Workflow '$Id' has reviewStatus '$($catalogEntry.reviewStatus)', which cannot be enabled via the state ledger (allowed: approved, deprecated)."
 }
 
 $inputHash = @{}

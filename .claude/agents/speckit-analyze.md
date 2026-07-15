@@ -25,7 +25,9 @@ Identify inconsistencies, duplications, ambiguities, underspecified items, readi
 
 ## Operating Constraints
 
-**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
+**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report plus the exact machine-result JSON described below. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually). The operator or workflow orchestration, not this agent, persists that exact JSON as `FEATURE_DIR/analysis-result.json`.
+
+**MACHINE AUTHORIZATION SOURCE**: `analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`. `analysis-checklist.md` may be used as human review notes, but its status or findings table is never authorization evidence.
 
 **Constitution Authority**: The dual-layer constitution system is **non-negotiable** within this analysis scope:
 - **Studio Constitution** (`studio/constitution/constitution.md`): Highest authority, always applies
@@ -305,6 +307,80 @@ report MUST include a one-line prompt:
 
 This is advisory only; analyze does not write files. Skip the prompt entirely when the change is
 purely consumer-project (`projects/`, `learning/`).
+
+### 6.1 Emit the Deterministic Machine Result
+
+After the Markdown report, emit one fenced `json` block containing the complete content that the
+operator must save unchanged as `FEATURE_DIR/analysis-result.json`. Do not write the file yourself.
+Do not add a timestamp, prose fields, comments, or properties not defined by
+`studio/runtime/analysis-result.schema.json`.
+
+Use these exact rules:
+
+- `schemaVersion` is `1.0.0`.
+- `featureId` is the leaf directory name of `FEATURE_DIR`.
+- `outcome` is `IMPLEMENTATION_READY` only when readiness is `READY_FOR_PLAN`, every Critical
+  finding is resolved, the Intent Drift Check passes, and every retained intent obligation is
+  accounted for. Otherwise it is `BLOCKED`.
+- `criticalFindings` contains every Critical finding, including resolved ones. Each entry uses
+  `OPEN` or `RESOLVED` and includes a non-empty resolution statement.
+- `intentDriftCheck.status` is `PASS` or `FAIL` and includes a non-empty summary.
+- When `intent-ledger.md` is absent, `intentObligations.status` is `NOT_REQUIRED` and `items` is
+  empty. When it exists, emit one item per ledger row; use overall status `ACCOUNTED` only when no
+  item is `BLOCKING`, otherwise use `BLOCKED`.
+- Hashes are lowercase SHA-256. Use raw file bytes for `spec.md`,
+  `readiness/readiness-assessment.md`, optional `intent-ledger.md`, and `plan.md`.
+- For `tasks.md`, hash task definitions rather than progress: decode UTF-8 strictly, normalize only
+  canonical task checkbox prefixes `[ ]`, `[x]`, and `[X]` before `T###` to `[ ]`, encode UTF-8
+  without BOM, then hash. Checkbox progress therefore does not stale Analyze evidence; any task ID,
+  metadata, description, or canonical-line change does.
+- Set the `intent-ledger.md` hash to JSON `null` when the file is absent.
+
+Use this exact PowerShell algorithm when computing the task-definition hash; it is identical to the
+consumer in `setup-implement.ps1`:
+
+```powershell
+$content = [System.IO.File]::ReadAllText($TASKS, [System.Text.UTF8Encoding]::new($false, $true))
+$normalized = [regex]::Replace(
+    $content,
+    '(?m)^(- )\[(?: |x|X)\](\s+T\d{3}\b)',
+    '$1[ ]$2'
+)
+$bytes = [System.Text.UTF8Encoding]::new($false).GetBytes($normalized)
+$tasksDefinitionHash = ([System.Convert]::ToHexString(
+    [System.Security.Cryptography.SHA256]::HashData($bytes)
+)).ToLowerInvariant()
+```
+
+Emit properties in this order:
+
+```json
+{
+  "schemaVersion": "1.0.0",
+  "featureId": "<FEATURE_DIR leaf>",
+  "outcome": "IMPLEMENTATION_READY or BLOCKED",
+  "artifactHashes": {
+    "spec.md": "<lowercase sha256>",
+    "readiness/readiness-assessment.md": "<lowercase sha256>",
+    "intent-ledger.md": null,
+    "plan.md": "<lowercase sha256>",
+    "tasks.md": "<lowercase normalized task-definition sha256>"
+  },
+  "criticalFindings": [],
+  "intentDriftCheck": {
+    "status": "PASS or FAIL",
+    "summary": "<non-empty evidence summary>"
+  },
+  "intentObligations": {
+    "status": "NOT_REQUIRED, ACCOUNTED, or BLOCKED",
+    "items": []
+  }
+}
+```
+
+After the block, state exactly which absolute path must receive the unchanged JSON and that
+`/speckit.implement` will reject missing, schema-invalid, blocked, or stale results. The fenced block
+must contain actual values, never the angle-bracket placeholders shown above.
 
 ### 7. Provide Next Actions
 

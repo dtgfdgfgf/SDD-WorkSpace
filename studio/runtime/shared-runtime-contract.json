@@ -590,7 +590,46 @@
         "Plan/tasks assumptions that violate ECI `Allowed Implementation Scope`, `Explicit Prohibitions`, or adoption boundary",
         "#### E. Intent Drift Check",
         "From README.md (if present):",
-        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, missing required `intent-ledger.md`, dropped-without-signoff, truthfulness drift that over-claims shipped coverage, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality"
+        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, missing required `intent-ledger.md`, dropped-without-signoff, truthfulness drift that over-claims shipped coverage, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality",
+        "`analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`.",
+        "### 6.1 Emit the Deterministic Machine Result",
+        "Do not write the file yourself.",
+        "`outcome` is `IMPLEMENTATION_READY` only when readiness is `READY_FOR_PLAN`",
+        "For `tasks.md`, hash task definitions rather than progress",
+        "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)",
+        "`intentObligations.status` is `NOT_REQUIRED`",
+        "When it exists, emit one item per ledger row",
+        "The operator or workflow orchestration, not this agent, persists that exact JSON"
+      ]
+    },
+    {
+      "id": "implement-agent-first-action-gate",
+      "path": ".github/agents/speckit.implement.agent.md",
+      "mustContainAll": [
+        "## Outline\n\n1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.**",
+        "pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json",
+        "If the process exits non-zero, `READY` is not exactly `true`, output is missing/invalid, or any blocker is present, STOP",
+        "this gate has no `-Force` bypass"
+      ]
+    },
+    {
+      "id": "implement-claude-first-action-gate",
+      "path": ".claude/agents/speckit-implement.md",
+      "mustContainAll": [
+        "## Outline\n\n1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.**",
+        "pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json",
+        "this gate has no `-Force` bypass"
+      ]
+    },
+    {
+      "id": "analyze-claude-machine-result",
+      "path": ".claude/agents/speckit-analyze.md",
+      "mustContainAll": [
+        "`analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`.",
+        "### 6.1 Emit the Deterministic Machine Result",
+        "Do not write the file yourself.",
+        "For `tasks.md`, hash task definitions rather than progress",
+        "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)"
       ]
     }
   ],
@@ -628,6 +667,16 @@
         "`deferred`",
         "`dropped_with_owner_signoff`",
         "`dropped_with_owner_signoff` MUST include explicit owner signoff"
+      ]
+    },
+    {
+      "id": "analysis-checklist-informational-only",
+      "path": "studio/templates/sdd-docs/checklist-template.md",
+      "mustContainAll": [
+        "## Analyze Review Notes",
+        "Human-facing review aid only. This checklist does not authorize /speckit.implement.",
+        "Machine authorization comes exclusively from a schema-valid analysis-result.json",
+        "**Review Status**: DRAFT"
       ]
     },
     {
@@ -861,6 +910,33 @@
       ]
     },
     {
+      "id": "common-workflow-registry-authorization",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Test-StrictBooleanValue",
+        "return ($Value -is [bool])",
+        "function Read-WorkflowRegistryDocument",
+        "[Parameter(Mandatory = $true)] [string]$TrustedSchemaPath",
+        "$schemaValid = Test-Json -Json $raw -Schema $schema -ErrorAction Stop",
+        "Get-FileHash -LiteralPath $SchemaPath -Algorithm SHA256",
+        "Get-FileHash -LiteralPath $TrustedSchemaPath -Algorithm SHA256",
+        "if ($schemaHash -cne $trustedSchemaHash)",
+        "schema identity mismatch",
+        "function Get-WorkflowRegistrySnapshot",
+        "catalog.schema.json",
+        "state.schema.json",
+        "$trustedWorkflowsRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../workflows'))",
+        "Required $Label file missing: $Path",
+        "$stateValidation = Read-WorkflowRegistryDocument",
+        "-Path $statePath",
+        "$errors += @($stateValidation.ERRORS)",
+        "if (-not (Test-StrictBooleanValue -Value $stateEntry['enabled']))",
+        "if (-not (Test-StrictBooleanValue -Value $entry['defaultEnabled']))",
+        "function Get-WorkflowExecutionAuthorization",
+        "AUTHORIZED   = ($errors.Count -eq 0)"
+      ]
+    },
+    {
       "id": "setup-hooks-repo-root-awareness",
       "path": "studio/scripts/powershell/setup-hooks.ps1",
       "mustContainAll": [
@@ -988,7 +1064,11 @@
         "intent-ledger.md",
         "ROUTE_TO_ECI",
         "tasks-no-canonical-line",
-        "Get-MarkdownField"
+        "Get-MarkdownField",
+        "readiness-dir-missing",
+        "eci-dir-missing",
+        "$primaryStatus -eq 'ROUTE_TO_ECI' -or",
+        "Triggered ECI governance requires readiness/eci/$name."
       ]
     },
     {
@@ -1052,32 +1132,58 @@
       "mustContainAll": [
         "checklist-template.md",
         "validate-feature-structure.ps1",
-        "Intent Drift Check",
+        "analysis-result.json",
+        "runtime/analysis-result.schema.json",
+        "analysis-checklist.md is informational only",
+        "$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))",
+        "ANALYSIS_RESULT_SCHEMA",
         "ANALYSIS_CHECKLIST",
         "Force"
       ]
     },
     {
-      "id": "setup-implement-tasks-gate",
+      "id": "setup-implement-non-bypassable-gate",
       "path": "studio/scripts/powershell/setup-implement.ps1",
       "mustContainAll": [
         "Get-PendingTasks",
         "Get-UnresolvedCriticalFindings",
         "validate-feature-structure.ps1",
+        "readiness/readiness-assessment.md",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "Get-AnalyzeCompletionState",
+        "Test-Json -Json $raw -Schema $schema -ErrorAction Stop",
+        "[switch]$CompletionValidation",
+        "Get-ArtifactBindingHash",
+        "NormalizeTaskCheckboxes",
+        "Test-AnalyzeArtifactBindings",
+        "Get-IntentLedgerEntries",
+        "intent-ledger.md header must contain the canonical nine columns in canonical order",
+        "requires a concrete reentry_trigger for deferred intent",
+        "$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))",
+        "intentObligations",
+        "does not account for its intent obligations",
+        "does not account exactly once for intent obligation",
+        "returned no machine-readable result",
+        "validate-feature-structure.ps1 exited with code $validatorExitCode",
+        "The former `-Force` bypass is intentionally not accepted.",
+        "FORCED                = $false",
         "PENDING_TASKS",
-        "SELECTED_TASK",
-        "Force"
+        "SELECTED_TASK"
       ]
     },
     {
-      "id": "setup-implement-analyze-gate",
-      "path": "studio/scripts/powershell/setup-implement.ps1",
+      "id": "analyze-result-schema-contract",
+      "path": "studio/runtime/analysis-result.schema.json",
       "mustContainAll": [
-        "Get-AnalyzeCompletionState",
-        "Analysis Status",
-        "has not run",
-        "is not complete",
-        "ANALYZE_STATE"
+        "\"additionalProperties\": false",
+        "\"const\": \"1.0.0\"",
+        "\"IMPLEMENTATION_READY\"",
+        "\"artifactHashes\"",
+        "\"readiness/readiness-assessment.md\"",
+        "\"criticalFindings\"",
+        "\"intentDriftCheck\"",
+        "\"intentObligations\"",
+        "\"pattern\": \"^[a-f0-9]{64}$\""
       ]
     },
     {
@@ -1231,13 +1337,12 @@
       "path": "studio/scripts/powershell/run-workflow.ps1",
       "mustContainAll": [
         "Deny-WorkflowRun",
-        "is not cataloged in",
-        "reviewStatus 'rejected' and is retained for audit history only",
+        "Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot",
+        "Get-WorkflowExecutionAuthorization -Registry $registry -Id $Id",
+        "if (-not $authorization.AUTHORIZED)",
+        "Workflow registry authorization denied",
+        "$catalogEntry = $authorization.ENTRY.CATALOG_ENTRY",
         "Workflow identity mismatch",
-        "$effectiveEnabled = [bool]$catalogEntry.defaultEnabled",
-        "is not enabled (reviewStatus",
-        "violates the default-enable policy",
-        "which cannot be enabled via the state ledger",
         "-ExpectedWorkflowId $Id",
         "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path"
       ]
@@ -1257,6 +1362,17 @@
       "id": "workflow-engine-terminal-postcondition",
       "path": "studio/scripts/powershell/workflow-engine.ps1",
       "mustContainAll": [
+        "function Get-CanonicalTaskInventory",
+        "function Initialize-StepPostconditionBaseline",
+        "$stepVars['baseline_task_ids'] =",
+        "Initialize-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot",
+        "baseline canonical task inventory is missing from RunState; restart the run",
+        "baseline task ID(s) missing or non-canonical",
+        "baseline task ID(s) remain unchecked",
+        "function Test-TerminalCompletionValidation",
+        "$completionValidationFailure = Test-TerminalCompletionValidation -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot",
+        "terminal completion validation failed: script exited with code $exitCode",
+        "result is missing Boolean READY",
         "function Test-StepPostcondition",
         "no-pending-tasks",
         "$accepted = ($acceptRequested -and -not $terminal)",
@@ -1297,10 +1413,31 @@
       ]
     },
     {
+      "id": "sdd-pipeline-analyze-machine-result",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  - id: stage-analyze\n    type: command\n    dispatch: agent\n    agent_command: /speckit.analyze\n    expected_artifact: \"specs/{{ inputs.feature }}/analysis-result.json\"",
+        "save its exact schema-valid machine-result JSON unchanged",
+        "analysis-checklist.md is informational only"
+      ]
+    },
+    {
       "id": "sdd-pipeline-implement-terminal",
       "path": "studio/workflows/sdd-pipeline/workflow.yml",
       "mustContainAll": [
-        "  - id: stage-implement\n    type: command\n    dispatch: agent\n    agent_command: /speckit.implement\n    expected_artifact: \"specs/{{ inputs.feature }}/tasks.md\"\n    terminal: true\n    postcondition:\n      type: no-pending-tasks\n      file: \"specs/{{ inputs.feature }}/tasks.md\""
+        "  - id: stage-implement\n    type: command\n    dispatch: agent\n    agent_command: /speckit.implement\n    expected_artifact: \"specs/{{ inputs.feature }}/tasks.md\"\n    terminal: true\n    postcondition:\n      type: no-pending-tasks\n      file: \"specs/{{ inputs.feature }}/tasks.md\"",
+        "    completion_validation:\n      script: studio/scripts/powershell/setup-implement.ps1\n      args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-CompletionValidation\", \"-Json\"]"
+      ]
+    },
+    {
+      "id": "workflow-manifest-terminal-completion-validation",
+      "path": "studio/workflows/manifest.schema.json",
+      "mustContainAll": [
+        "\"completion_validation\"",
+        "\"required\": [\"script\", \"args\"]",
+        "\"if\": { \"required\": [\"completion_validation\"] }",
+        "\"terminal\": { \"const\": true }",
+        "\"required\": [\"dispatch\", \"terminal\", \"postcondition\"]"
       ]
     },
     {
@@ -1316,15 +1453,11 @@
       "id": "list-workflows-registry-validation",
       "path": "studio/scripts/powershell/list-workflows.ps1",
       "mustContainAll": [
-        "catalog.schema.json",
-        "state.schema.json",
-        "Test-Json",
-        "canonical object shape",
-        "Duplicate workflow catalog id",
-        "unknown catalog id",
-        "pinnedVersion",
-        "defaultEnabled=true requires",
-        "enabled state requires"
+        "$registry = Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot",
+        "$authorization = Get-WorkflowExecutionAuthorization -Registry $registry -Id ([string]$entry.ID)",
+        "executionAuthorized = $authorization.AUTHORIZED",
+        "authorizationErrors = @($authorization.ERRORS)",
+        "VALID         = ($errors.Count -eq 0)"
       ]
     }
   ],
@@ -1386,6 +1519,7 @@
     ".githooks/pre-commit.ps1",
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
+    "studio/runtime/analysis-result.schema.json",
     "studio/runtime/mainline-note-validation-baseline.json",
     "studio/templates/project-init/.gitignore",
     "studio/templates/project-init/.gitattributes",

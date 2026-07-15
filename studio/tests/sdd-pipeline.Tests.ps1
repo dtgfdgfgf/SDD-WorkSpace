@@ -97,3 +97,15 @@ Describe 'plan preparation binds to the workflow feature' -Skip:(-not $script:ya
         $agentStep[0].operator_message | Should -Match '/speckit\.plan -FeatureDir specs/\{\{ inputs\.feature \}\}'
     }
 }
+
+Describe 'Analyze uses the machine-readable authorization artifact' {
+    It 'requires analysis-result.json and treats the Markdown checklist as informational only' {
+        $content = Get-Content -LiteralPath $script:workflowPath -Raw
+        $match = [regex]::Match($content, '(?ms)^\s*- id: stage-analyze\s+.*?(?=^\s*# 8\. Implement)')
+        $match.Success | Should -BeTrue
+        $match.Value | Should -Match 'expected_artifact:\s*"specs/\{\{ inputs\.feature \}\}/analysis-result\.json"'
+        $match.Value | Should -Match 'exact schema-valid machine-result JSON'
+        $match.Value | Should -Match 'analysis-checklist\.md is informational only'
+        $match.Value | Should -Not -Match 'expected_artifact:.*analysis-checklist\.md'
+    }
+}

@@ -9,9 +9,11 @@
     Confirms that the canonical artifact set for analyze is complete: spec.md,
     readiness/readiness-assessment.md, plan.md, and tasks.md must all exist.
     Delegates structural validation to validate-feature-structure.ps1 and
-    scaffolds analysis-checklist.md from studio/templates/sdd-docs/checklist-template.md
-    so the agent has a checklist surface to record findings, including the
-    Intent Drift Check required by constitution §8.
+    identifies the canonical analysis-result.json target and schema consumed
+    by setup-implement.ps1. analysis-checklist.md is scaffolded only as an
+    optional human review surface; it is not implementation authorization.
+    The machine result carries the required Intent Drift Check and intent
+    obligation disposition.
 
     Hard gate (constitution §2 + §8): /speckit.analyze depends on every prior
     stage. Use `-Force` to override the entry gate when investigating an
@@ -30,7 +32,7 @@
     Show this help message.
 
 .NOTES
-    Exit code: 0 analysis-checklist scaffolded, 1 entry-gate failure (unless -Force).
+    Exit code: 0 ready to analyze, 1 entry-gate failure (unless -Force).
 #>
 
 [CmdletBinding()]
@@ -134,6 +136,9 @@ if ($studioRoot) {
 }
 
 $checklistPath = Join-Path $paths.FEATURE_DIR 'analysis-checklist.md'
+$analysisResultPath = Join-Path $paths.FEATURE_DIR 'analysis-result.json'
+$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$analysisResultSchema = Join-Path $trustedStudioRoot 'runtime/analysis-result.schema.json'
 $scaffolded = $false
 $checklistExists = Test-Path -LiteralPath $checklistPath -PathType Leaf
 if ($ready) {
@@ -151,6 +156,7 @@ if ($ready) {
         $scaffolded = $true
         $messages.Add('checklist-template.md not found; created empty file.') | Out-Null
     }
+    $messages.Add('analysis-checklist.md is informational only. Emit the exact analysis-result.json payload required by the canonical schema; the Analyze agent remains read-only and does not persist it.') | Out-Null
 }
 
 $stage = 'analyze'
@@ -163,6 +169,8 @@ $result = [ordered]@{
     READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT
     IMPL_PLAN            = $paths.IMPL_PLAN
     TASKS                = $paths.TASKS
+    ANALYSIS_RESULT      = $analysisResultPath
+    ANALYSIS_RESULT_SCHEMA = $analysisResultSchema
     ANALYSIS_CHECKLIST   = $checklistPath
     SCAFFOLDED           = $scaffolded
     STRUCTURE_VALID      = if ($validation) { $validation.VALID } else { $null }
@@ -176,6 +184,8 @@ if ($Json) {
     Write-Output ("STAGE: {0}" -f $stage)
     Write-Output ("READY: {0}" -f $ready)
     Write-Output ("FEATURE_DIR: {0}" -f $paths.FEATURE_DIR)
+    Write-Output ("ANALYSIS_RESULT: {0}" -f $analysisResultPath)
+    Write-Output ("ANALYSIS_RESULT_SCHEMA: {0}" -f $analysisResultSchema)
     Write-Output ("ANALYSIS_CHECKLIST: {0}" -f $checklistPath)
     Write-Output ("SCAFFOLDED: {0}" -f $scaffolded)
     if ($validation) {

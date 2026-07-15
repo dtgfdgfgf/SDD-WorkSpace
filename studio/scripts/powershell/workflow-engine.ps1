@@ -366,30 +366,124 @@ function Get-ArtifactFingerprint {
     return [ordered]@{ exists = $true; empty = $false; hash = $hash }
 }
 
+function Get-CanonicalTaskInventory {
+    <#
+    .SYNOPSIS
+        Returns task IDs and checkbox state only for constitution-canonical task lines.
+
+    .DESCRIPTION
+        The exact accepted shape is:
+        - [ ] T### [P#] [Risk: X] [Story: ...] Description
+
+        Checked tasks may use x or X. Lines with a changed ID width, missing metadata,
+        indentation, alternate bullet, or missing description are deliberately excluded so
+        they cannot satisfy a persisted baseline inventory after Implement begins.
+    #>
+    param([Parameter(Mandatory)] [string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
+
+    $content = [string](Get-Content -LiteralPath $Path -Raw)
+    $pattern = [regex]'(?m)^- \[(?<checkbox>[ xX])\] (?<id>T\d{3}) \[P[1-3]\] \[Risk: (?:Low|Medium|High)\] \[Story: [^\]\r\n]+\] \S[^\r\n]*[ \t]*\r?$'
+    foreach ($match in $pattern.Matches($content)) {
+        [ordered]@{
+            id      = $match.Groups['id'].Value
+            checked = ($match.Groups['checkbox'].Value -in 'x', 'X')
+        }
+    }
+}
+
+function Resolve-StepPostconditionFilePath {
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot)
+    $fileRel = Resolve-Interpolation -Template ([string]$Step.postcondition.file) -Context $RunState
+    $filePath = if ([System.IO.Path]::IsPathRooted($fileRel)) { $fileRel } else { Join-Path $ProjectRoot $fileRel }
+    Assert-PathInsideRoot -Root $ProjectRoot -Candidate $filePath -MessagePrefix 'postcondition file escapes project root'
+    return $filePath
+}
+
+function Initialize-StepPostconditionBaseline {
+    <#
+    .SYNOPSIS
+        Persists evidence that a terminal postcondition must preserve across agent execution.
+    #>
+    param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot)
+    if (-not $Step.Contains('postcondition') -or -not $Step.postcondition) { return }
+    if ([string]$Step.postcondition.type -ne 'no-pending-tasks') { return }
+
+    $stepVars = $RunState.vars.steps[$Step.id]
+    if ($stepVars.ContainsKey('baseline_task_ids')) { return }
+
+    $filePath = Resolve-StepPostconditionFilePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+    $inventory = @(Get-CanonicalTaskInventory -Path $filePath)
+    $stepVars['baseline_task_ids'] = @($inventory | ForEach-Object { [string]$_.id } | Sort-Object -Unique)
+    $RunState.vars.steps[$Step.id] = $stepVars
+}
+
 function Test-StepPostcondition {
     <#
     .SYNOPSIS
         Evaluates a declarative step postcondition. Returns $null when satisfied, otherwise a
         human-readable failure reason. Artifact change detection proves the agent did work;
         the postcondition proves the work is actually finished (e.g. a terminal implement
-        step is complete only when zero canonical tasks remain unchecked).
+        step is complete only when every baseline canonical task ID remains canonical and
+        checked).
     #>
     param($Step, $RunState, [Parameter(Mandatory)] [string]$ProjectRoot)
     if (-not $Step.Contains('postcondition') -or -not $Step.postcondition) { return $null }
     $pc = $Step.postcondition
     $pcType = [string]$pc.type
-    $fileRel = Resolve-Interpolation -Template ([string]$pc.file) -Context $RunState
-    $filePath = if ([System.IO.Path]::IsPathRooted($fileRel)) { $fileRel } else { Join-Path $ProjectRoot $fileRel }
-    Assert-PathInsideRoot -Root $ProjectRoot -Candidate $filePath -MessagePrefix 'postcondition file escapes project root'
+    $filePath = Resolve-StepPostconditionFilePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
     switch ($pcType) {
         'no-pending-tasks' {
             if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
                 return "postcondition no-pending-tasks: file not found: $filePath"
             }
-            $pending = @([regex]::Matches((Get-Content -LiteralPath $filePath -Raw), '(?m)^\s*-\s\[\s\]\s+T\d+'))
-            if ($pending.Count -gt 0) {
-                return "postcondition no-pending-tasks: $($pending.Count) unchecked canonical task(s) remain in $filePath"
+
+            $stepVars = $null
+            if ($RunState.vars -and $RunState.vars.steps -and $RunState.vars.steps.ContainsKey($Step.id)) {
+                $stepVars = $RunState.vars.steps[$Step.id]
             }
+            if (-not $stepVars -or -not $stepVars.ContainsKey('baseline_task_ids')) {
+                return 'postcondition no-pending-tasks: baseline canonical task inventory is missing from RunState; restart the run'
+            }
+
+            $baselineIds = @($stepVars['baseline_task_ids'] | ForEach-Object { [string]$_ })
+            if ($baselineIds.Count -eq 0) {
+                return 'postcondition no-pending-tasks: baseline canonical task inventory is empty; restart with a valid tasks.md'
+            }
+            if (@($baselineIds | Where-Object { $_ -notmatch '^T\d{3}$' }).Count -gt 0 -or
+                @($baselineIds | Sort-Object -Unique).Count -ne $baselineIds.Count) {
+                return 'postcondition no-pending-tasks: baseline canonical task inventory in RunState is invalid; restart the run'
+            }
+
+            $currentInventory = @(Get-CanonicalTaskInventory -Path $filePath)
+            $missingIds = @()
+            $duplicateIds = @()
+            $uncheckedIds = @()
+            foreach ($taskId in $baselineIds) {
+                $matchesForId = @($currentInventory | Where-Object { [string]$_.id -eq $taskId })
+                if ($matchesForId.Count -eq 0) {
+                    $missingIds += $taskId
+                } elseif ($matchesForId.Count -gt 1) {
+                    $duplicateIds += $taskId
+                } elseif (-not [bool]$matchesForId[0].checked) {
+                    $uncheckedIds += $taskId
+                }
+            }
+            if ($missingIds.Count -gt 0) {
+                return "postcondition no-pending-tasks: baseline task ID(s) missing or non-canonical: $($missingIds -join ', ')"
+            }
+            if ($duplicateIds.Count -gt 0) {
+                return "postcondition no-pending-tasks: baseline task ID(s) appear more than once: $($duplicateIds -join ', ')"
+            }
+            if ($uncheckedIds.Count -gt 0) {
+                return "postcondition no-pending-tasks: baseline task ID(s) remain unchecked: $($uncheckedIds -join ', ')"
+            }
+
+            $otherUncheckedIds = @($currentInventory | Where-Object { -not [bool]$_.checked } | ForEach-Object { [string]$_.id } | Sort-Object -Unique)
+            if ($otherUncheckedIds.Count -gt 0) {
+                return "postcondition no-pending-tasks: canonical task ID(s) added after baseline remain unchecked: $($otherUncheckedIds -join ', ')"
+            }
+
             return $null
         }
         default { return "unknown postcondition type: $pcType" }
@@ -453,6 +547,73 @@ function Add-RunStateHistoryOnce {
     Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $Outcome -Extras $Extras
 }
 
+function Test-TerminalCompletionValidation {
+    <#
+    .SYNOPSIS
+        Re-runs a terminal agent step's explicitly configured entry gate before completion.
+
+    .DESCRIPTION
+        Returns $null only when the child process exits zero and emits one JSON object whose
+        READY member is the Boolean true. Missing scripts, non-zero exits, empty output,
+        malformed JSON, and non-Boolean READY values all fail closed. Terminal steps without
+        an explicit completion_validation block retain their existing behavior.
+    #>
+    param(
+        $Step,
+        $RunState,
+        [Parameter(Mandatory)] [string]$ProjectRoot,
+        [Parameter(Mandatory)] [string]$WorkspaceRoot
+    )
+
+    if (-not $Step.Contains('completion_validation') -or -not $Step.completion_validation) {
+        return $null
+    }
+    if (-not ($Step.Contains('terminal') -and [bool]$Step.terminal) -or [string]$Step.dispatch -ne 'agent') {
+        return 'completion_validation is permitted only on a terminal agent command step'
+    }
+
+    $configuration = $Step.completion_validation
+    $scriptRel = [string]$configuration.script
+    $scriptPath = if ([System.IO.Path]::IsPathRooted($scriptRel)) { $scriptRel } else { Join-Path $WorkspaceRoot $scriptRel }
+    Assert-PathInsideRoot -Root $WorkspaceRoot -Candidate $scriptPath -MessagePrefix 'completion validation script path escapes workspace root'
+    if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+        return "completion validation script not found: $scriptPath"
+    }
+
+    $argv = @()
+    if ($configuration.Contains('args')) {
+        $argv = @($configuration.args | ForEach-Object { Resolve-Interpolation -Template ([string]$_) -Context $RunState })
+    }
+    $stdout = @(& pwsh -NoProfile -WorkingDirectory $ProjectRoot -File $scriptPath @argv 2>&1)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        return "terminal completion validation failed: script exited with code $exitCode"
+    }
+
+    $json = $stdout -join [Environment]::NewLine
+    if ([string]::IsNullOrWhiteSpace($json)) {
+        return 'terminal completion validation failed: script returned no machine-readable result'
+    }
+
+    try {
+        $result = $json | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+    } catch {
+        return "terminal completion validation failed: script returned invalid JSON: $($_.Exception.Message)"
+    }
+    if ($result -isnot [System.Collections.IDictionary] -or
+        -not $result.Contains('READY') -or
+        $result['READY'] -isnot [bool]) {
+        return 'terminal completion validation failed: result is missing Boolean READY'
+    }
+    if (-not [bool]$result['READY']) {
+        $details = @($result['BLOCKERS'] | ForEach-Object { [string]$_ } | Where-Object { $_ }) -join '; '
+        if ($details) { return "terminal completion validation failed: $details" }
+        return 'terminal completion validation failed: READY is false'
+    }
+
+    return $null
+}
+
 function Invoke-CommandStep {
     param(
         $Step,
@@ -513,10 +674,14 @@ function Invoke-CommandStep {
         # generic operator override.
         $accepted = ($acceptRequested -and -not $terminal)
         $postconditionFailure = $null
+        $completionValidationFailure = $null
 
         # First arrival this run: record the pre-agent baseline (scaffold or prior-stage state) and
         # halt. Mere existence of a scaffolded artifact is NOT completion; the agent must change it.
         if (-not $stepVars.ContainsKey('agent_baseline')) {
+            if ($terminal) {
+                Initialize-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
+            }
             $stepVars['agent_baseline'] = $current.hash
             $RunState.vars.steps[$Step.id] = $stepVars
         } else {
@@ -533,10 +698,13 @@ function Invoke-CommandStep {
             if ($completionCandidate) {
                 $postconditionFailure = Test-StepPostcondition -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
                 if ($null -eq $postconditionFailure) {
-                    Invoke-ArtifactExtraction -Step $Step -RunState $RunState -ArtifactPath $artifactPath
-                    $outcome = if ($changed) { 'success' } elseif ($accepted) { 'success-accepted' } else { 'success-postcondition' }
-                    Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras @{ artifact = $artifactPath }
-                    return @{ Status = 'success' }
+                    $completionValidationFailure = Test-TerminalCompletionValidation -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot
+                    if ($null -eq $completionValidationFailure) {
+                        Invoke-ArtifactExtraction -Step $Step -RunState $RunState -ArtifactPath $artifactPath
+                        $outcome = if ($changed) { 'success' } elseif ($accepted) { 'success-accepted' } else { 'success-postcondition' }
+                        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras @{ artifact = $artifactPath }
+                        return @{ Status = 'success' }
+                    }
                 }
             }
         }
@@ -546,6 +714,8 @@ function Invoke-CommandStep {
             "-AcceptAgent is disabled for terminal step $($Step.id); completion requires the real artifact postcondition$suffix"
         } elseif ($postconditionFailure) {
             $postconditionFailure
+        } elseif ($completionValidationFailure) {
+            $completionValidationFailure
         } elseif ($accepted) {
             "artifact missing or empty; cannot accept: $artifactPath"
         } else {

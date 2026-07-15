@@ -14,10 +14,11 @@
 
     Validation rules:
     - spec.md MUST exist and MUST contain a Version field.
-    - readiness/readiness-assessment.md MUST exist whenever any readiness
-      artifact is present (readiness directory must not be partial).
-    - When readiness Primary Status is `ROUTE_TO_ECI`, the readiness/eci/
-      dossier files (eci-assessment, source-manifest, adoption-record,
+    - readiness/ and readiness/readiness-assessment.md MUST exist. A missing
+      readiness stage is an error, not an advisory absence.
+    - readiness/eci/ MUST exist as the canonical ECI container. When readiness
+      routes to ECI, an eci-trigger exists, or any dossier artifact exists, all
+      four dossier files (eci-assessment, source-manifest, adoption-record,
       authorization-record) MUST exist.
     - When readiness Intent Ledger Requirement asks for create/update,
       intent-ledger.md MUST exist and contain at least one row.
@@ -105,12 +106,29 @@ if (-not (Test-Path -LiteralPath $specPath -PathType Leaf)) {
     }
 }
 
-# readiness/readiness-assessment.md (required if any readiness artifact exists)
+# readiness/readiness-assessment.md and readiness/eci/ (required containers)
 $readinessDir = Join-Path $resolvedFeatureDir 'readiness'
 $readinessAssessmentPath = Join-Path $readinessDir 'readiness-assessment.md'
+$eciDir = Join-Path $readinessDir 'eci'
+$eciTriggerPath = Join-Path $readinessDir 'eci-trigger.md'
+$eciRequiredNames = @('eci-assessment.md', 'source-manifest.md', 'adoption-record.md', 'authorization-record.md')
 $readinessExists = Test-Path -LiteralPath $readinessDir -PathType Container
 
-if ($readinessExists) {
+if (-not $readinessExists) {
+    $findings += New-Finding -Severity 'error' -Id 'readiness-dir-missing' `
+        -Message 'readiness/ is required for every governed feature before Analyze or Implement.' -Path $readinessDir
+
+    $intentLedgerPath = Join-Path $resolvedFeatureDir 'intent-ledger.md'
+    if (Test-Path -LiteralPath $intentLedgerPath -PathType Leaf) {
+        $findings += New-Finding -Severity 'warning' -Id 'intent-ledger-without-readiness' `
+            -Message 'intent-ledger.md exists but readiness/ has not been initiated.' -Path $intentLedgerPath
+    }
+} else {
+    if (-not (Test-Path -LiteralPath $eciDir -PathType Container)) {
+        $findings += New-Finding -Severity 'error' -Id 'eci-dir-missing' `
+            -Message 'readiness/eci/ is required as the canonical ECI dossier container.' -Path $eciDir
+    }
+
     if (-not (Test-Path -LiteralPath $readinessAssessmentPath -PathType Leaf)) {
         $findings += New-Finding -Severity 'error' -Id 'readiness-assessment-missing' `
             -Message 'readiness/ exists but readiness-assessment.md is missing.' -Path $readinessAssessmentPath
@@ -124,14 +142,21 @@ if ($readinessExists) {
                 -Message 'readiness-assessment.md must declare a Primary Status.' -Path $readinessAssessmentPath
         }
 
-        if ($primaryStatus -eq 'ROUTE_TO_ECI') {
-            $eciDir = Join-Path $readinessDir 'eci'
-            $eciRequired = @('eci-assessment.md', 'source-manifest.md', 'adoption-record.md', 'authorization-record.md')
-            foreach ($name in $eciRequired) {
+        $eciDossierStarted = @($eciRequiredNames | Where-Object {
+            Test-Path -LiteralPath (Join-Path $eciDir $_) -PathType Leaf
+        }).Count -gt 0
+        $eciRequired = (
+            $primaryStatus -eq 'ROUTE_TO_ECI' -or
+            (Test-Path -LiteralPath $eciTriggerPath -PathType Leaf) -or
+            $eciDossierStarted
+        )
+
+        if ($eciRequired) {
+            foreach ($name in $eciRequiredNames) {
                 $eciPath = Join-Path $eciDir $name
                 if (-not (Test-Path -LiteralPath $eciPath -PathType Leaf)) {
                     $findings += New-Finding -Severity 'error' -Id "eci-missing-$($name -replace '\.md$','')" `
-                        -Message "ROUTE_TO_ECI requires readiness/eci/$name." -Path $eciPath
+                        -Message "Triggered ECI governance requires readiness/eci/$name." -Path $eciPath
                 }
             }
         }
@@ -149,12 +174,6 @@ if ($readinessExists) {
                 }
             }
         }
-    }
-} else {
-    $intentLedgerPath = Join-Path $resolvedFeatureDir 'intent-ledger.md'
-    if (Test-Path -LiteralPath $intentLedgerPath) {
-        $findings += New-Finding -Severity 'warning' -Id 'intent-ledger-without-readiness' `
-            -Message 'intent-ledger.md exists but readiness/ has not been initiated.' -Path $intentLedgerPath
     }
 }
 

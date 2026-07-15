@@ -526,6 +526,320 @@ function Read-JsonFile {
     return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable
 }
 
+function Test-StrictBooleanValue {
+    <#
+    .SYNOPSIS
+    Return true only for an actual System.Boolean value.
+
+    .DESCRIPTION
+    PowerShell casts every non-empty string, including 'false', to $true. Registry
+    authorization must therefore inspect the parsed JSON type instead of coercing it.
+    #>
+    param([AllowNull()] [object]$Value)
+
+    return ($Value -is [bool])
+}
+
+function Read-WorkflowRegistryDocument {
+    <#
+    .SYNOPSIS
+    Parse and schema-validate one canonical workflow registry document.
+    #>
+    param(
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [Parameter(Mandatory = $true)] [string]$SchemaPath,
+        [Parameter(Mandatory = $true)] [string]$TrustedSchemaPath,
+        [Parameter(Mandatory = $true)] [string]$Label,
+        [Parameter(Mandatory = $true)] [string]$ExpectedRootProperty
+    )
+
+    $documentErrors = @()
+    $data = $null
+    $raw = $null
+    $parseSucceeded = $false
+    $schemaValid = $false
+    $schemaIdentityValid = $false
+    $schemaHash = $null
+    $trustedSchemaHash = $null
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        $documentErrors += "Required $Label file missing: $Path"
+    } else {
+        try {
+            $raw = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
+            $data = $raw | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+            $parseSucceeded = $true
+        } catch {
+            $documentErrors += "Invalid $Label JSON: $($_.Exception.Message)"
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $SchemaPath -PathType Leaf)) {
+        $documentErrors += "Required $Label schema missing: $SchemaPath"
+    } elseif (-not (Test-Path -LiteralPath $TrustedSchemaPath -PathType Leaf)) {
+        $documentErrors += "Trusted canonical $Label schema missing: $TrustedSchemaPath"
+    } elseif ($parseSucceeded) {
+        try {
+            $schemaHash = (Get-FileHash -LiteralPath $SchemaPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+            $trustedSchemaHash = (Get-FileHash -LiteralPath $TrustedSchemaPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+            if ($schemaHash -cne $trustedSchemaHash) {
+                $documentErrors += "$Label schema identity mismatch: supplied SHA-256 $schemaHash does not match trusted canonical object shape SHA-256 $trustedSchemaHash at $TrustedSchemaPath"
+            } else {
+                $schemaIdentityValid = $true
+
+                $schema = Get-Content -LiteralPath $SchemaPath -Raw -ErrorAction Stop
+                $schemaDocument = $schema | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+                $schemaShapeValid = (
+                    $schemaDocument -is [System.Collections.IDictionary] -and
+                    [string]$schemaDocument['type'] -eq 'object' -and
+                    @($schemaDocument['required']) -contains $ExpectedRootProperty -and
+                    $schemaDocument['properties'] -is [System.Collections.IDictionary] -and
+                    $schemaDocument['properties'].Contains($ExpectedRootProperty) -and
+                    [string]$schemaDocument['$id'] -match ('/' + [regex]::Escape([System.IO.Path]::GetFileName($SchemaPath)) + '$')
+                )
+                if (-not $schemaShapeValid) {
+                    $documentErrors += "$Label schema is missing its canonical object shape for '$ExpectedRootProperty': $SchemaPath"
+                } else {
+                    $schemaValid = Test-Json -Json $raw -Schema $schema -ErrorAction Stop
+                    if (-not $schemaValid) {
+                        $documentErrors += "$Label does not conform to schema: $SchemaPath"
+                    }
+                }
+            }
+        } catch {
+            $documentErrors += "$Label schema validation failed: $($_.Exception.Message)"
+        }
+    }
+
+    return [PSCustomObject][ordered]@{
+        DATA            = $data
+        PARSE_SUCCEEDED = $parseSucceeded
+        SCHEMA_IDENTITY_VALID = $schemaIdentityValid
+        SCHEMA_VALID    = $schemaValid
+        SCHEMA_HASH     = $schemaHash
+        TRUSTED_SCHEMA_HASH = $trustedSchemaHash
+        ERRORS          = @($documentErrors)
+    }
+}
+
+function Get-WorkflowRegistrySnapshot {
+    <#
+    .SYNOPSIS
+    Return the shared fail-closed catalog/state validation and enable-state view.
+
+    .DESCRIPTION
+    Both list-workflows.ps1 and run-workflow.ps1 consume this function so listing
+    validity and execution authorization cannot silently diverge.
+    #>
+    param([Parameter(Mandatory = $true)] [string]$StudioRoot)
+
+    $workflowsRoot = Join-Path $StudioRoot 'workflows'
+    $catalogPath = Join-Path $workflowsRoot 'catalog.json'
+    $statePath = Join-Path $workflowsRoot 'state.json'
+    $catalogSchemaPath = Join-Path $workflowsRoot 'catalog.schema.json'
+    $stateSchemaPath = Join-Path $workflowsRoot 'state.schema.json'
+    $trustedWorkflowsRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../workflows'))
+    $trustedCatalogSchemaPath = Join-Path $trustedWorkflowsRoot 'catalog.schema.json'
+    $trustedStateSchemaPath = Join-Path $trustedWorkflowsRoot 'state.schema.json'
+
+    $errors = @()
+    $catalogValidation = Read-WorkflowRegistryDocument `
+        -Path $catalogPath `
+        -SchemaPath $catalogSchemaPath `
+        -TrustedSchemaPath $trustedCatalogSchemaPath `
+        -Label 'workflow catalog' `
+        -ExpectedRootProperty 'workflows'
+    $stateValidation = Read-WorkflowRegistryDocument `
+        -Path $statePath `
+        -SchemaPath $stateSchemaPath `
+        -TrustedSchemaPath $trustedStateSchemaPath `
+        -Label 'workflow state' `
+        -ExpectedRootProperty 'states'
+    $errors += @($catalogValidation.ERRORS)
+    $errors += @($stateValidation.ERRORS)
+
+    $catalog = if (
+        $catalogValidation.SCHEMA_VALID -and
+        $catalogValidation.DATA -is [System.Collections.IDictionary]
+    ) { $catalogValidation.DATA } else { $null }
+    $state = if (
+        $stateValidation.SCHEMA_VALID -and
+        $stateValidation.DATA -is [System.Collections.IDictionary]
+    ) { $stateValidation.DATA } else { $null }
+
+    $catalogEntries = if ($catalog -and $catalog.ContainsKey('workflows')) {
+        @($catalog['workflows'])
+    } else {
+        @()
+    }
+    $states = if (
+        $state -and
+        $state.ContainsKey('states') -and
+        $state['states'] -is [System.Collections.IDictionary]
+    ) { $state['states'] } else { @{} }
+
+    $catalogIndex = @{}
+    $catalogIds = @()
+    foreach ($entry in $catalogEntries) {
+        if ($entry -isnot [System.Collections.IDictionary]) {
+            $errors += 'Workflow catalog contains a non-object entry.'
+            continue
+        }
+
+        $entryId = [string]$entry['id']
+        if ([string]::IsNullOrWhiteSpace($entryId)) {
+            $errors += 'Workflow catalog contains an entry without an id.'
+            continue
+        }
+        $catalogIds += $entryId
+        if (-not $catalogIndex.ContainsKey($entryId)) {
+            $catalogIndex[$entryId] = $entry
+        }
+    }
+
+    foreach ($duplicate in @($catalogIds | Group-Object | Where-Object Count -gt 1)) {
+        $errors += "Duplicate workflow catalog id: $($duplicate.Name)"
+    }
+
+    foreach ($stateId in @($states.Keys)) {
+        if (-not $catalogIndex.ContainsKey([string]$stateId)) {
+            $errors += "Workflow state references unknown catalog id: $stateId"
+            continue
+        }
+
+        $stateEntry = $states[$stateId]
+        if ($stateEntry -isnot [System.Collections.IDictionary]) {
+            $errors += "Workflow state entry for '$stateId' must be an object"
+            continue
+        }
+        if (-not (Test-StrictBooleanValue -Value $stateEntry['enabled'])) {
+            $errors += "Workflow state enabled for '$stateId' must be a JSON boolean"
+        }
+
+        $catalogEntry = $catalogIndex[[string]$stateId]
+        if (
+            $null -ne $stateEntry['pinnedVersion'] -and
+            [string]$stateEntry['pinnedVersion'] -ne [string]$catalogEntry['version']
+        ) {
+            $errors += "Workflow state pinnedVersion '$($stateEntry['pinnedVersion'])' differs from catalog version '$($catalogEntry['version'])' for '$stateId'; the state ledger pins version '$($stateEntry['pinnedVersion'])'"
+        }
+    }
+
+    $workflows = @()
+    foreach ($entry in $catalogEntries) {
+        if ($entry -isnot [System.Collections.IDictionary]) { continue }
+        $entryId = [string]$entry['id']
+        if ([string]::IsNullOrWhiteSpace($entryId)) { continue }
+
+        if (-not (Test-StrictBooleanValue -Value $entry['defaultEnabled'])) {
+            $errors += "Workflow catalog defaultEnabled for '$entryId' must be a JSON boolean"
+            $defaultEnabled = $false
+        } else {
+            $defaultEnabled = $entry['defaultEnabled']
+        }
+
+        try {
+            $sourceRoot = Join-Path $StudioRoot ([string]$entry['sourcePath'])
+            if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
+                $errors += "Workflow sourcePath does not exist for '$entryId': $($entry['sourcePath'])"
+            }
+        } catch {
+            $errors += "Workflow sourcePath is invalid for '$entryId': $($entry['sourcePath'])"
+        }
+
+        $stateEntry = if ($states.ContainsKey($entryId)) { $states[$entryId] } else { $null }
+        $reviewStatus = [string]$entry['reviewStatus']
+        $trustLevel = [string]$entry['trustLevel']
+        if ($defaultEnabled -eq $true -and ($reviewStatus -ne 'approved' -or $trustLevel -notin @('core', 'curated'))) {
+            $errors += "Workflow '$entryId' defaultEnabled=true requires reviewStatus=approved and trustLevel core or curated; this violates the default-enable policy"
+        }
+        if (
+            $stateEntry -is [System.Collections.IDictionary] -and
+            (Test-StrictBooleanValue -Value $stateEntry['enabled']) -and
+            $stateEntry['enabled'] -eq $true -and
+            $reviewStatus -notin @('approved', 'deprecated')
+        ) {
+            $errors += "Workflow '$entryId' enabled state requires reviewStatus approved or deprecated; reviewStatus '$reviewStatus' cannot be enabled via the state ledger"
+        }
+
+        $effectiveEnabled = $false
+        $enableSource = 'defaultEnabled'
+        if (
+            $stateEntry -is [System.Collections.IDictionary] -and
+            (Test-StrictBooleanValue -Value $stateEntry['enabled'])
+        ) {
+            $effectiveEnabled = $stateEntry['enabled']
+            $enableSource = 'state'
+        } elseif (Test-StrictBooleanValue -Value $entry['defaultEnabled']) {
+            $effectiveEnabled = $entry['defaultEnabled']
+        }
+
+        $workflows += [PSCustomObject][ordered]@{
+            ID                = $entryId
+            TITLE             = [string]$entry['title']
+            VERSION           = [string]$entry['version']
+            SOURCE_PATH       = [string]$entry['sourcePath']
+            REVIEW_STATUS     = $reviewStatus
+            TRUST_LEVEL       = $trustLevel
+            DEFAULT_ENABLED   = $defaultEnabled
+            ENABLED           = $effectiveEnabled
+            ENABLE_SOURCE     = $enableSource
+            STEP_TYPES_USED   = @($entry['stepTypesUsed'])
+            PINNED_VERSION    = if ($stateEntry -is [System.Collections.IDictionary]) { [string]$stateEntry['pinnedVersion'] } else { $null }
+            STATE_SOURCE      = if ($stateEntry -is [System.Collections.IDictionary]) { [string]$stateEntry['source'] } else { $null }
+            CATALOG_ENTRY     = $entry
+            STATE_ENTRY       = $stateEntry
+        }
+    }
+
+    return [PSCustomObject][ordered]@{
+        VALID               = ($errors.Count -eq 0)
+        CATALOG_PATH        = $catalogPath
+        STATE_PATH          = $statePath
+        CATALOG_SCHEMA_PATH = $catalogSchemaPath
+        STATE_SCHEMA_PATH   = $stateSchemaPath
+        ERROR_COUNT         = $errors.Count
+        ERRORS              = @($errors)
+        WORKFLOWS           = @($workflows)
+    }
+}
+
+function Get-WorkflowExecutionAuthorization {
+    <#
+    .SYNOPSIS
+    Apply the shared registry validity and effective-enabled execution criterion.
+    #>
+    param(
+        [Parameter(Mandatory = $true)] $Registry,
+        [Parameter(Mandatory = $true)] [string]$Id
+    )
+
+    $errors = @()
+    if (-not $Registry.VALID) {
+        $errors += @($Registry.ERRORS)
+    }
+
+    $entry = @($Registry.WORKFLOWS | Where-Object { [string]$_.ID -eq $Id }) | Select-Object -First 1
+    if (-not $entry) {
+        $errors += "Workflow '$Id' is not cataloged in $($Registry.CATALOG_PATH); refusing to run an ungoverned workflow."
+    } else {
+        if ([string]$entry.REVIEW_STATUS -eq 'rejected') {
+            $errors += "Workflow '$Id' has reviewStatus 'rejected' and is retained for audit history only."
+        }
+        if ($entry.ENABLED -ne $true) {
+            $errors += "Workflow '$Id' is not enabled (reviewStatus '$($entry.REVIEW_STATUS)', defaultEnabled=$($entry.DEFAULT_ENABLED)). Enable it explicitly with set-workflow-state.ps1 -Id $Id -State enabled."
+        }
+    }
+
+    return [PSCustomObject][ordered]@{
+        AUTHORIZED   = ($errors.Count -eq 0)
+        ERROR_COUNT  = $errors.Count
+        ERRORS       = @($errors)
+        ENTRY        = $entry
+        ENABLE_SOURCE = if ($entry) { [string]$entry.ENABLE_SOURCE } else { $null }
+    }
+}
+
 function Write-JsonFile {
     param(
         [Parameter(Mandatory = $true)]

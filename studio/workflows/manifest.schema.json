@@ -122,6 +122,18 @@
             "file": { "type": "string", "minLength": 1 }
           }
         },
+        "completion_validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["script", "args"],
+          "properties": {
+            "script": { "type": "string", "minLength": 1 },
+            "args": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
         "extract": {
           "type": "array",
           "items": {
@@ -146,6 +158,16 @@
         {
           "if": { "properties": { "dispatch": { "const": "agent" } }, "required": ["dispatch"] },
           "then": { "required": ["agent_command", "expected_artifact"] }
+        },
+        {
+          "if": { "required": ["completion_validation"] },
+          "then": {
+            "properties": {
+              "dispatch": { "const": "agent" },
+              "terminal": { "const": true }
+            },
+            "required": ["dispatch", "terminal", "postcondition"]
+          }
         }
       ]
     },

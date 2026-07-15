@@ -50,6 +50,12 @@ BeforeAll {
         $studioFixture = Join-Path $TestDrive ("studio-{0}" -f ([System.Guid]::NewGuid().ToString('N').Substring(0, 8)))
         $wfDir = Join-Path $studioFixture "workflows/$wfId"
         New-Item -ItemType Directory -Path $wfDir -Force | Out-Null
+        foreach ($schemaName in @('catalog.schema.json', 'state.schema.json')) {
+            Copy-Item `
+                -LiteralPath (Join-Path $script:workflowsRoot $schemaName) `
+                -Destination (Join-Path $studioFixture "workflows/$schemaName") `
+                -Force
+        }
         $WorkflowYaml | Set-Content -LiteralPath (Join-Path $wfDir 'workflow.yml') -NoNewline
 
         [ordered]@{
@@ -63,14 +69,25 @@ BeforeAll {
                 id = $wfId; version = $CatalogVersion; title = 'Engine Test Fixture'
                 sourcePath = "workflows/$wfId"; reviewStatus = $ReviewStatus
                 trustLevel = $TrustLevel; defaultEnabled = $DefaultEnabled; owner = 'studio'
+                approvedBy = 'governance-test'; approvedAt = '2026-07-14T00:00:00+08:00'
+                stepTypesUsed = @('command', 'gate', 'if', 'switch'); notes = 'Isolated workflow-engine fixture.'
             }
         }
-        [ordered]@{ version = '1.0.0'; updated = '2026-07-14T00:00:00+08:00'; workflows = $catalogWorkflows } |
+        $catalogPolicy = [ordered]@{
+            mode = 'studio-first'; curatedOnly = $true; autoEnableNewWorkflows = $false
+            reviewStatuses = @('draft', 'approved', 'experimental', 'deprecated', 'rejected')
+            trustLevels = @('core', 'curated', 'experimental')
+            stateSources = @('default', 'manual', 'sync')
+        }
+        [ordered]@{ version = '1.0.0'; updated = '2026-07-14T00:00:00+08:00'; policy = $catalogPolicy; workflows = $catalogWorkflows } |
             ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $studioFixture 'workflows/catalog.json')
 
         $states = [ordered]@{}
         if ($null -ne $StateEnabled) {
-            $states[$wfId] = [ordered]@{ enabled = [bool]$StateEnabled; pinnedVersion = $CatalogVersion; source = 'manual' }
+            $states[$wfId] = [ordered]@{
+                enabled = [bool]$StateEnabled; pinnedVersion = $CatalogVersion
+                changedAt = '2026-07-14T00:00:00+08:00'; source = 'manual'
+            }
         }
         [ordered]@{ version = '1.0.0'; updated = '2026-07-14T00:00:00+08:00'; states = $states } |
             ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $studioFixture 'workflows/state.json')
@@ -95,6 +112,95 @@ BeforeAll {
         $json = $null
         try { $json = ($output -join "`n") | ConvertFrom-Json } catch { $json = $null }
         return [pscustomobject]@{ Output = $output; ExitCode = $exitCode; Json = $json }
+    }
+
+    function script:Get-WorkflowTestArtifactHash {
+        param(
+            [Parameter(Mandatory)] [string]$Path,
+            [switch]$NormalizeTaskCheckboxes
+        )
+
+        if (-not $NormalizeTaskCheckboxes) {
+            return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $content = [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false, $true))
+        $normalized = [regex]::Replace($content, '(?m)^(- )\[(?: |x|X)\](\s+T\d{3}\b)', '$1[ ]$2')
+        $bytes = [System.Text.UTF8Encoding]::new($false).GetBytes($normalized)
+        return ([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))).ToLowerInvariant()
+    }
+
+    function script:Initialize-ImplementGateFeature {
+        param($Fixture, [switch]$WithEci)
+
+        $featureDir = Join-Path $Fixture.ProjectRoot 'specs/999-fixture'
+        $readinessDir = Join-Path $featureDir 'readiness'
+        $eciDir = Join-Path $readinessDir 'eci'
+        New-Item -ItemType Directory -Path $eciDir -Force | Out-Null
+
+        @"
+# Feature Specification: Fixture
+
+**Feature ID**: ``999-fixture``
+**Version**: 1.0.0
+
+## Functional Requirements
+
+- **FR-001**: System MUST preserve terminal authorization.
+"@ | Set-Content -LiteralPath (Join-Path $featureDir 'spec.md') -NoNewline
+        @"
+# Implementation Plan: Fixture
+
+**Feature ID**: ``999-fixture``
+**Version**: 1.0.0
+"@ | Set-Content -LiteralPath (Join-Path $featureDir 'plan.md') -NoNewline
+        @"
+# Tasks: Fixture
+
+**Feature ID**: ``999-fixture``
+**Version**: 1.0.0
+
+- [ ] T001 [P1] [Risk: Low] [Story: Foundation] Implement the authorized change
+"@ | Set-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -NoNewline
+        @"
+# Readiness Assessment: Fixture
+
+**Date**: 2026-07-15
+**Primary Status**: ``READY_FOR_PLAN``
+
+## Planability vs Intent Obligations
+
+- **Intent Ledger Requirement**: Not Required
+"@ | Set-Content -LiteralPath (Join-Path $readinessDir 'readiness-assessment.md') -NoNewline
+
+        if ($WithEci) {
+            '# ECI Trigger' | Set-Content -LiteralPath (Join-Path $readinessDir 'eci-trigger.md') -NoNewline
+            '# ECI Assessment' | Set-Content -LiteralPath (Join-Path $eciDir 'eci-assessment.md') -NoNewline
+            '# Source Manifest' | Set-Content -LiteralPath (Join-Path $eciDir 'source-manifest.md') -NoNewline
+            '# Adoption Record' | Set-Content -LiteralPath (Join-Path $eciDir 'adoption-record.md') -NoNewline
+            @"
+# Authorization Record
+
+**Authorization Outcome**: ``READY_FOR_MAINLINE_IMPLEMENTATION``
+"@ | Set-Content -LiteralPath (Join-Path $eciDir 'authorization-record.md') -NoNewline
+        }
+
+        $analysis = [ordered]@{
+            schemaVersion = '1.0.0'
+            featureId = '999-fixture'
+            outcome = 'IMPLEMENTATION_READY'
+            artifactHashes = [ordered]@{
+                'spec.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $featureDir 'spec.md')
+                'readiness/readiness-assessment.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $readinessDir 'readiness-assessment.md')
+                'intent-ledger.md' = $null
+                'plan.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $featureDir 'plan.md')
+                'tasks.md' = Get-WorkflowTestArtifactHash -Path (Join-Path $featureDir 'tasks.md') -NormalizeTaskCheckboxes
+            }
+            criticalFindings = [object[]]@()
+            intentDriftCheck = [ordered]@{ status = 'PASS'; summary = 'No intent drift.' }
+            intentObligations = [ordered]@{ status = 'NOT_REQUIRED'; items = [object[]]@() }
+        }
+        $analysis | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $featureDir 'analysis-result.json') -Encoding utf8
+        return $featureDir
     }
 }
 
@@ -682,7 +788,7 @@ steps:
     }
 }
 
-Describe 'workflow-engine: terminal implement postcondition (R-B02)' -Skip:(-not $script:yamlAvailable) {
+Describe 'workflow-engine: terminal implement baseline inventory (R-B02/R-B19)' -Skip:(-not $script:yamlAvailable) {
     BeforeEach {
         $script:fixture = New-WorkflowFixtureProject -WorkflowYaml @"
 schema_version: "1.0.0"
@@ -714,6 +820,8 @@ steps:
     It 'does not complete when only part of the tasks are checked off' {
         $r = Invoke-Run -Fixture $script:fixture
         $r.ExitCode | Should -Be 42
+        $baselineState = Get-Content -LiteralPath $r.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        @($baselineState.vars.steps.'stage-implement'.baseline_task_ids) -join ',' | Should -Be 'T001,T002'
 
         (Get-Content -LiteralPath $script:tasksPath -Raw) -replace '\- \[ \] T001', '- [x] T001' |
             Set-Content -LiteralPath $script:tasksPath
@@ -722,10 +830,10 @@ steps:
         $r2.ExitCode | Should -Be 42
         $r2.Json.STATUS | Should -Be 'awaiting_agent'
         $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
-        $state.halt_reason | Should -Match 'postcondition no-pending-tasks: 1 unchecked'
+        $state.halt_reason | Should -Match 'baseline task ID\(s\) remain unchecked: T002'
     }
 
-    It 'completes once zero canonical tasks remain unchecked' {
+    It 'completes once every baseline task remains canonical and checked' {
         $r = Invoke-Run -Fixture $script:fixture
         $r.ExitCode | Should -Be 42
 
@@ -735,6 +843,81 @@ steps:
         $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
         $r2.ExitCode | Should -Be 0
         $r2.Json.STATUS | Should -Be 'completed'
+    }
+
+    It 'rejects completion when a baseline task is deleted' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        @(
+            '# Tasks',
+            '- [x] T001 [P1] [Risk: Low] [Story: A] First task'
+        ) -join "`n" | Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        $r2.Json.STATUS | Should -Be 'awaiting_agent'
+        $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $state.halt_reason | Should -Match 'baseline task ID\(s\) missing or non-canonical: T002'
+    }
+
+    It 'rejects completion when a baseline task ID is changed' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        @(
+            '# Tasks',
+            '- [x] T001 [P1] [Risk: Low] [Story: A] First task',
+            '- [x] T099 [P1] [Risk: Low] [Story: A] Second task with changed ID'
+        ) -join "`n" | Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $state.halt_reason | Should -Match 'baseline task ID\(s\) missing or non-canonical: T002'
+    }
+
+    It 'rejects completion when a baseline task line is no longer canonical' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        @(
+            '# Tasks',
+            '- [x] T001 [P1] [Risk: Low] [Story: A] First task',
+            '- [x] T002 [P1] [Risk: Low] Second task without Story metadata'
+        ) -join "`n" | Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $state.halt_reason | Should -Match 'baseline task ID\(s\) missing or non-canonical: T002'
+    }
+
+    It 'rejects completion when tasks.md is replaced by non-task text' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        "# Tasks`n`nImplementation reported complete without task evidence." |
+            Set-Content -LiteralPath $script:tasksPath
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        $r2.Json.STATUS | Should -Be 'awaiting_agent'
+        $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $state.halt_reason | Should -Match 'baseline task ID\(s\) missing or non-canonical: T001, T002'
+    }
+
+    It 'rejects completion when tasks.md is blanked to whitespace' {
+        $r = Invoke-Run -Fixture $script:fixture
+        $r.ExitCode | Should -Be 42
+
+        " `n `n" | Set-Content -LiteralPath $script:tasksPath -NoNewline
+
+        $r2 = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+        $r2.ExitCode | Should -Be 42
+        $r2.Json.STATUS | Should -Be 'awaiting_agent'
+        $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $state.halt_reason | Should -Match 'baseline task ID\(s\) missing or non-canonical: T001, T002'
     }
 
     It 'refuses -AcceptAgent as a completion substitute on a terminal step' {
@@ -761,6 +944,161 @@ steps:
         $r2.Json.STATUS | Should -Be 'completed'
         $state = Get-Content -LiteralPath $r2.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
         @($state.history | Where-Object { $_.step_id -eq 'stage-implement' -and $_.outcome -eq 'success-postcondition' }).Count | Should -Be 1
+    }
+}
+
+Describe 'workflow-engine: terminal completion revalidates implement authorization (RVR-02)' -Skip:(-not $script:yamlAvailable) {
+    BeforeEach {
+        $script:fixture = New-WorkflowFixtureProject -WorkflowYaml @"
+schema_version: "1.0.0"
+workflow:
+  id: terminal-revalidation
+  name: Terminal Revalidation
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: stage-implement-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-implement.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+  - id: stage-implement
+    type: command
+    dispatch: agent
+    agent_command: /speckit.implement
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    terminal: true
+    postcondition:
+      type: no-pending-tasks
+      file: "specs/{{ inputs.feature }}/tasks.md"
+    completion_validation:
+      script: studio/scripts/powershell/setup-implement.ps1
+      args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-CompletionValidation", "-Json"]
+"@
+    }
+    AfterEach { Remove-WorkflowFixture -Fixture $script:fixture }
+
+    It 'completes with zero pending tasks when all authorization evidence remains current' {
+        $featureDir = Initialize-ImplementGateFeature -Fixture $script:fixture
+        $first = Invoke-Run -Fixture $script:fixture
+        $first.ExitCode | Should -Be 42
+
+        (Get-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -Raw) -replace '\- \[ \]', '- [x]' |
+            Set-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -NoNewline
+        $resume = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+
+        $resume.ExitCode | Should -Be 0
+        $resume.Json.STATUS | Should -Be 'completed'
+    }
+
+    It 'blocks completion after <Name> between first terminal arrival and resume' -TestCases @(
+        @{
+            Name = 'Analyze result is deleted'; WithEci = $false
+            Mutation = { param($FeatureDir) Remove-Item -LiteralPath (Join-Path $FeatureDir 'analysis-result.json') }
+        },
+        @{
+            Name = 'Analyze result is modified'; WithEci = $false
+            Mutation = {
+                param($FeatureDir)
+                $path = Join-Path $FeatureDir 'analysis-result.json'
+                $document = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
+                $document['outcome'] = 'BLOCKED'
+                $document | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path -Encoding utf8
+            }
+        },
+        @{
+            Name = 'readiness assessment is deleted'; WithEci = $false
+            Mutation = { param($FeatureDir) Remove-Item -LiteralPath (Join-Path $FeatureDir 'readiness/readiness-assessment.md') }
+        },
+        @{
+            Name = 'readiness assessment is modified'; WithEci = $false
+            Mutation = { param($FeatureDir) Add-Content -LiteralPath (Join-Path $FeatureDir 'readiness/readiness-assessment.md') -Value "`nTampered." }
+        },
+        @{
+            Name = 'plan is deleted'; WithEci = $false
+            Mutation = { param($FeatureDir) Remove-Item -LiteralPath (Join-Path $FeatureDir 'plan.md') }
+        },
+        @{
+            Name = 'plan is modified'; WithEci = $false
+            Mutation = { param($FeatureDir) Add-Content -LiteralPath (Join-Path $FeatureDir 'plan.md') -Value "`nTampered." }
+        },
+        @{
+            Name = 'ECI authorization is deleted'; WithEci = $true
+            Mutation = { param($FeatureDir) Remove-Item -LiteralPath (Join-Path $FeatureDir 'readiness/eci/authorization-record.md') }
+        },
+        @{
+            Name = 'ECI authorization is modified'; WithEci = $true
+            Mutation = {
+                param($FeatureDir)
+                $path = Join-Path $FeatureDir 'readiness/eci/authorization-record.md'
+                (Get-Content -LiteralPath $path -Raw) -replace 'READY_FOR_MAINLINE_IMPLEMENTATION', 'READY_FOR_SANDBOX_ONLY' |
+                    Set-Content -LiteralPath $path -NoNewline
+            }
+        }
+    ) {
+        param($Name, $WithEci, $Mutation)
+
+        $featureDir = Initialize-ImplementGateFeature -Fixture $script:fixture -WithEci:$WithEci
+        $first = Invoke-Run -Fixture $script:fixture
+        $first.ExitCode | Should -Be 42
+        $first.Json.STATUS | Should -Be 'awaiting_agent'
+
+        & $Mutation $featureDir
+        (Get-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -Raw) -replace '\- \[ \]', '- [x]' |
+            Set-Content -LiteralPath (Join-Path $featureDir 'tasks.md') -NoNewline
+        $resume = Invoke-Run -Fixture $script:fixture -ExtraArgs @('-Resume')
+
+        $resume.ExitCode | Should -Be 42
+        $resume.Json.STATUS | Should -Be 'awaiting_agent'
+        $state = Get-Content -LiteralPath $resume.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+        $state.halt_reason | Should -Match 'terminal completion validation failed'
+        @($state.completed_steps) | Should -Not -Contain 'stage-implement'
+    }
+}
+
+Describe 'workflow-engine: terminal completion validator output is fail-closed' -Skip:(-not $script:yamlAvailable) {
+    It 'blocks <Mode> validator output' -TestCases @(
+        @{ Mode = 'empty'; Expected = 'no machine-readable result' },
+        @{ Mode = 'malformed'; Expected = 'invalid JSON' },
+        @{ Mode = 'nonboolean'; Expected = 'missing Boolean READY' },
+        @{ Mode = 'nonzero'; Expected = 'exited with code 9' }
+    ) {
+        param($Mode, $Expected)
+        $fixture = New-WorkflowFixtureProject -WorkflowYaml @"
+schema_version: "1.0.0"
+workflow:
+  id: completion-output-$Mode
+  name: Completion Output $Mode
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: stage-implement
+    type: command
+    dispatch: agent
+    agent_command: /speckit.implement
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    terminal: true
+    postcondition:
+      type: no-pending-tasks
+      file: "specs/{{ inputs.feature }}/tasks.md"
+    completion_validation:
+      script: studio/tests/fixtures/terminal-completion-validator.ps1
+      args: ["$Mode"]
+"@
+        try {
+            $tasksPath = Join-Path $fixture.ProjectRoot 'specs/999-fixture/tasks.md'
+            '- [ ] T001 [P1] [Risk: Low] [Story: Foundation] Task' | Set-Content -LiteralPath $tasksPath -NoNewline
+            (Invoke-Run -Fixture $fixture).ExitCode | Should -Be 42
+            '- [x] T001 [P1] [Risk: Low] [Story: Foundation] Task' | Set-Content -LiteralPath $tasksPath -NoNewline
+
+            $resume = Invoke-Run -Fixture $fixture -ExtraArgs @('-Resume')
+            $resume.ExitCode | Should -Be 42
+            $state = Get-Content -LiteralPath $resume.Json.RUN_STATE_PATH -Raw | ConvertFrom-Json
+            $state.halt_reason | Should -Match $Expected
+        } finally {
+            Remove-WorkflowFixture -Fixture $fixture
+        }
     }
 }
 

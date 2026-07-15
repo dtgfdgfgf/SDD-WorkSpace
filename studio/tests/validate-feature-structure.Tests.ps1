@@ -16,7 +16,7 @@ BeforeAll {
         param(
             [string]$FeatureDir,
             [string]$SpecBody = "# Specification: Test`n`n**Version:** 1.0.0`n",
-            [string]$ReadinessBody = $null,
+            [string]$ReadinessBody = "# Readiness`n`n**Primary Status**: READY_FOR_PLAN`n**Intent Ledger Requirement**: Not Required`n",
             [hashtable]$Optional = @{}
         )
         New-Item -ItemType Directory -Path $FeatureDir -Force | Out-Null
@@ -25,6 +25,7 @@ BeforeAll {
         if ($ReadinessBody) {
             $rdir = Join-Path $FeatureDir 'readiness'
             New-Item -ItemType Directory -Path $rdir -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $rdir 'eci') -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $rdir 'readiness-assessment.md') -Value $ReadinessBody -NoNewline -Encoding utf8
         }
 
@@ -39,13 +40,30 @@ Describe 'validate-feature-structure (M5)' {
         $script:featureDir = Join-Path $TestDrive ("feat-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
     }
 
-    It 'reports VALID for a minimal spec.md only' {
+    It 'reports VALID for a minimal governed feature with readiness and the ECI container' {
         Write-FeatureFixture -FeatureDir $script:featureDir
         $output = pwsh -NoProfile -File $script:validatorScript -FeatureDir $script:featureDir -Json
         $LASTEXITCODE | Should -Be 0
         $result = ($output -join "`n") | ConvertFrom-Json
         $result.VALID | Should -BeTrue
         $result.ERROR_COUNT | Should -Be 0
+    }
+
+    It 'fails closed when readiness/ is missing entirely' {
+        Write-FeatureFixture -FeatureDir $script:featureDir -ReadinessBody $null
+        $output = pwsh -NoProfile -File $script:validatorScript -FeatureDir $script:featureDir -Json
+        $LASTEXITCODE | Should -Not -Be 0
+        $result = ($output -join "`n") | ConvertFrom-Json
+        ($result.ERRORS | Where-Object { $_.id -eq 'readiness-dir-missing' }) | Should -Not -BeNullOrEmpty
+    }
+
+    It 'fails closed when readiness/eci/ is missing' {
+        Write-FeatureFixture -FeatureDir $script:featureDir
+        Remove-Item -LiteralPath (Join-Path $script:featureDir 'readiness/eci') -Recurse -Force
+        $output = pwsh -NoProfile -File $script:validatorScript -FeatureDir $script:featureDir -Json
+        $LASTEXITCODE | Should -Not -Be 0
+        $result = ($output -join "`n") | ConvertFrom-Json
+        ($result.ERRORS | Where-Object { $_.id -eq 'eci-dir-missing' }) | Should -Not -BeNullOrEmpty
     }
 
     It 'fails when spec.md is missing' {
@@ -74,8 +92,9 @@ Describe 'validate-feature-structure (M5)' {
     }
 
     It 'fails when readiness/ exists but readiness-assessment.md is missing' {
-        Write-FeatureFixture -FeatureDir $script:featureDir
+        Write-FeatureFixture -FeatureDir $script:featureDir -ReadinessBody $null
         New-Item -ItemType Directory -Path (Join-Path $script:featureDir 'readiness') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $script:featureDir 'readiness/eci') -Force | Out-Null
         $output = pwsh -NoProfile -File $script:validatorScript -FeatureDir $script:featureDir -Json
         $LASTEXITCODE | Should -Not -Be 0
         $result = ($output -join "`n") | ConvertFrom-Json
@@ -110,9 +129,11 @@ Describe 'validate-feature-structure (M5)' {
     }
 
     It 'warns when intent-ledger.md exists but readiness has not been initiated' {
-        Write-FeatureFixture -FeatureDir $script:featureDir -Optional @{ 'intent-ledger.md' = "# Intent Ledger`n`nstub`n" }
+        Write-FeatureFixture -FeatureDir $script:featureDir -ReadinessBody $null -Optional @{ 'intent-ledger.md' = "# Intent Ledger`n`nstub`n" }
         $output = pwsh -NoProfile -File $script:validatorScript -FeatureDir $script:featureDir -Json
+        $LASTEXITCODE | Should -Not -Be 0
         $result = ($output -join "`n") | ConvertFrom-Json
+        ($result.ERRORS | Where-Object { $_.id -eq 'readiness-dir-missing' }) | Should -Not -BeNullOrEmpty
         ($result.WARNINGS | Where-Object { $_.id -eq 'intent-ledger-without-readiness' }) | Should -Not -BeNullOrEmpty
     }
 

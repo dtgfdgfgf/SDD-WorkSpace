@@ -480,4 +480,30 @@ steps:
         $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
         $LASTEXITCODE | Should -Not -Be 0
     }
+
+    It 'rejects completion validation on a non-terminal agent command' {
+        $bad = @"
+schema_version: "1.0.0"
+workflow:
+  id: bad-completion-validation
+  name: Bad Completion Validation
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: implement
+    type: command
+    dispatch: agent
+    agent_command: /speckit.implement
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    postcondition:
+      type: no-pending-tasks
+      file: "specs/{{ inputs.feature }}/tasks.md"
+    completion_validation:
+      script: studio/scripts/powershell/setup-implement.ps1
+      args: ["-CompletionValidation", "-Json"]
+"@
+        $file = New-WorkflowFixture -Yaml $bad
+        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+    }
 }

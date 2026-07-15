@@ -167,8 +167,8 @@ steps:
     type: command
     dispatch: agent
     agent_command: /speckit.analyze
-    expected_artifact: "specs/{{ inputs.feature }}/analysis-checklist.md"
-    operator_message: "Run /speckit.analyze, capture findings into analysis-checklist.md, then resume."
+    expected_artifact: "specs/{{ inputs.feature }}/analysis-result.json"
+    operator_message: "Run /speckit.analyze, save its exact schema-valid machine-result JSON unchanged as specs/{{ inputs.feature }}/analysis-result.json, then resume. analysis-checklist.md is informational only."
 
   # 8. Implement --------------------------------------------------------------
   - id: stage-implement-prep
@@ -187,4 +187,7 @@ steps:
     postcondition:
       type: no-pending-tasks
       file: "specs/{{ inputs.feature }}/tasks.md"
-    operator_message: "Run /speckit.implement to execute the task list, then resume. This terminal step completes only when every canonical task in tasks.md is checked off; -AcceptAgent cannot substitute for completion."
+    completion_validation:
+      script: studio/scripts/powershell/setup-implement.ps1
+      args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-CompletionValidation", "-Json"]
+    operator_message: "Run /speckit.implement to execute the task list, then resume. This terminal step completes only when every baseline canonical task remains present in canonical format and is checked off; -AcceptAgent cannot substitute for completion."
