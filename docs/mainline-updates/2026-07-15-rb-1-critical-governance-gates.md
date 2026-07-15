@@ -3,8 +3,8 @@
 **Date**: 2026-07-15
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `cb43de5`; repair commit `TBD`
+**Status**: Ready
+**Related Commits**: `cb43de5`; `961df61`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 
@@ -89,6 +89,8 @@ reopened R-B02 and R-B05 and assigned closure to R-B19, R-D02 with R-B08, and R-
   0 warnings.
 - `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`: 428 passed, 0 failed, 0 skipped;
   the prior branch baseline was 361 passed, 0 failed.
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef origin/main -HeadRef HEAD
+  -RequireReady -Json`: `VALID=true`, 0 errors.
 - R-B19 discriminating overlay: all five required task-inventory tamper cases completed under the old
   implementation and are denied by the new implementation; the current terminal inventory block is
   9 passed.
@@ -107,7 +109,8 @@ reopened R-B02 and R-B05 and assigned closure to R-B19, R-D02 with R-B08, and R-
 ## Merge Notes
 
 - The first implementation commit is `cb43de5`. Independent review then found two closure blockers;
-  this Draft remains open until the repair commit exists and staged plus final-HEAD gates pass.
+  repair commit `961df61` binds the deleted ECI evidence and baseline cache to durable terminal evidence.
+- This note is Ready for the RB-1 batch only. It is not a branch-level merge-readiness claim.
 - RB-1 completion does not make PR #3 ready to merge. RB-2 through RB-5 and R6 remain mandatory.
 
 ## Follow-ups
