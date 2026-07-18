@@ -1,15 +1,15 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.7.0"
+version: "1.8.0"
 date: "2026-07-12"
-last_updated: "2026-07-15"
+last_updated: "2026-07-18"
 language: "zh-TW"
 owner: "元熙"
 status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "961df61 (RB-1 implementation repair head)"
+head_commit: "6030b27 (RB-1 accounting head; RB-2 worktree in progress)"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -28,6 +28,8 @@ related_documents:
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
 **2026-07-15 RB-1 Critical 止血完成**：implementation commits `cb43de5`、`961df61` 關閉 RVR-01、RVR-02、RVR-03，完成 R-B19、R-D02、R-B08、R-B20，並以新的判別性證據恢復 R-B02、R-B05 的 `COMPLETED` 狀態。post-commit 獨立複核另辨識全面 RunState 與 sidecar 真偽邊界，依 ledger 規則新增 High finding R-B23；已修復的單獨 cache 縮減、sidecar 缺失、格式損壞與 identity mismatch 不重複列入 R-B23。詳見第 17 節。RB-1 完成後分支仍 `NOT READY TO MERGE`；RB-2 至 RB-5 與 R6 仍是必要批次，`sdd-pipeline` 維持 experimental 與 denied。
+
+**2026-07-18 RB-1 誠實性再還原**：RB-2 對抗複核證明 listing 與 runner 並未使用同一完整授權判準。manifest version 與 catalog version 不符時，listing 仍回報 `executionAuthorized=true`，runner 才拒絕 identity mismatch。這項反例推翻 R-B20/R-B05 的完整 closure 宣稱，但不推翻已驗證的 strict Boolean、missing-state、wrong-type、null、scalar 與 schema-substitution 修復。依 ledger 與 note 狀態機，R-B20/R-B05 先回到 `IN_PROGRESS`，RB-1 note 降回 `Draft`；日期化證據與重新進入條件見第 18 節。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -367,6 +369,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.5.0 | 2026-07-14 | R2 主批 workflow engine 執行完整性實作：關閉 R-B01 至 R-B06（剩餘）、R-B10 至 R-B16（見第 15 節）。提交前 3 代理對抗 review 發現並修復 5 缺陷。完整 governance suite 361 passed / 0 failed，audit VALID=true。sdd-pipeline 仍 experimental/denied，R-B07/B08 留 R3、R-B09 留 R6。 |
 | 1.6.0 | 2026-07-14 | R2.1 誠實性還原：2026-07-14 治理 re-review 以本地反例推翻 R-B02（RVR-01）與 R-B05（RVR-03）的 COMPLETED，兩者改回 IN_PROGRESS 並移交 R-B19/R-B20；新增 9 條 RVR findings（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06），ledger 由 114 增至 123（機器重數 Critical 8/High 28/Medium 49/Low 38）；engine-integrity note 降回 Draft 加 Revalidation（見第 16 節）。本批不改 runtime 程式碼。 |
 | 1.7.0 | 2026-07-15 | RB-1 implementation commits `cb43de5`、`961df61` 關閉 RVR-01/02/03 與 R-B19/R-D02/R-B08/R-B20，並以判別性回歸證據恢復 R-B02/R-B05 的 COMPLETED；post-commit 複核新增 High R-B23，ledger 由 123 增至 124（Critical 8/High 29/Medium 49/Low 38）。完整 suite 428 passed / 0 failed；audit VALID=true、0 errors、0 warnings。分支仍 NOT READY TO MERGE，見第 17 節。 |
+| 1.8.0 | 2026-07-18 | RB-2 對抗複核發現 manifest version mismatch 時 listing 授權、runner 拒絕，推翻 R-B20/R-B05 的完整 shared-criterion closure；先將兩者還原為 IN_PROGRESS，RB-1 note 降為 Draft 且 reconciliation 改為 Open。本版只記錄 superseding evidence 與重新進入條件，不把尚未落地的 runtime 修補冒充完成，見第 18 節。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -587,3 +590,30 @@ identity mismatch；這些 cases 已有 fail-closed 回歸證據，不得重複�
 RB-1 mainline note：`docs/mainline-updates/2026-07-15-rb-1-critical-governance-gates.md`。
 RB-1 完成使分支更接近可合併，但 PR #3 仍 `NOT READY TO MERGE`；`sdd-pipeline` 在 R6 前維持
 experimental 與 execution-denied。
+
+## 18. 2026-07-18 RB-2 對抗複核的 RB-1 誠實性還原
+
+RB-2 開工後的獨立對抗複核建立隔離 registry fixture：catalog、state、trusted schemas、
+enablement 與 workflow raw-byte digest 均有效，catalog 宣告 workflow version `1.0.0`，
+但 `manifest.json` 宣告同一 ID 的 version `9.9.9`。同一 fixture 得到以下相反判定：
+
+| Surface | Exit | Machine result |
+|---|---:|---|
+| `list-workflows.ps1` | 0 | `VALID=true`、`executionAuthorized=true` |
+| `run-workflow.ps1` | 1 | `STATUS=denied`、workflow identity mismatch |
+
+根因是 common registry authorization 未驗 manifest identity；runner 在共用判定之後另做
+manifest ID/version 檢查，listing 沒有該檢查。這直接反駁第 17 節「run/list 使用同一完整判準」
+的 closure 宣稱。依 Surface Truthfulness 與第 8 節 ledger 規則，本節先記錄降級，不把後續
+runtime 修補倒填成已完成。
+
+| ID | 目前狀態 | 未被推翻的既有修復 | 被推翻範圍與重新進入條件 |
+|---|---|---|---|
+| R-B20 | IN_PROGRESS | catalog/state trusted-schema 驗證、strict JSON Boolean、missing-state、wrong-type、null、scalar、schema substitution 與 workflow content digest 均仍 fail-closed | common registry 必須納入 manifest existence、JSON shape、ID 與 version，runner/list 共同消費同一結果；補舊 listing 通過而 runner 拒絕、新實作兩者都拒絕的判別性測試，並重跑完整 gates |
+| R-B05 | IN_PROGRESS | R-B20 已驗證的 strict Boolean 與 fail-closed registry 輸入處置仍成立 | 其「runner/list 完整共同判準」依賴 R-B20，因此同步重開；只有 R-B20 的 manifest identity closure 重新成立後才可恢復 COMPLETED |
+
+`docs/mainline-updates/2026-07-15-rb-1-critical-governance-gates.md` 已由 `Ready` 降回
+`Draft`，Reconciliation Status 由 `Closed` 改為 `Open`，並加入同一反例與重新進入條件。
+R-B19、R-B02、R-D02、R-B08 的具體 closure 未被本反例推翻，維持第 17 節狀態。
+R-B21 只處理 reviewed workflow raw-byte graph identity；R-B23 處理 RunState/sidecar
+authenticity，兩者都不得吸收此 manifest shared-criterion 修補。

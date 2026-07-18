@@ -3,10 +3,10 @@
 **Date**: 2026-07-15
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `cb43de5`; `961df61`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 
 ## Summary
 
@@ -106,11 +106,36 @@ reopened R-B02 and R-B05 and assigned closure to R-B19, R-D02 with R-B08, and R-
   identity-mismatched baseline sidecars and changed ECI dossier hashes are also denied.
 - `git diff --check`: no whitespace errors.
 
+## Revalidation (2026-07-18)
+
+An RB-2 adversarial review produced a counterexample that refutes the RB-1 claim that workflow
+execution and listing use the same complete authorization criterion. In an isolated registry whose
+catalog, state, trusted schemas, enablement, and workflow digest were otherwise valid, the catalog
+declared version `1.0.0` while `manifest.json` declared version `9.9.9`. `list-workflows.ps1`
+returned exit 0 with `VALID=true` and `executionAuthorized=true`; `run-workflow.ps1` denied the same
+workflow for an identity mismatch.
+
+The shared registry decision did not validate manifest identity. The runner performed that check
+separately, so the prior R-B20/R-B05 shared-criterion closure was incomplete even though the strict
+Boolean, missing-state, wrong-type, null, scalar, and schema-substitution repairs remain effective.
+Accordingly, R-B20 and R-B05 are reopened to `IN_PROGRESS`, this note returns to `Draft`, and
+reconciliation returns to `Open`.
+
+Re-entry to `Ready` requires all of the following:
+
+- Manifest existence, JSON shape, workflow ID, and version must participate in the common registry
+  authorization decision consumed by both listing and execution.
+- A discriminating test must show that the old implementation authorizes listing while denying the
+  runner for the same manifest identity mismatch, and that the repaired implementation denies both.
+- The existing strict-Boolean, missing-state, wrong-type, null, scalar, schema-substitution, and
+  workflow-content digest cases must remain denied by both surfaces.
+- The full runtime audit, governance suite, Ready-note validator, and whitespace check must pass.
+
 ## Merge Notes
 
 - The first implementation commit is `cb43de5`. Independent review then found two closure blockers;
   repair commit `961df61` binds the deleted ECI evidence and baseline cache to durable terminal evidence.
-- This note is Ready for the RB-1 batch only. It is not a branch-level merge-readiness claim.
+- This note is Draft while the 2026-07-18 manifest-identity counterexample is repaired and revalidated.
 - RB-1 completion does not make PR #3 ready to merge. RB-2 through RB-5 and R6 remain mandatory.
 
 ## Follow-ups

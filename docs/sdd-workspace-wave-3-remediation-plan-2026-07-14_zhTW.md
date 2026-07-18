@@ -1,7 +1,8 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.0.0"
+version: "1.1.0"
 date: "2026-07-14"
+last_updated: "2026-07-18"
 language: "zh-TW"
 status: "plan"
 authority: "informational"
@@ -198,3 +199,25 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | Version | Date | Change |
 |---|---|---|
 | 1.0.0 | 2026-07-14 | 依 2026-07-14 治理 re-review 的 12 條 RVR findings 制定分批修復計畫，對映 ledger 並標出被推翻的 Ready/Completed 宣稱 |
+| 1.1.0 | 2026-07-18 | 日期化記錄 RB-2 開工前發現的 ECI outcome 數量 drift、owner 四值裁定與 R-B23 scope 邊界；原始 v1.0.0 文字保留為歷史證據 |
+
+## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
+
+RB-2 開工前複核發現，本文件第 2 節的批次專屬閘門寫「三種 ECI outcome」，但 canonical
+`.github/agents/speckit.eci.agent.md`、ECI assessment template 與 authorization-record template
+一致定義四個 Authorization Outcome。憲法第 5.1 節要求 exactly-one，但沒有另行縮減 enum。
+依 drift-stop 規則先停止實作，並由 owner 於 2026-07-18 裁定採用以下四值：
+
+1. `READY_FOR_MAINLINE_IMPLEMENTATION`
+2. `READY_FOR_SPIKE_ONLY`
+3. `READY_FOR_SANDBOX_ONLY`
+4. `NOT_READY`
+
+`NOT_READY` 是明確的第四種 fail-closed 結果，不授權 Plan 或 Implement。缺失、未知、重複或矛盾
+outcome 同樣 fail-closed，不能把 default branch 當成有效的 `NOT_READY` 證據。第 2 節原始
+「三種 ECI outcome」保留為當時的 drift 證據；本增補 supersede 該數量，RB-2 驗收必須覆蓋八種
+readiness statuses 與四種 ECI outcomes。
+
+RB-2 closure 範圍仍是 R-B07、R-B21、R-B22。R-B23 是 RB-1 獨立複核新增的 RunState/sidecar
+authenticity finding，只排在 RB-2 相鄰工作，不併入 R-B21，也不得由 workflow graph digest
+冒充關閉。`sdd-pipeline` 在 R6 前仍維持 experimental 與 execution-denied。
