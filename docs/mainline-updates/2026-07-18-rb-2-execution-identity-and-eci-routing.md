@@ -3,10 +3,10 @@
 **Date**: 2026-07-18
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `e4d2167`; `d548124`; `ec25c07`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -39,16 +39,17 @@ on 2026-07-18. The dated remediation-plan addendum preserves that decision and t
 - R-B21: catalog approval digest, exact-byte engine parsing, RunState graph identity, resume and
   restart semantics, listing visibility, policy, contract, and regression coverage.
 - R-B07 and R-B22: complete ECI dossier validation, exactly-one Readiness and ECI fields, direct Plan
-  enforcement, a distinct post-ECI Readiness step, a persistent local requirement latch, and
-  eight-status plus four-outcome routing tests.
+  enforcement, a distinct post-ECI Readiness step, a persistent feature-bound local requirement
+  latch, and eight-status plus four-outcome routing tests.
 - R-B20/R-B05 and R-B10/R-B24: truth-first reopening followed by shared manifest and physical
   reparse authorization, exact `sourcePath` execution, and no-overwrite restart archive repair.
   These are adjacent repairs, not subcases absorbed into R-B21.
 - No changes under `projects/` or `learning/`, no PR thread resolution, no main merge, and no workflow
   promotion. `sdd-pipeline` remains experimental, disabled, and execution-denied until R6.
-- R-B23 remains a separate open finding. Graph identity does not prove the provenance of
-  `completed_steps`, persisted routing variables, gate decisions, or coordinated same-principal
-  RunState and sidecar edits.
+- R-B23 remains a separate open finding. Coordinated marker and evidence deletion or forgery,
+  RunState and sidecar co-forgery, `completed_steps`, routing, or gate-decision injection, and run-ID
+  or path substitution remain outside RB-2's closure. Graph identity and the local ECI latch do not
+  prove the provenance of those checkpoints.
 
 ## Affected Paths
 
@@ -70,13 +71,26 @@ on 2026-07-18. The dated remediation-plan addendum preserves that decision and t
 - Missing, null, wrong-type, malformed, uppercase, or mismatched workflow digests fail closed.
 - Removing any ECI dossier file, leaving only the trigger, duplicating a status or outcome, or
   presenting a non-mainline outcome to direct Plan cannot authorize planning.
+- The initial Readiness result may enter ECI only when its exact primary status is `ROUTE_TO_ECI`.
+  `setup-eci.ps1` is the non-bypassable first action for both canonical ECI agent surfaces and
+  atomically creates the feature-bound local requirement marker without overwriting an existing
+  marker.
+- The canonical ECI evidence is `eci-trigger.md` plus the four dossier files. Their names and raw
+  bytes are length-framed into one digest, which must agree with the readiness
+  `ECI Re-entry Status` and `ECI Evidence SHA-256` fields. A fresh or restarted run with an already
+  complete, coherent dossier skips ECI and proceeds through the post-ECI Readiness assessment.
 - The latest post-ECI Readiness assessment, rather than the first assessment or a reminder gate,
   controls the final eight-status routing decision.
+- Listing and execution share manifest existence, object shape, id, version, exact `sourcePath`, and
+  all-component physical reparse-boundary authorization. Restart archives use collision-resistant
+  names and atomic no-overwrite publication, preserving every prior run identity.
 
 ## Impact Reconciliation
 
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
+| `.claude/agents/*.md` | `must_update` | `updated` | ECI and Readiness Claude mirrors carry the same setup-eci first-action, marker, five-evidence, and re-entry semantics as their canonical Copilot sources; contract and focused tests cover both surfaces. |
+| `.github/agents/*.agent.md` | `maybe_review` | `updated` | Canonical ECI and Readiness agents expose the non-bypassable ECI entry gate and persistent requirement semantics. |
 | `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | New catalog, engine, runner, listing, Plan, validator, policy, manifest, and workflow invariants pass the canonical audit. |
 | `.githooks/pre-commit.ps1` | `must_review` | `reviewed-no-change` | The existing staged-snapshot audit consumes the updated contract without hook semantic changes. |
 | `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `reviewed-no-change` | The generic contract consumer reports `VALID=true`, 0 errors, and 0 warnings. |
@@ -102,17 +116,23 @@ on 2026-07-18. The dated remediation-plan addendum preserves that decision and t
 - Current-head tests deny those cases. The marker-retained deletion and `NOT_REQUIRED` rewrite,
   stale framed evidence, fresh and restarted complete-dossier routing, exact archive collision,
   manifest identity, and physical reparse boundary are included.
+- Independent adversarial review reported no remaining RB-2 blocker.
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef origin/main -HeadRef HEAD
+  -RequireReady -Json`: `VALID=true`, 0 errors, 0 warnings.
 - `git diff --check`: no whitespace errors.
 
 ## Merge Notes
 
-- This note remains Draft only until the implementation commit hash is recorded and the ledger
-  receives its dated closure update. Independent adversarial review found no blocking issue, and
-  the implementation gates above are green.
-- RB-2 completion will not make PR #3 ready to merge. RB-3 through RB-5 and R6 remain mandatory.
+- Implementation commit `ec25c07` and the truth-first reopening commits `e4d2167` and `d548124`
+  provide the coherent RB-2 history. The note is Ready only with the dated ledger closure and final
+  accounting gates.
+- RB-2 makes the branch closer to merge readiness but PR #3 remains NOT READY TO MERGE. RB-3 through
+  RB-5 and R6 remain mandatory, and `sdd-pipeline` remains experimental, default-disabled, and
+  execution-denied.
 
 ## Follow-ups
 
 - Keep R-B23 open for comprehensive RunState and sidecar authenticity; do not reinterpret the R-B21
-  digest as progress, routing, gate-decision, or local-checkpoint provenance.
+  digest or ECI marker as progress, routing, gate-decision, run-ID/path, or local-checkpoint
+  provenance.
 - Execute RB-3 through RB-5 and R6. Do not re-promote `sdd-pipeline` before fresh-fixture R6 acceptance.

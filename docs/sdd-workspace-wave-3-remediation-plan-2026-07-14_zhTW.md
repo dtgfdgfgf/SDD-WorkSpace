@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.1.0"
+version: "1.2.0"
 date: "2026-07-14"
 last_updated: "2026-07-18"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "04e4287"
+head_commit: "ec25c07 (RB-2 implementation)"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -200,6 +200,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 |---|---|---|
 | 1.0.0 | 2026-07-14 | 依 2026-07-14 治理 re-review 的 12 條 RVR findings 制定分批修復計畫，對映 ledger 並標出被推翻的 Ready/Completed 宣稱 |
 | 1.1.0 | 2026-07-18 | 日期化記錄 RB-2 開工前發現的 ECI outcome 數量 drift、owner 四值裁定與 R-B23 scope 邊界；原始 v1.0.0 文字保留為歷史證據 |
+| 1.2.0 | 2026-07-18 | implementation commit `ec25c07` 完成 RB-2 的 graph identity、完整 ECI dossier/re-entry/exactly-one routing，並修復對抗複核揭露的共用 workflow 授權與 restart archive 缺口；記錄 R-B23、R-A17、R-A18 仍 OPEN，分支仍 NOT READY TO MERGE |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -221,3 +222,53 @@ readiness statuses 與四種 ECI outcomes。
 RB-2 closure 範圍仍是 R-B07、R-B21、R-B22。R-B23 是 RB-1 獨立複核新增的 RunState/sidecar
 authenticity finding，只排在 RB-2 相鄰工作，不併入 R-B21，也不得由 workflow graph digest
 冒充關閉。`sdd-pipeline` 在 R6 前仍維持 experimental 與 execution-denied。
+
+## 8. 2026-07-18 RB-2 完成增補
+
+implementation commit `ec25c07` 已完成 RB-2。workflow approval、執行 snapshot 與
+RunState 現在綁定同一 raw-byte SHA-256 graph digest；未核准的同 ID/version graph 在
+fresh、resume 與 restart 都被拒絕，明確重新核准後仍須用 restart 封存舊 identity 才能
+開始新 run。ECI 路徑要求八種 readiness status 與第 7 節裁定的四種 outcome 各自
+exactly one；canonical evidence 是 `eci-trigger.md` 加四份 dossier，以 framed digest
+綁定。`setup-eci.ps1` 與 project-local requirement marker 保存已觸發義務，direct Plan、
+isolated canonical evidence deletion 與竄改 re-entry 均 fail-closed；已完成 dossier 的
+fresh/restart 則依最新 readiness 跳過 ECI，不再誤入。
+
+對抗複核同時修復兩個相鄰 closure blocker。run/list 改共用 manifest identity、
+catalog `sourcePath` 與所有 reparse-point 實體邊界判準，恢復 R-B20/R-B05；restart
+archive 改為 collision-resistant、atomic no-overwrite，恢復 R-B10/R-B24。這些相鄰修復
+不改變 RB-2 的 canonical closure 範圍，也不把 R-B23 吸收到 R-B21。
+
+| ID | 2026-07-18 狀態 | 結論 |
+|---|---|---|
+| R-B21 | COMPLETED | reviewed graph digest 綁定 approval、執行 bytes 與 RunState；未核准 bytes 均拒絕，重新核准後 resume 拒絕 hybrid run、restart 才能開始新 run |
+| R-B07 | COMPLETED | 五件 ECI evidence、digest、re-entry 與第二次 readiness routing 已閉合 |
+| R-B22 | COMPLETED | 八種 readiness status、四種 outcome exactly-one；requirement marker 與 mandatory setup gate 防止 isolated deletion 或 direct Plan bypass |
+| R-B20、R-B05 | COMPLETED | ledger 第 18 節 manifest/list-run divergence 與 junction escape 已修復，共用授權判準恢復成立 |
+| R-B10、R-B24 | COMPLETED | ledger 第 19 節同秒 archive overwrite 已修復，每次 restart 證據以 no-overwrite 保存 |
+| R-B23 | OPEN | coordinated marker、readiness、trigger、dossier deletion/forgery；RunState/sidecar co-forgery；`completed_steps`、routing、gate injection；run-ID/path substitution 仍待 authority 設計 |
+
+**判別性與機器驗收：**
+
+| 驗收面 | 舊實作或現行結果 |
+|---|---|
+| R-B21 overlay | 舊實作 1/13 通過 |
+| ECI validator overlay | 舊實作 0/25 通過 |
+| direct Plan overlay | 舊實作 1/13 通過 |
+| outcome/re-entry overlay | 舊實作 0/9 通過 |
+| manifest counterexample | 舊 listing false-authorized manifest mismatch；新 run/list 共用判準並拒絕 |
+| junction counterexample | 舊來源可經 reparse point 逃逸；新 run/list 均拒絕 root 外實體路徑 |
+| archive counterexamples | 舊同秒 restart 覆寫第一份 archive；新實作保存兩份 identity，exact collision 拒絕覆寫 |
+| RB-2 focused suites | 現行 353 passed / 0 failed |
+| 完整 governance suite | 現行 579 passed / 0 failed |
+| runtime audit | 現行 `VALID=true`、0 errors、0 warnings |
+| accounting integration gates | `validate-mainline-notes.ps1 -BaseRef origin/main -HeadRef HEAD -RequireReady -Json` 為 `VALID=true`、0 errors、0 warnings；branch-wide `git diff --check` 通過 |
+
+本次沒有新增 finding。ledger 維持 125 條，分布維持 Critical 8、High 29、Medium 50、
+Low 38。R-B23 仍 `OPEN`；R-A17、R-A18 仍 `OPEN` 並留給 RB-3。RB-3 標題中的
+「需先於後續任何 Ready 宣稱」是指 RB-3 之後各批的 Ready 宣稱；RB-2 note 可標為
+`Ready`，只代表本批 implementation、判別性測試與帳務 evidence 彼此一致，不代表
+aggregate branch 已可合併，也不宣稱 R-A18 已關閉。
+
+RB-3、RB-4、RB-5 與 R6 仍須完成；`sdd-pipeline` 在 R6 前維持 experimental 與
+execution-denied。RB-2 完成使分支更接近可合併，但 PR #3 仍 `NOT READY TO MERGE`。

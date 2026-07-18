@@ -3,16 +3,16 @@
 **Date**: 2026-07-14
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `6a53f66`
+**Status**: Ready
+**Related Commits**: `6a53f66`; `cb43de5`; `961df61`; `e4d2167`; `d548124`; `ec25c07`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 
 ## Revalidation
 
 The 2026-07-14 governance re-review
 ([`sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md`](../sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md))
-refuted two of this note's material closure claims with reproduced counterexamples, so the note is
+refuted two of this note's material closure claims with reproduced counterexamples, so the note was
 demoted from Ready to Draft per the note state machine's Reopened rule:
 
 - **R-B02 (false-completion closure) refuted by RVR-01.** The `no-pending-tasks` postcondition only
@@ -24,10 +24,10 @@ demoted from Ready to Draft per the note state machine's Reopened rule:
   `[bool]`, where `[bool]'false'` is `True` (locally reproduced); a missing `state.json` falls back to
   `defaultEnabled` instead of failing closed. Closure moves to ledger item R-B20.
 
-The other items in this batch (R-B01, R-B03, R-B04, R-B06 remainder, R-B10 through R-B16) are not
-refuted and stand as implemented. Re-entry condition: this note may return to Ready only after R-B19
-and R-B20 land with baseline-inventory and schema/strict-boolean fail-closed negative tests, and the
-2026-07-14 remediation plan's RB-1 batch closes. Full mapping in
+The other items in this batch (R-B01, R-B03, R-B04, R-B06 remainder, R-B10 through R-B16) were not
+refuted by that review and stood as implemented. At that point, re-entry required R-B19 and R-B20
+to land with baseline-inventory and schema/strict-boolean fail-closed negative tests and the
+2026-07-14 remediation plan's RB-1 batch to close. Full mapping in
 [`sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`](../sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md).
 
 ### 2026-07-18 Restart Archive Revalidation
@@ -39,10 +39,38 @@ restart overwrote the first state, losing its run identity and audit evidence. R
 returns to `IN_PROGRESS`, and the distinct Medium finding R-B24 records the collision and overwrite
 failure. The existing explicit restart and terminal/in-flight recovery behavior remains effective.
 
-Re-entry requires collision-resistant archive names, atomic no-overwrite creation, and a
+Re-entry then required collision-resistant archive names, atomic no-overwrite creation, and a
 discriminating fixed-time repeated-restart test that preserves both archived states and their
-distinct run identities. This note remains Draft and its Reconciliation Status is Open until that
-evidence exists.
+distinct run identities. At that point, this note remained Draft and its Reconciliation Status
+remained Open until that evidence existed.
+
+### Closure Resolution (2026-07-18)
+
+The historical reopenings above remain part of the evidence trail. Their coherent blockers are now
+resolved as follows:
+
+- R-B02/R-B19: commits `cb43de5` and `961df61` replace the absence-of-pending-text conclusion with an
+  engine-owned, write-once baseline task-ID inventory. Terminal completion requires every baseline
+  ID to remain present as one canonical checked task and revalidates the Implement authorization.
+- R-B05/R-B20: commit `ec25c07` makes catalog/state schema validation, strict Boolean parsing,
+  manifest existence/object/id/version, exact catalog `sourcePath`, content digest, and
+  all-component physical reparse boundaries one shared list/run authorization decision. The
+  truth-first reopening is preserved in `e4d2167`.
+- R-B10/R-B24: commit `ec25c07` replaces second-granularity forced moves with collision-resistant
+  archive names and atomic no-overwrite publication. Fixed-time consecutive restarts preserve both
+  archived states and their distinct run identities. The counterexample remains recorded in
+  `d548124`.
+- R-B21: commit `ec25c07` binds the approved lowercase SHA-256 of the exact `workflow.yml` bytes to
+  catalog authorization and RunState id, version, and digest. Fresh execution rejects an
+  unapproved current graph; resume rejects a legacy or mismatched saved identity; restart proceeds
+  only after the current graph is explicitly approved and then archives the old identity.
+
+Focused RB-2 integration is 353 passed, 0 failed, 0 skipped; the full governance suite is 579
+passed, 0 failed, 0 skipped; and the shared runtime audit reports `VALID=true`, 0 errors, and
+0 warnings. R-B23 is expressly excluded from this closure: coordinated marker/evidence deletion or
+forgery, RunState/sidecar co-forgery, `completed_steps`/routing/gate injection, and run-ID/path
+substitution remain open. This note therefore returns to Ready with reconciliation Closed, without
+promoting the experimental workflow.
 
 ## Summary
 
@@ -87,8 +115,9 @@ fixed and regression-tested inside this batch before commit.
 - sdd-pipeline stays `experimental` / default-disabled: the runner authorization now makes it
   deterministically denied until the wave-3 promotion gates close in R6. This is intended and is
   now disclosed in the pipeline README and POLICY.
-- R-B07 (ECI full-dossier re-entry), R-B08 (analyze result artifact), and R-B09 (re-promotion) remain
-  open for R3/R6.
+- At original R2 completion, R-B07 (ECI full-dossier re-entry), R-B08 (Analyze result artifact), and
+  R-B09 (re-promotion) remained open for later batches. RB-1 subsequently closed R-B08, RB-2 closes
+  R-B07, and R-B09 remains deferred to R6.
 
 ## Affected Paths
 
@@ -110,15 +139,17 @@ fixed and regression-tested inside this batch before commit.
 
 - A run keeps one feature context, never pre-creates `specs/<feature>`, and cannot be resumed from a
   DryRun preview.
-- (REOPENED, R-B02 / RVR-01) This batch added a `no-pending-tasks` postcondition and a terminal
-  `-AcceptAgent` lockout, but the re-review showed the postcondition does not preserve the baseline
-  task-ID inventory, so false completion is NOT closed. See the Revalidation section; closure moves to
-  R-B19.
+- (HISTORICAL REOPENING, R-B02 / RVR-01; resolved by R-B19 on 2026-07-18) This batch added a
+  `no-pending-tasks` postcondition and a terminal `-AcceptAgent` lockout, but the re-review showed
+  that the original postcondition did not preserve the baseline task-ID inventory. The reproduced
+  false completion remains recorded in Revalidation; Closure Resolution records the later
+  baseline-inventory repair.
 - A rejected gate with no remediation branch stops the run instead of silently completing it.
-- (REOPENED, R-B05 / RVR-03) This batch added catalog/state/manifest existence and identity checks,
-  but the re-review showed the runner does not apply the catalog/state schema and mis-parses string
-  booleans (missing `state.json` falls back to `defaultEnabled`), so runner authorization is NOT
-  fail-closed. See the Revalidation section; closure moves to R-B20.
+- (HISTORICAL REOPENING, R-B05 / RVR-03; resolved by R-B20 on 2026-07-18) This batch added
+  catalog/state/manifest existence and identity checks, but the re-review showed that the original
+  runner did not apply the catalog/state schema and mis-parsed string booleans while a missing
+  `state.json` fell back to `defaultEnabled`. The counterexample remains recorded in Revalidation;
+  Closure Resolution records the later shared fail-closed repair.
 - Known residuals, recorded not absorbed: `.workflow/` is ignored only in the workspace repo and the
   project template — a pre-existing standalone consumer repo must add the pattern itself (noted in
   POLICY, and consumer-repo drift is out of this shared-layer batch's scope); the DryRun sidecar uses
@@ -141,7 +172,7 @@ fixed and regression-tested inside this batch before commit.
 | `.githooks/pre-commit.ps1` | `must_review` | `reviewed-no-change` | Consumes the contract through the unchanged audit entry point. |
 | `studio/QUICKSTART.md` | `maybe_review` | `updated` | RunState path and experimental-status disclosure corrected. |
 | `WORKSPACE_STRUCTURE.md` | `maybe_review` | `reviewed-no-change` | No workspace component added, removed, or relocated (RunState is a local transient, not a tracked layout path). |
-| `.claude/agents/*.md` | `must_update` | `reviewed-no-change` | No agent source changed in this batch. |
+| `.claude/agents/*.md` | `must_update` | `updated` | The reconciled repair history includes ECI and Readiness Claude mirror changes from `ec25c07`; the RB-2 note records their first-action and evidence semantics. |
 | `studio/constitution/constitution.md` | `maybe_review` | `reviewed-no-change` | Fixes implement existing ordered-stage, gate, and surface-truthfulness rules; no new policy. |
 
 ## Validation
@@ -157,12 +188,17 @@ fixed and regression-tested inside this batch before commit.
 ## Merge Notes
 
 - This batch does not promote the experimental workflow runtime; sdd-pipeline remains denied until R6.
-- Implementation commit `6a53f66` exists and all local validation is green; hosted `audit-and-tests`
-  validates the pushed SHA on PR #3 before merge.
+- Original implementation commit `6a53f66` and the five dated repair/truth commits listed above form
+  the reconciled history. Final Ready-note validation reports `VALID=true`, 0 errors, and 0 warnings,
+  and `git diff --check` passes; hosted `audit-and-tests` must still validate a later pushed SHA on
+  PR #3.
+- Closing these execution-integrity blockers makes the branch closer to merge readiness, but PR #3
+  remains NOT READY TO MERGE. RB-3 through RB-5 and R6 remain mandatory.
 
 ## Follow-ups
 
-- R-B07 ECI full-dossier re-entry and R-B08 analyze result artifact (R3).
-- R-B09 re-promotion of sdd-pipeline after the wave-3 gates close (R6).
+- R-B23 remains open for coordinated local-checkpoint forgery and authority-field injection.
+- R-B09 re-promotion of `sdd-pipeline` remains deferred until the wave-3 gates close in R6; it stays
+  experimental, default-disabled, and execution-denied.
 - Optional hardening carried in the ledger: strengthen the DryRun sidecar lock, and consider a
   bootstrap step that adds `.workflow/` ignore to existing consumer repos.

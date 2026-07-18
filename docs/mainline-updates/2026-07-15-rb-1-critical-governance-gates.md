@@ -3,10 +3,10 @@
 **Date**: 2026-07-15
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `cb43de5`; `961df61`
+**Status**: Ready
+**Related Commits**: `cb43de5`; `961df61`; `e4d2167`; `ec25c07`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -118,10 +118,10 @@ workflow for an identity mismatch.
 The shared registry decision did not validate manifest identity. The runner performed that check
 separately, so the prior R-B20/R-B05 shared-criterion closure was incomplete even though the strict
 Boolean, missing-state, wrong-type, null, scalar, and schema-substitution repairs remain effective.
-Accordingly, R-B20 and R-B05 are reopened to `IN_PROGRESS`, this note returns to `Draft`, and
-reconciliation returns to `Open`.
+Accordingly, R-B20 and R-B05 were reopened to `IN_PROGRESS`, this note returned to `Draft`, and
+reconciliation returned to `Open`.
 
-Re-entry to `Ready` requires all of the following:
+Re-entry to `Ready` required all of the following:
 
 - Manifest existence, JSON shape, workflow ID, and version must participate in the common registry
   authorization decision consumed by both listing and execution.
@@ -131,16 +131,38 @@ Re-entry to `Ready` requires all of the following:
   workflow-content digest cases must remain denied by both surfaces.
 - The full runtime audit, governance suite, Ready-note validator, and whitespace check must pass.
 
+## Resolution (2026-07-18)
+
+Commit `e4d2167` preserved the manifest-identity counterexample and reopened R-B20/R-B05 before the
+repair. Commit `ec25c07` then moved manifest existence, object shape, workflow id, and version into
+the shared registry authorization decision consumed by both `list-workflows.ps1` and
+`run-workflow.ps1`. The runner executes the exact catalog-authorized `sourcePath`; the shared
+resolver also verifies the physical workflow root, `sourceRoot`, `workflow.yml`, and `manifest.json`
+through every existing reparse component before either surface can authorize them.
+
+The discriminating old-head evidence still authorizes the mismatched manifest in listing while the
+runner denies it, and also permits an external junction to reach execution. Current-head tests deny
+both surfaces for the mismatch and deny the physical escape. The original string-Boolean,
+missing-state, wrong-type, null, scalar, schema-substitution, and digest cases remain fail-closed.
+The coherent R-B20/R-B05 blocker is therefore resolved without weakening any prior RB-1 negative
+case. Current focused integration is 353 passed, 0 failed, 0 skipped; the full governance suite is
+579 passed, 0 failed, 0 skipped; and the shared runtime audit reports `VALID=true`, 0 errors, and
+0 warnings. The final Ready-note validator reports `VALID=true`, 0 errors, and 0 warnings, and
+`git diff --check` passes. This note therefore returns to Ready and its reconciliation is Closed.
+
 ## Merge Notes
 
 - The first implementation commit is `cb43de5`. Independent review then found two closure blockers;
   repair commit `961df61` binds the deleted ECI evidence and baseline cache to durable terminal evidence.
-- This note is Draft while the 2026-07-18 manifest-identity counterexample is repaired and revalidated.
-- RB-1 completion does not make PR #3 ready to merge. RB-2 through RB-5 and R6 remain mandatory.
+- Truth-first commit `e4d2167` records the later manifest/listing divergence; implementation commit
+  `ec25c07` closes it with the shared identity, exact-source, and physical-boundary authorization
+  described above.
+- RB-1 completion does not make PR #3 ready to merge. RB-2 is now complete, while RB-3 through RB-5
+  and R6 remain mandatory.
 
 ## Follow-ups
 
-- Execute RB-2 through RB-5 and R6 from the dated remediation plan. Do not re-promote
+- Execute RB-3 through RB-5 and R6 from the dated remediation plan. Do not re-promote
   `sdd-pipeline` before R6 acceptance.
 - Record R-B23 for comprehensive RunState authenticity. RB-1 detects a modified baseline cache via
   the write-once sidecar, but coordinated modification of transient state and sidecars or direct
