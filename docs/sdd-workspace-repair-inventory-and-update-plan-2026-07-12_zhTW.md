@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.8.0"
+version: "1.9.0"
 date: "2026-07-12"
 last_updated: "2026-07-18"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "6030b27 (RB-1 accounting head; RB-2 worktree in progress)"
+head_commit: "e4d2167 (RB-2 first truth-restoration accounting head; RB-2 worktree in progress)"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -23,13 +23,20 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23。因此目前為 124 條，編為 R-A01 至 R-A19、R-B01 至 R-B23、其餘區域至 R-J03。現況分佈：Critical 8、High 29、Medium 49、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24。因此目前為 125 條，編為 R-A01 至 R-A19、R-B01 至 R-B24、其餘區域至 R-J03。現況分佈：Critical 8、High 29、Medium 50、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
 **2026-07-15 RB-1 Critical 止血完成**：implementation commits `cb43de5`、`961df61` 關閉 RVR-01、RVR-02、RVR-03，完成 R-B19、R-D02、R-B08、R-B20，並以新的判別性證據恢復 R-B02、R-B05 的 `COMPLETED` 狀態。post-commit 獨立複核另辨識全面 RunState 與 sidecar 真偽邊界，依 ledger 規則新增 High finding R-B23；已修復的單獨 cache 縮減、sidecar 缺失、格式損壞與 identity mismatch 不重複列入 R-B23。詳見第 17 節。RB-1 完成後分支仍 `NOT READY TO MERGE`；RB-2 至 RB-5 與 R6 仍是必要批次，`sdd-pipeline` 維持 experimental 與 denied。
 
 **2026-07-18 RB-1 誠實性再還原**：RB-2 對抗複核證明 listing 與 runner 並未使用同一完整授權判準。manifest version 與 catalog version 不符時，listing 仍回報 `executionAuthorized=true`，runner 才拒絕 identity mismatch。這項反例推翻 R-B20/R-B05 的完整 closure 宣稱，但不推翻已驗證的 strict Boolean、missing-state、wrong-type、null、scalar 與 schema-substitution 修復。依 ledger 與 note 狀態機，R-B20/R-B05 先回到 `IN_PROGRESS`，RB-1 note 降回 `Draft`；日期化證據與重新進入條件見第 18 節。
+
+**2026-07-18 R-B10 誠實性還原**：RB-2 的 restart 對抗複核固定時鐘並連續執行兩次
+`-Restart`，證明既有 archive 名稱只精確到秒且使用 `Move-Item -Force`；第二次 restart
+覆寫第一份 archive，使第一個 run identity 與 state 證據遺失。這推翻 R-B10 的 archive
+保留子宣稱，但不推翻顯式 `-Restart` 已能讓 terminal 與 in-flight run 重新開始的既有修復。
+R-B10 先回到 `IN_PROGRESS`，並新增 Medium finding R-B24；日期化證據與重新進入條件見第
+19 節。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -370,6 +377,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.6.0 | 2026-07-14 | R2.1 誠實性還原：2026-07-14 治理 re-review 以本地反例推翻 R-B02（RVR-01）與 R-B05（RVR-03）的 COMPLETED，兩者改回 IN_PROGRESS 並移交 R-B19/R-B20；新增 9 條 RVR findings（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06），ledger 由 114 增至 123（機器重數 Critical 8/High 28/Medium 49/Low 38）；engine-integrity note 降回 Draft 加 Revalidation（見第 16 節）。本批不改 runtime 程式碼。 |
 | 1.7.0 | 2026-07-15 | RB-1 implementation commits `cb43de5`、`961df61` 關閉 RVR-01/02/03 與 R-B19/R-D02/R-B08/R-B20，並以判別性回歸證據恢復 R-B02/R-B05 的 COMPLETED；post-commit 複核新增 High R-B23，ledger 由 123 增至 124（Critical 8/High 29/Medium 49/Low 38）。完整 suite 428 passed / 0 failed；audit VALID=true、0 errors、0 warnings。分支仍 NOT READY TO MERGE，見第 17 節。 |
 | 1.8.0 | 2026-07-18 | RB-2 對抗複核發現 manifest version mismatch 時 listing 授權、runner 拒絕，推翻 R-B20/R-B05 的完整 shared-criterion closure；先將兩者還原為 IN_PROGRESS，RB-1 note 降為 Draft 且 reconciliation 改為 Open。本版只記錄 superseding evidence 與重新進入條件，不把尚未落地的 runtime 修補冒充完成，見第 18 節。 |
+| 1.9.0 | 2026-07-18 | RB-2 restart 對抗複核以固定時鐘重現同秒 archive collision：第二次 `-Restart` 因秒級名稱與 `Move-Item -Force` 覆寫第一份 state。R-B10 的 archive 保留子宣稱還原為 IN_PROGRESS，新增 Medium R-B24，ledger 由 124 增至 125（Critical 8/High 29/Medium 50/Low 38）。本版只記錄 superseding evidence，不把尚未落地的 runtime 修補冒充完成，見第 19 節。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -617,3 +625,25 @@ runtime 修補倒填成已完成。
 R-B19、R-B02、R-D02、R-B08 的具體 closure 未被本反例推翻，維持第 17 節狀態。
 R-B21 只處理 reviewed workflow raw-byte graph identity；R-B23 處理 RunState/sidecar
 authenticity，兩者都不得吸收此 manifest shared-criterion 修補。
+
+## 19. 2026-07-18 RB-2 對抗複核的 restart archive 誠實性還原
+
+RB-2 的獨立 RunState 對抗複核固定 `Get-Date`，對同一 feature 連續執行兩次
+`-Restart`。既有 engine 以秒級時間戳組成固定 archive 名稱，並用 `Move-Item -Force`
+搬移 `state.json`。兩次 restart 落在同一秒時只剩一份 archive，第二次覆寫第一份，
+使第一個 run identity 與 state 證據不可恢復。這項反例推翻第 15 節 R-B10
+「舊 state 以 timestamped `.restarted.json` 封存」的完整性宣稱。
+
+依 Surface Truthfulness 與第 8 節 ledger 規則，本節先記錄降級，不把後續 runtime
+修補倒填成已完成。R-B10 的顯式 restart 與 terminal/in-flight recovery 能力仍成立；
+被推翻的是重複 restart 時每一份舊 state 都被保留的 archive 子保證。
+
+| ID | Severity | 目前狀態 | 未被推翻的既有修復 | 被推翻範圍與重新進入條件 |
+|---|---|---|---|---|
+| R-B10 | Medium | IN_PROGRESS | completed、failed、rejected 與 in-flight run 可用顯式 `-Restart` 重新開始；沒有 `-Restart` 時仍拒絕覆蓋既有 state | archive 名稱必須具碰撞抗性，建立時不得覆寫既有檔案；固定同一時間連續 restart 的判別性測試必須保存兩份 archive，且各自保留不同 run identity |
+| R-B24 | Medium | IN_PROGRESS | N/A，新 finding | [2026-07-18 RB-2 對抗複核] 秒級 archive 名稱與 `Move-Item -Force` 允許後一次 restart 覆寫前一次 restart 證據。closure 要求 collision-resistant 名稱、atomic no-overwrite 搬移，以及固定時鐘重複 restart 的 negative test；不得吸收到只處理 graph digest 的 R-B21 或本機 checkpoint authenticity 的 R-B23 |
+
+`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 原已因 RVR-01/03
+維持 `Draft`；本反例使其 Reconciliation Status 回到 `Open`，並新增日期化 Revalidation。
+R-B24 是獨立 correctness finding；R-B23 仍只處理 RunState/sidecar authority 與 authenticity，
+兩者不得互相吸收。

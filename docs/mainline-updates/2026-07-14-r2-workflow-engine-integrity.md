@@ -6,7 +6,7 @@
 **Status**: Draft
 **Related Commits**: `6a53f66`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 
 ## Revalidation
 
@@ -29,6 +29,20 @@ refuted and stand as implemented. Re-entry condition: this note may return to Re
 and R-B20 land with baseline-inventory and schema/strict-boolean fail-closed negative tests, and the
 2026-07-14 remediation plan's RB-1 batch closes. Full mapping in
 [`sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`](../sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md).
+
+### 2026-07-18 Restart Archive Revalidation
+
+This dated evidence supersedes only the preceding sentence's R-B10 archive-retention conclusion.
+An RB-2 adversarial test fixed the clock and performed two consecutive `-Restart` operations. The
+engine's second-granularity archive name and `Move-Item -Force` left only one archive: the second
+restart overwrote the first state, losing its run identity and audit evidence. R-B10 therefore
+returns to `IN_PROGRESS`, and the distinct Medium finding R-B24 records the collision and overwrite
+failure. The existing explicit restart and terminal/in-flight recovery behavior remains effective.
+
+Re-entry requires collision-resistant archive names, atomic no-overwrite creation, and a
+discriminating fixed-time repeated-restart test that preserves both archived states and their
+distinct run identities. This note remains Draft and its Reconciliation Status is Open until that
+evidence exists.
 
 ## Summary
 
