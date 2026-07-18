@@ -39,6 +39,40 @@ if ($Help) {
 # Load common functions
 . "$PSScriptRoot/common.ps1"
 
+function Invoke-FeatureStructureValidation {
+    param([Parameter(Mandatory = $true)][string]$FeatureDir)
+
+    $validatorPath = Join-Path $PSScriptRoot 'validate-feature-structure.ps1'
+    if (-not (Test-Path -LiteralPath $validatorPath -PathType Leaf)) {
+        throw "validate-feature-structure.ps1 is required before planning: $validatorPath"
+    }
+
+    $output = & pwsh -NoProfile -File $validatorPath -FeatureDir $FeatureDir -Json 2>&1
+    $exitCode = $LASTEXITCODE
+    if (-not $output) {
+        throw 'validate-feature-structure.ps1 returned no machine-readable result.'
+    }
+
+    try {
+        $result = ($output -join "`n") | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        throw "validate-feature-structure.ps1 returned invalid JSON: $($_.Exception.Message)"
+    }
+
+    if ($result.VALID -isnot [bool]) {
+        throw 'validate-feature-structure.ps1 result is missing boolean VALID.'
+    }
+    if ($exitCode -ne 0 -or -not $result.VALID) {
+        $details = @($result.ERRORS | ForEach-Object { "[$($_.id)] $($_.message)" }) -join '; '
+        if (-not $details) {
+            $details = "validator exited with code $exitCode"
+        }
+        throw "Planning is blocked by feature structure validation: $details"
+    }
+
+    return $result
+}
+
 function Assert-ReadyForPlan {
     param([Parameter(Mandatory = $true)][object]$Paths)
 
@@ -46,10 +80,20 @@ function Assert-ReadyForPlan {
         throw "readiness-assessment.md is required before planning. Run /speckit.readiness first: $($Paths.READINESS_ASSESSMENT)"
     }
 
+    $validation = Invoke-FeatureStructureValidation -FeatureDir $Paths.FEATURE_DIR
     $readinessContent = Get-Content -LiteralPath $Paths.READINESS_ASSESSMENT -Raw
-    $primaryStatus = Get-MarkdownField -Content $readinessContent -Field 'Primary Status'
+    $primaryStatus = [string]$validation.READINESS_PRIMARY_STATUS
     if ($primaryStatus -ne 'READY_FOR_PLAN') {
         throw "Planning is blocked because readiness Primary Status is '$primaryStatus'. Complete readiness remediation before running /speckit.plan."
+    }
+
+    $eciReentryStatus = [string]$validation.ECI_REENTRY_STATUS
+    if ($eciReentryStatus -eq 'NOT_REQUIRED') {
+        if ($validation.ECI_REQUIRED -eq $true) {
+            throw 'Planning is blocked because Readiness declares ECI NOT_REQUIRED while current ECI evidence requires governed re-entry.'
+        }
+    } elseif ($eciReentryStatus -ne 'COMPLETE') {
+        throw "Planning is blocked because ECI Re-entry Status is '$eciReentryStatus'. Run /speckit.readiness after the complete ECI evidence set is available."
     }
 
     $ledgerRequirement = Get-MarkdownField -Content $readinessContent -Field 'Intent Ledger Requirement'
@@ -59,10 +103,8 @@ function Assert-ReadyForPlan {
         }
     }
 
-    $authorizationRecord = Join-Path $Paths.ECI_DIR 'authorization-record.md'
-    if (Test-Path -LiteralPath $authorizationRecord -PathType Leaf) {
-        $authorizationContent = Get-Content -LiteralPath $authorizationRecord -Raw
-        $authorizationOutcome = Get-MarkdownField -Content $authorizationContent -Field 'Authorization Outcome'
+    if ($validation.ECI_REQUIRED -eq $true) {
+        $authorizationOutcome = [string]$validation.ECI_AUTHORIZATION_OUTCOME
         if ($authorizationOutcome -ne 'READY_FOR_MAINLINE_IMPLEMENTATION') {
             throw "Planning is blocked because ECI Authorization Outcome is '$authorizationOutcome'. Re-run /speckit.readiness after resolving the ECI boundary."
         }

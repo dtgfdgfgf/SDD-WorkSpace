@@ -67,6 +67,46 @@ BeforeAll {
         return ([System.Convert]::ToHexString($digest)).ToLowerInvariant()
     }
 
+    function script:Get-TestEciEvidenceSha256 {
+        param([Parameter(Mandatory = $true)][string]$FeatureDir)
+
+        $readinessDir = Join-Path $FeatureDir 'readiness'
+        $relativePaths = @(
+            'eci-trigger.md',
+            'eci/eci-assessment.md',
+            'eci/source-manifest.md',
+            'eci/adoption-record.md',
+            'eci/authorization-record.md'
+        )
+        $hasher = [System.Security.Cryptography.IncrementalHash]::CreateHash(
+            [System.Security.Cryptography.HashAlgorithmName]::SHA256
+        )
+        try {
+            foreach ($relativePath in $relativePaths) {
+                $pathBytes = [System.Text.Encoding]::UTF8.GetBytes($relativePath)
+                $pathLengthBytes = [System.BitConverter]::GetBytes([uint32]$pathBytes.Length)
+                if ([System.BitConverter]::IsLittleEndian) {
+                    [System.Array]::Reverse($pathLengthBytes)
+                }
+
+                $contentBytes = [System.IO.File]::ReadAllBytes((Join-Path $readinessDir $relativePath))
+                $contentLengthBytes = [System.BitConverter]::GetBytes([uint64]$contentBytes.LongLength)
+                if ([System.BitConverter]::IsLittleEndian) {
+                    [System.Array]::Reverse($contentLengthBytes)
+                }
+
+                $hasher.AppendData($pathLengthBytes)
+                $hasher.AppendData($pathBytes)
+                $hasher.AppendData($contentLengthBytes)
+                $hasher.AppendData($contentBytes)
+            }
+
+            return [System.Convert]::ToHexString($hasher.GetHashAndReset()).ToLowerInvariant()
+        } finally {
+            $hasher.Dispose()
+        }
+    }
+
     function script:Write-AnalysisResult {
         param(
             [Parameter(Mandatory = $true)][string]$FeatureDir,
@@ -219,6 +259,8 @@ $ValidatorBody
 
 **Date**: 2026-05-01
 **Primary Status**: ``READY_FOR_PLAN``
+**ECI Re-entry Status**: ``NOT_REQUIRED``
+**ECI Evidence SHA-256**: ``N/A``
 
 ## Planability vs Intent Obligations
 
@@ -448,7 +490,12 @@ Describe 'setup-implement entry gate' {
             $eciDir = Join-Path $FeatureDir 'readiness/eci'
             New-Item -ItemType Directory -Path $eciDir -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $FeatureDir 'readiness/eci-trigger.md') -Value "# ECI Trigger`n" -Encoding utf8
-            Set-Content -LiteralPath (Join-Path $eciDir 'eci-assessment.md') -Value "# ECI Assessment`n" -Encoding utf8
+            Set-Content -LiteralPath (Join-Path $eciDir 'eci-assessment.md') -Value @"
+# ECI Assessment
+
+**ECI Level**: ``STANDARD_ECI``
+**Recommended Authorization**: ``$AuthorizationOutcome``
+"@ -Encoding utf8
             Set-Content -LiteralPath (Join-Path $eciDir 'source-manifest.md') -Value "# Source Manifest`n" -Encoding utf8
             Set-Content -LiteralPath (Join-Path $eciDir 'adoption-record.md') -Value "# Adoption Record`n" -Encoding utf8
             Set-Content -LiteralPath (Join-Path $eciDir 'authorization-record.md') -Value @"
@@ -456,6 +503,27 @@ Describe 'setup-implement entry gate' {
 
 **Authorization Outcome**: ``$AuthorizationOutcome``
 "@ -Encoding utf8
+
+            $digest = Get-TestEciEvidenceSha256 -FeatureDir $FeatureDir
+            $readinessPath = Join-Path $FeatureDir 'readiness/readiness-assessment.md'
+            $readinessContent = Get-Content -LiteralPath $readinessPath -Raw
+            $readinessContent = $readinessContent `
+                -replace '(?m)^(\*\*ECI Re-entry Status\*\*:\s*).+$', "`${1}``COMPLETE``" `
+                -replace '(?m)^(\*\*ECI Evidence SHA-256\*\*:\s*).+$', "`${1}``$digest``"
+            Set-Content -LiteralPath $readinessPath -Value $readinessContent -NoNewline
+
+            $feature = Split-Path -Leaf $FeatureDir
+            $projectRoot = Split-Path -Parent (Split-Path -Parent $FeatureDir)
+            $markerDir = Join-Path $projectRoot ".workflow/runs/$feature"
+            New-Item -ItemType Directory -Path $markerDir -Force | Out-Null
+            [ordered]@{
+                schema_version = '1.0.0'
+                feature = $feature
+                feature_path = "specs/$feature"
+                eci_required = $true
+                recorded_at = '2026-07-18T00:00:00.0000000+00:00'
+            } | ConvertTo-Json -Compress |
+                Set-Content -LiteralPath (Join-Path $markerDir 'eci-requirement.json') -NoNewline -Encoding utf8
         }
     }
 

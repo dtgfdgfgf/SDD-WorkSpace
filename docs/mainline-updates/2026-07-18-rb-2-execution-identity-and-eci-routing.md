@@ -13,9 +13,14 @@
 - Bind approved `workflow.yml` raw bytes to the catalog and RunState with SHA-256, then reject
   fresh execution, resume, or restart when the graph identity is not explicitly approved.
 - Validate exactly one of eight Readiness statuses and exactly one of four ECI outcomes, require
-  the complete four-file ECI dossier, and make direct Plan entry use the same fail-closed validator.
+  `eci-trigger.md` plus the complete four-file ECI dossier, bind all five canonical evidence files
+  to a framed digest and a persistent feature-bound requirement latch, and make direct Plan entry
+  use the same fail-closed validator.
 - Replace the ECI reminder gate with a distinct second Readiness agent step. The three bounded
   outcomes may re-enter Readiness; `NOT_READY` cannot reach re-entry or Plan.
+- Repair the adjacent counterexamples discovered during RB-2: shared manifest and physical-path
+  authorization for R-B20/R-B05, plus collision-resistant no-overwrite restart archives for
+  R-B10/R-B24.
 
 ## Why This Update Exists
 
@@ -34,7 +39,11 @@ on 2026-07-18. The dated remediation-plan addendum preserves that decision and t
 - R-B21: catalog approval digest, exact-byte engine parsing, RunState graph identity, resume and
   restart semantics, listing visibility, policy, contract, and regression coverage.
 - R-B07 and R-B22: complete ECI dossier validation, exactly-one Readiness and ECI fields, direct Plan
-  enforcement, a distinct post-ECI Readiness step, and eight-status plus four-outcome routing tests.
+  enforcement, a distinct post-ECI Readiness step, a persistent local requirement latch, and
+  eight-status plus four-outcome routing tests.
+- R-B20/R-B05 and R-B10/R-B24: truth-first reopening followed by shared manifest and physical
+  reparse authorization, exact `sourcePath` execution, and no-overwrite restart archive repair.
+  These are adjacent repairs, not subcases absorbed into R-B21.
 - No changes under `projects/` or `learning/`, no PR thread resolution, no main merge, and no workflow
   promotion. `sdd-pipeline` remains experimental, disabled, and execution-denied until R6.
 - R-B23 remains a separate open finding. Graph identity does not prove the provenance of
@@ -46,11 +55,11 @@ on 2026-07-18. The dated remediation-plan addendum preserves that decision and t
 | Path | Change |
 |------|--------|
 | `studio/workflows/catalog.schema.json`, `studio/workflows/catalog.json` | Require a lowercase approval digest for approved or deprecated workflows; keep the experimental built-in digest null and denied. |
-| `studio/scripts/powershell/common.ps1`, `run-workflow.ps1`, `list-workflows.ps1` | Compute and compare actual and approved graph digests through the shared registry decision and expose the result in listing output. |
+| `studio/scripts/powershell/common.ps1`, `run-workflow.ps1`, `list-workflows.ps1` | Compute and compare graph digests, validate manifest identity, resolve every existing reparse target inside the physical workflow root, execute the authorized `sourcePath`, and share one list/run decision. |
 | `studio/scripts/powershell/workflow-engine.ps1` | Hash and parse one byte snapshot, persist graph identity, and reject legacy or mismatched resume before replay. |
-| `studio/scripts/powershell/validate-feature-structure.ps1`, `setup-plan.ps1` | Enforce complete ECI evidence, closed enums, exactly-one fields, coherent authorization, and direct Plan gating. |
+| `studio/scripts/powershell/setup-eci.ps1`, `validate-feature-structure.ps1`, `setup-plan.ps1` | Atomically latch the exact initial ECI requirement, enforce complete five-file evidence, closed enums, exactly-one fields, coherent authorization, and direct Plan gating. |
 | `studio/workflows/sdd-pipeline/workflow.yml`, `manifest.json`, `docs/README.md` | Move the graph to version 1.1.0 with validated initial routing, four ECI outcomes, and a distinct second Readiness assessment. |
-| `studio/workflows/POLICY.md` | Document raw-byte approval, RunState identity, reapproval, resume, and restart semantics without claiming local checkpoint authenticity. |
+| `studio/workflows/POLICY.md` | Document raw-byte approval, RunState identity, ECI latch limits, reapproval, resume, and no-overwrite restart semantics without claiming local checkpoint authenticity. |
 | `studio/runtime/shared-runtime-contract.json` | Anchor graph identity, dossier, exactly-one, re-entry, direct Plan, listing, schema, and denied-workflow invariants. |
 | `studio/tests/*.Tests.ps1` | Add discriminating graph mutation, RunState identity, catalog digest, dossier, direct Plan, duplicate-field, eight-status, and four-outcome coverage. |
 
@@ -84,17 +93,22 @@ on 2026-07-18. The dated remediation-plan addendum preserves that decision and t
 
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`: `VALID=true`, 0 errors,
   0 warnings.
-- Focused RB-2 integration suite: 276 passed, 0 failed, 0 skipped.
-- Detached old-head overlay at `6030b27`: the new R-B21 graph and RunState identity block was
-  0 of 12; direct Plan dossier and duplicate-field negatives were 0 of 7; exactly-one Readiness
-  negatives were 0 of 3; new ECI re-entry graph invariants were 8 of 16.
-- Current-head discriminating blocks and full governance results remain pending before this Draft
-  note can become Ready.
+- Focused RB-2 integration suite: 353 passed, 0 failed, 0 skipped.
+- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`: 579 passed, 0 failed, 0 skipped.
+- Detached old-head overlay at `6030b27`: the R-B21 identity block was 1 of 13; ECI validator
+  negatives were 0 of 25; direct Plan was 1 of 13; adapted outcome and re-entry cases were 0 of 9.
+  The old listing authorized a manifest version mismatch, an external junction reached execution,
+  and a same-destination restart archive overwrite erased the first run.
+- Current-head tests deny those cases. The marker-retained deletion and `NOT_REQUIRED` rewrite,
+  stale framed evidence, fresh and restarted complete-dossier routing, exact archive collision,
+  manifest identity, and physical reparse boundary are included.
+- `git diff --check`: no whitespace errors.
 
 ## Merge Notes
 
-- This note is Draft until the implementation commit exists, independent adversarial review closes,
-  the ledger receives a dated status update, and all final machine gates pass at the committed head.
+- This note remains Draft only until the implementation commit hash is recorded and the ledger
+  receives its dated closure update. Independent adversarial review found no blocking issue, and
+  the implementation gates above are green.
 - RB-2 completion will not make PR #3 ready to merge. RB-3 through RB-5 and R6 remain mandatory.
 
 ## Follow-ups

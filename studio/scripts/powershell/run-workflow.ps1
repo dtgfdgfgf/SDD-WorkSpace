@@ -8,8 +8,8 @@
 
 .DESCRIPTION
     Authorizes the workflow against catalog.json / state.json / manifest.json
-    (fail-closed), resolves studio/workflows/<id>/workflow.yml, parses + validates
-    against manifest.schema.json, initializes or resumes RunState at
+    (fail-closed), resolves the catalog sourcePath workflow.yml, parses +
+    validates against manifest.schema.json, initializes or resumes RunState at
     <project>/.workflow/runs/<feature>/state.json (local transient, ignored by Git),
     and runs the state machine via the workflow-engine.ps1 dispatcher.
 
@@ -21,7 +21,7 @@
         44 rejected (gate rejected with no on_reject branch; recover with -Restart)
 
 .PARAMETER Id
-    Workflow id (resolves to studio/workflows/<id>/workflow.yml).
+    Workflow id (resolves through the authorized catalog sourcePath).
 
 .PARAMETER Feature
     Feature id (e.g. 001-foo). RunState lives at <project>/.workflow/runs/<Feature>/state.json.
@@ -100,9 +100,6 @@ $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 if (-not $studioRoot -or -not $workspaceRoot) { throw 'Unable to resolve studio / workspace roots.' }
 $projectRoot = Get-RepoRoot
 
-$workflowYaml = Join-Path (Join-Path $studioRoot "workflows/$Id") 'workflow.yml'
-Assert-PathInsideRoot -Root (Join-Path $studioRoot 'workflows') -Candidate $workflowYaml -MessagePrefix 'workflow.yml escapes workflows root'
-
 function Deny-WorkflowRun {
     param([Parameter(Mandatory)] [string]$Message)
     if ($Json) {
@@ -118,23 +115,25 @@ function Deny-WorkflowRun {
 # state.json is the enable/disable ledger. A workflow directory existing on disk
 # is not, by itself, an authorization to execute it.
 # ---------------------------------------------------------------------------
-$manifestPath = Join-Path (Join-Path $studioRoot "workflows/$Id") 'manifest.json'
-
 $registry = Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot
+# Manifest existence, JSON shape, id, and version are shared registry facts.
+# "Workflow identity mismatch" is therefore denied here and by workflow listing alike.
 $authorization = Get-WorkflowExecutionAuthorization -Registry $registry -Id $Id
 if (-not $authorization.AUTHORIZED) {
     Deny-WorkflowRun -Message ("Workflow registry authorization denied: {0}" -f (@($authorization.ERRORS) -join ' '))
 }
 $catalogEntry = $authorization.ENTRY.CATALOG_ENTRY
-
-if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-    Deny-WorkflowRun -Message "Workflow manifest not found at $manifestPath."
+$workflowYaml = [string]$authorization.ENTRY.WORKFLOW_PATH
+if ([string]::IsNullOrWhiteSpace($workflowYaml)) {
+    Deny-WorkflowRun -Message "Workflow registry authorization did not resolve workflow.yml for '$Id'."
 }
-try { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json -AsHashtable } catch {
-    Deny-WorkflowRun -Message "Unable to parse workflow manifest at ${manifestPath}: $($_.Exception.Message)"
-}
-if ([string]$manifest.id -ne $Id -or [string]$manifest.version -ne [string]$catalogEntry.version) {
-    Deny-WorkflowRun -Message "Workflow identity mismatch: manifest declares '$($manifest.id)@$($manifest.version)' but the catalog entry is '$Id@$($catalogEntry.version)'."
+try {
+    Assert-PathInsideRoot `
+        -Root (Join-Path $studioRoot 'workflows') `
+        -Candidate $workflowYaml `
+        -MessagePrefix 'workflow.yml escapes workflows root'
+} catch {
+    Deny-WorkflowRun -Message $_.Exception.Message
 }
 
 $inputHash = @{}
@@ -158,6 +157,7 @@ try {
         -WorkflowYamlPath $workflowYaml `
         -ExpectedWorkflowId $Id `
         -ExpectedWorkflowVersion ([string]$catalogEntry.version) `
+        -ExpectedWorkflowSha256 ([string]$authorization.ENTRY.WORKFLOW_SHA256) `
         -Feature $Feature `
         -ProjectRoot $projectRoot `
         -WorkspaceRoot $workspaceRoot `

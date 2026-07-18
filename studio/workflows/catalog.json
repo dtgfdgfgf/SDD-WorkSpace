@@ -1,6 +1,6 @@
 {
-  "version": "1.0.1",
-  "updated": "2026-07-13T00:00:00+08:00",
+  "version": "1.1.0",
+  "updated": "2026-07-18T00:00:00+08:00",
   "policy": {
     "mode": "studio-first",
     "curatedOnly": true,
@@ -26,7 +26,7 @@
   "workflows": [
     {
       "id": "sdd-pipeline",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "title": "SDD Seven-Stage Pipeline",
       "sourcePath": "workflows/sdd-pipeline",
       "reviewStatus": "experimental",
@@ -35,8 +35,9 @@
       "owner": "studio",
       "approvedBy": null,
       "approvedAt": null,
-      "stepTypesUsed": ["command", "gate", "switch"],
-      "notes": "Catalog and listing demoted on 2026-07-13 pending closure of GOV-01 through GOV-13 and fresh-fixture promotion gates. This workflow is experimental, not approved, and not default-enabled. Runner authorization enforcement remains a separate R2 gate."
+      "workflowSha256": null,
+      "stepTypesUsed": ["command", "gate", "if", "switch"],
+      "notes": "Catalog and listing remain demoted pending closure of Wave-3 remediation batches and fresh-fixture promotion gates. This workflow is experimental, not approved, not default-enabled, and execution-denied."
     }
   ]
 }

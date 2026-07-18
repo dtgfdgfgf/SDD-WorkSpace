@@ -42,6 +42,7 @@ BeforeAll {
                 -Force
         }
 
+        $workflowPath = Join-Path $workflowRoot 'workflow.yml'
         @"
 schema_version: "1.0.0"
 workflow:
@@ -53,7 +54,8 @@ steps:
   - id: review
     type: gate
     prompt: "Approve?"
-"@ | Set-Content -LiteralPath (Join-Path $workflowRoot 'workflow.yml') -NoNewline
+"@ | Set-Content -LiteralPath $workflowPath -NoNewline
+        $workflowSha256 = (Get-FileHash -LiteralPath $workflowPath -Algorithm SHA256).Hash.ToLowerInvariant()
 
         Write-FixtureJson -Path (Join-Path $workflowRoot 'manifest.json') -Data ([ordered]@{
             id = $id
@@ -83,6 +85,7 @@ steps:
             owner = 'studio'
             approvedBy = 'governance-test'
             approvedAt = '2026-07-15T00:00:00+08:00'
+            workflowSha256 = $workflowSha256
             stepTypesUsed = @('gate')
             notes = 'R-B20 isolated authorization fixture.'
         }
@@ -104,6 +107,9 @@ steps:
             ProjectRoot = $projectRoot
             StudioRoot = $studioRoot
             WorkflowsRoot = $workflowsRoot
+            WorkflowRoot = $workflowRoot
+            WorkflowPath = $workflowPath
+            ManifestPath = Join-Path $workflowRoot 'manifest.json'
             CatalogPath = Join-Path $workflowsRoot 'catalog.json'
             StatePath = Join-Path $workflowsRoot 'state.json'
         }
@@ -148,6 +154,112 @@ steps:
                 $state.states[$Fixture.Id] = $stateEntry
                 Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
                 Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'catalog-missing-workflow-digest' {
+                [void]$catalog.workflows[0].Remove('workflowSha256')
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'catalog-null-workflow-digest' {
+                $catalog.workflows[0].workflowSha256 = $null
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'catalog-number-workflow-digest' {
+                $catalog.workflows[0].workflowSha256 = 42
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'catalog-malformed-workflow-digest' {
+                $catalog.workflows[0].workflowSha256 = 'not-a-sha256'
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'catalog-uppercase-workflow-digest' {
+                $catalog.workflows[0].workflowSha256 = ([string]$catalog.workflows[0].workflowSha256).ToUpperInvariant()
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'workflow-content-mismatch' {
+                (Get-Content -LiteralPath $Fixture.WorkflowPath -Raw).Replace(
+                    'prompt: "Approve?"',
+                    'prompt: "Mutated after approval?"'
+                ) | Set-Content -LiteralPath $Fixture.WorkflowPath -NoNewline
+            }
+            'source-path-inside-alias' {
+                $aliasName = 'catalog-selected-source'
+                $aliasRoot = Join-Path $Fixture.WorkflowsRoot $aliasName
+                Move-Item -LiteralPath $Fixture.WorkflowRoot -Destination $aliasRoot
+                $catalog.workflows[0].sourcePath = "workflows/$aliasName"
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                $Fixture.WorkflowRoot = $aliasRoot
+                $Fixture.WorkflowPath = Join-Path $aliasRoot 'workflow.yml'
+                $Fixture.ManifestPath = Join-Path $aliasRoot 'manifest.json'
+            }
+            'source-path-inside-junction' {
+                $aliasName = 'catalog-selected-inside-junction'
+                $aliasRoot = Join-Path $Fixture.WorkflowsRoot $aliasName
+                $linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
+                New-Item `
+                    -ItemType $linkType `
+                    -Path $aliasRoot `
+                    -Target $Fixture.WorkflowRoot `
+                    -ErrorAction Stop |
+                    Out-Null
+                $catalog.workflows[0].sourcePath = "workflows/$aliasName"
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'source-path-outside-root' {
+                $outsideRoot = Join-Path $Fixture.StudioRoot 'outside-approved-graph'
+                Copy-Item -LiteralPath $Fixture.WorkflowRoot -Destination $outsideRoot -Recurse
+                $catalog.workflows[0].sourcePath = 'workflows/../outside-approved-graph'
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'source-path-junction-outside-root' {
+                $outsideRoot = Join-Path $Fixture.StudioRoot 'outside-junction-parent'
+                New-Item -ItemType Directory -Path $outsideRoot -Force | Out-Null
+                $outsideGraph = Join-Path $outsideRoot 'approved-graph'
+                Copy-Item -LiteralPath $Fixture.WorkflowRoot -Destination $outsideGraph -Recurse
+                $aliasName = 'catalog-selected-outside-junction'
+                $aliasRoot = Join-Path $Fixture.WorkflowsRoot $aliasName
+                $linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
+                New-Item `
+                    -ItemType $linkType `
+                    -Path $aliasRoot `
+                    -Target $outsideRoot `
+                    -ErrorAction Stop |
+                    Out-Null
+                $catalog.workflows[0].sourcePath = "workflows/$aliasName/approved-graph"
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'manifest-version-mismatch' {
+                $manifest = Get-Content -LiteralPath $Fixture.ManifestPath -Raw | ConvertFrom-Json -AsHashtable
+                $manifest['version'] = '9.9.9'
+                Write-FixtureJson -Path $Fixture.ManifestPath -Data $manifest
+            }
+            'manifest-id-mismatch' {
+                $manifest = Get-Content -LiteralPath $Fixture.ManifestPath -Raw | ConvertFrom-Json -AsHashtable
+                $manifest['id'] = 'other-workflow'
+                Write-FixtureJson -Path $Fixture.ManifestPath -Data $manifest
+            }
+            'missing-manifest' {
+                Remove-Item -LiteralPath $Fixture.ManifestPath -Force
+            }
+            'malformed-manifest' {
+                [System.IO.File]::WriteAllText(
+                    $Fixture.ManifestPath,
+                    "{not-json`n",
+                    [System.Text.UTF8Encoding]::new($false)
+                )
+            }
+            'null-manifest' {
+                [System.IO.File]::WriteAllText(
+                    $Fixture.ManifestPath,
+                    "null`n",
+                    [System.Text.UTF8Encoding]::new($false)
+                )
+            }
+            'scalar-manifest' {
+                [System.IO.File]::WriteAllText(
+                    $Fixture.ManifestPath,
+                    "42`n",
+                    [System.Text.UTF8Encoding]::new($false)
+                )
             }
             'missing-state' {
                 Remove-Item -LiteralPath $Fixture.StatePath -Force
@@ -263,6 +375,56 @@ Describe 'run-workflow: shared fail-closed registry authorization (R-B20)' {
         $listing.ExitCode | Should -Be 0
         $listing.Result.VALID | Should -BeTrue
         $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].workflowSha256 | Should -BeExactly $listing.Result.WORKFLOWS[0].actualWorkflowSha256
+        $listing.Result.WORKFLOWS[0].workflowDigestMatches | Should -BeTrue
+
+        $runner = Invoke-FixtureRunner -Fixture $fixture
+        $runner.ExitCode | Should -Be 43
+        $runner.Result.STATUS | Should -Be 'awaiting_gate'
+    }
+
+    It 'denies manifest version mismatch in both listing and runner instead of the old listing false-authorization' {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind 'manifest-version-mismatch'
+
+        $listing = Invoke-FixtureListing -Fixture $fixture
+        $listing.ExitCode | Should -Be 1
+        $listing.Result.VALID | Should -BeFalse
+        $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match 'Workflow identity mismatch'
+
+        $runner = Invoke-FixtureRunner -Fixture $fixture
+        $runner.ExitCode | Should -Be 1
+        $runner.Result.STATUS | Should -Be 'denied'
+        $runner.Result.ERROR | Should -Match 'registry authorization denied.*Workflow identity mismatch'
+    }
+
+    It 'runs the exact authorized sourcePath graph when its directory differs from the workflow id' {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind 'source-path-inside-alias'
+
+        $listing = Invoke-FixtureListing -Fixture $fixture
+        $listing.ExitCode | Should -Be 0
+        $listing.Result.VALID | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].sourcePath | Should -BeExactly 'workflows/catalog-selected-source'
+        $listing.Result.WORKFLOWS[0].workflowPath | Should -BeExactly $fixture.WorkflowPath
+
+        $runner = Invoke-FixtureRunner -Fixture $fixture
+        $runner.ExitCode | Should -Be 43
+        $runner.Result.STATUS | Should -Be 'awaiting_gate'
+    }
+
+    It 'allows a catalog junction alias only when its physical target remains inside workflows root' {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind 'source-path-inside-junction'
+
+        $listing = Invoke-FixtureListing -Fixture $fixture
+        $listing.ExitCode | Should -Be 0
+        $listing.Result.VALID | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].sourcePath | Should -BeExactly 'workflows/catalog-selected-inside-junction'
+        $listing.Result.WORKFLOWS[0].workflowPath | Should -BeExactly $fixture.WorkflowPath
 
         $runner = Invoke-FixtureRunner -Fixture $fixture
         $runner.ExitCode | Should -Be 43
@@ -274,6 +436,19 @@ Describe 'run-workflow: shared fail-closed registry authorization (R-B20)' {
         @{ Name = 'state enabled string false'; Kind = 'state-string-boolean' }
         @{ Name = 'state enabled numeric wrong type'; Kind = 'state-number-boolean' }
         @{ Name = 'catalog defaultEnabled null'; Kind = 'catalog-null-boolean' }
+        @{ Name = 'approved catalog missing workflow digest'; Kind = 'catalog-missing-workflow-digest' }
+        @{ Name = 'approved catalog null workflow digest'; Kind = 'catalog-null-workflow-digest' }
+        @{ Name = 'approved catalog numeric workflow digest'; Kind = 'catalog-number-workflow-digest' }
+        @{ Name = 'approved catalog malformed workflow digest'; Kind = 'catalog-malformed-workflow-digest' }
+        @{ Name = 'approved catalog uppercase workflow digest'; Kind = 'catalog-uppercase-workflow-digest' }
+        @{ Name = 'same-id/version workflow content mismatch'; Kind = 'workflow-content-mismatch'; ErrorPattern = 'approval digest mismatch' }
+        @{ Name = 'catalog sourcePath outside workflows root'; Kind = 'source-path-outside-root'; ErrorPattern = 'escapes workflows root' }
+        @{ Name = 'catalog sourcePath junction target outside workflows root'; Kind = 'source-path-junction-outside-root'; ErrorPattern = 'reparse point outside workflows root.*outside physical root' }
+        @{ Name = 'manifest id mismatch'; Kind = 'manifest-id-mismatch'; ErrorPattern = 'Workflow identity mismatch' }
+        @{ Name = 'missing manifest'; Kind = 'missing-manifest'; ErrorPattern = 'manifest missing' }
+        @{ Name = 'malformed manifest JSON'; Kind = 'malformed-manifest'; ErrorPattern = 'Invalid workflow manifest JSON' }
+        @{ Name = 'manifest JSON null'; Kind = 'null-manifest'; ErrorPattern = 'must be a JSON object' }
+        @{ Name = 'manifest JSON scalar wrong shape'; Kind = 'scalar-manifest'; ErrorPattern = 'must be a JSON object' }
         @{ Name = 'missing state.json'; Kind = 'missing-state' }
         @{ Name = 'states array wrong type'; Kind = 'states-array' }
         @{ Name = 'states null'; Kind = 'states-null' }
@@ -301,5 +476,71 @@ Describe 'run-workflow: shared fail-closed registry authorization (R-B20)' {
             $runner.Result.ERROR | Should -Match $ErrorPattern
             ($listing.Result.ERRORS -join "`n") | Should -Match $ErrorPattern
         }
+    }
+}
+
+Describe 'shared workflow authorization leaf reparse boundary (R-B20)' {
+    BeforeAll {
+        . (Join-Path $WorkspaceRoot 'studio/scripts/powershell/common.ps1')
+    }
+
+    It 'physically resolves workflow.yml and manifest.json before either leaf is trusted' {
+        $commonContent = Get-Content `
+            -LiteralPath (Join-Path $WorkspaceRoot 'studio/scripts/powershell/common.ps1') `
+            -Raw
+
+        $commonContent | Should -Match '(?s)\$workflowPath\s*=\s*Resolve-ExistingPathInsideRoot.*?-Candidate\s+\$workflowPath'
+        $commonContent | Should -Match '(?s)\$manifestPath\s*=\s*Resolve-ExistingPathInsideRoot.*?-Candidate\s+\$manifestPath'
+    }
+
+    It 'denies a workflow leaf whose simulated reparse target is outside workflows root' {
+        # Windows file-symlink creation requires a privilege unavailable in the
+        # governance test environment. Mock only Get-Item at the leaf boundary;
+        # the resolver still traverses the real root and outside target paths.
+        $root = Join-Path $TestDrive 'leaf-reparse-root'
+        $outsideRoot = Join-Path $TestDrive 'leaf-reparse-outside'
+        New-Item -ItemType Directory -Path $root -Force | Out-Null
+        New-Item -ItemType Directory -Path $outsideRoot -Force | Out-Null
+        $leafPath = Join-Path $root 'workflow.yml'
+        $outsideLeafPath = Join-Path $outsideRoot 'workflow.yml'
+        'inside-placeholder' | Set-Content -LiteralPath $leafPath -NoNewline
+        'outside-target' | Set-Content -LiteralPath $outsideLeafPath -NoNewline
+
+        $fakeLeaf = [PSCustomObject]@{
+            Attributes = [System.IO.FileAttributes]::ReparsePoint
+            FullName = [System.IO.Path]::GetFullPath($leafPath)
+            TargetPath = [System.IO.Path]::GetFullPath($outsideLeafPath)
+        }
+        $fakeLeaf | Add-Member -MemberType ScriptMethod -Name ResolveLinkTarget -Value {
+            param([bool]$ReturnFinalTarget)
+            return [System.IO.FileInfo]::new([string]$this.TargetPath)
+        }
+
+        Mock Get-Item {
+            if (
+                [System.IO.Path]::GetFullPath([string]$LiteralPath) -eq
+                [System.IO.Path]::GetFullPath($leafPath)
+            ) {
+                return $fakeLeaf
+            }
+            if ([System.IO.Directory]::Exists([string]$LiteralPath)) {
+                return [System.IO.DirectoryInfo]::new([string]$LiteralPath)
+            }
+            if ([System.IO.File]::Exists([string]$LiteralPath)) {
+                return [System.IO.FileInfo]::new([string]$LiteralPath)
+            }
+
+            throw [System.IO.FileNotFoundException]::new(
+                "Mocked filesystem item does not exist: $LiteralPath"
+            )
+        }
+
+        {
+            Resolve-ExistingPathInsideRoot `
+                -Root $root `
+                -Candidate $leafPath `
+                -MessagePrefix 'workflow.yml leaf escapes workflows root' |
+                Out-Null
+        } | Should -Throw '*workflow.yml leaf escapes workflows root*outside physical root*'
     }
 }

@@ -41,6 +41,24 @@ Its job is to answer:
 
 ## Required Behavior
 
+### Non-bypassable first action
+
+Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any
+existing dossier content, run this gate once from the project root:
+
+```powershell
+pwsh ./studio/scripts/powershell/setup-eci.ps1 -Json
+```
+
+Pass `-FeatureDir <path>` only when the user supplied an explicit feature
+context. Parse `READY`, `FEATURE_DIR`, `FEATURE_SPEC`, `READINESS_ASSESSMENT`,
+`ECI_TRIGGER`, `ECI_DIR`, `ECI_REQUIREMENT_PATH`,
+`ECI_REQUIREMENT_LATCHED`, `STUDIO_ROOT`, `CONSTITUTIONS`, and `BLOCKERS`.
+If the process exits non-zero, `READY` is not exactly Boolean `true`, the
+result is missing or invalid, any blocker exists, or
+`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`, stop and report the
+blocker. There is no operator-confirmation or force bypass.
+
 ### What this agent MUST do
 
 1. Validate that the current feature was explicitly routed here by `/speckit.readiness`.
@@ -98,22 +116,20 @@ and send the feature back to `/speckit.readiness`.
 
 ## Execution Steps
 
-1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once**.
+1. Run the non-bypassable `setup-eci.ps1 -Json` entry gate described above as the first action.
 2. Parse:
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
+   - `READINESS_ASSESSMENT`
+   - `ECI_TRIGGER`
+   - `ECI_DIR`
+   - `ECI_REQUIREMENT_PATH`
    - `STUDIO_ROOT`
    - `CONSTITUTIONS`
-3. Derive:
-   - `READINESS_DIR = FEATURE_DIR/readiness`
-   - `READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`
-   - `ECI_TRIGGER = READINESS_DIR/eci-trigger.md`
-   - `ECI_DIR = READINESS_DIR/eci`
-4. Abort with an error if:
-   - `READINESS_ASSESSMENT` is missing
-   - `ECI_TRIGGER` is missing
-   - `Primary Status` is absent or ambiguous
-   - `Primary Status` is anything other than `ROUTE_TO_ECI`
+3. Abort if the gate does not prove the exact `ROUTE_TO_ECI`, `PENDING`,
+   `ECI_REQUIRED=true`, and latched-marker intake state.
+4. Treat every path returned by the gate as authoritative for this invocation;
+   do not derive a second feature context independently.
 5. Load:
    - current `spec.md`
    - `readiness-assessment.md`

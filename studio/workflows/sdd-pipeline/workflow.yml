@@ -2,12 +2,13 @@ schema_version: "1.0.0"
 workflow:
   id: sdd-pipeline
   name: SDD Seven-Stage Pipeline
-  version: "1.0.0"
+  version: "1.1.0"
   integration: studio-first
   description: |
     Executable representation of the SDD seven-stage flow.
-    Readiness routes all 8 primary statuses through a switch.
-    ECI re-entry routes all 3 authorization outcomes through a nested switch.
+    The latest Readiness assessment routes all 8 primary statuses through one switch.
+    ECI validates the intake trigger plus the four-file dossier and exactly one of 4 authorization outcomes.
+    Mainline, sandbox-only, and spike-only outcomes re-enter Readiness; NOT_READY fails closed.
 
 inputs:
   - name: feature
@@ -53,49 +54,130 @@ steps:
     agent_command: /speckit.readiness
     expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
     operator_message: "Produce readiness-assessment.md with one of the 8 primary statuses set, then resume."
-    extract:
-      - var: readiness_primary_status
-        field: Primary Status
 
-  # 4. Branch on readiness's 8 primary statuses -------------------------------
+  - id: stage-readiness-routing-validation
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-DeferEciDossier", "-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+
+  # 4. Complete ECI when the initial Readiness route requires it ---------------
+  - id: branch-readiness-eci
+    type: if
+    condition: "vars.steps.stage-readiness-routing-validation.json.READINESS_PRIMARY_STATUS == 'ROUTE_TO_ECI'"
+    then:
+      - id: stage-eci-entry-gate
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/setup-eci.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+        capture: { json: true }
+
+      - id: stage-eci
+        type: command
+        dispatch: agent
+        agent_command: /speckit.eci
+        expected_artifact: "specs/{{ inputs.feature }}/readiness/eci/authorization-record.md"
+        operator_message: "Run /speckit.eci to produce all four canonical dossier files, then resume."
+
+      - id: stage-eci-dossier-validation
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/validate-feature-structure.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciDossier", "-Json"]
+        capture: { json: true }
+        revalidate_on_resume: true
+
+      - id: branch-eci-authorization
+        type: switch
+        subject: "{{ vars.steps.stage-eci-dossier-validation.json.ECI_AUTHORIZATION_OUTCOME | default('NOT_READY') }}"
+        cases:
+          READY_FOR_MAINLINE_IMPLEMENTATION:
+            - id: validate-eci-mainline-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+          READY_FOR_SANDBOX_ONLY:
+            - id: validate-eci-sandbox-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+          READY_FOR_SPIKE_ONLY:
+            - id: validate-eci-spike-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+          NOT_READY:
+            - id: deny-eci-not-ready-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+        default:
+          - id: deny-eci-unknown-reentry
+            type: command
+            dispatch: script
+            script: studio/scripts/powershell/validate-feature-structure.ps1
+            args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+            capture: { json: true }
+            revalidate_on_resume: true
+
+      - id: stage-readiness-reentry-prep
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/setup-readiness.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+        capture: { json: true }
+
+      - id: stage-readiness-reentry
+        type: command
+        dispatch: agent
+        agent_command: /speckit.readiness
+        expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
+        operator_message: "Re-run /speckit.readiness against the complete ECI dossier, replace the prior assessment with one latest primary status, then resume."
+
+      - id: stage-readiness-reentry-validation
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/validate-feature-structure.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciDossier", "-Json"]
+        capture: { json: true }
+        revalidate_on_resume: true
+
+  # 5. Route the latest Readiness assessment across all 8 statuses -------------
+  - id: stage-latest-readiness-routing-validation
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+
   - id: branch-readiness-status
     type: switch
-    subject: "{{ vars.readiness_primary_status | default('NOT_READY') }}"
+    subject: "{{ vars.steps.stage-latest-readiness-routing-validation.json.READINESS_PRIMARY_STATUS | default('NOT_READY') }}"
     cases:
       READY_FOR_PLAN:
         - id: ready-confirm
           type: gate
           prompt: "Readiness is READY_FOR_PLAN. Proceed to /speckit.plan?"
       ROUTE_TO_ECI:
-        - id: stage-eci
-          type: command
-          dispatch: agent
-          agent_command: /speckit.eci
-          expected_artifact: "specs/{{ inputs.feature }}/readiness/eci/authorization-record.md"
-          operator_message: "Run /speckit.eci to produce the ECI dossier, then resume."
-          extract:
-            - var: eci_authorization_outcome
-              field: Authorization Outcome
-        - id: branch-eci-authorization
-          type: switch
-          subject: "{{ vars.eci_authorization_outcome | default('NOT_READY') }}"
-          cases:
-            READY_FOR_MAINLINE_IMPLEMENTATION:
-              - id: eci-mainline-confirm
-                type: gate
-                prompt: "ECI cleared. Re-run readiness, then resume to plan."
-            READY_FOR_SANDBOX_ONLY:
-              - id: eci-sandbox-halt
-                type: gate
-                prompt: "ECI authorization is READY_FOR_SANDBOX_ONLY. Mainline implementation is not authorized. Acknowledge and halt."
-            READY_FOR_SPIKE_ONLY:
-              - id: eci-spike-halt
-                type: gate
-                prompt: "ECI authorization is READY_FOR_SPIKE_ONLY. Mainline implementation is not authorized. Acknowledge and halt."
-          default:
-            - id: eci-not-ready-halt
-              type: gate
-              prompt: "ECI dossier is missing or NOT_READY. Resolve before resuming."
+        - id: route-eci-repeat-halt
+          type: gate
+          prompt: "Latest Readiness still routes to ECI. The dossier is stale, contradictory, misrouted, or scope-mismatched; restart the governed ECI cycle before Plan."
       ROUTE_TO_REPO_CONTEXT:
         - id: route-repo-context-halt
           type: gate

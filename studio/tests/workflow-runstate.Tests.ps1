@@ -37,10 +37,11 @@ Describe 'Save-RunState / Read-RunState round-trip' {
         $root = New-FixtureProjectRoot
         $path = Get-RunStatePath -ProjectRoot $root -Feature '001-foo'
         $rs = [ordered]@{
-            schema_version = '1.0.0'
+            schema_version = '1.1.0'
             run_id = 'abc'
             workflow_id = 'sdd-pipeline'
             workflow_version = '1.0.0'
+            workflow_sha256 = ('a' * 64)
             feature = '001-foo'
             status = 'running'
             started_at = Get-IsoTimestamp
@@ -54,6 +55,7 @@ Describe 'Save-RunState / Read-RunState round-trip' {
         Save-RunState -RunState $rs -Path $path
         $loaded = Read-RunState -Path $path
         $loaded.workflow_id | Should -Be 'sdd-pipeline'
+        $loaded.workflow_sha256 | Should -BeExactly ('a' * 64)
         $loaded.current_step_id | Should -Be 'stage-x'
         $loaded.inputs.feature | Should -Be '001-foo'
     }

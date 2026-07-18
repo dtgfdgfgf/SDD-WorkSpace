@@ -513,6 +513,300 @@ function Write-Utf8NoBomLfFile {
     [System.IO.File]::WriteAllText($Path, $normalized, [System.Text.UTF8Encoding]::new($false, $true))
 }
 
+function Get-EciRequirementMarkerContext {
+    <#
+    .SYNOPSIS
+    Resolve the operator-local ECI requirement marker identity for one feature.
+
+    .DESCRIPTION
+    The marker is intentionally outside governed feature artifacts. It records
+    only that the local engine/operator observed an ECI-required readiness
+    route; it does not authenticate readiness or ECI evidence.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FeatureDir,
+        [string]$ProjectRoot
+    )
+
+    $resolvedFeatureDir = [System.IO.Path]::GetFullPath($FeatureDir)
+    $specsRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $resolvedFeatureDir))
+    if ((Split-Path -Leaf $specsRoot) -cne 'specs') {
+        throw "FEATURE_DIR must be located at <project>/specs/<feature>: $resolvedFeatureDir"
+    }
+
+    $resolvedProjectRoot = if ($ProjectRoot) {
+        [System.IO.Path]::GetFullPath($ProjectRoot)
+    } else {
+        [System.IO.Path]::GetFullPath((Split-Path -Parent $specsRoot))
+    }
+    $expectedSpecsRoot = [System.IO.Path]::GetFullPath((Join-Path $resolvedProjectRoot 'specs'))
+    if (-not $specsRoot.Equals($expectedSpecsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "FEATURE_DIR escapes project root: $resolvedFeatureDir must be a direct child of $expectedSpecsRoot"
+    }
+
+    $feature = Split-Path -Leaf $resolvedFeatureDir
+    if ([string]::IsNullOrWhiteSpace($feature) -or $feature -in @('.', '..')) {
+        throw "FEATURE_DIR has an invalid feature identity: $resolvedFeatureDir"
+    }
+
+    $runDir = Join-Path (Join-Path (Join-Path $resolvedProjectRoot '.workflow') 'runs') $feature
+    return [PSCustomObject][ordered]@{
+        PROJECT_ROOT         = $resolvedProjectRoot
+        FEATURE              = $feature
+        FEATURE_PATH         = $resolvedFeatureDir
+        FEATURE_RELATIVE_PATH = "specs/$feature"
+        RUN_DIR              = [System.IO.Path]::GetFullPath($runDir)
+        MARKER_PATH          = [System.IO.Path]::GetFullPath((Join-Path $runDir 'eci-requirement.json'))
+    }
+}
+
+function Read-EciRequirementMarker {
+    <#
+    .SYNOPSIS
+    Strictly read and identity-check an ECI requirement marker.
+
+    .DESCRIPTION
+    Missing is a distinct, valid read state. Any existing malformed marker,
+    unexpected property, type coercion, false/null eci_required value, or
+    feature identity mismatch is invalid and must be handled fail-closed by
+    callers.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FeatureDir,
+        [string]$ProjectRoot
+    )
+
+    $context = Get-EciRequirementMarkerContext -FeatureDir $FeatureDir -ProjectRoot $ProjectRoot
+    if (-not (Test-Path -LiteralPath $context.MARKER_PATH -PathType Leaf)) {
+        return [PSCustomObject][ordered]@{
+            EXISTS       = $false
+            VALID        = $true
+            LATCHED      = $false
+            CREATED      = $false
+            PATH         = $context.MARKER_PATH
+            FEATURE      = $context.FEATURE
+            FEATURE_PATH = $context.FEATURE_PATH
+            DOCUMENT     = $null
+            ERROR        = $null
+        }
+    }
+
+    try {
+        [void](Resolve-ExistingPathInsideRoot `
+            -Root $context.PROJECT_ROOT `
+            -Candidate $context.MARKER_PATH `
+            -MessagePrefix 'ECI requirement marker escapes project root through a reparse point')
+
+        $expectedKeys = @(
+            'schema_version',
+            'feature',
+            'feature_path',
+            'eci_required',
+            'recorded_at'
+        )
+        $jsonDocument = $null
+        try {
+            $rawBytes = [System.IO.File]::ReadAllBytes($context.MARKER_PATH)
+            $rawJson = [System.Text.UTF8Encoding]::new($false, $true).GetString($rawBytes)
+            $jsonDocument = [System.Text.Json.JsonDocument]::Parse($rawJson)
+            $rootElement = $jsonDocument.RootElement
+            if ($rootElement.ValueKind -ne [System.Text.Json.JsonValueKind]::Object) {
+                throw 'marker root must be a JSON object'
+            }
+
+            $properties = @($rootElement.EnumerateObject())
+            $actualKeys = @($properties | ForEach-Object Name)
+            $unexpected = @($actualKeys | Where-Object { $_ -cnotin $expectedKeys })
+            $missing = @($expectedKeys | Where-Object { $_ -cnotin $actualKeys })
+            if (
+                $unexpected.Count -gt 0 -or
+                $missing.Count -gt 0 -or
+                $actualKeys.Count -ne $expectedKeys.Count
+            ) {
+                throw "marker properties must be exactly: $($expectedKeys -join ', ')"
+            }
+
+            $elements = [ordered]@{}
+            foreach ($property in $properties) {
+                $elements[$property.Name] = $property.Value.Clone()
+            }
+            foreach ($name in 'schema_version', 'feature', 'feature_path', 'recorded_at') {
+                if ($elements[$name].ValueKind -ne [System.Text.Json.JsonValueKind]::String) {
+                    throw "$name must be a JSON string"
+                }
+            }
+
+            $document = [ordered]@{
+                schema_version = $elements['schema_version'].GetString()
+                feature        = $elements['feature'].GetString()
+                feature_path   = $elements['feature_path'].GetString()
+                eci_required   = if (
+                    $elements['eci_required'].ValueKind -in @(
+                        [System.Text.Json.JsonValueKind]::True,
+                        [System.Text.Json.JsonValueKind]::False
+                    )
+                ) {
+                    $elements['eci_required'].GetBoolean()
+                } else {
+                    $null
+                }
+                recorded_at    = $elements['recorded_at'].GetString()
+            }
+        } finally {
+            if ($null -ne $jsonDocument) { $jsonDocument.Dispose() }
+        }
+
+        if (-not [string]::Equals(
+            [string]$document['schema_version'],
+            '1.0.0',
+            [System.StringComparison]::Ordinal
+        )) {
+            throw "schema_version must be the string '1.0.0'"
+        }
+        if (-not [string]::Equals(
+            [string]$document['feature'],
+            $context.FEATURE,
+            [System.StringComparison]::Ordinal
+        )) {
+            throw "feature identity must exactly match '$($context.FEATURE)'"
+        }
+        if (-not [string]::Equals(
+            [string]$document['feature_path'],
+            $context.FEATURE_RELATIVE_PATH,
+            [System.StringComparison]::Ordinal
+        )) {
+            throw "feature_path identity must exactly match '$($context.FEATURE_RELATIVE_PATH)'"
+        }
+        if (
+            $elements['eci_required'].ValueKind -ne [System.Text.Json.JsonValueKind]::True -or
+            $document['eci_required'] -ne $true
+        ) {
+            throw 'eci_required must be the JSON Boolean true'
+        }
+        $recordedAt = [System.DateTimeOffset]::MinValue
+        if (-not [System.DateTimeOffset]::TryParseExact(
+            [string]$document['recorded_at'],
+            'o',
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::RoundtripKind,
+            [ref]$recordedAt
+        )) {
+            throw 'recorded_at must be an ISO-8601 round-trip timestamp string'
+        }
+
+        return [PSCustomObject][ordered]@{
+            EXISTS       = $true
+            VALID        = $true
+            LATCHED      = $true
+            CREATED      = $false
+            PATH         = $context.MARKER_PATH
+            FEATURE      = $context.FEATURE
+            FEATURE_PATH = $context.FEATURE_PATH
+            DOCUMENT     = $document
+            ERROR        = $null
+        }
+    } catch {
+        return [PSCustomObject][ordered]@{
+            EXISTS       = $true
+            VALID        = $false
+            LATCHED      = $false
+            CREATED      = $false
+            PATH         = $context.MARKER_PATH
+            FEATURE      = $context.FEATURE
+            FEATURE_PATH = $context.FEATURE_PATH
+            DOCUMENT     = $null
+            ERROR        = $_.Exception.Message
+        }
+    }
+}
+
+function Initialize-EciRequirementMarker {
+    <#
+    .SYNOPSIS
+    Atomically create an ECI requirement marker without overwriting.
+
+    .DESCRIPTION
+    A valid existing marker is an idempotent success. An invalid existing
+    marker is never repaired or replaced implicitly. A unique same-directory
+    temporary file is created without overwrite, flushed, and atomically moved
+    to the marker path without replacement; a race winner is accepted only
+    after the same strict identity validation.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FeatureDir,
+        [string]$ProjectRoot
+    )
+
+    $existing = Read-EciRequirementMarker -FeatureDir $FeatureDir -ProjectRoot $ProjectRoot
+    if ($existing.EXISTS) {
+        if (-not $existing.VALID) {
+            throw "Existing ECI requirement marker is invalid: $($existing.ERROR)"
+        }
+        return $existing
+    }
+
+    $context = Get-EciRequirementMarkerContext -FeatureDir $FeatureDir -ProjectRoot $ProjectRoot
+    $workflowDir = Join-Path $context.PROJECT_ROOT '.workflow'
+    $runsDir = Join-Path $workflowDir 'runs'
+    foreach ($directory in @($workflowDir, $runsDir, $context.RUN_DIR)) {
+        # CreateDirectory is idempotent under concurrent setup-eci invocations.
+        # New-Item without -Force leaves race losers failing on an already-created
+        # directory before they reach the atomic marker publication.
+        [void][System.IO.Directory]::CreateDirectory($directory)
+        [void](Resolve-ExistingPathInsideRoot `
+            -Root $context.PROJECT_ROOT `
+            -Candidate $directory `
+            -MessagePrefix 'ECI requirement marker directory escapes project root through a reparse point')
+    }
+
+    $document = [ordered]@{
+        schema_version = '1.0.0'
+        feature        = $context.FEATURE
+        feature_path   = $context.FEATURE_RELATIVE_PATH
+        eci_required   = $true
+        recorded_at    = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $json = ([PSCustomObject]$document | ConvertTo-Json -Compress) + "`n"
+    $bytes = [System.Text.UTF8Encoding]::new($false, $true).GetBytes($json)
+    $tempPath = Join-Path $context.RUN_DIR (
+        '.eci-requirement.{0}.tmp' -f [System.Guid]::NewGuid().ToString('N')
+    )
+    $stream = $null
+    $published = $false
+    try {
+        $stream = [System.IO.File]::Open(
+            $tempPath,
+            [System.IO.FileMode]::CreateNew,
+            [System.IO.FileAccess]::Write,
+            [System.IO.FileShare]::None
+        )
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush($true)
+        $stream.Dispose()
+        $stream = $null
+
+        [System.IO.File]::Move($tempPath, $context.MARKER_PATH, $false)
+        $published = $true
+    } catch [System.IO.IOException] {
+        if (-not (Test-Path -LiteralPath $context.MARKER_PATH -PathType Leaf)) { throw }
+    } finally {
+        if ($null -ne $stream) { $stream.Dispose() }
+        if (Test-Path -LiteralPath $tempPath) {
+            Remove-Item -LiteralPath $tempPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    $createdMarker = Read-EciRequirementMarker -FeatureDir $FeatureDir -ProjectRoot $ProjectRoot
+    if (-not $createdMarker.VALID -or -not $createdMarker.LATCHED) {
+        throw "ECI requirement marker creation did not produce a valid marker: $($createdMarker.ERROR)"
+    }
+    $createdMarker.CREATED = $published
+    return $createdMarker
+}
+
 function Read-JsonFile {
     param(
         [Parameter(Mandatory = $true)]
@@ -538,6 +832,99 @@ function Test-StrictBooleanValue {
     param([AllowNull()] [object]$Value)
 
     return ($Value -is [bool])
+}
+
+function Get-WorkflowContentSha256 {
+    <#
+    .SYNOPSIS
+    Return the lowercase SHA-256 digest of the exact workflow.yml bytes.
+    #>
+    param([Parameter(Mandatory = $true)] [string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "workflow.yml not found for content digest: $Path"
+    }
+
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+}
+
+function Read-WorkflowManifestIdentity {
+    <#
+    .SYNOPSIS
+    Read one workflow-owned manifest.json and compare its identity to the catalog.
+
+    .DESCRIPTION
+    Manifest existence, JSON object shape, and exact id/version identity are part
+    of the shared workflow authorization result consumed by both listing and the
+    runner. Keeping this check inside the registry snapshot prevents the listing
+    from advertising execution authorization that the runner will later deny.
+    #>
+    param(
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [Parameter(Mandatory = $true)] [string]$ExpectedId,
+        [Parameter(Mandatory = $true)] [string]$ExpectedVersion
+    )
+
+    $manifest = $null
+    $manifestId = $null
+    $manifestVersion = $null
+    $manifestErrors = @()
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        $manifestErrors += "Workflow manifest missing for '$ExpectedId': $Path"
+    } else {
+        try {
+            $manifest = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop |
+                ConvertFrom-Json -AsHashtable -ErrorAction Stop
+        } catch {
+            $manifestErrors += "Invalid workflow manifest JSON for '$ExpectedId': $($_.Exception.Message)"
+        }
+    }
+
+    if ($null -ne $manifest) {
+        if ($manifest -isnot [System.Collections.IDictionary]) {
+            $manifestErrors += "Workflow manifest for '$ExpectedId' must be a JSON object: $Path"
+        } else {
+            $rawId = if ($manifest.ContainsKey('id')) { $manifest['id'] } else { $null }
+            $rawVersion = if ($manifest.ContainsKey('version')) { $manifest['version'] } else { $null }
+
+            if ($rawId -isnot [string] -or [string]::IsNullOrWhiteSpace([string]$rawId)) {
+                $manifestErrors += "Workflow manifest for '$ExpectedId' must declare a non-empty string id."
+            } else {
+                $manifestId = [string]$rawId
+            }
+            if ($rawVersion -isnot [string] -or [string]::IsNullOrWhiteSpace([string]$rawVersion)) {
+                $manifestErrors += "Workflow manifest for '$ExpectedId' must declare a non-empty string version."
+            } else {
+                $manifestVersion = [string]$rawVersion
+            }
+
+            if (
+                $manifestId -and
+                $manifestVersion -and
+                (
+                    $manifestId -cne $ExpectedId -or
+                    $manifestVersion -cne $ExpectedVersion
+                )
+            ) {
+                $manifestErrors += "Workflow identity mismatch for manifest '$ExpectedId': manifest declares '$manifestId@$manifestVersion' but the catalog entry is '$ExpectedId@$ExpectedVersion'."
+            }
+        }
+    } elseif (
+        (Test-Path -LiteralPath $Path -PathType Leaf) -and
+        $manifestErrors.Count -eq 0
+    ) {
+        $manifestErrors += "Workflow manifest for '$ExpectedId' must be a JSON object: $Path"
+    }
+
+    return [PSCustomObject][ordered]@{
+        VALID    = ($manifestErrors.Count -eq 0)
+        PATH     = $Path
+        ID       = $manifestId
+        VERSION  = $manifestVersion
+        DATA     = $manifest
+        ERRORS   = @($manifestErrors)
+    }
 }
 
 function Read-WorkflowRegistryDocument {
@@ -730,6 +1117,17 @@ function Get-WorkflowRegistrySnapshot {
         if ($entry -isnot [System.Collections.IDictionary]) { continue }
         $entryId = [string]$entry['id']
         if ([string]::IsNullOrWhiteSpace($entryId)) { continue }
+        $reviewStatus = [string]$entry['reviewStatus']
+        $trustLevel = [string]$entry['trustLevel']
+        $workflowSha256 = if ($entry.ContainsKey('workflowSha256')) { $entry['workflowSha256'] } else { $null }
+        $actualWorkflowSha256 = $null
+        $workflowDigestMatches = $null
+        $sourceRoot = $null
+        $workflowPath = $null
+        $manifestPath = $null
+        $manifestId = $null
+        $manifestVersion = $null
+        $manifestIdentityMatches = $null
 
         if (-not (Test-StrictBooleanValue -Value $entry['defaultEnabled'])) {
             $errors += "Workflow catalog defaultEnabled for '$entryId' must be a JSON boolean"
@@ -739,17 +1137,72 @@ function Get-WorkflowRegistrySnapshot {
         }
 
         try {
-            $sourceRoot = Join-Path $StudioRoot ([string]$entry['sourcePath'])
+            $sourceRoot = [System.IO.Path]::GetFullPath(
+                (Join-Path $StudioRoot ([string]$entry['sourcePath']))
+            )
+            Assert-PathInsideRoot `
+                -Root $workflowsRoot `
+                -Candidate $sourceRoot `
+                -MessagePrefix "Workflow sourcePath escapes workflows root for '$entryId'"
             if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
                 $errors += "Workflow sourcePath does not exist for '$entryId': $($entry['sourcePath'])"
+            } else {
+                $sourceRoot = Resolve-ExistingPathInsideRoot `
+                    -Root $workflowsRoot `
+                    -Candidate $sourceRoot `
+                    -MessagePrefix "Workflow sourcePath resolves through a reparse point outside workflows root for '$entryId'"
+                $workflowPath = Join-Path $sourceRoot 'workflow.yml'
+                $manifestPath = Join-Path $sourceRoot 'manifest.json'
+                if (-not (Test-Path -LiteralPath $workflowPath -PathType Leaf)) {
+                    $errors += "Workflow sourcePath for '$entryId' does not contain workflow.yml: $workflowPath"
+                } else {
+                    $workflowPath = Resolve-ExistingPathInsideRoot `
+                        -Root $workflowsRoot `
+                        -Candidate $workflowPath `
+                        -MessagePrefix "Workflow workflow.yml resolves through a reparse point outside workflows root for '$entryId'"
+                    $actualWorkflowSha256 = Get-WorkflowContentSha256 -Path $workflowPath
+                }
+
+                if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+                    $manifestPath = Resolve-ExistingPathInsideRoot `
+                        -Root $workflowsRoot `
+                        -Candidate $manifestPath `
+                        -MessagePrefix "Workflow manifest.json resolves through a reparse point outside workflows root for '$entryId'"
+                }
+                $manifestValidation = Read-WorkflowManifestIdentity `
+                    -Path $manifestPath `
+                    -ExpectedId $entryId `
+                    -ExpectedVersion ([string]$entry['version'])
+                $errors += @($manifestValidation.ERRORS)
+                $manifestId = $manifestValidation.ID
+                $manifestVersion = $manifestValidation.VERSION
+                $manifestIdentityMatches = $manifestValidation.VALID
             }
         } catch {
-            $errors += "Workflow sourcePath is invalid for '$entryId': $($entry['sourcePath'])"
+            $errors += "Workflow sourcePath is invalid for '$entryId': $($entry['sourcePath']). $($_.Exception.Message)"
+        }
+
+        if (
+            $reviewStatus -in @('approved', 'deprecated') -and
+            (
+                $workflowSha256 -isnot [string] -or
+                [string]$workflowSha256 -cnotmatch '^[a-f0-9]{64}$'
+            )
+        ) {
+            $errors += "Workflow '$entryId' reviewStatus '$reviewStatus' requires a lowercase workflowSha256 approval digest"
+        }
+        if ($null -ne $workflowSha256) {
+            if ($workflowSha256 -isnot [string] -or [string]$workflowSha256 -cnotmatch '^[a-f0-9]{64}$') {
+                $errors += "Workflow '$entryId' workflowSha256 must be a lowercase 64-character SHA-256 digest or null"
+            } elseif ($actualWorkflowSha256) {
+                $workflowDigestMatches = ([string]$workflowSha256 -ceq [string]$actualWorkflowSha256)
+                if (-not $workflowDigestMatches) {
+                    $errors += "Workflow approval digest mismatch for '$entryId': catalog workflowSha256 '$workflowSha256' does not match actual workflow.yml SHA-256 '$actualWorkflowSha256'"
+                }
+            }
         }
 
         $stateEntry = if ($states.ContainsKey($entryId)) { $states[$entryId] } else { $null }
-        $reviewStatus = [string]$entry['reviewStatus']
-        $trustLevel = [string]$entry['trustLevel']
         if ($defaultEnabled -eq $true -and ($reviewStatus -ne 'approved' -or $trustLevel -notin @('core', 'curated'))) {
             $errors += "Workflow '$entryId' defaultEnabled=true requires reviewStatus=approved and trustLevel core or curated; this violates the default-enable policy"
         }
@@ -787,6 +1240,14 @@ function Get-WorkflowRegistrySnapshot {
             STEP_TYPES_USED   = @($entry['stepTypesUsed'])
             PINNED_VERSION    = if ($stateEntry -is [System.Collections.IDictionary]) { [string]$stateEntry['pinnedVersion'] } else { $null }
             STATE_SOURCE      = if ($stateEntry -is [System.Collections.IDictionary]) { [string]$stateEntry['source'] } else { $null }
+            WORKFLOW_PATH     = $workflowPath
+            WORKFLOW_SHA256   = if ($workflowSha256 -is [string]) { [string]$workflowSha256 } else { $null }
+            ACTUAL_WORKFLOW_SHA256 = $actualWorkflowSha256
+            WORKFLOW_DIGEST_MATCH  = $workflowDigestMatches
+            MANIFEST_PATH     = $manifestPath
+            MANIFEST_ID       = $manifestId
+            MANIFEST_VERSION  = $manifestVersion
+            MANIFEST_IDENTITY_MATCH = $manifestIdentityMatches
             CATALOG_ENTRY     = $entry
             STATE_ENTRY       = $stateEntry
         }
@@ -933,6 +1394,182 @@ function Assert-PathInsideRoot {
     if (-not (Test-PathInsideRoot -Root $Root -Candidate $Candidate)) {
         throw "${MessagePrefix}: $Candidate (root: $Root)"
     }
+}
+
+function Test-PathInsideOrEqualRoot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Root,
+        [Parameter(Mandatory = $true)]
+        [string]$Candidate
+    )
+
+    $resolvedRoot = [System.IO.Path]::GetFullPath($Root)
+    $resolvedCandidate = [System.IO.Path]::GetFullPath($Candidate)
+    if ($resolvedCandidate.Equals($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    $rootPrefix = $resolvedRoot
+    if (
+        -not $rootPrefix.EndsWith([System.IO.Path]::DirectorySeparatorChar) -and
+        -not $rootPrefix.EndsWith([System.IO.Path]::AltDirectorySeparatorChar)
+    ) {
+        $rootPrefix += [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    return $resolvedCandidate.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Resolve-ExistingPathThroughReparsePoints {
+    <#
+    .SYNOPSIS
+    Resolve every reparse point in an existing filesystem path.
+
+    .DESCRIPTION
+    Resolve-Path preserves the lexical name of a directory junction on Windows.
+    This helper instead walks each component and restarts from the immediate link
+    target, so a junction or symbolic-link ancestor cannot hide the physical path.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $pendingPath = [System.IO.Path]::GetFullPath($Path)
+    if (-not (Test-Path -LiteralPath $pendingPath)) {
+        throw "Cannot resolve a non-existent path through reparse points: $pendingPath"
+    }
+
+    $visitedReparsePoints = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
+
+    for ($hop = 0; $hop -lt 64; $hop++) {
+        $pathRoot = [System.IO.Path]::GetPathRoot($pendingPath)
+        if ([string]::IsNullOrWhiteSpace($pathRoot)) {
+            throw "Cannot determine the filesystem root for path: $pendingPath"
+        }
+
+        $relativePath = [System.IO.Path]::GetRelativePath($pathRoot, $pendingPath)
+        if ($relativePath -eq '.') {
+            return [System.IO.Path]::GetFullPath($pathRoot)
+        }
+
+        $segments = @(
+            $relativePath.Split(
+                [char[]]@(
+                    [System.IO.Path]::DirectorySeparatorChar,
+                    [System.IO.Path]::AltDirectorySeparatorChar
+                ),
+                [System.StringSplitOptions]::RemoveEmptyEntries
+            )
+        )
+        $currentPath = $pathRoot
+        $restarted = $false
+
+        for ($index = 0; $index -lt $segments.Count; $index++) {
+            $currentPath = Join-Path $currentPath $segments[$index]
+            try {
+                $item = Get-Item -LiteralPath $currentPath -Force -ErrorAction Stop
+            } catch {
+                throw "Cannot inspect path component while resolving reparse points: $currentPath. $($_.Exception.Message)"
+            }
+
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0) {
+                $currentPath = $item.FullName
+                continue
+            }
+
+            $reparsePoint = [System.IO.Path]::GetFullPath($item.FullName)
+            if (-not $visitedReparsePoints.Add($reparsePoint)) {
+                throw "Reparse-point cycle detected while resolving path: $reparsePoint"
+            }
+
+            try {
+                $target = $item.ResolveLinkTarget($false)
+            } catch {
+                throw "Cannot resolve reparse-point target: $reparsePoint. $($_.Exception.Message)"
+            }
+            if ($null -eq $target) {
+                throw "Cannot resolve reparse-point target: $reparsePoint"
+            }
+
+            $pendingPath = [System.IO.Path]::GetFullPath($target.FullName)
+            if ($index + 1 -lt $segments.Count) {
+                $remainingPath = $segments[($index + 1)..($segments.Count - 1)] -join [System.IO.Path]::DirectorySeparatorChar
+                $pendingPath = [System.IO.Path]::GetFullPath((Join-Path $pendingPath $remainingPath))
+            }
+
+            if (-not (Test-Path -LiteralPath $pendingPath)) {
+                throw "Reparse-point target does not resolve to an existing path: $reparsePoint -> $pendingPath"
+            }
+
+            $restarted = $true
+            break
+        }
+
+        if (-not $restarted) {
+            return [System.IO.Path]::GetFullPath($currentPath)
+        }
+    }
+
+    throw "Reparse-point resolution exceeded the maximum hop count for path: $Path"
+}
+
+function Resolve-ExistingPathInsideRoot {
+    <#
+    .SYNOPSIS
+    Resolve an existing child path and reject reparse-point escapes.
+
+    .DESCRIPTION
+    The lexical prefix check rejects dot-segment traversal first. Each existing
+    child component is then resolved physically and compared with the resolved
+    root. This denies junction and symbolic-link targets outside the allowed root
+    while preserving ordinary paths and aliases whose targets remain inside it.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Root,
+        [Parameter(Mandatory = $true)]
+        [string]$Candidate,
+        [string]$MessagePrefix = 'Resolved path escapes the allowed root through a reparse point'
+    )
+
+    $lexicalRoot = [System.IO.Path]::GetFullPath($Root)
+    $lexicalCandidate = [System.IO.Path]::GetFullPath($Candidate)
+    Assert-PathInsideRoot -Root $lexicalRoot -Candidate $lexicalCandidate -MessagePrefix $MessagePrefix
+
+    if (-not (Test-Path -LiteralPath $lexicalRoot -PathType Container)) {
+        throw "Allowed root does not exist or is not a directory: $lexicalRoot"
+    }
+    if (-not (Test-Path -LiteralPath $lexicalCandidate)) {
+        throw "Candidate path does not exist: $lexicalCandidate"
+    }
+
+    $physicalRoot = Resolve-ExistingPathThroughReparsePoints -Path $lexicalRoot
+    $relativePath = [System.IO.Path]::GetRelativePath($lexicalRoot, $lexicalCandidate)
+    $segments = @(
+        $relativePath.Split(
+            [char[]]@(
+                [System.IO.Path]::DirectorySeparatorChar,
+                [System.IO.Path]::AltDirectorySeparatorChar
+            ),
+            [System.StringSplitOptions]::RemoveEmptyEntries
+        )
+    )
+    $componentPath = $lexicalRoot
+    $physicalCandidate = $physicalRoot
+
+    foreach ($segment in $segments) {
+        $componentPath = Join-Path $componentPath $segment
+        $physicalCandidate = Resolve-ExistingPathThroughReparsePoints -Path $componentPath
+        if (-not (Test-PathInsideOrEqualRoot -Root $physicalRoot -Candidate $physicalCandidate)) {
+            throw "${MessagePrefix}: component '$componentPath' resolves to '$physicalCandidate' outside physical root '$physicalRoot'"
+        }
+    }
+
+    return [System.IO.Path]::GetFullPath($physicalCandidate)
 }
 
 function Resolve-RelativePathInsideRoot {

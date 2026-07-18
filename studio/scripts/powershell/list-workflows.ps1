@@ -70,6 +70,14 @@ foreach ($entry in @($registry.WORKFLOWS)) {
         stepTypesUsed       = @($entry.STEP_TYPES_USED)
         pinnedVersion       = $entry.PINNED_VERSION
         stateSource         = $entry.STATE_SOURCE
+        workflowPath        = $entry.WORKFLOW_PATH
+        workflowSha256      = $entry.WORKFLOW_SHA256
+        actualWorkflowSha256 = $entry.ACTUAL_WORKFLOW_SHA256
+        workflowDigestMatches = $entry.WORKFLOW_DIGEST_MATCH
+        manifestPath        = $entry.MANIFEST_PATH
+        manifestId          = $entry.MANIFEST_ID
+        manifestVersion     = $entry.MANIFEST_VERSION
+        manifestIdentityMatches = $entry.MANIFEST_IDENTITY_MATCH
     }
 }
 

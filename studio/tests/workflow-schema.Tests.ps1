@@ -102,14 +102,20 @@ Describe 'list-workflows.ps1 against the live catalog' {
 
         $entry.reviewStatus | Should -Be 'experimental'
         $entry.trustLevel | Should -Be 'experimental'
+        $entry.version | Should -Be '1.1.0'
         $entry.defaultEnabled | Should -BeFalse
         $entry.approvedBy | Should -BeNullOrEmpty
         $entry.approvedAt | Should -BeNullOrEmpty
+        $entry.workflowSha256 | Should -BeNullOrEmpty
 
         $output = pwsh -NoProfile -File $script:listScript -Id 'sdd-pipeline' -Json
         $LASTEXITCODE | Should -Be 0
         $listed = (($output -join "`n") | ConvertFrom-Json).WORKFLOWS[0]
         $listed.enabled | Should -BeFalse
+        $listed.executionAuthorized | Should -BeFalse
+        $listed.workflowSha256 | Should -BeNullOrEmpty
+        $listed.actualWorkflowSha256 | Should -Match '^[a-f0-9]{64}$'
+        $listed.workflowDigestMatches | Should -BeNullOrEmpty
     }
 }
 
@@ -329,7 +335,7 @@ steps:
     prompt: "Approve?"
   - id: branch-check
     type: if
-    condition: "{{ steps.stage-script.outcome == 'success' }}"
+    condition: "steps.stage-script.outcome == 'success'"
     then:
       - { id: ok-step, type: command, dispatch: script, script: noop }
   - id: branch-status
@@ -347,6 +353,29 @@ steps:
         $r = ($output -join "`n") | ConvertFrom-Json
         $r.VALID | Should -BeTrue
         $r.SCHEMA_VALID | Should -BeTrue
+    }
+
+    It 'accepts the canonical read-only resume revalidation command shape' {
+        $valid = @"
+schema_version: "1.0.0"
+workflow:
+  id: revalidate-valid
+  name: Revalidate Valid
+  version: "1.0.0"
+  integration: studio-first
+steps:
+  - id: validate-current-evidence
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+"@
+        $file = New-WorkflowFixture -Yaml $valid
+        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json
+        $LASTEXITCODE | Should -Be 0
+        (($output -join "`n") | ConvertFrom-Json).SCHEMA_VALID | Should -BeTrue
     }
 }
 
@@ -399,6 +428,132 @@ steps:
   - id: bogus
     type: while
     condition: "true"
+"@
+        $file = New-WorkflowFixture -Yaml $bad
+        $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+    }
+
+    It 'rejects unsafe resume revalidation shape: <Name>' -ForEach @(
+        @{
+            Name = 'arbitrary script'
+            StepBody = @'
+  - id: unsafe-replay
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-plan.ps1
+    args: ["-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+'@
+        }
+        @{
+            Name = 'agent dispatch'
+            StepBody = @'
+  - id: unsafe-agent-replay
+    type: command
+    dispatch: agent
+    agent_command: /speckit.readiness
+    expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
+    args: ["-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+'@
+        }
+        @{
+            Name = 'missing JSON capture'
+            StepBody = @'
+  - id: missing-capture
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-Json"]
+    revalidate_on_resume: true
+'@
+        }
+        @{
+            Name = 'false JSON capture'
+            StepBody = @'
+  - id: false-capture
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-Json"]
+    capture: { json: false }
+    revalidate_on_resume: true
+'@
+        }
+        @{
+            Name = 'missing Json argument'
+            StepBody = @'
+  - id: missing-json-arg
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}"]
+    capture: { json: true }
+    revalidate_on_resume: true
+'@
+        }
+        @{
+            Name = 'non-zero expected exit'
+            StepBody = @'
+  - id: expected-failure
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-Json"]
+    expected_exit_code: 1
+    capture: { json: true }
+    revalidate_on_resume: true
+'@
+        }
+        @{
+            Name = 'false replay flag'
+            StepBody = @'
+  - id: false-replay
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-Json"]
+    capture: { json: true }
+    revalidate_on_resume: false
+'@
+        }
+        @{
+            Name = 'string replay flag'
+            StepBody = @'
+  - id: string-replay
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-Json"]
+    capture: { json: true }
+    revalidate_on_resume: "true"
+'@
+        }
+        @{
+            Name = 'null replay flag'
+            StepBody = @'
+  - id: null-replay
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-Json"]
+    capture: { json: true }
+    revalidate_on_resume: null
+'@
+        }
+    ) {
+        $bad = @"
+schema_version: "1.0.0"
+workflow:
+  id: revalidate-invalid
+  name: Revalidate Invalid
+  version: "1.0.0"
+  integration: studio-first
+steps:
+$StepBody
 "@
         $file = New-WorkflowFixture -Yaml $bad
         $output = pwsh -NoProfile -File $script:validateScript -Path $file -Json 2>&1

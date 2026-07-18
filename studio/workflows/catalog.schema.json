@@ -71,6 +71,7 @@
           "owner",
           "approvedBy",
           "approvedAt",
+          "workflowSha256",
           "stepTypesUsed",
           "notes"
         ],
@@ -114,6 +115,10 @@
             "type": ["string", "null"],
             "format": "date-time"
           },
+          "workflowSha256": {
+            "type": ["string", "null"],
+            "pattern": "^[a-f0-9]{64}$"
+          },
           "stepTypesUsed": {
             "type": "array",
             "items": {
@@ -125,7 +130,27 @@
           "notes": {
             "type": "string"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "reviewStatus": {
+                  "enum": ["approved", "deprecated"]
+                }
+              },
+              "required": ["reviewStatus"]
+            },
+            "then": {
+              "properties": {
+                "workflowSha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            }
+          }
+        ]
       }
     }
   }

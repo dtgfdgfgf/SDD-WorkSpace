@@ -186,6 +186,10 @@ Assess the current spec against these dimensions:
    - If `Authorization Outcome = READY_FOR_MAINLINE_IMPLEMENTATION`, external capability adoption is no longer the primary blocker by default.
    - If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.
    - If `Authorization Outcome = NOT_READY` or `ECI Level = NO_ECI`, re-triage honestly and return to `ROUTE_TO_ECI` only when external capability governance is still the dominant blocker.
+   - Run `pwsh ./studio/scripts/powershell/validate-feature-structure.ps1 -FeatureDir specs/<feature> -RequireEciReentry -Json`.
+   - Require a valid machine result with `ECI_ACTUAL_EVIDENCE_SHA256`, then copy that exact lowercase value into the COMPLETE assessment. Do not reimplement or estimate the digest manually.
+   - The validator frames each canonical UTF-8 path relative to `readiness/` with a 4-byte big-endian length and each raw-byte content with an 8-byte big-endian length in this order: `eci-trigger.md`, `eci/eci-assessment.md`, `eci/source-manifest.md`, `eci/adoption-record.md`, `eci/authorization-record.md`.
+   - All five evidence files, including `eci-trigger.md`, must exist and be non-empty before the validator emits the actual evidence digest.
 8. Assess all readiness dimensions.
 9. Determine whether `intent-ledger.md` is required for this run.
    - Required when one or more core spec items are `represented_by_substitute`, `deferred`, or `dropped_with_owner_signoff`.
@@ -197,7 +201,11 @@ Assess the current spec against these dimensions:
    - `intent-ledger.md` when required,
    - the minimum required packet for the selected route,
    - a concise operator-facing summary.
-12. Do **not** modify `spec.md` unless the workspace explicitly adds that behavior later.
+12. In the readiness assessment, write exactly one `ECI Re-entry Status` and exactly one `ECI Evidence SHA-256`:
+    - `NOT_REQUIRED` with `N/A` only when no `eci-trigger.md` or artifact under `readiness/eci/` exists.
+    - `PENDING` with `N/A` only for an initial `ROUTE_TO_ECI` assessment before Readiness re-entry.
+    - `COMPLETE` with the validator's `ECI_ACTUAL_EVIDENCE_SHA256` only after inspecting the complete current trigger and dossier.
+13. Do **not** modify `spec.md` unless the workspace explicitly adds that behavior later.
 
 ---
 
@@ -270,6 +278,8 @@ Use this structure:
 
 **Date**: YYYY-MM-DD
 **Primary Status**: [STATUS]
+**ECI Re-entry Status**: [NOT_REQUIRED | PENDING | COMPLETE]
+**ECI Evidence SHA-256**: [N/A | lowercase 64-character digest]
 **Recommended Next Step**: [command / packet / owner action]
 
 ## Summary
@@ -426,6 +436,8 @@ You MUST:
 - write or update `intent-ledger.md` when the assessment says it is required
 - clearly state why planning can safely proceed
 - recommend `/speckit.plan`
+- use `ECI Re-entry Status = NOT_REQUIRED` with digest `N/A` when ECI was not required
+- use `ECI Re-entry Status = COMPLETE` with the current canonical five-file evidence digest when this is a post-ECI assessment
 
 ### If any `ROUTE_TO_*`
 You MUST:
@@ -437,6 +449,7 @@ You MUST:
 
 If the primary status is `ROUTE_TO_ECI`, the next concrete action MUST be `/speckit.eci`.
 If this run happens after a completed ECI dossier, do **not** regenerate `eci-trigger.md` unless the current external capability scope requires a fresh intake.
+An initial `ROUTE_TO_ECI` assessment MUST use `ECI Re-entry Status = PENDING` and digest `N/A`.
 
 ### If `EXPLORATORY_ONLY`
 You MUST:
@@ -456,6 +469,7 @@ You MUST:
 After writing files, report:
 
 - Primary status
+- ECI re-entry status and evidence SHA-256
 - Files written
 - Why this is the correct route
 - Recommended next command or owner action
@@ -489,6 +503,7 @@ A good readiness assessment:
 - does **not** let missing validation hide behind "we can test later",
 - does **not** let access/runtime blockers stay implicit,
 - does **not** let defer disappear without a ledger trail,
+- does **not** claim ECI re-entry COMPLETE without binding the assessment to the current five-file evidence digest,
 - does **not** silently authorize `dropped_with_owner_signoff` without explicit owner signoff reference,
 - and does **not** expand the command surface unnecessarily.
 

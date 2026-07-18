@@ -9,16 +9,21 @@ BeforeAll {
     function script:Write-ReadinessFixture {
         param(
             [string]$PrimaryStatus = 'READY_FOR_PLAN',
-            [string]$LedgerRequirement = 'Not Required'
+            [string]$LedgerRequirement = 'Not Required',
+            [string]$EciReentryStatus = 'NOT_REQUIRED',
+            [string]$EciEvidenceSha256 = 'N/A'
         )
 
         $readinessDir = Join-Path $script:featureDir 'readiness'
         New-Item -ItemType Directory -Path $readinessDir -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $readinessDir 'eci') -Force | Out-Null
         @"
 # Readiness Assessment: Fixture
 
 **Date**: 2026-04-30
 **Primary Status**: $PrimaryStatus
+**ECI Re-entry Status**: $EciReentryStatus
+**ECI Evidence SHA-256**: $EciEvidenceSha256
 **Recommended Next Step**: /speckit.plan
 
 ## Summary
@@ -50,6 +55,102 @@ No blockers.
 
 - Skip planning.
 "@ | Set-Content -LiteralPath (Join-Path $readinessDir 'readiness-assessment.md')
+    }
+
+    function script:Write-EciDossier {
+        param(
+            [string]$AuthorizationOutcome = 'READY_FOR_MAINLINE_IMPLEMENTATION',
+            [string]$AuthorizationSuffix = '',
+            [switch]$CompleteReadiness
+        )
+
+        $readinessDir = Join-Path $script:featureDir 'readiness'
+        $eciDir = Join-Path $readinessDir 'eci'
+        New-Item -ItemType Directory -Path $eciDir -Force | Out-Null
+        "# ECI Trigger`n`n**Provider**: provider-a`n**Scope**: read-only`n" |
+            Set-Content -LiteralPath (Join-Path $readinessDir 'eci-trigger.md') -NoNewline
+        @"
+# ECI Assessment
+
+**ECI Level**: ``STANDARD_ECI``
+"@ | Set-Content -LiteralPath (Join-Path $eciDir 'eci-assessment.md') -NoNewline
+        "# ECI Source Manifest`n`nCanonical source evidence.`n" |
+            Set-Content -LiteralPath (Join-Path $eciDir 'source-manifest.md') -NoNewline
+        "# ECI Adoption Record`n`nGoverned adoption boundary.`n" |
+            Set-Content -LiteralPath (Join-Path $eciDir 'adoption-record.md') -NoNewline
+        @"
+# ECI Authorization Record
+
+**Authorization Outcome**: ``$AuthorizationOutcome``
+$AuthorizationSuffix
+"@ | Set-Content -LiteralPath (Join-Path $eciDir 'authorization-record.md') -NoNewline
+
+        if ($CompleteReadiness) {
+            Set-EciReadinessComplete
+        }
+
+        Write-EciRequirementMarker
+    }
+
+    function script:Write-EciRequirementMarker {
+        $markerDir = Join-Path $script:projectRoot ".workflow/runs/$script:featureName"
+        New-Item -ItemType Directory -Path $markerDir -Force | Out-Null
+        [ordered]@{
+            schema_version = '1.0.0'
+            feature = $script:featureName
+            feature_path = "specs/$script:featureName"
+            eci_required = $true
+            recorded_at = '2026-07-18T00:00:00.0000000+00:00'
+        } | ConvertTo-Json -Compress |
+            Set-Content -LiteralPath (Join-Path $markerDir 'eci-requirement.json') -NoNewline -Encoding utf8
+    }
+
+    function script:Get-EciEvidenceDigest {
+        $readinessDir = Join-Path $script:featureDir 'readiness'
+        $relativePaths = @(
+            'eci-trigger.md',
+            'eci/eci-assessment.md',
+            'eci/source-manifest.md',
+            'eci/adoption-record.md',
+            'eci/authorization-record.md'
+        )
+        $hasher = [System.Security.Cryptography.IncrementalHash]::CreateHash(
+            [System.Security.Cryptography.HashAlgorithmName]::SHA256
+        )
+        try {
+            foreach ($relativePath in $relativePaths) {
+                $pathBytes = [System.Text.Encoding]::UTF8.GetBytes($relativePath)
+                $pathLengthBytes = [System.BitConverter]::GetBytes([uint32]$pathBytes.Length)
+                if ([System.BitConverter]::IsLittleEndian) {
+                    [System.Array]::Reverse($pathLengthBytes)
+                }
+
+                $contentBytes = [System.IO.File]::ReadAllBytes(
+                    (Join-Path $readinessDir $relativePath)
+                )
+                $contentLengthBytes = [System.BitConverter]::GetBytes([uint64]$contentBytes.LongLength)
+                if ([System.BitConverter]::IsLittleEndian) {
+                    [System.Array]::Reverse($contentLengthBytes)
+                }
+
+                $hasher.AppendData($pathLengthBytes)
+                $hasher.AppendData($pathBytes)
+                $hasher.AppendData($contentLengthBytes)
+                $hasher.AppendData($contentBytes)
+            }
+            return [System.Convert]::ToHexString($hasher.GetHashAndReset()).ToLowerInvariant()
+        } finally {
+            $hasher.Dispose()
+        }
+    }
+
+    function script:Set-EciReadinessComplete {
+        $assessmentPath = Join-Path $script:featureDir 'readiness/readiness-assessment.md'
+        $digest = Get-EciEvidenceDigest
+        $content = Get-Content -LiteralPath $assessmentPath -Raw
+        $content = $content -replace '(?m)^\*\*ECI Re-entry Status\*\*:\s*.+$', '**ECI Re-entry Status**: COMPLETE'
+        $content = $content -replace '(?m)^\*\*ECI Evidence SHA-256\*\*:\s*.+$', "**ECI Evidence SHA-256**: $digest"
+        $content | Set-Content -LiteralPath $assessmentPath -NoNewline
     }
 }
 
@@ -155,21 +256,197 @@ Describe 'setup-plan readiness gate' {
 
         $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
         $LASTEXITCODE | Should -Not -Be 0
-        ($output -join "`n") | Should -Match 'requires intent-ledger\.md'
+        ($output -join "`n") | Should -Match '\[intent-ledger-missing\]'
     }
 
     It 'fails when ECI authorization does not allow mainline implementation' {
         Write-ReadinessFixture
-        $eciDir = Join-Path $script:featureDir 'readiness/eci'
-        New-Item -ItemType Directory -Path $eciDir -Force | Out-Null
-        @"
-# ECI Authorization Record: Fixture
-
-**Authorization Outcome**: READY_FOR_SANDBOX_ONLY
-"@ | Set-Content -LiteralPath (Join-Path $eciDir 'authorization-record.md')
+        Write-EciDossier -AuthorizationOutcome 'READY_FOR_SANDBOX_ONLY' -CompleteReadiness
 
         $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
         $LASTEXITCODE | Should -Not -Be 0
         ($output -join "`n") | Should -Match 'READY_FOR_SANDBOX_ONLY'
+    }
+
+    It 'accepts a mainline dossier with correctly bound COMPLETE Readiness evidence' {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json
+        $LASTEXITCODE | Should -Be 0
+        (($output[-1] | ConvertFrom-Json).IMPL_PLAN) | Should -Exist
+    }
+
+    It 'denies non-mainline ECI outcome <Outcome> even when readiness says READY_FOR_PLAN' -ForEach @(
+        @{ Outcome = 'READY_FOR_SPIKE_ONLY' }
+        @{ Outcome = 'READY_FOR_SANDBOX_ONLY' }
+        @{ Outcome = 'NOT_READY' }
+    ) {
+        Write-ReadinessFixture
+        Write-EciDossier -AuthorizationOutcome $Outcome -CompleteReadiness
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match ([regex]::Escape($Outcome))
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies a previously triggered ECI dossier when <MissingFile> is missing' -ForEach @(
+        @{ MissingFile = 'eci-assessment.md' }
+        @{ MissingFile = 'source-manifest.md' }
+        @{ MissingFile = 'adoption-record.md' }
+        @{ MissingFile = 'authorization-record.md' }
+    ) {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+        Remove-Item -LiteralPath (Join-Path $script:featureDir "readiness/eci/$MissingFile") -Force
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match ([regex]::Escape(($MissingFile -replace '\.md$', '')))
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning when only the ECI trigger remains after readiness is hand-edited to READY_FOR_PLAN' {
+        Write-ReadinessFixture
+        "# ECI Trigger`n" |
+            Set-Content -LiteralPath (Join-Path $script:featureDir 'readiness/eci-trigger.md') -NoNewline
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-reentry-not-required-artifacts-present\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies duplicate contradictory readiness Primary Status fields' {
+        Write-ReadinessFixture
+        Add-Content -LiteralPath (Join-Path $script:featureDir 'readiness/readiness-assessment.md') `
+            -Value "`n**Primary Status**: ``ROUTE_TO_DECISION``"
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[readiness-primary-status-invalid\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies duplicate contradictory ECI Authorization Outcome fields' {
+        Write-ReadinessFixture
+        Write-EciDossier `
+            -AuthorizationSuffix '**Authorization Outcome**: `READY_FOR_SANDBOX_ONLY`' `
+            -CompleteReadiness
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-authorization-outcome-invalid\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning with a complete dossier but no COMPLETE Readiness evidence' {
+        Write-ReadinessFixture
+        Write-EciDossier
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-reentry-not-required-artifacts-present\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning after the trigger and all four dossier files are deleted' {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+        Remove-Item -LiteralPath (Join-Path $script:featureDir 'readiness/eci-trigger.md') -Force
+        Get-ChildItem -LiteralPath (Join-Path $script:featureDir 'readiness/eci') -File |
+            Remove-Item -Force
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-trigger-missing\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning when a COMPLETE evidence digest is stale' {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+        Add-Content -LiteralPath (Join-Path $script:featureDir 'readiness/eci/adoption-record.md') `
+            -Value 'Changed after Readiness.'
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-evidence-sha256-mismatch\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning after only the trigger provider and scope are changed' {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+        @"
+# ECI Trigger
+
+**Provider**: provider-b
+**Scope**: write-enabled
+"@ | Set-Content -LiteralPath (Join-Path $script:featureDir 'readiness/eci-trigger.md') -NoNewline
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-evidence-sha256-mismatch\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning when ECI Evidence SHA-256 is <Kind>' -ForEach @(
+        @{ Kind = 'missing'; Digest = $null }
+        @{ Kind = 'malformed'; Digest = 'ABC123' }
+    ) {
+        Write-ReadinessFixture -EciReentryStatus 'COMPLETE' -EciEvidenceSha256 $(if ($null -eq $Digest) { 'N/A' } else { $Digest })
+        if ($null -eq $Digest) {
+            $assessmentPath = Join-Path $script:featureDir 'readiness/readiness-assessment.md'
+            (Get-Content -LiteralPath $assessmentPath -Raw) `
+                -replace '(?m)^\*\*ECI Evidence SHA-256\*\*:.*\r?\n?', '' |
+                Set-Content -LiteralPath $assessmentPath -NoNewline
+        }
+        Write-EciDossier
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[readiness-eci-evidence-sha256-invalid\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning while ECI re-entry remains PENDING' {
+        Write-ReadinessFixture `
+            -PrimaryStatus 'READY_FOR_PLAN' `
+            -EciReentryStatus 'PENDING' `
+            -EciEvidenceSha256 'N/A'
+        Write-EciDossier
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match '\[eci-reentry-pending-route-invalid\]'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
+    }
+
+    It 'denies direct planning after combined canonical ECI evidence deletion and NOT_REQUIRED rewrite when the marker remains' {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+        Remove-Item -LiteralPath (Join-Path $script:featureDir 'readiness/eci-trigger.md') -Force
+        Get-ChildItem -LiteralPath (Join-Path $script:featureDir 'readiness/eci') -File |
+            Remove-Item -Force
+        Write-ReadinessFixture -PrimaryStatus 'READY_FOR_PLAN' -EciReentryStatus 'NOT_REQUIRED' -EciEvidenceSha256 'N/A'
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'eci-requirement-latched-not-required'
+    }
+
+    It 'denies direct planning when a complete ECI dossier has no requirement marker' {
+        Write-ReadinessFixture
+        Write-EciDossier -CompleteReadiness
+        Remove-Item -LiteralPath (
+            Join-Path $script:projectRoot ".workflow/runs/$script:featureName/eci-requirement.json"
+        ) -Force
+
+        $output = pwsh -NoProfile -File $script:setupPlanScript -Json 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($output -join "`n") | Should -Match 'eci-requirement-marker-missing'
+        (Join-Path $script:featureDir 'plan.md') | Should -Not -Exist
     }
 }

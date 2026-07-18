@@ -282,12 +282,48 @@
       "id": "sdd-pipeline-catalog-demotion",
       "path": "studio/workflows/catalog.json",
       "mustContainAll": [
+        "\"version\": \"1.1.0\"",
+        "\"id\": \"sdd-pipeline\",\n      \"version\": \"1.1.0\"",
         "\"reviewStatus\": \"experimental\"",
         "\"trustLevel\": \"experimental\"",
         "\"defaultEnabled\": false",
         "\"approvedBy\": null",
         "\"approvedAt\": null",
-        "Runner authorization enforcement remains a separate R2 gate."
+        "\"workflowSha256\": null",
+        "\"stepTypesUsed\": [\"command\", \"gate\", \"if\", \"switch\"]",
+        "not default-enabled, and execution-denied"
+      ]
+    },
+    {
+      "id": "workflow-catalog-approval-digest-schema",
+      "path": "studio/workflows/catalog.schema.json",
+      "mustContainAll": [
+        "\"workflowSha256\"",
+        "\"pattern\": \"^[a-f0-9]{64}$\"",
+        "\"enum\": [\"approved\", \"deprecated\"]",
+        "\"type\": \"string\""
+      ]
+    },
+    {
+      "id": "sdd-pipeline-four-value-routing-doc",
+      "path": "studio/workflows/sdd-pipeline/docs/README.md",
+      "mustContainAll": [
+        "ECI authorization: all 4 outcomes",
+        "the three bounded outcomes run a distinct second Readiness assessment",
+        "`NOT_READY` fails closed before re-entry or Plan",
+        "experimental",
+        "run-workflow.ps1 -Id sdd-pipeline` is denied until it is re-promoted"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-manifest-four-value-routing",
+      "path": "studio/workflows/sdd-pipeline/manifest.json",
+      "mustContainAll": [
+        "\"version\": \"1.1.0\"",
+        "four-value ECI authorization",
+        "three bounded outcomes re-enter Readiness",
+        "NOT_READY fails closed",
+        "\"eci-authorization-re-entry\""
       ]
     },
     {
@@ -541,16 +577,27 @@
         "If any proposed drop lacks explicit owner signoff reference, route to `ROUTE_TO_DECISION` instead of normalizing the drop.",
         "`eci-trigger.md` is the mandatory intake seed for `/speckit.eci`.",
         "If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.",
-        "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope."
+        "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope.",
+        "write exactly one `ECI Re-entry Status` and exactly one `ECI Evidence SHA-256`",
+        "validate-feature-structure.ps1 -FeatureDir specs/<feature> -RequireEciReentry -Json",
+        "ECI_ACTUAL_EVIDENCE_SHA256",
+        "4-byte big-endian length",
+        "8-byte big-endian length",
+        "All five evidence files, including `eci-trigger.md`, must exist and be non-empty"
       ]
     },
     {
       "id": "eci-agent-semantics",
       "path": ".github/agents/speckit.eci.agent.md",
       "mustContainAll": [
-        "`READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`",
-        "`ECI_TRIGGER = READINESS_DIR/eci-trigger.md`",
-        "`Primary Status` is anything other than `ROUTE_TO_ECI`",
+        "### Non-bypassable first action",
+        "Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any",
+        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -Json",
+        "`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`",
+        "There is no operator-confirmation or force bypass.",
+        "Parse `READY`, `FEATURE_DIR`, `FEATURE_SPEC`, `READINESS_ASSESSMENT`,",
+        "Abort if the gate does not prove the exact `ROUTE_TO_ECI`, `PENDING`,",
+        "Treat every path returned by the gate as authoritative for this invocation;",
         "`eci-assessment.md`",
         "`source-manifest.md`",
         "`adoption-record.md`",
@@ -559,6 +606,17 @@
         "### Authorization Outcome",
         "Always recommend `/speckit.readiness` as the next command.",
         "Never recommend `/speckit.plan` directly from `/speckit.eci`."
+      ]
+    },
+    {
+      "id": "eci-claude-first-action-gate",
+      "path": ".claude/agents/speckit-eci.md",
+      "mustContainAll": [
+        "### Non-bypassable first action",
+        "Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any",
+        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -Json",
+        "`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`",
+        "There is no operator-confirmation or force bypass."
       ]
     },
     {
@@ -647,6 +705,14 @@
         "## Planability vs Intent Obligations",
         "**Intent Ledger Requirement**: Not Required / Create `intent-ledger.md` / Update `intent-ledger.md`",
         "**Intent Ledger Path**: `specs/<feature>/intent-ledger.md` / N/A",
+        "**ECI Re-entry Status**: `NOT_REQUIRED | PENDING | COMPLETE`",
+        "**ECI Evidence SHA-256**: `N/A | <lowercase 64-character digest>`",
+        "validate-feature-structure.ps1 -FeatureDir specs/<feature> -RequireEciReentry -Json",
+        "ECI_ACTUAL_EVIDENCE_SHA256",
+        "4-byte big-endian length",
+        "8-byte",
+        "`eci-trigger.md`,",
+        "`eci/authorization-record.md`. All five files must exist and be non-empty.",
         "If this is a post-ECI rerun, distinguish what is already governed from what still blocks planning",
         "If this is a post-ECI rerun, explain why external capability governance is no longer the primary blocker or why it still is"
       ]
@@ -936,6 +1002,42 @@
         "$errors += @($stateValidation.ERRORS)",
         "if (-not (Test-StrictBooleanValue -Value $stateEntry['enabled']))",
         "if (-not (Test-StrictBooleanValue -Value $entry['defaultEnabled']))",
+        "function Get-WorkflowContentSha256",
+        "Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop",
+        "function Read-WorkflowManifestIdentity",
+        "[Parameter(Mandatory = $true)] [string]$ExpectedId",
+        "[Parameter(Mandatory = $true)] [string]$ExpectedVersion",
+        "Workflow identity mismatch for manifest",
+        "Assert-PathInsideRoot",
+        "-Root $workflowsRoot",
+        "-Candidate $sourceRoot",
+        "Workflow sourcePath escapes workflows root",
+        "function Resolve-ExistingPathThroughReparsePoints",
+        "$target = $item.ResolveLinkTarget($false)",
+        "function Resolve-ExistingPathInsideRoot",
+        "$physicalRoot = Resolve-ExistingPathThroughReparsePoints -Path $lexicalRoot",
+        "outside physical root",
+        "$sourceRoot = Resolve-ExistingPathInsideRoot",
+        "$workflowPath = Resolve-ExistingPathInsideRoot",
+        "$manifestPath = Resolve-ExistingPathInsideRoot",
+        "function Get-EciRequirementMarkerContext",
+        "FEATURE_RELATIVE_PATH = \"specs/$feature\"",
+        "function Read-EciRequirementMarker",
+        "[System.Text.Json.JsonDocument]::Parse($rawJson)",
+        "feature_path identity must exactly match",
+        "eci_required must be the JSON Boolean true",
+        "function Initialize-EciRequirementMarker",
+        "[System.IO.FileMode]::CreateNew",
+        "$stream.Flush($true)",
+        "[System.IO.File]::Move($tempPath, $context.MARKER_PATH, $false)",
+        "$reviewStatus -in @('approved', 'deprecated')",
+        "requires a lowercase workflowSha256 approval digest",
+        "Workflow approval digest mismatch",
+        "WORKFLOW_PATH",
+        "WORKFLOW_SHA256",
+        "ACTUAL_WORKFLOW_SHA256",
+        "WORKFLOW_DIGEST_MATCH",
+        "MANIFEST_IDENTITY_MATCH",
         "function Get-WorkflowExecutionAuthorization",
         "AUTHORIZED   = ($errors.Count -eq 0)"
       ]
@@ -1014,10 +1116,39 @@
       "path": "studio/scripts/powershell/setup-plan.ps1",
       "mustContainAll": [
         "Assert-ReadyForPlan",
+        "Invoke-FeatureStructureValidation",
+        "validate-feature-structure.ps1",
+        "READINESS_PRIMARY_STATUS",
+        "$primaryStatus = [string]$validation.READINESS_PRIMARY_STATUS",
+        "ECI_REQUIRED",
+        "if ($validation.ECI_REQUIRED -eq $true)",
+        "ECI_REENTRY_STATUS",
+        "$eciReentryStatus = [string]$validation.ECI_REENTRY_STATUS",
+        "ECI_AUTHORIZATION_OUTCOME",
+        "$authorizationOutcome = [string]$validation.ECI_AUTHORIZATION_OUTCOME",
         "READY_FOR_PLAN",
         "Intent Ledger Requirement",
         "Authorization Outcome",
         "READY_FOR_MAINLINE_IMPLEMENTATION"
+      ]
+    },
+    {
+      "id": "setup-eci-non-bypassable-requirement-latch",
+      "path": "studio/scripts/powershell/setup-eci.ps1",
+      "mustContainAll": [
+        "#Requires -Version 7.0",
+        "Invoke-EciIntakeValidation",
+        "validate-feature-structure.ps1",
+        "-DeferEciDossier",
+        "$validation.READINESS_PRIMARY_STATUS -isnot [string]",
+        "'ROUTE_TO_ECI'",
+        "$validation.ECI_REENTRY_STATUS -isnot [string]",
+        "'PENDING'",
+        "$validation.ECI_REQUIRED -isnot [bool]",
+        "Initialize-EciRequirementMarker",
+        "ECI_REQUIREMENT_PATH",
+        "ECI_REQUIREMENT_LATCHED",
+        "There is no Force bypass."
       ]
     },
     {
@@ -1064,6 +1195,37 @@
       "mustContainAll": [
         "FeatureDir",
         "WarningsAsErrors",
+        "RequireEciDossier",
+        "RequireEciReentry",
+        "DeferEciDossier",
+        "function Get-ExactlyOneMarkdownEnum",
+        "function Get-ExactlyOneMarkdownField",
+        "$matches.Count -ne 1",
+        "-Field 'ECI Re-entry Status'",
+        "-Field 'ECI Evidence SHA-256'",
+        "function Get-EciEvidenceSha256",
+        "Read-EciRequirementMarker",
+        "$canDeferInitialEciIntake",
+        "eci-requirement-marker-invalid",
+        "eci-requirement-marker-missing",
+        "eci-requirement-latched-not-required",
+        "eci-requirement-latched-digest-na",
+        "$eciEvidenceRelativePaths = @(",
+        "'eci-trigger.md',",
+        "'eci/eci-assessment.md',",
+        "'eci/source-manifest.md',",
+        "'eci/adoption-record.md',",
+        "'eci/authorization-record.md'",
+        "[System.BitConverter]::GetBytes([uint32]$pathBytes.Length)",
+        "[System.BitConverter]::GetBytes([uint64]$contentBytes.LongLength)",
+        "$hasher.AppendData($pathLengthBytes)",
+        "$hasher.AppendData($contentLengthBytes)",
+        "ECI_ACTUAL_EVIDENCE_SHA256",
+        "$eciReentryStatus -in @('PENDING', 'COMPLETE')",
+        "$eciReentryStatus -eq 'NOT_REQUIRED'",
+        "$eciReentryStatus -eq 'PENDING'",
+        "$eciReentryStatus -eq 'COMPLETE'",
+        "eci-evidence-sha256-mismatch",
         "readiness-assessment.md",
         "intent-ledger.md",
         "ROUTE_TO_ECI",
@@ -1071,8 +1233,17 @@
         "Get-MarkdownField",
         "readiness-dir-missing",
         "eci-dir-missing",
-        "$primaryStatus -eq 'ROUTE_TO_ECI' -or",
-        "Triggered ECI governance requires readiness/eci/$name."
+        "Triggered ECI governance requires readiness/eci/$name.",
+        "eci-authorization-outcome-invalid",
+        "eci-reentry-not-authorized",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "READY_FOR_SPIKE_ONLY",
+        "READY_FOR_SANDBOX_ONLY",
+        "NOT_READY",
+        "READINESS_PRIMARY_STATUS",
+        "ECI_REQUIREMENT_PATH",
+        "ECI_REQUIREMENT_LATCHED",
+        "ECI_AUTHORIZATION_OUTCOME"
       ]
     },
     {
@@ -1359,7 +1530,11 @@
         "Workflow registry authorization denied",
         "$catalogEntry = $authorization.ENTRY.CATALOG_ENTRY",
         "Workflow identity mismatch",
+        "$workflowYaml = [string]$authorization.ENTRY.WORKFLOW_PATH",
+        "Workflow registry authorization did not resolve workflow.yml",
+        "-Candidate $workflowYaml",
         "-ExpectedWorkflowId $Id",
+        "-ExpectedWorkflowSha256 ([string]$authorization.ENTRY.WORKFLOW_SHA256)",
         "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path"
       ]
     },
@@ -1385,8 +1560,8 @@
         "function Initialize-StepPostconditionBaseline",
         "$stepVars['baseline_task_ids'] =",
         "$stepVars['baseline_sidecar'] = $sidecarPath",
-        "terminal baseline sidecar already exists and is write-once",
-        "RunState baseline cache does not match the authoritative write-once sidecar",
+        "terminal baseline sidecar already exists; atomic no-overwrite-at-creation policy refuses replacement",
+        "RunState baseline cache does not match the engine-created local sidecar",
         "terminal baseline sidecar identity mismatch",
         "Initialize-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot",
         "baseline canonical task inventory is missing from RunState; restart the run",
@@ -1418,12 +1593,56 @@
       ]
     },
     {
+      "id": "workflow-engine-restart-archive-no-overwrite",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Move-RunStateToRestartArchive",
+        "[DateTimeOffset]$ArchiveTime = [DateTimeOffset]::Now",
+        "[guid]$ArchiveNonce = [guid]::NewGuid()",
+        "$archivePath = \"$Path.$archiveStamp.$($ArchiveNonce.ToString('N')).restarted.json\"",
+        "[System.IO.File]::Move($Path, $archivePath, $false)",
+        "Restart archive move refused without overwriting an existing archive",
+        "[void](Move-RunStateToRestartArchive -Path $resumeReadPath)"
+      ]
+    },
+    {
+      "id": "workflow-engine-validator-revalidation-policy",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Assert-WorkflowRevalidationPolicy",
+        "Comparisons:  ==, != (written directly in condition, outside {{ }}).",
+        "Workflow condition operators must use the engine expression grammar directly; do not wrap a comparison or Boolean expression in {{ }}.",
+        "Workflow condition resolved to an empty expression.",
+        "$validatorScript = 'studio/scripts/powershell/validate-feature-structure.ps1'",
+        "$step.revalidate_on_resume -isnot [bool]",
+        "[string]$step.script -cne $validatorScript",
+        "exactly one -Json argument",
+        "Assert-WorkflowRevalidationPolicy -Steps $workflow.steps",
+        "[void]$RunState.vars.steps[$Step.id].Remove('json')",
+        "$captured -isnot [System.Collections.IDictionary]",
+        "$captured['VALID'] -isnot [bool]",
+        "revalidation result is missing Boolean VALID=true",
+        "-not $revalidateOnResume",
+        "it must replace its captured decision payload with current filesystem evidence"
+      ]
+    },
+    {
       "id": "workflow-engine-executed-identity-binding",
       "path": "studio/scripts/powershell/workflow-engine.ps1",
       "mustContainAll": [
-        "[string]$ExpectedWorkflowId",
-        "$ExpectedWorkflowId -and [string]$workflow.workflow.id -ne $ExpectedWorkflowId",
-        "the catalog authorizes version"
+        "function Read-WorkflowYamlSnapshot",
+        "[System.IO.File]::ReadAllBytes($Path)",
+        "[System.Security.Cryptography.SHA256]::HashData($bytes)",
+        "[Parameter(Mandatory)] [string]$ExpectedWorkflowId",
+        "[ValidatePattern('^[a-f0-9]{64}$')]",
+        "[string]$ExpectedWorkflowSha256",
+        "$actualWorkflowSha256 -cne $ExpectedWorkflowSha256",
+        "the approved catalog workflowSha256",
+        "workflow_sha256",
+        "state workflow_version",
+        "state workflow_sha256 is missing or invalid",
+        "The workflow graph changed; use -Restart after explicit re-approval.",
+        "-WorkflowSha256 $ExpectedWorkflowSha256"
       ]
     },
     {
@@ -1431,10 +1650,26 @@
       "path": "studio/workflows/POLICY.md",
       "mustContainAll": [
         "Per-project `.workflow/runs/<feature>/state.json`",
-        "write-once `.workflow/runs/<feature>/baselines/<run-id>/<step-id>.json` sidecars",
+        "engine-created local `.workflow/runs/<feature>/baselines/<run-id>/<step-id>.json` sidecars written with atomic no-overwrite-at-creation semantics",
+        "does not authenticate provenance or resist coordinated replacement by the same local principal",
+        "broader RunState authenticity boundary remains open under R-B23",
+        "Per-feature `.workflow/runs/<feature>/eci-requirement.json`",
+        "strict identity-bound Boolean latch",
+        "atomic no-overwrite publication",
+        "does not authenticate the readiness or dossier contents",
+        "coordinated deletion or forgery of the marker and governed evidence remains open under R-B23",
         "cache-mismatched terminal baseline sidecar fails closed",
         "never intended for Git",
-        "starting a run never creates anything under `specs/`"
+        "starting a run never creates anything under `specs/`",
+        "approved raw-byte SHA-256",
+        "A content change invalidates the existing approval",
+        "Resume compares RunState workflow id, version, and SHA-256",
+        "After explicit re-approval, the operator must use `-Restart`",
+        "Each archive uses a collision-resistant UTC-millisecond-and-nonce name and an atomic no-overwrite move",
+        "Restart archives and terminal baseline sidecars use atomic no-overwrite moves",
+        "restart archive names include UTC milliseconds plus a GUID nonce",
+        "`revalidate_on_resume: true`",
+        "Each replay removes the prior capture before dispatch and requires a JSON object with Boolean `VALID=true`"
       ]
     },
     {
@@ -1462,7 +1697,12 @@
         "\"required\": [\"script\", \"args\"]",
         "\"if\": { \"required\": [\"completion_validation\"] }",
         "\"terminal\": { \"const\": true }",
-        "\"required\": [\"dispatch\", \"terminal\", \"postcondition\"]"
+        "\"required\": [\"dispatch\", \"terminal\", \"postcondition\"]",
+        "\"revalidate_on_resume\": {\n          \"type\": \"boolean\",\n          \"const\": true\n        }",
+        "\"if\": { \"required\": [\"revalidate_on_resume\"] }",
+        "\"const\": \"studio/scripts/powershell/validate-feature-structure.ps1\"",
+        "\"contains\": { \"const\": \"-Json\" }",
+        "\"maxContains\": 1"
       ]
     },
     {
@@ -1482,6 +1722,13 @@
         "$authorization = Get-WorkflowExecutionAuthorization -Registry $registry -Id ([string]$entry.ID)",
         "executionAuthorized = $authorization.AUTHORIZED",
         "authorizationErrors = @($authorization.ERRORS)",
+        "workflowPath        = $entry.WORKFLOW_PATH",
+        "workflowSha256      = $entry.WORKFLOW_SHA256",
+        "actualWorkflowSha256 = $entry.ACTUAL_WORKFLOW_SHA256",
+        "workflowDigestMatches = $entry.WORKFLOW_DIGEST_MATCH",
+        "manifestId          = $entry.MANIFEST_ID",
+        "manifestVersion     = $entry.MANIFEST_VERSION",
+        "manifestIdentityMatches = $entry.MANIFEST_IDENTITY_MATCH",
         "VALID         = ($errors.Count -eq 0)"
       ]
     }
@@ -1524,6 +1771,39 @@
       "mustContainAll": [
         "  - id: stage-plan-prep\n    type: command\n    dispatch: script\n    script: studio/scripts/powershell/setup-plan.ps1\n    args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-Json\"]",
         "operator_message: \"Run /speckit.plan -FeatureDir specs/{{ inputs.feature }}"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-eci-dossier-reentry-routing",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  version: \"1.1.0\"",
+        "stage-readiness-routing-validation",
+        "-DeferEciDossier",
+        "revalidate_on_resume: true",
+        "branch-readiness-eci",
+        "condition: \"vars.steps.stage-readiness-routing-validation.json.READINESS_PRIMARY_STATUS == 'ROUTE_TO_ECI'\"",
+        "stage-eci-entry-gate",
+        "script: studio/scripts/powershell/setup-eci.ps1",
+        "stage-eci-dossier-validation",
+        "subject: \"{{ vars.steps.stage-eci-dossier-validation.json.ECI_AUTHORIZATION_OUTCOME | default('NOT_READY') }}\"",
+        "branch-eci-authorization",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "READY_FOR_SANDBOX_ONLY",
+        "READY_FOR_SPIKE_ONLY",
+        "NOT_READY",
+        "validate-eci-mainline-reentry",
+        "validate-eci-sandbox-reentry",
+        "validate-eci-spike-reentry",
+        "deny-eci-not-ready-reentry",
+        "-RequireEciReentry",
+        "stage-readiness-reentry",
+        "stage-readiness-reentry-validation",
+        "-RequireEciDossier",
+        "stage-latest-readiness-routing-validation",
+        "subject: \"{{ vars.steps.stage-latest-readiness-routing-validation.json.READINESS_PRIMARY_STATUS | default('NOT_READY') }}\"",
+        "route-eci-repeat-halt",
+        "branch-readiness-status"
       ]
     }
   ],

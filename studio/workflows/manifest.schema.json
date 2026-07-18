@@ -100,6 +100,10 @@
           "items": { "type": "string" }
         },
         "expected_exit_code": { "type": "integer", "default": 0 },
+        "revalidate_on_resume": {
+          "type": "boolean",
+          "const": true
+        },
         "capture": {
           "type": "object",
           "additionalProperties": false,
@@ -167,6 +171,30 @@
               "terminal": { "const": true }
             },
             "required": ["dispatch", "terminal", "postcondition"]
+          }
+        },
+        {
+          "if": { "required": ["revalidate_on_resume"] },
+          "then": {
+            "required": ["script", "args", "capture"],
+            "properties": {
+              "dispatch": { "const": "script" },
+              "script": {
+                "const": "studio/scripts/powershell/validate-feature-structure.ps1"
+              },
+              "args": {
+                "contains": { "const": "-Json" },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              "expected_exit_code": { "const": 0 },
+              "capture": {
+                "required": ["json"],
+                "properties": {
+                  "json": { "const": true }
+                }
+              }
+            }
           }
         }
       ]

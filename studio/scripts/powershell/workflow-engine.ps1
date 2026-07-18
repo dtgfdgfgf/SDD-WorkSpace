@@ -13,7 +13,7 @@
 
     Expression subset:
       - {{ ref }} interpolation (dotted lookup against inputs/vars/steps).
-      - Comparisons:  ==, !=
+      - Comparisons:  ==, != (written directly in condition, outside {{ }}).
       - Boolean:      and, or, not (with parentheses, short-circuit)
       - Filter:       {{ ref | default('VALUE') }}
 
@@ -48,14 +48,34 @@ function Assert-YamlModuleAvailable {
     }
 }
 
-function Read-WorkflowYaml {
+function Read-WorkflowYamlSnapshot {
     param([Parameter(Mandatory)] [string]$Path)
     Assert-YamlModuleAvailable
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         throw "workflow.yml not found: $Path"
     }
-    $raw = Get-Content -LiteralPath $Path -Raw
-    return (ConvertFrom-Yaml -Yaml $raw -Ordered)
+    try {
+        # Hash and parse the same immutable byte snapshot. Separate Get-FileHash and
+        # Get-Content calls would leave a time-of-check/time-of-use gap.
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        $raw = [System.Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+        $sha256 = ([System.Convert]::ToHexString(
+            [System.Security.Cryptography.SHA256]::HashData($bytes)
+        )).ToLowerInvariant()
+        $document = ConvertFrom-Yaml -Yaml $raw -Ordered
+    } catch {
+        throw "Unable to read workflow.yml as strict UTF-8 bytes: $Path. $($_.Exception.Message)"
+    }
+
+    return [PSCustomObject][ordered]@{
+        DOCUMENT = $document
+        SHA256   = $sha256
+    }
+}
+
+function Read-WorkflowYaml {
+    param([Parameter(Mandatory)] [string]$Path)
+    return (Read-WorkflowYamlSnapshot -Path $Path).DOCUMENT
 }
 
 function Test-WorkflowSchema {
@@ -164,7 +184,13 @@ function Test-WorkflowCondition {
         [Parameter(Mandatory)] [string]$Expression,
         [Parameter(Mandatory)] $Context
     )
+    if ($Expression -match '(?s)^\s*\{\{.*(?:==|!=|\band\b|\bor\b|\bnot\b).*\}\}\s*$') {
+        throw 'Workflow condition operators must use the engine expression grammar directly; do not wrap a comparison or Boolean expression in {{ }}.'
+    }
     $expr = (Resolve-Interpolation -Template $Expression -Context $Context).Trim()
+    if ([string]::IsNullOrWhiteSpace($expr)) {
+        throw 'Workflow condition resolved to an empty expression.'
+    }
     return [bool](Invoke-WorkflowBooleanExpression -Expression $expr -Context $Context)
 }
 
@@ -298,6 +324,40 @@ function Read-RunState {
     return ($raw | ConvertFrom-Json -AsHashtable)
 }
 
+function Move-RunStateToRestartArchive {
+    <#
+    .SYNOPSIS
+        Atomically archives a RunState without overwriting an earlier archive.
+
+    .DESCRIPTION
+        The UTC millisecond stamp is diagnostic only. A GUID nonce prevents two
+        restarts at the same instant from selecting the same destination, while
+        File.Move with overwrite disabled makes any remaining collision fail closed.
+        The archive remains compatible with the state.json.*.restarted.json glob.
+    #>
+    param(
+        [Parameter(Mandatory)] [string]$Path,
+        [DateTimeOffset]$ArchiveTime = [DateTimeOffset]::Now,
+        [guid]$ArchiveNonce = [guid]::NewGuid()
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "RunState to archive does not exist: $Path"
+    }
+
+    $archiveStamp = $ArchiveTime.UtcDateTime.ToString(
+        'yyyyMMddHHmmssfff',
+        [System.Globalization.CultureInfo]::InvariantCulture
+    )
+    $archivePath = "$Path.$archiveStamp.$($ArchiveNonce.ToString('N')).restarted.json"
+    try {
+        [System.IO.File]::Move($Path, $archivePath, $false)
+    } catch {
+        throw "Restart archive move refused without overwriting an existing archive; RunState path: $Path. $($_.Exception.Message)"
+    }
+    return $archivePath
+}
+
 function Lock-RunState {
     param([Parameter(Mandatory)] [string]$Path)
     $lock = "$Path.lock"
@@ -319,14 +379,16 @@ function Unlock-RunState {
 function Initialize-RunState {
     param(
         [Parameter(Mandatory)] $Workflow,
+        [Parameter(Mandatory)] [string]$WorkflowSha256,
         [Parameter(Mandatory)] [string]$Feature,
         [Parameter(Mandatory)] [hashtable]$Inputs
     )
     return [ordered]@{
-        schema_version    = '1.0.0'
+        schema_version    = '1.1.0'
         run_id            = "{0:yyyyMMddHHmmss}-{1}" -f (Get-Date), [guid]::NewGuid().ToString('N').Substring(0, 6)
         workflow_id       = $Workflow.workflow.id
         workflow_version  = $Workflow.workflow.version
+        workflow_sha256   = $WorkflowSha256
         feature           = $Feature
         status            = 'running'
         started_at        = Get-IsoTimestamp
@@ -465,7 +527,7 @@ function New-StepPostconditionBaseline {
 
     $path = Get-StepPostconditionBaselinePath -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot
     if (Test-Path -LiteralPath $path) {
-        throw 'terminal baseline sidecar already exists and is write-once; restart the run instead of replacing it'
+        throw 'terminal baseline sidecar already exists; atomic no-overwrite-at-creation policy refuses replacement, so restart the run'
     }
     $directory = Split-Path -Parent $path
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
@@ -548,7 +610,7 @@ function Test-StepPostcondition {
             $baselineIds = @($baseline.TaskIds)
             $cachedBaselineIds = @($stepVars['baseline_task_ids'] | ForEach-Object { [string]$_ })
             if (($cachedBaselineIds -join "`n") -cne ($baselineIds -join "`n")) {
-                return 'postcondition no-pending-tasks: RunState baseline cache does not match the authoritative write-once sidecar; restart the run'
+                return 'postcondition no-pending-tasks: RunState baseline cache does not match the engine-created local sidecar; restart the run'
             }
 
             $currentInventory = @(Get-CanonicalTaskInventory -Path $filePath)
@@ -721,6 +783,11 @@ function Invoke-CommandStep {
     )
     $dispatch = [string]$Step.dispatch
     if ($dispatch -eq 'script') {
+        $revalidateOnResume = (
+            $Step.Contains('revalidate_on_resume') -and
+            $Step.revalidate_on_resume -is [bool] -and
+            [bool]$Step.revalidate_on_resume
+        )
         $scriptRel = [string]$Step.script
         $scriptPath = if ([System.IO.Path]::IsPathRooted($scriptRel)) { $scriptRel } else { Join-Path $WorkspaceRoot $scriptRel }
         Assert-PathInsideRoot -Root $WorkspaceRoot -Candidate $scriptPath -MessagePrefix 'Step script path escapes workspace root'
@@ -729,6 +796,13 @@ function Invoke-CommandStep {
         if ($DryRun) {
             Add-RunStateHistory -RunState $RunState -Step $Step -Outcome 'dry-run-skipped' -Extras @{ script = $scriptPath; args = $argv }
             return @{ Status = 'success' }
+        }
+        if ($revalidateOnResume) {
+            if (-not $RunState.vars.steps.ContainsKey($Step.id)) { $RunState.vars.steps[$Step.id] = @{} }
+            # A revalidation attempt may never inherit the prior decision payload. Remove
+            # it before dispatch so empty, malformed, or failed output cannot route via
+            # stale JSON from an earlier invocation.
+            [void]$RunState.vars.steps[$Step.id].Remove('json')
         }
         $stdout = & pwsh -NoProfile -WorkingDirectory $ProjectRoot -File $scriptPath @argv 2>&1
         $exitCode = $LASTEXITCODE
@@ -739,14 +813,29 @@ function Invoke-CommandStep {
         if ($captureJson -and $stdout) {
             try { $captured = ($stdout -join "`n") | ConvertFrom-Json -AsHashtable } catch { $captured = $null }
         }
+        $captureFailure = $null
+        if ($revalidateOnResume) {
+            if ($captured -isnot [System.Collections.IDictionary]) {
+                $captureFailure = 'revalidation did not emit a machine-readable JSON object'
+            } elseif (
+                -not $captured.Contains('VALID') -or
+                $captured['VALID'] -isnot [bool] -or
+                -not [bool]$captured['VALID']
+            ) {
+                $captureFailure = 'revalidation result is missing Boolean VALID=true'
+            }
+        }
         if ($null -ne $captured) {
             if (-not $RunState.vars.steps.ContainsKey($Step.id)) { $RunState.vars.steps[$Step.id] = @{} }
             $RunState.vars.steps[$Step.id].json = $captured
         }
-        $outcome = if ($exitCode -eq $expectedExit) { 'success' } else { 'failed' }
-        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras @{ exit_code = $exitCode; expected_exit_code = $expectedExit }
+        $outcome = if ($exitCode -eq $expectedExit -and -not $captureFailure) { 'success' } else { 'failed' }
+        $historyExtras = @{ exit_code = $exitCode; expected_exit_code = $expectedExit }
+        if ($captureFailure) { $historyExtras['capture_error'] = $captureFailure }
+        Add-RunStateHistory -RunState $RunState -Step $Step -Outcome $outcome -Extras $historyExtras
         if ($outcome -ne 'success') {
-            return @{ Status = 'failed'; ExitCode = $exitCode; Stdout = ($stdout -join "`n") }
+            $failureExitCode = if ($exitCode -eq $expectedExit) { 1 } else { $exitCode }
+            return @{ Status = 'failed'; ExitCode = $failureExitCode; Stdout = ($stdout -join "`n"); Error = $captureFailure }
         }
         return @{ Status = 'success' }
     }
@@ -934,8 +1023,20 @@ function Invoke-Step {
     # Resume idempotency: a command step (script or agent) that already succeeded is not re-run.
     # This prevents a resume from re-scaffolding / overwriting agent-authored artifacts and defeats
     # the "prep re-creates the expected artifact" false-completion path. if/switch re-route and
-    # gates are idempotent on their own, so only command steps are skipped here.
-    if (($sid) -and ([string]$Step.type -eq 'command') -and (@($RunState.completed_steps) -contains $sid)) {
+    # gates are idempotent on their own, so only command steps are skipped here. A narrowly
+    # authorized read-only validator carrying revalidate_on_resume is the sole exception:
+    # it must replace its captured decision payload with current filesystem evidence.
+    $revalidateOnResume = (
+        $Step.Contains('revalidate_on_resume') -and
+        $Step.revalidate_on_resume -is [bool] -and
+        [bool]$Step.revalidate_on_resume
+    )
+    if (
+        ($sid) -and
+        ([string]$Step.type -eq 'command') -and
+        (@($RunState.completed_steps) -contains $sid) -and
+        -not $revalidateOnResume
+    ) {
         Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome 'skipped-completed'
         return @{ Status = 'success' }
     }
@@ -973,6 +1074,66 @@ function Get-WorkflowStepIds {
     return $ids
 }
 
+function Assert-WorkflowRevalidationPolicy {
+    <#
+    .SYNOPSIS
+        Restricts replayable commands to the canonical read-only feature validator.
+
+    .DESCRIPTION
+        The JSON schema is the first shape gate. This recursive semantic check is a
+        second runtime boundary: an arbitrary script, agent command, non-JSON capture,
+        or non-zero expected exit code may never opt into completed-step replay.
+    #>
+    param([Parameter(Mandatory)] $Steps)
+
+    $validatorScript = 'studio/scripts/powershell/validate-feature-structure.ps1'
+    foreach ($step in @($Steps)) {
+        if ($null -eq $step) { continue }
+        if ($step.Contains('revalidate_on_resume')) {
+            $captureJsonIsTrue = (
+                $step.Contains('capture') -and
+                $step.capture -is [System.Collections.IDictionary] -and
+                $step.capture.Contains('json') -and
+                $step.capture.json -is [bool] -and
+                [bool]$step.capture.json
+            )
+            $hasJsonArgument = (
+                $step.Contains('args') -and
+                @($step.args | Where-Object { $_ -is [string] -and [string]$_ -ceq '-Json' }).Count -eq 1
+            )
+            $expectedExitIsZero = (
+                -not $step.Contains('expected_exit_code') -or
+                (
+                    $step.expected_exit_code -is [int] -and
+                    [int]$step.expected_exit_code -eq 0
+                )
+            )
+            if (
+                $step.revalidate_on_resume -isnot [bool] -or
+                -not [bool]$step.revalidate_on_resume -or
+                [string]$step.type -cne 'command' -or
+                [string]$step.dispatch -cne 'script' -or
+                [string]$step.script -cne $validatorScript -or
+                -not $captureJsonIsTrue -or
+                -not $hasJsonArgument -or
+                -not $expectedExitIsZero
+            ) {
+                throw "Step '$($step.id)' revalidate_on_resume is restricted to dispatch: script, exact script '$validatorScript', capture.json: true, exactly one -Json argument, and expected exit code 0."
+            }
+        }
+        foreach ($branchKey in 'then', 'else', 'on_reject', 'default') {
+            if ($step.Contains($branchKey) -and $step[$branchKey]) {
+                Assert-WorkflowRevalidationPolicy -Steps $step[$branchKey]
+            }
+        }
+        if ($step.Contains('cases') -and $step.cases) {
+            foreach ($caseKey in $step.cases.Keys) {
+                Assert-WorkflowRevalidationPolicy -Steps $step.cases[$caseKey]
+            }
+        }
+    }
+}
+
 function Invoke-StepList {
     param($Steps, $RunState, [hashtable]$GateActions, [hashtable]$AgentActions = @{}, [Parameter(Mandatory)] [string]$ProjectRoot, [Parameter(Mandatory)] [string]$WorkspaceRoot, [switch]$DryRun)
     foreach ($step in $Steps) {
@@ -996,24 +1157,33 @@ function Invoke-Workflow {
         [hashtable]$Inputs = @{},
         [hashtable]$GateActions = @{},
         [hashtable]$AgentActions = @{},
-        [string]$ExpectedWorkflowId,
-        [string]$ExpectedWorkflowVersion,
+        [Parameter(Mandatory)] [string]$ExpectedWorkflowId,
+        [Parameter(Mandatory)] [string]$ExpectedWorkflowVersion,
+        [Parameter(Mandatory)]
+        [ValidatePattern('^[a-f0-9]{64}$')]
+        [string]$ExpectedWorkflowSha256,
         [switch]$Resume,
         [switch]$Restart,
         [switch]$DryRun
     )
     if ($Resume -and $Restart) { throw 'Use either -Resume or -Restart, not both.' }
     $schemaPath = Join-Path $WorkspaceRoot 'studio/workflows/manifest.schema.json'
-    $workflow = Read-WorkflowYaml -Path $WorkflowYamlPath
+    $workflowSnapshot = Read-WorkflowYamlSnapshot -Path $WorkflowYamlPath
+    $workflow = $workflowSnapshot.DOCUMENT
+    $actualWorkflowSha256 = [string]$workflowSnapshot.SHA256
     [void](Test-WorkflowSchema -Document $workflow -SchemaPath $schemaPath)
+    Assert-WorkflowRevalidationPolicy -Steps $workflow.steps
 
-    # Bind the EXECUTED document to the authorized identity: catalog/state/manifest checks
-    # in the runner authorize an id and version, and the workflow.yml actually run must
-    # declare that same identity, or a swapped file executes ungoverned content.
-    if ($ExpectedWorkflowId -and [string]$workflow.workflow.id -ne $ExpectedWorkflowId) {
+    # Bind the exact bytes parsed and executed to the catalog approval identity.
+    # A matching id/version is insufficient because same-version graph mutation
+    # otherwise creates an unreviewed fresh run or a hybrid resume.
+    if ($actualWorkflowSha256 -cne $ExpectedWorkflowSha256) {
+        throw "Workflow content identity mismatch: workflow.yml SHA-256 '$actualWorkflowSha256' does not match the approved catalog workflowSha256 '$ExpectedWorkflowSha256'."
+    }
+    if ([string]$workflow.workflow.id -cne $ExpectedWorkflowId) {
         throw "Workflow identity mismatch: workflow.yml declares id '$($workflow.workflow.id)' but the authorized id is '$ExpectedWorkflowId'."
     }
-    if ($ExpectedWorkflowVersion -and [string]$workflow.workflow.version -ne $ExpectedWorkflowVersion) {
+    if ([string]$workflow.workflow.version -cne $ExpectedWorkflowVersion) {
         throw "Workflow identity mismatch: workflow.yml declares version '$($workflow.workflow.version)' but the catalog authorizes version '$ExpectedWorkflowVersion'."
     }
 
@@ -1041,8 +1211,29 @@ function Invoke-Workflow {
         if ($Resume) {
             $runState = Read-RunState -Path $resumeReadPath
             if (-not $runState) { throw "No RunState to resume at $resumeReadPath" }
-            if ($runState.workflow_id -ne [string]$workflow.workflow.id) {
-                throw "Resume mismatch: state workflow_id=$($runState.workflow_id), requested=$($workflow.workflow.id)"
+            if (
+                -not $runState.ContainsKey('workflow_id') -or
+                $runState['workflow_id'] -isnot [string] -or
+                [string]$runState['workflow_id'] -cne [string]$workflow.workflow.id
+            ) {
+                throw "Resume mismatch: state workflow_id=$($runState['workflow_id']), requested=$($workflow.workflow.id)"
+            }
+            if (
+                -not $runState.ContainsKey('workflow_version') -or
+                $runState['workflow_version'] -isnot [string] -or
+                [string]$runState['workflow_version'] -cne [string]$workflow.workflow.version
+            ) {
+                throw "Resume mismatch: state workflow_version=$($runState['workflow_version']), requested=$($workflow.workflow.version). Use -Restart to archive the legacy run and start over."
+            }
+            if (
+                -not $runState.ContainsKey('workflow_sha256') -or
+                $runState['workflow_sha256'] -isnot [string] -or
+                [string]$runState['workflow_sha256'] -cnotmatch '^[a-f0-9]{64}$'
+            ) {
+                throw 'Resume mismatch: state workflow_sha256 is missing or invalid. Legacy or malformed RunState cannot be resumed; use -Restart to archive it and start over.'
+            }
+            if ([string]$runState['workflow_sha256'] -cne $ExpectedWorkflowSha256) {
+                throw "Resume mismatch: state workflow_sha256=$($runState['workflow_sha256']), approved workflow_sha256=$ExpectedWorkflowSha256. The workflow graph changed; use -Restart after explicit re-approval."
             }
             if ($runState.status -in 'completed', 'failed', 'rejected') {
                 throw "Cannot resume a $($runState.status) run. Use -Restart to archive the RunState and start over."
@@ -1069,8 +1260,7 @@ function Invoke-Workflow {
             # -Restart, which archives the previous state next to the live path.
             if (-not $DryRun -and (Test-Path -LiteralPath $resumeReadPath -PathType Leaf)) {
                 if ($Restart) {
-                    $archiveStamp = (Get-Date).ToString('yyyyMMddHHmmss')
-                    Move-Item -LiteralPath $resumeReadPath -Destination "$resumeReadPath.$archiveStamp.restarted.json" -Force
+                    [void](Move-RunStateToRestartArchive -Path $resumeReadPath)
                 } else {
                     throw "RunState already exists for feature '$Feature' at $resumeReadPath. Use -Resume to continue or -Restart to archive it and start over."
                 }
@@ -1080,7 +1270,11 @@ function Invoke-Workflow {
                 if ($k -eq 'feature') { continue }
                 $effectiveInputs[$k] = $Inputs[$k]
             }
-            $runState = Initialize-RunState -Workflow $workflow -Feature $Feature -Inputs $effectiveInputs
+            $runState = Initialize-RunState `
+                -Workflow $workflow `
+                -WorkflowSha256 $ExpectedWorkflowSha256 `
+                -Feature $Feature `
+                -Inputs $effectiveInputs
         }
 
         $r = Invoke-StepList -Steps $workflow.steps -RunState $runState -GateActions $GateActions -AgentActions $AgentActions -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
