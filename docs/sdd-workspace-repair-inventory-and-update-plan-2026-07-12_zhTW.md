@@ -1,15 +1,15 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.10.0"
+version: "1.11.0"
 date: "2026-07-12"
-last_updated: "2026-07-18"
+last_updated: "2026-07-20"
 language: "zh-TW"
 owner: "元熙"
 status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "ec25c07 (RB-2 implementation)"
+head_commit: "4f757e5 (RB-3 implementation)"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -23,7 +23,7 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24。因此目前為 125 條，編為 R-A01 至 R-A19、R-B01 至 R-B24、其餘區域至 R-J03。現況分佈：Critical 8、High 29、Medium 50、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21。因此目前為 127 條，編為 R-A01 至 R-A21、R-B01 至 R-B24、其餘區域至 R-J03。現況分佈：Critical 8、High 30、Medium 51、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
@@ -48,6 +48,17 @@ restart archive 缺口，使 R-B20/R-B05、R-B10/R-B24 恢復 `COMPLETED`。舊�
 R-A18 仍 `OPEN`；PR #3 仍 `NOT READY TO MERGE`，RB-3 至 RB-5 與 R6 仍須完成，
 `sdd-pipeline` 維持 experimental 與 execution-denied。完整範圍與殘留見第 20 節。
 
+**2026-07-20 RB-3 合併證據完整性完成**：implementation commit `4f757e5` 關閉
+R-A17、R-A18，並新增及完成 High R-A20，明確分開 coherent Batch closure 與 Aggregate
+merge readiness。category-complete shared roots、rename old/new preservation、BaseRef
+強制、Git commit 與 repository identity、truthful Markdown surface、governed non-note
+shared-path coverage 與 canonical Aggregate anchor 均有判別性測試。舊版 34 個
+discriminating negatives 通過 0 個，現行 focused suites 134 passed / 0 failed。另新增
+Medium R-A21 記錄 middle `/**/` 無法匹配零層目錄的殘留；它不影響本批三個 suffix
+`/**` shared roots，也不得被本批吸收。ledger 現為 127 條（Critical 8、High 30、
+Medium 51、Low 38）。Batch 可 Ready，但 Aggregate 仍只因 Wave-3 umbrella note 為
+Draft 而 fail-closed；PR #3 仍 `NOT READY TO MERGE`。詳見第 21 節。
+
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
 四個結構性重點：
@@ -71,7 +82,7 @@ canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與
 resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復（見第 14 節），R-B18
 保持 open。
 
-建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 125 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan；R-B23 另依第 17 節排入 RB-2 相鄰工作）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；RB-2 至 R6 在實作時仍須依當下證據調整。
+建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 127 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan；R-B23 與 R-A21 另依日期化增補處理）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；RB-4、RB-5、R6 與其他未完成 findings 在實作時仍須依當下證據調整。
 
 ## 1. 範圍與排除
 
@@ -303,7 +314,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 | R3 SDD stage gates、routing 與 agent runtime | implement 首步接 fail-closed gate、analyze schema 單一化、specify/priority 語義修正、ECI full dossier 與 readiness re-entry、analyze artifact 收斂、mirror `-Verify`、tool mapping fail-loud；route-aware templates；模型預設 inherit；prompt 格式範圍明文化；D12 先維持 temporary allowlist，直到 Copilot overlay/Claude-only 決策可安全落地 | R-B07、R-B08、R-D01 至 R-D12、R-I03 | 直呼 `/speckit.implement` 不能繞 readiness/ECI/analyze；8 readiness statuses 與 4 ECI outcomes 都有 routing tests；source/mirror body parity；template 只產生 minimum packet；D12 無 consumer regression | 3-5 天 |
 | R4 Extensions、registry 周邊與 skills 退役 | Extensions path/reparse/rollback/schema/version/state/lifecycle 補完；完整退役 skills export/install/generic chain、upgrade caller、audit/contract/docs/tests/empty output；更新 shared-layer map 與正式 operation surface | R-C01 至 R-C07、R-F04、R-H15、R-I01、R-I09 | workspace 外 export/reparse/force replacement/schema violation 全被擋；extension lifecycle e2e 綠；repo 對 skills chain 零可執行/文件/contract 孤兒引用；upgrade runtime 仍可驗收 | 3-5 天 |
 | R5 Authority、文件、上游與知識迴路收斂 | 憲法/adapter authority patch、雙軌治理邊界、changelog/current phase；mainline 帳務；README/WORKSPACE_STRUCTURE/VS Code/語言清理；governance-status 與 historical banners；Wave-4 alignment-state、v0.9 至當下最新 release 決策矩陣、converge 與修正比對；adapter template 單一來源、prompt/learnings 機制；完成 D12 project-local overlay 或明示 Claude-only | R-A13、R-E01 至 R-E04、R-E06 至 R-E09、R-E12、R-F01 至 R-F03、R-F05、R-G01 至 R-G05、R-G07 至 R-G09、R-G11、R-G12、R-H03、R-H04、R-H06、R-H07、R-H09、R-H14、R-H18、R-I02、R-I04、R-I05、R-D12 | authority update order 無漂移；所有 stale docs 有 current/superseded/historical disposition；alignment-state 與決策矩陣指向同一 baseline；root docs 無失效連結/過度宣稱；D12 不再污染 shared source | 5-8 天 |
-| R6 Fresh-fixture 端到端驗收、重新 promotion 與合併 | 以全新 fixture 完整跑七階段含 ECI re-entry、非 READY routes、reject/recovery、implement completion；關閉 wave-3 review Gates 與 2026-07-14 re-review 第 9.2 節 minimum gates；只有全部通過才重新 promotion workflow；回填 notes/ledger/commits；合併 main 後重跑同一套 | R-B09、R-E09、R-E11、R-J03 | 目前 125 條 ledger 各有 completed commit 或 owner-approved disposition；wave-3 9 個 P1 與 12 條 RVR 全關；fresh fixture e2e 有保存證據；main 合併後 audit/Pester/negative/e2e 全綠 | 2-4 天 |
+| R6 Fresh-fixture 端到端驗收、重新 promotion 與合併 | 以全新 fixture 完整跑七階段含 ECI re-entry、非 READY routes、reject/recovery、implement completion；關閉 wave-3 review Gates 與 2026-07-14 re-review 第 9.2 節 minimum gates；只有全部通過才重新 promotion workflow；回填 notes/ledger/commits；合併 main 後重跑同一套 | R-B09、R-E09、R-E11、R-J03 | 目前 127 條 ledger 各有 completed commit 或 owner-approved disposition；wave-3 9 個 P1 與 12 條 RVR 全關；fresh fixture e2e 有保存證據；main 合併後 audit/Pester/negative/e2e 全綠 | 2-4 天 |
 
 依賴備註：
 
@@ -313,7 +324,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 4. R-B16 的 gitignore 必須跟隨 R-B06 的最終 relocation，不在舊路徑先做永久政策。
 5. R-G06 與 R-E05 必須原子處理：移除 manifest presence 面時，同批建立 mainline-note reconciliation 與 merge CI。
 6. R-D12 在 R3 只可建立安全遷移前提；若 Copilot overlay 尚未完成，temporary allowlist 必須保留到 R5，不能先刪 shared agent。
-7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 125 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan；R-B23 另依第 17 節排入 RB-2 相鄰工作）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
+7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 127 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan；R-B23 與 R-A21 依日期化增補另行排程）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
 8. R-E09 在 R5 處理既有 Ready/Draft notes 的歷史帳務與失真修復；R6 只做本輪 final commit/PR/merge hash 回填與合併後驗證。兩批不得把同一工作重複計為完成。
 
 ## 6. Owner 已裁定的 18 項決策
@@ -389,6 +400,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.8.0 | 2026-07-18 | RB-2 對抗複核發現 manifest version mismatch 時 listing 授權、runner 拒絕，推翻 R-B20/R-B05 的完整 shared-criterion closure；先將兩者還原為 IN_PROGRESS，RB-1 note 降為 Draft 且 reconciliation 改為 Open。本版只記錄 superseding evidence 與重新進入條件，不把尚未落地的 runtime 修補冒充完成，見第 18 節。 |
 | 1.9.0 | 2026-07-18 | RB-2 restart 對抗複核以固定時鐘重現同秒 archive collision：第二次 `-Restart` 因秒級名稱與 `Move-Item -Force` 覆寫第一份 state。R-B10 的 archive 保留子宣稱還原為 IN_PROGRESS，新增 Medium R-B24，ledger 由 124 增至 125（Critical 8/High 29/Medium 50/Low 38）。本版只記錄 superseding evidence，不把尚未落地的 runtime 修補冒充完成，見第 19 節。 |
 | 1.10.0 | 2026-07-18 | RB-2 implementation commit `ec25c07` 完成 R-B21、R-B07、R-B22；修復共用 manifest/reparse-point 授權與 restart archive no-overwrite，恢復 R-B20/R-B05、R-B10/R-B24 的 COMPLETED。現行 focused suite 353/0、完整 suite 579/0、audit 0/0；R-B23、R-A17、R-A18 保持 OPEN，ledger 維持 125 條，見第 20 節。 |
+| 1.11.0 | 2026-07-20 | RB-3 implementation commit `4f757e5` 完成 R-A17/R-A18；新增並完成 High R-A20，新增且保留 Medium R-A21 為 OPEN。ledger 由 125 增至 127（Critical 8 / High 30 / Medium 51 / Low 38）。Batch gate 全綠；Aggregate gate 只因 Wave-3 umbrella note 仍 Draft 而如實失敗。分支仍 NOT READY TO MERGE，見第 21 節。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -719,3 +731,59 @@ Low 38。
 - `sdd-pipeline` 在 R6 前維持 experimental 與 execution-denied，不重新 promotion。
 
 RB-2 完成使分支更接近可合併，但 PR #3 仍 `NOT READY TO MERGE`。
+
+## 21. 2026-07-20 RB-3 合併證據完整性完成增補
+
+RB-3 開工前的 immutable batch base 為 `8bf9f0e`。前置複核確認，R-A18 的正確
+closure 會使 `origin/main...HEAD` Aggregate gate 因 Wave-3 umbrella note 仍為
+`Draft` 且 Related Commits 仍為 `TBD` 而失敗；原批次規則卻要求同一 Aggregate
+gate 在每批收尾全綠。依 drift-stop 與 Surface Truthfulness，本節新增 R-A20 保存
+該矛盾，不把它吸收到 R-A18，也不以較小 Ready note 製造 Aggregate 假綠。
+
+Owner 於 2026-07-20 選擇 Choice A：
+
+1. `Batch` scope 驗證一個 coherent incremental batch，並綁定 immutable pre-batch
+   BaseRef、本批 commit evidence 與 governed non-note shared-path last-touch coverage。
+2. `Aggregate` scope 驗證完整分支 merge readiness，並要求 machine-designated
+   Wave-3 umbrella note 在 HeadRef 本身為可接受狀態。
+3. `-RequireReady` 必須同時具有 `-BaseRef` 與明確 `-ReadinessScope`；顯式
+   ChangedPaths、現存歷史 commit 或較小 Ready note 都不能代替 Git range 證據。
+4. RB-3 Batch 綠燈與 Aggregate 因 umbrella note 尚未完成而紅燈可以同時成立。
+
+**新增 findings：**
+
+| ID | Severity | Finding | Required closure | 2026-07-20 狀態 |
+|---|---|---|---|---|
+| R-A20 | High | [2026-07-20 RB-3 preflight] `-RequireReady` 未區分 coherent Batch closure 與 `origin/main...HEAD` Aggregate merge readiness，形成假綠或過早 promotion 誘因 | 提供明確且 fail-closed 的 Batch、Aggregate scope；Batch 綁定 immutable base 與本批 evidence，Aggregate 綁定完整 main diff 與 machine-designated umbrella note；缺 BaseRef 或 scope 必須拒絕 | COMPLETED by `4f757e5` |
+| R-A21 | Medium | [2026-07-20 RB-3 adversarial review] `Test-PathPattern` 對 middle `/**/` 宣稱零層或多層目錄，但 `specs/<feature>/readiness/**/*.md` 無法匹配直接位於 `readiness/` 下的 `readiness-assessment.md`。現行 exact readiness route 與本批 suffix `/**` shared roots 使此缺陷不阻塞 RB-3，但 generic matcher 語義不實 | 修正 middle `/**/` 為零層或多層均可匹配；補 direct child、nested child、near-prefix negatives，並複核所有 impact-registry consumers | OPEN |
+
+Implementation commit `4f757e5` 完成日期化 closure：
+
+| ID | 目前狀態 | 本批 closure | 判別性證據 |
+|---|---|---|---|
+| R-A17 | COMPLETED | `sharedGatePaths` 使用 category-complete roots 覆蓋 `studio/scripts/powershell/**`、`.githooks/**`、`studio/extensions/**`；Git name-status parser 保存 rename old 與 new path；runtime audit 錨定三個必要類別及 canonical Aggregate policy | 舊版單獨變更 add-extension、刪除 setup-eci、漏列 hook 或 nested extension、rename governed source 到 gate 外可通過；現行 branch validator、hook matcher 與 audit mutation tests 均 fail-closed |
+| R-A18 | COMPLETED | blocking `-RequireReady` 驗 commit object、merge-base 至 HeadRef membership、contract-bound repository PR、visible exactly-one metadata、visible required sections、governed non-note shared-path last-touch coverage，以及所有 configured Aggregate anchors | 舊版接受 deadbee、blob、range 外 commit、錯 repo PR、mutable wrong origin、無 BaseRef、hidden 或 duplicate metadata、comment/fence/indented-code/raw-HTML sections、unrelated commit 與小 note Aggregate bypass；現行逐項拒絕 |
+| R-A20 | COMPLETED | `-RequireReady` 使用明確 Batch 或 Aggregate scope 且必須有 BaseRef；CI 使用 Aggregate，本批 accounting 使用 Batch；所有 configured anchors 即使未變更也在 HeadRef 受驗 | 舊版無法同時表達 truthful Batch green 與 Aggregate red；現行 Batch 可獨立閉合，Aggregate 只回報 canonical Draft umbrella blocker |
+
+非阻塞 global validation 在沒有 Git 的 isolated audit fixtures 中仍刻意保留 shape-only
+commit fallback；該路徑沒有 `-RequireReady`，不能授權 Batch 或 Aggregate。R-A18 的
+closure 宣稱只涵蓋 blocking acceptance，不把 nonblocking structural scan 冒充 Git
+證據驗證。
+
+**驗收證據：**
+
+| 驗收面 | 結果 |
+|---|---|
+| RB-3 focused suites | 134 passed / 0 failed |
+| 舊實作 overlay | 34 個 discriminating negatives 為 0/34 passed；5 個 positive/regression controls 為 5/5 passed；無參數綁定或 fixture setup 遮蔽 |
+| 完整 `run-governance-tests.ps1` | 616 passed / 0 failed |
+| `check-speckit-runtime.ps1 -Json` | `VALID=true`、0 errors、0 warnings |
+| Batch mainline gate | BaseRef `8bf9f0e`、`ReadinessScope Batch`，`VALID=true`、0 errors、0 warnings |
+| Aggregate mainline gate | BaseRef `origin/main`、`ReadinessScope Aggregate`，nonzero；唯一 error 為 `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` 的 `aggregate-note-not-ready` |
+| branch diff hygiene | `git diff --check` 通過 |
+
+本節使 ledger 由 125 增至 127 條，分布為 Critical 8、High 30、Medium 51、Low 38。
+R-A17、R-A18、R-A20 為 `COMPLETED`；R-A21 為 `OPEN`，不由本批吸收。R-B23 與
+其他既有 findings 狀態不變。`sdd-pipeline` 維持 experimental、default-disabled 與
+execution-denied；RB-4、RB-5、R6 仍未完成。RB-3 使分支更接近可合併，但 PR #3
+仍 `NOT READY TO MERGE`，本批 accounting 後停止。

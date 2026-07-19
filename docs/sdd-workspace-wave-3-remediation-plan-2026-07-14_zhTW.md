@@ -1,14 +1,14 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.2.0"
+version: "1.3.0"
 date: "2026-07-14"
-last_updated: "2026-07-18"
+last_updated: "2026-07-20"
 language: "zh-TW"
 status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "ec25c07 (RB-2 implementation)"
+head_commit: "4f757e5 (RB-3 implementation)"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -201,6 +201,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.0.0 | 2026-07-14 | 依 2026-07-14 治理 re-review 的 12 條 RVR findings 制定分批修復計畫，對映 ledger 並標出被推翻的 Ready/Completed 宣稱 |
 | 1.1.0 | 2026-07-18 | 日期化記錄 RB-2 開工前發現的 ECI outcome 數量 drift、owner 四值裁定與 R-B23 scope 邊界；原始 v1.0.0 文字保留為歷史證據 |
 | 1.2.0 | 2026-07-18 | implementation commit `ec25c07` 完成 RB-2 的 graph identity、完整 ECI dossier/re-entry/exactly-one routing，並修復對抗複核揭露的共用 workflow 授權與 restart archive 缺口；記錄 R-B23、R-A17、R-A18 仍 OPEN，分支仍 NOT READY TO MERGE |
+| 1.3.0 | 2026-07-20 | 記錄 owner Choice A，明確區分 Batch closure 與 Aggregate merge readiness；implementation commit `4f757e5` 關閉 R-A17/R-A18 並完成新 finding R-A20。另以 R-A21 保存 middle `/**/` zero-level matcher 殘留。Batch gate 全綠；Aggregate gate 只因 Wave-3 umbrella note 仍 Draft 而如實 fail-closed；分支仍 NOT READY TO MERGE。 |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -272,3 +273,57 @@ aggregate branch 已可合併，也不宣稱 R-A18 已關閉。
 
 RB-3、RB-4、RB-5 與 R6 仍須完成；`sdd-pipeline` 在 R6 前維持 experimental 與
 execution-denied。RB-2 完成使分支更接近可合併，但 PR #3 仍 `NOT READY TO MERGE`。
+
+## 9. 2026-07-20 RB-3 Batch 與 Aggregate 驗收語義裁定及完成增補
+
+RB-3 開工前的 immutable batch base 為 `8bf9f0e`。開工前複核發現，原驗收文字把
+同一個 `-RequireReady` 同時用於 coherent incremental Batch closure 與整個
+`origin/main...HEAD` Aggregate merge readiness。R-A18 正確修復後，Wave-3 umbrella
+note `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` 的 `Draft`、`TBD`
+狀態必須使 Aggregate gate 維持紅燈直到 R6；舊批次規則卻要求同一 Aggregate 指令
+在 RB-3 收尾全綠。兩者不能同時成立。
+
+Owner 於 2026-07-20 選擇 Choice A，將兩種驗收面明確分開：
+
+1. `Batch` scope 驗 coherent incremental batch。本批固定以 `8bf9f0e` 為 BaseRef，
+   要求 RB-3 Ready note、真實且屬於該 batch range 的 commit evidence、visible
+   exactly-one metadata、required sections、impact reconciliation 與 governed
+   non-note shared-path last-touch coverage 全部閉合。
+2. `Aggregate` scope 驗整個分支是否可合併。它固定以 `origin/main` 為 BaseRef；
+   Wave-3 umbrella note 在 `Draft` 或仍含 `TBD` 時必須 fail-closed，其他較小
+   Ready note 不得代替整體 readiness。configured anchor 即使未在 diff 變更也須
+   以 HeadRef 狀態受驗。
+3. `-RequireReady` 必須搭配 `-BaseRef` 與明確 `-ReadinessScope`；不得依 ChangedPaths、
+   note 數量、檔名或歷史 commit 猜測，也不得退回 nonblocking shape-only 判準。
+4. RB-3 的 Batch gate 綠燈與 Aggregate gate 因 umbrella note 尚未完成而紅燈可以
+   同時成立。後者是真實 merge disposition，不是 RB-3 implementation failure。
+5. Wave-3 umbrella note 在 fresh-fixture E2E 完成前維持 `Draft` 與 `TBD`；本批
+   不提前執行 RB-4、RB-5、R6，不重新 promotion `sdd-pipeline`，不合併 main。
+
+Implementation commit `4f757e5` 完成下列狀態：
+
+| ID | 2026-07-20 狀態 | 結論 |
+|---|---|---|
+| R-A17 | COMPLETED | `sharedGatePaths` 使用 category-complete roots 覆蓋 `studio/scripts/powershell/**`、`.githooks/**`、`studio/extensions/**`；NUL-safe name-status parser 保存 rename old 與 new path；production-contract fixtures 能抓到漏列 script、hook、nested extension 與 rename-out |
+| R-A18 | COMPLETED | blocking Ready evidence 驗 commit object、batch membership、contract-bound repository PR、visible metadata/sections 與 governed non-note shared-path coverage；Aggregate 不接受較小 Ready note 取代 Draft/TBD umbrella note |
+| R-A20 | COMPLETED | Batch closure 與 Aggregate merge readiness 為明確、fail-closed、machine-readable 的兩種 scope；缺 BaseRef 或 scope 被拒絕，CI 使用 Aggregate，本批 accounting 使用 Batch |
+| R-A21 | OPEN | middle `/**/` 目前無法匹配零層目錄；現行 exact readiness route 與本批 suffix `/**` roots 避免此殘留阻塞 RB-3，但 generic matcher 仍須獨立修復 |
+
+**判別性與機器驗收：**
+
+| 驗收面 | 結果 |
+|---|---|
+| Current RB-3 focused suites | 134 passed / 0 failed |
+| Old implementation overlay | 34 個 discriminating negatives 為 0/34 passed；5 個 positive/regression controls 為 5/5 passed |
+| 完整 governance suite | 616 passed / 0 failed |
+| Runtime audit | `VALID=true`、0 errors、0 warnings |
+| Batch gate | `-BaseRef 8bf9f0e -HeadRef HEAD -RequireReady -ReadinessScope Batch -Json` 為 `VALID=true`、0 errors、0 warnings |
+| Aggregate gate | `-BaseRef origin/main -HeadRef HEAD -RequireReady -ReadinessScope Aggregate -Json` 為 nonzero，唯一 error 是 canonical umbrella note 的 `aggregate-note-not-ready` |
+| Diff hygiene | `git diff --check` 通過 |
+
+RB-3 Ready note 為
+`docs/mainline-updates/2026-07-20-rb-3-mainline-evidence-integrity.md`。RB-3 使驗證
+結果恢復可信並使分支更接近可合併，但不使分支可合併。PR #3 仍
+`NOT READY TO MERGE`，`sdd-pipeline` 維持 experimental、default-disabled 與
+execution-denied。工作在 RB-3 accounting 完成後停止，RB-4、RB-5、R6 留待後續
+明確授權。
