@@ -405,6 +405,68 @@ Describe 'staged change parsing' {
             )
         }).Count | Should -Be 2
     }
+
+    It 'uses category-complete shared gate rules from the production contract' {
+        $contractPath = Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json'
+        $productionGatePaths = @((Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json).sharedGatePaths)
+
+        $productionGatePaths | Should -Contain 'studio/scripts/powershell/**'
+        $productionGatePaths | Should -Contain '.githooks/**'
+        $productionGatePaths | Should -Contain 'studio/extensions/**'
+        @($productionGatePaths | Where-Object {
+            $_ -ne 'studio/scripts/powershell/**' -and $_.StartsWith('studio/scripts/powershell/')
+        }).Count | Should -Be 0
+        @($productionGatePaths | Where-Object {
+            $_ -ne '.githooks/**' -and $_.StartsWith('.githooks/')
+        }).Count | Should -Be 0
+        @($productionGatePaths | Where-Object {
+            $_ -ne 'studio/extensions/**' -and $_.StartsWith('studio/extensions/')
+        }).Count | Should -Be 0
+    }
+
+    It 'matches production category rules for omitted scripts hooks and nested extensions' {
+        $contractPath = Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json'
+        $productionGatePaths = @((Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json).sharedGatePaths)
+        $governedPaths = @(
+            'studio/scripts/powershell/add-extension.ps1',
+            'studio/scripts/powershell/setup-eci.ps1',
+            '.githooks/commit-msg.ps1',
+            'studio/extensions/extension-smoke/scripts/invoke-extension-smoke.ps1'
+        )
+
+        foreach ($path in $governedPaths) {
+            Test-IsSharedGateHit -Path $path -GatePaths $productionGatePaths | Should -BeTrue -Because $path
+        }
+    }
+
+    It 'rejects near-prefix paths outside recursive shared gate categories' {
+        $contractPath = Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json'
+        $productionGatePaths = @((Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json).sharedGatePaths)
+        $outsidePaths = @(
+            'studio/scripts/powershell-archive/add-extension.ps1',
+            '.githooks-backup/commit-msg.ps1',
+            'studio/extensions-backup/extension-smoke/manifest.json'
+        )
+
+        foreach ($path in $outsidePaths) {
+            Test-IsSharedGateHit -Path $path -GatePaths $productionGatePaths | Should -BeFalse -Because $path
+        }
+    }
+
+    It 'preserves the governed source path when a category descendant is renamed out' {
+        $contractPath = Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json'
+        $productionGatePaths = @((Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json).sharedGatePaths)
+        $raw = "R100`0studio/extensions/extension-smoke/scripts/invoke-extension-smoke.ps1`0scratch/invoke-extension-smoke.ps1`0"
+        $changes = ConvertFrom-GitNameStatusZ -Raw $raw
+        $touched = Get-StagedTouchedPaths -Changes $changes
+        $sharedHits = @($touched | Where-Object {
+            Test-IsSharedGateHit -Path $_ -GatePaths $productionGatePaths
+        })
+
+        $touched | Should -Contain 'studio/extensions/extension-smoke/scripts/invoke-extension-smoke.ps1'
+        $touched | Should -Contain 'scratch/invoke-extension-smoke.ps1'
+        $sharedHits | Should -Be @('studio/extensions/extension-smoke/scripts/invoke-extension-smoke.ps1')
+    }
 }
 
 Describe 'agent bootstrap path helpers' {

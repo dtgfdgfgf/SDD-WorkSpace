@@ -211,6 +211,33 @@ Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
         @($audit.Result.FAILURES.id) | Should -Contain 'required-command-layering-mismatch'
     }
 
+    It 'fails when a category-complete shared gate rule is removed from the contract' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $contractPath = Join-Path $fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json
+        $contract.sharedGatePaths = @($contract.sharedGatePaths | Where-Object { $_ -ne 'studio/extensions/**' })
+        $contract | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $contractPath -Encoding utf8
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'required-shared-gate-path-missing'
+        ($audit.Result.FAILURES.message -join "`n") | Should -Match ([regex]::Escape('studio/extensions/**'))
+    }
+
+    It 'fails when the canonical aggregate readiness note is redirected' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $contractPath = Join-Path $fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json
+        $contract.mainlineReadiness.aggregateNotePaths = @(
+            'docs/mainline-updates/2026-07-18-rb-2-execution-identity-and-eci-routing.md'
+        )
+        $contract | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $contractPath -Encoding utf8
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'required-mainline-readiness-policy-missing'
+    }
+
     It 'fails when a Ready mainline note has no concrete commit or PR evidence' {
         $fixtureRoot = New-RuntimeAuditFixture
         $notePath = Join-Path $fixtureRoot 'docs/mainline-updates/2026-07-13-r1-validation-and-merge-enforcement.md'

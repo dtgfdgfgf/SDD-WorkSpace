@@ -49,7 +49,7 @@ jobs:
           BASE_REVISION: ${{ github.event.pull_request.base.sha }}
           HEAD_REVISION: ${{ github.event.pull_request.head.sha }}
         run: |
-          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -Json
+          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -ReadinessScope Aggregate -Json
           exit $LASTEXITCODE
 
       - name: Mainline note and impact reconciliation (main push)
@@ -59,7 +59,7 @@ jobs:
           BASE_REVISION: ${{ github.event.before }}
           HEAD_REVISION: ${{ github.sha }}
         run: |
-          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -Json
+          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -ReadinessScope Aggregate -Json
           exit $LASTEXITCODE
 
       - name: Governance tests (Pester)

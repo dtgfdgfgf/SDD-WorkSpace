@@ -112,7 +112,15 @@ function Test-IsSharedGateHit {
 
     $normalizedPath = Convert-ToRepoRelativePath -Path $Path
     foreach ($gatePath in $GatePaths) {
-        if ($gatePath.EndsWith('/')) {
+        if ($gatePath.EndsWith('/**', [System.StringComparison]::Ordinal)) {
+            $recursiveGatePrefix = $gatePath.Substring(0, $gatePath.Length - 2)
+            if (
+                $normalizedPath.Length -gt $recursiveGatePrefix.Length -and
+                $normalizedPath.StartsWith($recursiveGatePrefix, [System.StringComparison]::OrdinalIgnoreCase)
+            ) {
+                return $true
+            }
+        } elseif ($gatePath.EndsWith('/')) {
             if ($normalizedPath.StartsWith($gatePath, [System.StringComparison]::OrdinalIgnoreCase)) {
                 return $true
             }
@@ -186,7 +194,7 @@ function ConvertFrom-GitNameStatusZ {
 }
 
 function Get-StagedChanges {
-    $raw = & git -C $script:repoRoot diff --cached --name-status -z --diff-filter=ACDMR 2>$null
+    $raw = & git -C $script:repoRoot diff --cached --name-status --find-renames -z --diff-filter=ACDMR 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-HookError 'Unable to read staged changes from Git index.'
         return @()

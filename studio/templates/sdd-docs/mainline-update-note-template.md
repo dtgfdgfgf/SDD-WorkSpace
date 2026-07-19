@@ -63,7 +63,7 @@ records; they do not weaken a `must_update` route. Ready or Merged requires no `
 
 - `git diff --check`
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`
-- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef <base> -HeadRef <head> -RequireReady -Json`
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef <batch-base> -HeadRef <head> -RequireReady -ReadinessScope Batch -Json`
 - [Any additional validation command or manual check]
 
 ## Merge Notes

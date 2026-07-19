@@ -119,7 +119,9 @@
         "Agent bootstrap synchronized",
         "sync-agent-bootstrap.ps1",
         "check-agent-bootstrap.ps1",
+        "--find-renames",
         "diff-filter=ACDMR",
+        "recursiveGatePrefix",
         "checkout-index",
         "staged snapshot",
         "Runtime adapter must be staged with its synchronized set",
@@ -761,6 +763,7 @@
         "## Validation",
         "## Merge Notes",
         "validate-mainline-notes.ps1",
+        "-ReadinessScope Batch",
         "Reopened: when later evidence refutes a material Ready or Merged claim"
       ]
     },
@@ -876,8 +879,24 @@
       "path": "studio/scripts/powershell/validate-mainline-notes.ps1",
       "mustContainAll": [
         "mainline-note-validation-baseline.json",
-        "Merged requires a concrete final commit hash.",
         "Reconciliation Status: Closed",
+        "--name-status",
+        "--find-renames",
+        "ReadinessScope",
+        "-RequireReady requires -BaseRef",
+        "Get-VisibleMarkdownSurface",
+        "rawHtmlEndPattern",
+        "configuredRepositorySlug",
+        "commit-evidence-object-invalid",
+        "commit-evidence-out-of-range",
+        "commit-evidence-git-context-required",
+        "pr-evidence-repository-mismatch",
+        "note-metadata-count",
+        "required-section-missing",
+        "branch-evidence-coverage-missing",
+        "aggregate-note-not-ready",
+        "aggregate-note-policy-missing",
+        "mainlineReadiness",
         "reconciliation-section-missing",
         "reconciliation-section-malformed",
         "legacy-baseline-note-changed",
@@ -893,6 +912,8 @@
         "powershell-yaml-missing",
         "workflow-registry-invalid",
         "required-command-layering-mismatch",
+        "required-shared-gate-path-missing",
+        "required-mainline-readiness-policy-missing",
         "requiredNonCommandGitHubAgentFiles",
         "validate-mainline-notes.ps1",
         "MAINLINE_NOTE_VALID"
@@ -920,11 +941,11 @@
         "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
         "Install-Module Pester -RequiredVersion 5.7.1",
         "Install-Module powershell-yaml -RequiredVersion 0.4.12",
-        "validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -Json"
+        "validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -ReadinessScope Aggregate -Json"
       ],
       "mustMatchAll": [
-        "(?s)Mainline note and impact reconciliation \\(pull request\\).*?github\\.event_name == 'pull_request'.*?validate-mainline-notes\\.ps1.*?-RequireReady",
-        "(?s)Mainline note and impact reconciliation \\(main push\\).*?github\\.event_name == 'push'.*?validate-mainline-notes\\.ps1.*?-RequireReady"
+        "(?s)Mainline note and impact reconciliation \\(pull request\\).*?github\\.event_name == 'pull_request'.*?validate-mainline-notes\\.ps1.*?-RequireReady.*?-ReadinessScope Aggregate",
+        "(?s)Mainline note and impact reconciliation \\(main push\\).*?github\\.event_name == 'push'.*?validate-mainline-notes\\.ps1.*?-RequireReady.*?-ReadinessScope Aggregate"
       ]
     },
     {
@@ -1807,6 +1828,12 @@
       ]
     }
   ],
+  "mainlineReadiness": {
+    "repositorySlug": "dtgfdgfgf/sdd-workspace",
+    "aggregateNotePaths": [
+      "docs/mainline-updates/2026-05-05-studio-workflows-runtime.md"
+    ]
+  },
   "sharedGatePaths": [
     "AGENTS.md",
     "CLAUDE.md",
@@ -1820,12 +1847,12 @@
     ".github/prompts/",
     ".github/workflows/governance.yml",
     ".github/copilot-instructions.md",
-    ".githooks/pre-commit",
-    ".githooks/pre-commit.ps1",
+    ".githooks/**",
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
     "studio/runtime/analysis-result.schema.json",
     "studio/runtime/mainline-note-validation-baseline.json",
+    "studio/extensions/**",
     "studio/templates/project-init/.gitignore",
     "studio/templates/project-init/.gitattributes",
     "studio/templates/project-init/.editorconfig",
@@ -1836,24 +1863,8 @@
     "WORKSPACE_STRUCTURE.md",
     "README.md",
     "docs/mainline-updates/",
-    "studio/scripts/powershell/common.ps1",
-    "studio/scripts/powershell/check-prerequisites.ps1",
-    "studio/scripts/powershell/check-speckit-runtime.ps1",
-    "studio/scripts/powershell/validate-mainline-notes.ps1",
-    "studio/scripts/powershell/sync-agent-bootstrap.ps1",
-    "studio/scripts/powershell/check-agent-bootstrap.ps1",
-    "studio/scripts/powershell/update-constitution.ps1",
-    "studio/scripts/powershell/seed-claude-agents.ps1",
-    "studio/scripts/powershell/new-project-worktree.ps1",
-    "studio/scripts/powershell/setup-hooks.ps1",
-    "studio/scripts/powershell/upgrade-studio-runtime.ps1",
-    "studio/scripts/powershell/generate-impact-registry.ps1",
+    "studio/scripts/powershell/**",
     "studio/runtime/impact-registry.json",
-    "studio/workflows/",
-    "studio/scripts/powershell/workflow-engine.ps1",
-    "studio/scripts/powershell/run-workflow.ps1",
-    "studio/scripts/powershell/validate-workflow.ps1",
-    "studio/scripts/powershell/list-workflows.ps1",
-    "studio/scripts/powershell/set-workflow-state.ps1"
+    "studio/workflows/"
   ]
 }

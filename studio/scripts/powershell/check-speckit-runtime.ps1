@@ -256,6 +256,38 @@ if (-not $contract) {
         $failures += New-AuditFailure -Category 'contract' -Id 'command-layering-overlap' -Message ("mandatoryStageCommands and auxiliaryCommands must be disjoint: {0}" -f ($commandLayerOverlap -join ', ')) -Path $paths.SHARED_RUNTIME_CONTRACT
     }
 
+    $requiredSharedGatePaths = @(
+        'studio/scripts/powershell/**',
+        '.githooks/**',
+        'studio/extensions/**'
+    )
+    $declaredSharedGatePaths = if ($contract.ContainsKey('sharedGatePaths')) {
+        @($contract.sharedGatePaths | ForEach-Object { ([string]$_).Replace('\', '/').Trim() })
+    } else {
+        @()
+    }
+    $missingRequiredSharedGatePaths = @($requiredSharedGatePaths | Where-Object { $_ -cnotin $declaredSharedGatePaths })
+    if ($missingRequiredSharedGatePaths.Count -gt 0) {
+        $failures += New-AuditFailure -Category 'contract' -Id 'required-shared-gate-path-missing' -Message ("sharedGatePaths must include the category-complete rules: {0}" -f ($missingRequiredSharedGatePaths -join ', ')) -Path $paths.SHARED_RUNTIME_CONTRACT
+    }
+
+    $requiredRepositorySlug = 'dtgfdgfgf/sdd-workspace'
+    $requiredAggregateNotePath = 'docs/mainline-updates/2026-05-05-studio-workflows-runtime.md'
+    $mainlineReadinessPolicyValid = (
+        $contract.ContainsKey('mainlineReadiness') -and
+        $contract.mainlineReadiness -is [System.Collections.IDictionary] -and
+        $contract.mainlineReadiness.ContainsKey('repositorySlug') -and
+        ([string]$contract.mainlineReadiness.repositorySlug).Trim().ToLowerInvariant() -eq $requiredRepositorySlug -and
+        $contract.mainlineReadiness.ContainsKey('aggregateNotePaths') -and
+        $requiredAggregateNotePath -cin @(
+            $contract.mainlineReadiness.aggregateNotePaths |
+                ForEach-Object { ([string]$_).Replace('\', '/').Trim() }
+        )
+    )
+    if (-not $mainlineReadinessPolicyValid) {
+        $failures += New-AuditFailure -Category 'contract' -Id 'required-mainline-readiness-policy-missing' -Message "mainlineReadiness must bind repository '$requiredRepositorySlug' to aggregate note '$requiredAggregateNotePath' until R6." -Path $paths.SHARED_RUNTIME_CONTRACT
+    }
+
     $actualGitHubAgentFiles = if (Test-Path -LiteralPath $paths.SHARED_AGENTS_DIR -PathType Container) {
         @(Get-ChildItem -LiteralPath $paths.SHARED_AGENTS_DIR -File -Force | Select-Object -ExpandProperty Name)
     } else {
