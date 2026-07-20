@@ -6,6 +6,27 @@
 **Status**: Draft
 **Related Commits**: TBD
 **Related PR**: N/A
+**Reconciliation Status**: Open
+**Validation Scope**: Aggregate
+
+## Revalidation (2026-07-20)
+
+RB-1 through RB-5 now provide coherent Batch repairs for the defects discovered after this note
+was drafted. RB-5 implementation commit
+`78c47eb0f3da7e75f3ba79943ea44f55984677a1` completes R-D01, R-D04, R-D05, R-E07, and
+R-A22; migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` seals all 18
+historical-note records. The historical portion of R-E09 is complete, but R-E09 remains
+`IN_PROGRESS` because this Aggregate note and final merge accounting belong to R6.
+
+The body below is the contemporaneous 2026-05-05 proposal, not current acceptance evidence.
+Constitution 1.9.0 and the later repair notes supersede its original version, outcome-count,
+validation-count, merge-splitting, and promotion assumptions. `sdd-pipeline` remains experimental,
+default-disabled, and execution-denied.
+
+This note stays `Draft` with `Related Commits: TBD`, reconciliation `Open`, and validation scope
+`Aggregate`. R6 must still run the fresh-fixture seven-stage flow, exercise ECI re-entry and
+non-ready routes, satisfy the minimum merge gates, decide promotion, finalize Aggregate evidence,
+and perform authorized merge and post-merge verification. PR #3 remains `NOT READY TO MERGE`.
 
 ## Summary
 
@@ -72,6 +93,12 @@ Explicitly out of scope (deferred):
 - Constitution and project memories are unchanged.
 - Generated documents that reference the contract or `check-speckit-runtime.ps1` -Json output now see `STUDIO_WORKFLOW_*` keys; ignore-them defaults are safe.
 - `powershell-yaml` becomes an optional dependency. Without it, `validate-workflow.ps1` and `run-workflow.ps1` fail with an actionable install hint; everything else works.
+
+## Impact Reconciliation
+
+Reconciliation remains open. This historical Aggregate note does not close any current
+`must_update` route and does not authorize workflow promotion or merge. R6 must reconcile the
+current aggregate branch diff and replace `TBD` only with verified final evidence.
 
 ## Validation
 

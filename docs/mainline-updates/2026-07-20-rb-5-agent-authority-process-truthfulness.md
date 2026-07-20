@@ -3,10 +3,10 @@
 **Date**: 2026-07-20
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `78c47eb0f3da7e75f3ba79943ea44f55984677a1`, `26da9a7412d902f2dfff48df23d04662687f4a9d`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -43,6 +43,17 @@ In scope:
 - R-E07 constitutional self-application boundary and synchronized adapter guidance.
 - R-A22 one-time historical evidence migration controls.
 - The historical portion of R-E09, including truth review of all 18 legacy Ready/TBD notes.
+
+RB-5 disposition:
+
+| ID | Status | RB-5 result |
+|----|--------|-------------|
+| R-D01 | COMPLETED | Specify preserves material unknowns for Clarify and no longer offers a direct Readiness handoff. |
+| R-D04 | COMPLETED | Canonical audit verifies deterministic normalized Claude mirror content, including missing, extra, empty, and body-drift cases. |
+| R-D05 | COMPLETED | Tool conversion uses explicit least-privilege mappings and fails before writes on malformed, unsupported, or permission-broadening input. |
+| R-E07 | COMPLETED | Constitution 1.9.0 defines the shared-only workspace self-application entry and closure boundary without weakening project delivery. |
+| R-A22 | COMPLETED | The one-time historical migration is schema-bound, base-bound, commit-role-bound, hash-sealed, and excluded from current authorization. |
+| R-E09 | IN_PROGRESS | The 18-note historical portion is complete; the Wave-3 Aggregate note and final merge accounting remain R6 obligations. |
 
 Out of scope:
 
@@ -81,32 +92,58 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
-| `README.md` | `must_update` | `pending` | R-E07 self-application boundary is drafted and awaits final RB-5 validation. |
-| `studio/QUICKSTART.md` | `must_update` | `pending` | R-E07 quickstart boundary is drafted and awaits final RB-5 validation. |
-| `studio/SDD-QUICKSTART-GUIDE.md` | `must_update` | `pending` | R-E07 guide boundary is drafted and awaits final RB-5 validation. |
-| `.claude/agents/*.md` | `must_update` | `pending` | Source-derived mirrors are regenerated and await focused parity validation. |
-| `AGENTS.md` | `must_update` | `pending` | Generated Constitution 1.9.0 bootstrap awaits final audit. |
-| `CLAUDE.md` | `must_update` | `pending` | Generated Constitution 1.9.0 bootstrap awaits final audit. |
-| `.github/copilot-instructions.md` | `must_update` | `pending` | Generated bootstrap and manual boundary await final audit. |
+| `README.md` | `must_update` | `updated` | Commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` distinguishes seven-stage project delivery from the bounded workspace self-application route. |
+| `studio/QUICKSTART.md` | `must_update` | `updated` | Commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` documents the entry and closure prerequisites and preserves the R6 boundary. |
+| `studio/SDD-QUICKSTART-GUIDE.md` | `must_update` | `updated` | Commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` aligns the methodology guide with Constitution Section 2.1. |
+| `.github/agents/*.agent.md` | `must_review` | `updated` | Specify contradictions and unsafe explicit tool declarations are removed at the canonical source in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`. |
+| `.claude/agents/*.md` | `must_review` | `updated` | Source-derived mirrors were regenerated and normalized parity is part of the canonical audit. |
+| `studio/templates/sdd-docs/*.md` | `must_review` | `updated` | The three runtime-adapter templates carry the Constitution 1.9.0 scoped self-application bootstrap. |
+| `AGENTS.md` | `must_review` | `updated` | Generated Constitution 1.9.0 bootstrap is synchronized and audit-verified. |
+| `CLAUDE.md` | `must_review` | `updated` | Generated Constitution 1.9.0 bootstrap is synchronized and audit-verified. |
+| `.github/copilot-instructions.md` | `must_review` | `updated` | Generated bootstrap and the workspace-only manual boundary are aligned with Constitution 1.9.0. |
+| `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | Revert-sensitive R-D01/R-D04/R-D05/R-E07/R-A22 invariants and the sealed historical migration policy bind the closure. |
+| `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `updated` | Canonical audit now invokes normalized Claude parity and validates the sealed historical authority surfaces. |
+| `studio/constitution/constitution.md` | `maybe_review` | `updated` | Version 1.9.0 adds the evidence-equivalent, shared-only self-application route while retaining Aggregate and R6 obligations. |
+| `studio/runtime/impact-registry.json` | `maybe_review` | `reviewed-no-change` | RB-5 changes no generated routing rule; the separate R-E04 authority-classification finding remains open. |
+| `WORKSPACE_STRUCTURE.md` | `maybe_review` | `reviewed-no-change` | RB-5 changes governance semantics but no workspace path ownership or layout. |
+| `.githooks/pre-commit.ps1` | `maybe_review` | `reviewed-no-change` | The hook already consumes the contract and staged audit; no hook implementation change was required for this batch. |
 
 ## Validation
 
-Pending before promotion:
-
-- Exact pre-batch negative overlays for Specify contradiction, empty mirror acceptance, and unknown
-  tool fail-open behavior.
-- Historical migration adversarial tests for schema, immutable base, exact note bytes, commit role,
-  completed-state sealing, and non-authorization.
-- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`
-- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`
-- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef de61431ae8f50d66f59157e00e4d239e9b37efdb -HeadRef HEAD -RequireReady -ReadinessScope Batch -Json`
-- `git diff --check`
+- Specify and agent-authority negatives cover capped clarification markers, guessed material
+  unknowns, direct Readiness handoff, missing or extra mirrors, empty or drifted mirror bodies,
+  malformed frontmatter lists, unsupported tools, numeric tool values, and explicit permission
+  broadening. The pre-batch implementation does not satisfy these closure assertions.
+- Historical migration negatives cover schema violations, wrong types, nulls, additional
+  properties, path aliases and duplicates, wrong immutable base, wrong commit roles, migration
+  scope drift, dirty authority surfaces, record rewriting, missing Git context, and attempted use
+  of historical hashes as current readiness evidence.
+- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` reports `VALID=true`,
+  0 errors, and 0 warnings.
+- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1` reports 737 passed, 0 failed, and
+  0 skipped.
+- The historical migration reports state `sealed`, 18 records, and 18 valid records. All 18 legacy
+  notes were reviewed: 17 are `Merged` with reconciliation `Closed`; the disproven
+  `2026-04-10-shared-layer-consistency-fix.md` remains `Draft` with reconciliation `Open`.
+- The legacy baseline file is removed after the sealed transition; historical references are
+  excluded from Batch and Aggregate commit evidence, path coverage, and reconciliation.
+- `git diff --check` passes.
+- Batch acceptance uses
+  `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef
+  de61431ae8f50d66f59157e00e4d239e9b37efdb -HeadRef HEAD -RequireReady
+  -ReadinessScope Batch -Json`. This Ready note cites only the implementation and migration
+  commits and does not use an accounting self-reference.
 
 ## Merge Notes
 
-- Draft while implementation, historical migration, and accounting are incomplete.
-- RB-5 completion will make the branch closer to mergeable but will not make it merge-ready.
-- The aggregate Wave-3 note remains Draft, and PR #3 remains `NOT READY TO MERGE` until R6.
+- Ready status covers only the coherent RB-5 Batch implemented by
+  `78c47eb0f3da7e75f3ba79943ea44f55984677a1` and sealed by
+  `26da9a7412d902f2dfff48df23d04662687f4a9d`.
+- RB-5 makes the branch closer to mergeable but does not make it merge-ready.
+- The aggregate Wave-3 note remains Draft, R-E09 remains `IN_PROGRESS`, and PR #3 remains
+  `NOT READY TO MERGE`.
+- `sdd-pipeline` remains experimental, default-disabled, and execution-denied. R6 is the next
+  required batch.
 
 ## Follow-ups
 

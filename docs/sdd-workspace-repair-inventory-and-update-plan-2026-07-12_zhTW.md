@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.12.0"
+version: "1.13.0"
 date: "2026-07-12"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "9819e30 (RB-4 implementation)"
+head_commit: "26da9a7412d902f2dfff48df23d04662687f4a9d"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -23,7 +23,7 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21。因此目前為 127 條，編為 R-A01 至 R-A21、R-B01 至 R-B24、其餘區域至 R-J03。現況分佈：Critical 8、High 30、Medium 51、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22。因此目前為 128 條，編為 R-A01 至 R-A22、R-B01 至 R-B24、其餘區域至 R-J03。現況分佈：Critical 8、High 31、Medium 51、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
@@ -71,6 +71,16 @@ worktree/consumer 三項判別 assertion 全失敗；現行完整 governance sui
 0 failed，runtime audit 為 `VALID=true`、0 errors、0 warnings。R-C04、R-C06 與 R-F04
 保持 `OPEN`，不由本批吸收；ledger 維持 127 條與既有嚴重度分布。RB-5 與 R6 仍未完成，
 PR #3 仍 `NOT READY TO MERGE`。詳見第 22 節。
+
+**2026-07-20 RB-5 agent、authority、process 真實性完成**：implementation commit
+`78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01、R-D04、R-D05 與
+R-E07，並建立新 High finding R-A22 的 fail-closed 歷史證據框架；migration commit
+`26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 的精確 Git
+證據，完成 R-A22。17 份 note 恢復為 `Merged`、`Closed`，一份因廣泛 closure
+宣稱不實而保持 `Draft`、`Open`。R-E09 只有這 18 份歷史 note 子項完成，Wave-3
+umbrella note 與最終 merge accounting 仍留 R6，因此 R-E09 維持 `IN_PROGRESS`。
+ledger 現為 128 條（Critical 8、High 31、Medium 51、Low 38）。RB-5 使分支更接近
+可合併，但 R6 仍未完成，PR #3 仍 `NOT READY TO MERGE`。詳見第 23 節。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -415,6 +425,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.10.0 | 2026-07-18 | RB-2 implementation commit `ec25c07` 完成 R-B21、R-B07、R-B22；修復共用 manifest/reparse-point 授權與 restart archive no-overwrite，恢復 R-B20/R-B05、R-B10/R-B24 的 COMPLETED。現行 focused suite 353/0、完整 suite 579/0、audit 0/0；R-B23、R-A17、R-A18 保持 OPEN，ledger 維持 125 條，見第 20 節。 |
 | 1.11.0 | 2026-07-20 | RB-3 implementation commit `4f757e5` 完成 R-A17/R-A18；新增並完成 High R-A20，新增且保留 Medium R-A21 為 OPEN。ledger 由 125 增至 127（Critical 8 / High 30 / Medium 51 / Low 38）。Batch gate 全綠；Aggregate gate 只因 Wave-3 umbrella note 仍 Draft 而如實失敗。分支仍 NOT READY TO MERGE，見第 21 節。 |
 | 1.12.0 | 2026-07-20 | RB-4 implementation commit `9819e30` 完成 R-C01/R-C02/R-C03/R-C05/R-C07/R-C08、R-A19 與 R-F06；記錄 owner 核准 R-C03 為 schema gate 必要相依，並保留 R-C04/R-C06/R-F04 為 OPEN。完整 suite 664/0、audit 0/0；ledger 維持 127 條，分支仍 NOT READY TO MERGE，見第 22 節。 |
+| 1.13.0 | 2026-07-20 | RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01/R-D04/R-D05/R-E07，新增 High R-A22；migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 證據並完成 R-A22。R-E09 的歷史 note 子項完成但整項維持 IN_PROGRESS。ledger 增至 128（Critical 8 / High 31 / Medium 51 / Low 38）；分支仍 NOT READY TO MERGE，見第 23 節。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -864,3 +875,63 @@ backup 可能在驗 hash 前覆寫 canonical。所有反例都在 implementation
 本節不新增 finding，ledger 維持 127 條，分布維持 Critical 8、High 30、Medium 51、
 Low 38。RB-4 使分支更接近可合併，但 RB-5 與 R6 仍未完成；Wave-3 umbrella note
 維持 `Draft`，PR #3 仍 `NOT READY TO MERGE`。
+
+## 23. 2026-07-20 RB-5 agent、authority、process 真實性完成增補
+
+RB-5 的 immutable batch base 為
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`。Implementation commit
+`78c47eb0f3da7e75f3ba79943ea44f55984677a1` 修復 agent source、Claude mirror
+authority 與 workspace governance self-application 邊界；migration commit
+`26da9a7412d902f2dfff48df23d04662687f4a9d` 完成一次性的歷史 note 證據遷移。
+
+RB-5 preflight 發現，R-E09 的 18 份歷史 notes 都有真實但位於目前 Batch range 外的
+introducing commits。直接回填會與 R-A18 的 current in-range evidence 規則衝突；
+沿用或刷新 legacy hash baseline 又會重新建立可變的例外。Owner 於 2026-07-20 核准
+新增 High R-A22，範圍只限建立一次性、Git-bound、不能授權 current Batch 或 Aggregate
+的歷史證據遷移，不吸收 R-E09 的 Wave-3 umbrella note 與 R6 義務。
+
+**新增 finding：**
+
+| ID | Severity | Finding | Required closure | 2026-07-20 狀態 |
+|---|---|---|---|---|
+| R-A22 | High | [2026-07-20 RB-5 preflight] 18 份歷史 `Ready`、`TBD` notes 的真實 commits 位於 current Batch range 外；直接回填會被 R-A18 正確拒絕，而可刷新 legacy hash baseline 不能作為可信的永久例外 | 以固定 batch base、schema、first-add framework commit、first sealed snapshot、record digest、exact note bytes、exact historical commits 與 legacy baseline removal 建立一次性 migration；歷史 refs 不得進入 current evidence、path coverage、`must_update` 或 Aggregate authorization | COMPLETED by `78c47eb0f3da7e75f3ba79943ea44f55984677a1` and `26da9a7412d902f2dfff48df23d04662687f4a9d` |
+
+**日期化狀態：**
+
+| ID | 目前狀態 | 本批 closure | 判別性證據 |
+|---|---|---|---|
+| R-D01 | COMPLETED | Specify 保存所有 material clarification markers，不再超過三項就臆測；唯一 next-stage handoff 為 Clarify，source 與 generated mirror 同步 | Exact pre-batch overlay 對 10 個 source/mirror truthfulness assertions 為 0/10；現行 source、mirror 與 contract anchors 鎖定無 marker cap、無猜測、無 direct Readiness |
+| R-D04 | COMPLETED | `seed-claude-agents.ps1 -Verify` 以 normalized deterministic rendering 驗完整 frontmatter 與 body；canonical audit 拒絕 blank、body/frontmatter drift、missing、extra 與 nested mirror | 舊 audit 對 blank/body tampering 兩項都未攔截；現行 verifier 與 audit 逐項 fail-closed，child `VALID`、`ERROR_COUNT`、`ERRORS` 也要求原生 Boolean、Int64 與 array shape |
+| R-D05 | COMPLETED | 未知 Copilot tool、非法 explicit Claude tool、permission broadening 與 malformed list 全部在任何 mirror write 前 fail-loud；明示 `tools: []` 保持空權限 | 舊 conversion 對未知 tool 回空陣列並省略 `tools`；現行 unknown、numeric/malformed list、empty-source grant 與 broadened mapping negatives 均拒絕 |
+| R-E07 | COMPLETED | Studio Constitution 1.9.0 第 2.1 節以 contract repository identity、shared-only scope、實作前 owner plan/ledger 與實作後 closure evidence 界定 canonical workspace self-application；明確排除 consumer、一般 feature、Aggregate、promotion 與 R6 fresh fixture | Pre-batch constitution 沒有此 bounded route；現行 24 個 constitution contract cases、同步 root adapters、templates 與 explanatory docs 鎖定 entry/closure 分離及不得擴權 |
+| R-A22 | COMPLETED | A commit 建立固定 `de61431ae8f50d66f59157e00e4d239e9b37efdb` pending framework；M commit 封存 18 records、綁定 A commit 與 evidence SHA-256、刪除 legacy baseline，並保存 immutable first-add/first-seal history | Historical focused suite 37 passed / 0 failed；shifted base、schema spoof、delete/re-add、pending reset、reseal、dirty authority、note rewrite、mixed refs、no-Git blocking authorization 與 historical current-coverage bypass 均被拒絕 |
+| R-E09 | IN_PROGRESS | 18 份歷史 notes 的 exact commit recovery 與 truth review 已完成：17 份為 `Merged`、`Closed`，`2026-04-10-shared-layer-consistency-fix.md` 因不實 parity、`-Fix` 與 complete-MUST claims 保持 `Draft`、`Open` | Historical records 18/18 與 note bytes、status、commit anchors 一致；但 Wave-3 umbrella note 仍須在 R6 以 fresh-fixture、Aggregate、promotion decision、merge 與 post-merge evidence 收尾，因此不得把歷史子項冒充整項 closure |
+
+RB-5 implementation acceptance 的完整 governance suite 為 737 passed、0 failed、
+0 skipped（1029.06 秒）；runtime audit 為 `VALID=true`、0 errors、0 warnings。這兩項是
+本批 implementation acceptance 證據；本次 accounting edits 完成後仍須在批次收尾重跑
+完整 suite、runtime audit、Batch 與 Aggregate gates，本節不預先宣稱該次最終結果。
+
+R-A22 的 sealed policy 使用 record digest
+`1cbb98f6edea8e096501112fac7196f84524ffdd9e6b69e63dc5b859d29d7a5e`，
+`migrationCommit` 指向 A commit，18 records 中 17 個 expected status 為 `Merged`、一個
+為 `Draft`，legacy baseline 已移除。歷史 refs 明確排除 current Batch、Aggregate、
+shared-path coverage 與 `must_update` evidence；notes 後續再變更時必須離開 historical
+special mode，改用正常 in-range evidence。
+
+**未吸收殘留：**
+
+- R-E09 維持 `IN_PROGRESS`。已完成部分只有 18 份歷史 notes；Wave-3 umbrella note 的
+  最終 status、commit accounting、known issues、fresh-fixture 與 merge evidence 留給 R6。
+- README 的 ECI Authorization Outcome 數量由三修正為四只是既有真相同步，不關閉
+  R-E01。
+- R-A13、R-A21、R-B23、R-C04、R-C06、R-E02、R-E03、R-E04、R-E06、R-E08、
+  R-E12、R-F04、R-I02 與其他既有 open findings 狀態不變，沒有被 R-E07 或 R-A22
+  吸收。
+- `sdd-pipeline` 在 R6 前維持 experimental、default-disabled 與 execution-denied。
+
+本節新增一個 High finding，ledger 由 127 增至 128 條，分布由 Critical 8、High 30、
+Medium 51、Low 38 更新為 Critical 8、High 31、Medium 51、Low 38。RB-5 批次完成使
+分支更接近可合併，但不使分支 merge-ready。Wave-3 remediation sequence 的下一批為
+R6；整體 open-findings ledger 的其他 backlog 仍各自保留。PR #3 仍
+`NOT READY TO MERGE`。

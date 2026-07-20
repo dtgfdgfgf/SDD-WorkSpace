@@ -10,16 +10,22 @@
 **Status**: Draft
 **Related Commits**: `60556ef`
 **Related PR**: N/A
+**Reconciliation Status**: Open
 
-## Revalidation
+## Revalidation (2026-07-20)
 
 The later [2026-07-12 governance review](../sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md)
 refuted the conformance claim through GOV-05: the Specify agent still capped clarification markers,
 guessed remaining material unknowns, and offered Readiness as a next stage. This note therefore
 records a historical partial repair and is not current conformance evidence.
 
-Promotion requires the R3 source-agent fix, regenerated mirrors, and machine-checked handoff and
-next-stage invariants.
+RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` later completed R-D01,
+R-D04, and R-D05 with contradiction-free Specify rules, deterministic normalized mirror parity,
+and fail-loud least-privilege tool mapping. That later repair does not promote this historical
+partial note, close its unrelated deferred F3/R-E02 drift, or absorb any other residual finding.
+
+Overall workflow promotion remains an R6 decision after fresh-fixture seven-stage evidence and the
+Aggregate gate. `sdd-pipeline` remains experimental, default-disabled, and execution-denied.
 
 ## Summary
 
@@ -101,7 +107,9 @@ prompt layer and remove constitution contradictions.
 
 ## Merge Notes
 
-- Correctness/conformance batch from the verified external analysis; ready to merge with Wave-3.
+- This remains a Draft historical partial repair and is not current merge or promotion evidence.
+- RB-5 repairs the R-D01/R-D04/R-D05 superseding findings, but R6 and unrelated residuals remain
+  independently governed.
 
 ## Follow-ups
 
