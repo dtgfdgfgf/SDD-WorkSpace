@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.11.0"
+version: "1.12.0"
 date: "2026-07-12"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "4f757e5 (RB-3 implementation)"
+head_commit: "9819e30 (RB-4 implementation)"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -58,6 +58,19 @@ Medium R-A21 記錄 middle `/**/` 無法匹配零層目錄的殘留；它不影�
 `/**` shared roots，也不得被本批吸收。ledger 現為 127 條（Critical 8、High 30、
 Medium 51、Low 38）。Batch 可 Ready，但 Aggregate 仍只因 Wave-3 umbrella note 為
 Draft 而 fail-closed；PR #3 仍 `NOT READY TO MERGE`。詳見第 21 節。
+
+**2026-07-20 RB-4 extension、consumer、upgrade 邊界完成**：implementation commit
+`9819e30` 完成 R-C01、R-C02、R-C03、R-C05、R-C07、R-C08、R-A19 與 R-F06。
+R-C03 是 owner 於 RB-4 preflight 明確核准的必要相依，因 schema-violation 批次閘門
+無法在 schema 仍未執行時成立。Extension 使用 schema、實體路徑、content-bound
+approval、交易 rollback 與 mirror invalidation 的同一 fail-closed 判準；worktree hook
+改為 worktree-local，consumer junction 不進 Git intake；upgrade 只以 frozen trusted
+authority 驗 passive candidate bytes，並使用完整 baseline、atomic promotion/rollback
+與 durable recovery journal。舊版 extension 判別組通過 1/21、upgrade 0/17，
+worktree/consumer 三項判別 assertion 全失敗；現行完整 governance suite 664 passed /
+0 failed，runtime audit 為 `VALID=true`、0 errors、0 warnings。R-C04、R-C06 與 R-F04
+保持 `OPEN`，不由本批吸收；ledger 維持 127 條與既有嚴重度分布。RB-5 與 R6 仍未完成，
+PR #3 仍 `NOT READY TO MERGE`。詳見第 22 節。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -401,6 +414,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.9.0 | 2026-07-18 | RB-2 restart 對抗複核以固定時鐘重現同秒 archive collision：第二次 `-Restart` 因秒級名稱與 `Move-Item -Force` 覆寫第一份 state。R-B10 的 archive 保留子宣稱還原為 IN_PROGRESS，新增 Medium R-B24，ledger 由 124 增至 125（Critical 8/High 29/Medium 50/Low 38）。本版只記錄 superseding evidence，不把尚未落地的 runtime 修補冒充完成，見第 19 節。 |
 | 1.10.0 | 2026-07-18 | RB-2 implementation commit `ec25c07` 完成 R-B21、R-B07、R-B22；修復共用 manifest/reparse-point 授權與 restart archive no-overwrite，恢復 R-B20/R-B05、R-B10/R-B24 的 COMPLETED。現行 focused suite 353/0、完整 suite 579/0、audit 0/0；R-B23、R-A17、R-A18 保持 OPEN，ledger 維持 125 條，見第 20 節。 |
 | 1.11.0 | 2026-07-20 | RB-3 implementation commit `4f757e5` 完成 R-A17/R-A18；新增並完成 High R-A20，新增且保留 Medium R-A21 為 OPEN。ledger 由 125 增至 127（Critical 8 / High 30 / Medium 51 / Low 38）。Batch gate 全綠；Aggregate gate 只因 Wave-3 umbrella note 仍 Draft 而如實失敗。分支仍 NOT READY TO MERGE，見第 21 節。 |
+| 1.12.0 | 2026-07-20 | RB-4 implementation commit `9819e30` 完成 R-C01/R-C02/R-C03/R-C05/R-C07/R-C08、R-A19 與 R-F06；記錄 owner 核准 R-C03 為 schema gate 必要相依，並保留 R-C04/R-C06/R-F04 為 OPEN。完整 suite 664/0、audit 0/0；ledger 維持 127 條，分支仍 NOT READY TO MERGE，見第 22 節。 |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -787,3 +801,66 @@ R-A17、R-A18、R-A20 為 `COMPLETED`；R-A21 為 `OPEN`，不由本批吸收。
 其他既有 findings 狀態不變。`sdd-pipeline` 維持 experimental、default-disabled 與
 execution-denied；RB-4、RB-5、R6 仍未完成。RB-3 使分支更接近可合併，但 PR #3
 仍 `NOT READY TO MERGE`，本批 accounting 後停止。
+
+## 22. 2026-07-20 RB-4 extension、consumer、upgrade 邊界完成增補
+
+RB-4 開工前的 immutable batch base 為 `02f12cb`。Preflight 發現原 remediation
+mapping 沒有列 R-C03，但批次驗收明定 schema violation 必須被拒絕；在三份
+extension schema 仍無 `Test-Json` 執行點時，該閘門不可能成立。依 drift-stop 規則先
+停下，owner 於 2026-07-20 明確核准把 R-C03 納入 RB-4 必要相依。這項裁定只擴充
+schema gate 所需 finding，不吸收 R-C04、R-C06 或其他 extension backlog。
+
+Implementation commit `9819e30` 完成以下日期化狀態：
+
+| ID | 2026-07-20 狀態 | 本批 closure | 判別性證據 |
+|---|---|---|---|
+| R-C01 | COMPLETED | `-OutputDir` 必須位於 workspace 實體邊界內且不得與 extension、agent、prompt、script 或 template authority 重疊；既有 output 含 reparse point 時拒絕，輸出先 staging 再 promotion | 舊版可對 workspace 外目錄使用 `-Force`；現行 outside、alias overlap 與 output reparse negatives 均拒絕且不碰 sentinel |
+| R-C02 | COMPLETED | add、replace、state 與 remove 在 mutation 前驗 schema 與 prospective state；catalog、state、target 與 mirror 使用 transaction baseline，rollback 子步失敗時保留 recovery evidence | 舊版 post-validation failure 會留下 mutation；現行 second-write、state-write、target 與 mirror failure fixtures 驗完整回復或明確保留證據 |
+| R-C03 | COMPLETED | catalog、state、manifest 三份 JSON 都以 canonical schema 執行 `Test-Json`，並保留必要 cross-ledger 檢查 | 舊版接受 schema 不允許的 enum 或 shape；現行 schema substitution、wrong shape 與三 schema enforcement tests fail-closed |
+| R-C05 | COMPLETED | intake、registry、entry point 與 export 均驗 lexical 及 physical containment；extension tree 拒絕 reparse point；replacement 一律清除 approval、trust、default enablement 與 explicit state | 舊版 junction escape 與 approval carry-forward 可通過；現行 extension-root junction、content reparse、byte replacement 與 force-replacement tests 均拒絕或降級 |
+| R-C07 | COMPLETED | 隔離 fixture 自動演練 add、approve、enable、export、disable、re-enable、再次 export 與 remove，並驗 generated mirror lifecycle | 舊版沒有該生命週期驗收；現行完整 lifecycle 與 collision/cleanup controls 全綠 |
+| R-C08 | COMPLETED | entry point normalized path 必須留在 declared scope；approval 綁 current bytes；多檔 mutation 可回復；state 或 registry mutation 使 merged mirror 失效；recovery journal、baseline 與 restore 均 hash-bound 且原子發布 | Exact `02f12cb` extension overlay 只有 1 個 positive control 通過，20 個 discriminating negatives 全失敗；現行 21/21 |
+| R-A19 | COMPLETED | 啟用 `extensions.worktreeConfig` 並以 `git config --worktree` 保存 depth-specific hooks；project template 以 rooted ignore 保留 junction 可用性但排除 shared bytes 的 Git intake | 舊版三項判別 assertion 對 source/sibling hooks mutation、junction status 或 staging、缺 rooted ignores 全失敗；現行 common/init/feature suites 114/114 |
+| R-F06 | COMPLETED | 在任何 audit 前保存完整 canonical baseline；以 transaction 開始前凍結且 hash-manifested 的 trusted checker、dependency closure 與 schemas 驗 staged 與 promoted runtime；candidate checker、version、skills 與 extension export scripts 不執行；promotion、journal 與 rollback 使用 hash 驗證及 atomic replacement | Exact `02f12cb` upgrade overlay 0/17；現行 17/17，多輪 reviewer rerun 全綠。Corrupted backup 在 canonical overwrite 前由 baseline hash 拒絕，target 不會被壞 evidence 覆寫，rollback-failed journal 保留 |
+
+Extension catalog 同步執行 Surface Truthfulness 修正。既有 `extension-smoke` 的 approval
+日期早於現行 bytes 的 Git 變更，沒有證據能把舊核准延伸到新內容；因此 catalog
+1.2.0 將它降回 `draft`、`experimental`、default-disabled，並清除 approval fields。
+這是 R-C05/R-C08 的必要 migration，不是重新核准。
+
+對抗複核在 freeze 前先後發現 extension rollback evidence 可能被 cleanup 刪除、
+baseline restore 直接覆寫 canonical、upgrade 可能執行 candidate verifier、trusted
+authority 與 baseline sibling 可被改寫、journal 非原子，以及 corrupted upgrade
+backup 可能在驗 hash 前覆寫 canonical。所有反例都在 implementation commit 前修復，
+並加入舊版失敗、現行通過的 behavioral tests 與 shared contract anchors；因此沒有把
+中途部分處置冒充 closure，也沒有留下需要新增 ledger ID 的未處理子項。
+
+**驗收證據：**
+
+| 驗收面 | 結果 |
+|---|---|
+| Extension lifecycle | 現行 21 passed / 0 failed；exact `02f12cb` 為 1/21，唯一通過是 positive compatibility control |
+| Worktree 與 consumer | 現行 common/init/feature suites 114 passed / 0 failed；舊版三個 discriminating assertions 為 0/3 |
+| Upgrade transaction | 現行 17 passed / 0 failed；deterministic corrupted-baseline targeted 連續 5/5；exact `02f12cb` 為 0/17 |
+| Production-map isolated Apply | exit 0、zero changes、trusted staging 與 canonical audits 均為 Boolean `true`、Int64 0 errors / 0 warnings |
+| Contract mutation 與 path hardening | `check-speckit-runtime.Tests.ps1` 31/31；`path-traversal-hardening.Tests.ps1` 14/14 |
+| 完整 `run-governance-tests.ps1` | 664 passed / 0 failed |
+| `check-speckit-runtime.ps1 -Json` | `VALID=true`、0 errors、0 warnings |
+| Batch mainline gate | BaseRef `02f12cb`、`ReadinessScope Batch`，`VALID=true`、0 errors、0 warnings |
+| Aggregate mainline gate | BaseRef `origin/main`、`ReadinessScope Aggregate`，nonzero；唯一 error 為 canonical Wave-3 umbrella note 的 `aggregate-note-not-ready` |
+| branch diff hygiene | `git diff --check` 通過 |
+
+**未吸收殘留：**
+
+- R-C04 維持 `OPEN`：`compatibility.minStudioConstitutionVersion` 仍需真正 enforcement
+  或移除不實 surface。
+- R-C06 維持 `OPEN`：deprecated 新啟用與 dead `sync` state source 尚未收斂。
+- R-F04 維持 `OPEN`：upgrade transaction 已移除 skills 與 extension export caller，
+  但 scripts、audit、contract、docs、tests 與輸出目錄的整條退役尚未完成；本批只記錄
+  partial alignment，不宣稱 closure。
+- R-A21、R-B23 與其他既有 findings 狀態不變；沒有被 RB-4 吸收。
+- `sdd-pipeline` 在 R6 前維持 experimental、default-disabled 與 execution-denied。
+
+本節不新增 finding，ledger 維持 127 條，分布維持 Critical 8、High 30、Medium 51、
+Low 38。RB-4 使分支更接近可合併，但 RB-5 與 R6 仍未完成；Wave-3 umbrella note
+維持 `Draft`，PR #3 仍 `NOT READY TO MERGE`。

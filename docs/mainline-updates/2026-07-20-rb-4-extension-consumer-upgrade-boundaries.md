@@ -3,10 +3,10 @@
 **Date**: 2026-07-20
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `9819e30`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -94,8 +94,8 @@ running the audit and left a partially updated runtime after failure.
 | `WORKSPACE_STRUCTURE.md` | `must_review` | `updated` | Version 1.9.0 now describes worktree-local hook configuration; different-depth source and sibling worktrees retain their own values in tests. |
 | `studio/extensions/POLICY.md` | `must_review` | `updated` | Version 1.2.0 content-bound approval, replacement reset, mirror invalidation, and retained recovery-evidence handling match tested behavior. |
 | `docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md` | `must_review` | `updated` | The guide no longer claims that untrusted candidate checker, version, or export scripts run in the upgrade transaction and explicitly leaves R-F04 open. |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_review` | `pending` | Pending implementation commit and closure evidence. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_review` | `pending` | Pending owner R-C03 decision record and RB-4 evidence. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_review` | `updated` | Ledger v1.12.0 records implementation commit `9819e30`, closes the eight RB-4 findings, and preserves R-C04, R-C06, and R-F04 as OPEN without changing the 127-finding total. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_review` | `updated` | Remediation plan v1.4.0 records the owner-approved R-C03 dependency, exact evidence, residual boundaries, and the stop before RB-5. |
 
 ## Validation
 
@@ -123,20 +123,21 @@ running the audit and left a partially updated runtime after failure.
 - `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`: 664 passed, 0 failed.
 - PowerShell parsing: 14 changed or added scripts parsed with 0 errors.
 - `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef 02f12cb -HeadRef
-  HEAD -RequireReady -ReadinessScope Batch -Json`: pending until the implementation commit exists.
-- Aggregate validation is expected to remain nonzero only for the canonical Draft Wave-3 umbrella
-  note.
+  HEAD -RequireReady -ReadinessScope Batch -Json`: `VALID=true`, 0 errors, and 0 warnings.
+- The same validator with `-BaseRef origin/main -ReadinessScope Aggregate` returns nonzero with
+  exactly one `aggregate-note-not-ready` for the canonical Draft Wave-3 umbrella note.
 - `git diff --check`: passed.
 
 ## Merge Notes
 
-- This note remains Draft only until the implementation commit exists and the dated ledger and
-  remediation accounting are appended.
-- Ready status, if earned, will cover only the coherent RB-4 diff from immutable base `02f12cb`.
+- This note is Ready for the coherent RB-4 diff from immutable base `02f12cb` after implementation
+  commit `9819e30`, old-versus-new evidence, independent hash-matched review, full machine gates,
+  and dated accounting completed.
+- Ready status covers only this RB-4 Batch.
 - PR #3 remains not ready to merge after RB-4; RB-5 and R6 remain required.
 
 ## Follow-ups
 
 - Keep `sdd-pipeline` experimental, default-disabled, and execution-denied until R6.
-- Keep R-A21, R-B23, R-C04, R-C06, and all other findings outside this batch unchanged unless
-  new evidence requires a separately identified ledger entry.
+- Keep R-A21, R-B23, R-C04, R-C06, R-F04, and all other findings outside this batch unchanged
+  unless new evidence requires a separately identified ledger entry.
