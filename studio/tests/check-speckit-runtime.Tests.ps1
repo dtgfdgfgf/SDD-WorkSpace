@@ -153,6 +153,29 @@ Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
         $audit.Raw | Should -Match '"STUDIO_WORKFLOW_ENABLED"\s*:\s*\[\s*\]'
     }
 
+    It 'fails when the R6 fresh-fixture terminal evidence marker is removed' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $e2ePath = Join-Path $fixtureRoot 'studio/tests/r6-fresh-fixture-e2e.Tests.ps1'
+        $content = [System.IO.File]::ReadAllText($e2ePath)
+        $content = $content.Replace(
+            'R6_FRESH_FIXTURE_TERMINAL_SUCCESS',
+            'R6_FRESH_FIXTURE_TERMINAL_MARKER_REMOVED'
+        )
+        [System.IO.File]::WriteAllText(
+            $e2ePath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'r6-fresh-fixture-e2e'
+        ($audit.Result.FAILURES.message -join "`n") |
+            Should -Match 'R6_FRESH_FIXTURE_TERMINAL_SUCCESS'
+    }
+
     It 'fails closed when powershell-yaml is unavailable' {
         $fixtureRoot = New-RuntimeAuditFixture
         $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot -WithoutYamlModule

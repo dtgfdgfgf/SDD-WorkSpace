@@ -1133,6 +1133,28 @@
       ]
     },
     {
+      "id": "r6-fresh-fixture-e2e",
+      "path": "studio/tests/r6-fresh-fixture-e2e.Tests.ps1",
+      "mustContainAll": [
+        "R6_FRESH_FIXTURE_CANONICAL_REGISTRY_DENIED",
+        "R6_FRESH_FIXTURE_DRYRUN_ISOLATED",
+        "R6_FRESH_FIXTURE_WORKFLOW_MUTATION_DENIED",
+        "R6_FRESH_FIXTURE_NON_READY_REJECTED",
+        "R6_FRESH_FIXTURE_RESTART_ARCHIVED",
+        "R6_FRESH_FIXTURE_ECI_REENTRY_COMPLETE",
+        "R6_FRESH_FIXTURE_ANALYZE_CRITICAL_BLOCKED",
+        "R6_FRESH_FIXTURE_PARTIAL_IMPLEMENT_BLOCKED",
+        "R6_FRESH_FIXTURE_TERMINAL_SUCCESS",
+        "approval digest mismatch",
+        "state.json.*.restarted.json",
+        "baseline_task_ids",
+        "Get-R6EciEvidenceDigest",
+        "R6-CRITICAL-001",
+        "Get-R6WorkflowInventory",
+        "Get-R6ProtectedGitSurface"
+      ]
+    },
+    {
       "id": "governance-ci-enforcement",
       "path": ".github/workflows/governance.yml",
       "mustContainAll": [
