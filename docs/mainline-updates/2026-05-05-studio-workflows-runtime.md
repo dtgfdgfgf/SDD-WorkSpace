@@ -9,6 +9,38 @@
 **Reconciliation Status**: Open
 **Validation Scope**: Aggregate
 
+## R6 Fresh-Fixture Evidence Reconciliation (2026-07-21)
+
+Owner authorized this accounting-only reconciliation after a read-only preflight found that the
+current-status text below still described the fresh-fixture evidence as pending. This section
+supersedes only those stale pending statements in the 2026-07-20 chronology; it does not erase or
+rewrite the historical record.
+
+Implementation commit `aef41b1bac2e56bf717d9ded5328c3c601fd7037` completed the bounded R6
+fresh-fixture evidence sub-batch. Accounting commit
+`28fbc8280000124e15c9c4913f6c130af1df78bb` recorded its Batch disposition, and final tested
+head `f2df26e98300c034f7fa03c7831b8f00aa6c470a` produced these results:
+
+| Validation surface | Observed final-head result |
+|---|---|
+| Full governance suite | 744 passed, 0 failed, 0 skipped, 0 not run in 1251.1 seconds |
+| Canonical runtime audit | `VALID=true`, 0 errors, 0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| R6 evidence Batch gate | BaseRef `f8e3fe0bd9d62b7f8e0110bc2a13e73548311c3f`; `VALID=true`, 0 errors, 0 warnings across 8 changed paths |
+| Aggregate gate | Expected exit 1 with exactly one `aggregate-note-not-ready` for this umbrella note |
+| Diff and worktree hygiene | `git diff --check` passed and the worktree was clean |
+
+The bounded evidence note is
+[`2026-07-21-r6-fresh-fixture-evidence.md`](./2026-07-21-r6-fresh-fixture-evidence.md).
+Its `Ready`, `Closed`, and `Batch` status does not replace Aggregate acceptance.
+
+This umbrella note therefore remains `Draft` with `Related Commits: TBD`, reconciliation `Open`,
+and validation scope `Aggregate`. R6 overall and R-E09 remain `IN_PROGRESS`; R-E11 and residual
+dispositions remain unresolved under the ledger. Workflow promotion is undecided, and
+`sdd-pipeline` remains experimental, default-disabled, and execution-denied. This reconciliation
+does not authorize promotion, push, merge, or post-merge accounting. PR #3 remains
+`NOT READY TO MERGE`.
+
 ## Revalidation (2026-07-20)
 
 RB-1 through RB-5 now provide coherent Batch repairs for the defects discovered after this note

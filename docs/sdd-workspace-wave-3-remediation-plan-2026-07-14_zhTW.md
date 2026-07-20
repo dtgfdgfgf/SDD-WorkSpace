@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.10.0"
+version: "1.11.0"
 date: "2026-07-14"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "28fbc8280000124e15c9c4913f6c130af1df78bb"
+head_commit: "f2df26e98300c034f7fa03c7831b8f00aa6c470a"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -209,6 +209,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.8.0 | 2026-07-20 | RB-5 final gates at accounting head `44f768a12316cdb008f1fee263e03ed7ce9a8191` complete with full suite 742/0/0/0, runtime audit VALID 0/0 and historical sealed 18/18, Batch VALID 0/0 from base `de61431ae8f50d66f59157e00e4d239e9b37efdb`, exactly one expected Aggregate umbrella error, and clean diff/worktree hygiene. RB-5 is complete and R6 is next, but owner decisions and R6 evidence still block promotion and merge; see Section 14. |
 | 1.9.0 | 2026-07-21 | R6 evidence implementation `aef41b1bac2e56bf717d9ded5328c3c601fd7037` adds a reproducible isolated canonical-workflow journey and audit revert anchor. Focused E2E is 1/0, the full suite is 744/0/0/0, and committed runtime audit is VALID 0/0 with historical evidence 18/18. The bounded evidence sub-batch is complete; R6 overall remains IN_PROGRESS and residual, R-E11, promotion, merge, Aggregate, and post-merge decisions remain open; see Section 15. |
 | 1.10.0 | 2026-07-21 | R6 evidence accounting head `28fbc8280000124e15c9c4913f6c130af1df78bb` passes runtime and Batch with 0 errors and 0 warnings, historical evidence 18/18, and clean diff/worktree hygiene. Aggregate returns exactly the expected Draft-umbrella blocker. The evidence sub-batch remains complete, while R6 overall remains IN_PROGRESS; see Section 16. |
+| 1.11.0 | 2026-07-21 | Owner-authorized accounting-only reconciliation supersedes the stale umbrella statement that fresh-fixture evidence remained pending. Final tested head `f2df26e98300c034f7fa03c7831b8f00aa6c470a` has full suite 744/0/0/0, runtime and Batch VALID 0/0, historical evidence 18/18, and exactly one expected Aggregate umbrella blocker. No residual, promotion, Aggregate, merge, or post-merge disposition changes; see Section 17. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -602,3 +603,29 @@ R6 overall、R-E09、R-E11、residual dispositions、workflow promotion、Aggreg
 acceptance、merge accounting 與 post-merge evidence 仍未完成。Canonical
 `sdd-pipeline` 維持 experimental、default-disabled、execution-denied；PR #3 維持
 `NOT READY TO MERGE`。
+
+## 17. 2026-07-21 R6 umbrella evidence drift reconciliation 增補
+
+Owner 授權本批只做 accounting drift reconciliation。Canonical Wave-3 umbrella note 仍把
+fresh-fixture evidence 寫成待辦，已與 `aef41b1bac2e56bf717d9ded5328c3c601fd7037`
+完成的 bounded evidence 及最終已測 head
+`f2df26e98300c034f7fa03c7831b8f00aa6c470a` 矛盾。本節只日期化修正該 current-status
+drift，不刪除第 15、16 節或 umbrella note 的歷史時間線。
+
+| 驗收閘門 | `f2df26e98300c034f7fa03c7831b8f00aa6c470a` 結果 |
+|---|---|
+| Full governance suite | 744 passed、0 failed、0 skipped、0 not run，1251.1 秒 |
+| Canonical runtime audit | `VALID=true`、0 errors、0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| Batch | BaseRef `f8e3fe0bd9d62b7f8e0110bc2a13e73548311c3f`；`VALID=true`、0 errors、0 warnings；8 changed paths |
+| Aggregate | 預期 exit 1；只有 canonical umbrella note 的 `aggregate-note-not-ready` |
+| Diff 與 worktree | `git diff --check` passed；worktree clean |
+
+Metadata `head_commit` 表示已完整驗證的 evidence head，不預先填入本 accounting 增補的
+自我參照 hash。Fresh-fixture evidence 子批維持完成，但 R6 overall 與 R-E09 維持
+`IN_PROGRESS`；R-E11、residual dispositions、workflow promotion、Aggregate acceptance、
+merge accounting 與 post-merge evidence 仍未完成。
+
+Umbrella note 必須維持 `Draft`、`TBD`、`Open`、`Aggregate`；`sdd-pipeline` 必須維持
+experimental、default-disabled、execution-denied。本批不改 runtime、workflow、tests 或
+finding status，不 promotion、不 push、不 merge；PR #3 維持 `NOT READY TO MERGE`。
