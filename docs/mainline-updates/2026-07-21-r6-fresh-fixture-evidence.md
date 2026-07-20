@@ -3,10 +3,10 @@
 **Date**: 2026-07-21
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `aef41b1bac2e56bf717d9ded5328c3c601fd7037`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -60,7 +60,10 @@ Out of scope:
 | `studio/runtime/shared-runtime-contract.json` | Require all nine evidence markers and their key behavioral anchors |
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Prove removal of the terminal marker makes the canonical audit fail |
 | `docs/mainline-updates/2026-07-21-r6-fresh-fixture-evidence.md` | Record the bounded evidence sub-batch |
-| `docs/mainline-updates/README.md` | Index this note while preserving its Draft state |
+| `docs/mainline-updates/README.md` | Index this bounded Ready evidence note |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Append the dated R6 evidence disposition without closing R6 overall |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record the evidence sub-batch result and retained R6 blockers |
+| `docs/README.md` | Reconcile the stale ledger version, count, and campaign status index |
 
 ## Impact
 
@@ -99,14 +102,19 @@ Observed before the implementation commit:
   `r6-fresh-fixture-e2e`.
 - Canonical `sdd-pipeline/workflow.yml` SHA-256:
   `bd2710491c9a4cdd179f5b559c706ed781c5fbe933fd13dc0570494fba7a26ed`.
+- Full governance suite on the accounting worktree: 744 passed, 0 failed, 0 skipped,
+  0 not run in 1249.12 seconds.
+- Runtime audit on committed implementation head
+  `aef41b1bac2e56bf717d9ded5328c3c601fd7037`: `VALID=true`, 0 errors,
+  0 warnings, with 18 of 18 historical sealed records valid.
 - `git diff --check` passes.
 
-The uncommitted canonical runtime audit is expected to remain red only because the sealed
-historical-evidence guard requires authority bytes in
-`studio/runtime/shared-runtime-contract.json` to match `HEAD`. The implementation commit must be
-created before the audit can validate those exact committed bytes. Runtime audit, full governance
-suite, Batch, Aggregate, and final worktree hygiene remain pending and this note therefore remains
-Draft and Open.
+The evidence sub-batch is `Ready` and reconciliation is `Closed` only for the bounded
+fresh-fixture scope. The staged snapshot and committed accounting head must still pass the runtime
+and Batch gates using immutable base
+`f8e3fe0bd9d62b7f8e0110bc2a13e73548311c3f`. Aggregate is expected to remain non-ready only
+because the canonical Wave-3 umbrella note is still Draft. Any staged or committed result that
+contradicts this bounded status must reopen this note before work continues.
 
 ## Merge Notes
 
@@ -117,9 +125,9 @@ Draft and Open.
 
 ## Follow-ups
 
-- Commit the bounded implementation and rerun the runtime audit against committed authority bytes.
-- Complete append-only ledger and remediation accounting, including the owner-authorized
-  `docs/README.md` ledger-index drift correction.
-- Run the full governance, Batch, Aggregate, and diff gates.
+- Validate the staged accounting snapshot, then rerun runtime, Batch, Aggregate, and diff gates on
+  the committed accounting head; reopen this note if those results contradict its bounded status.
 - Request owner decisions for residual dispositions, R-E11, workflow promotion, and merge only
   after the evidence sub-batch is independently verified.
+- Complete the Wave-3 Aggregate and post-merge evidence only after those separate decisions and
+  authorizations exist.

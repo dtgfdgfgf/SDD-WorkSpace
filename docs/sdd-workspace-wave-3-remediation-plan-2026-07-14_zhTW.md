@@ -1,14 +1,14 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.8.0"
+version: "1.9.0"
 date: "2026-07-14"
-last_updated: "2026-07-20"
+last_updated: "2026-07-21"
 language: "zh-TW"
 status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "44f768a12316cdb008f1fee263e03ed7ce9a8191"
+head_commit: "aef41b1bac2e56bf717d9ded5328c3c601fd7037"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -207,6 +207,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.6.0 | 2026-07-20 | Post-accounting gates at head `64669c43d531d9dd699d60e163e7b1c755d64963` reopen RB-5 and R-A22: Pester remains 737/0/0, while runtime audit has one sealed-snapshot mismatch, Batch has 22 errors, and Aggregate has 19. R-D01/R-D04/R-D05/R-E07 remain COMPLETED; R-E09 remains IN_PROGRESS. R-A22 repair must precede R6; see Section 12. |
 | 1.7.0 | 2026-07-20 | Repair commit `3666c4e9a6553ff82774d4a06037f48846d8b0fd` restores RB-5 closure: committed audit is VALID with 18/18 sealed records; the dedicated validator file is 91/91; production-positive plus five shape/type/null negatives and the contract revert anchor close R-A22. R-E09 remains IN_PROGRESS; final accounting gates remain pending; R6 is next. |
 | 1.8.0 | 2026-07-20 | RB-5 final gates at accounting head `44f768a12316cdb008f1fee263e03ed7ce9a8191` complete with full suite 742/0/0/0, runtime audit VALID 0/0 and historical sealed 18/18, Batch VALID 0/0 from base `de61431ae8f50d66f59157e00e4d239e9b37efdb`, exactly one expected Aggregate umbrella error, and clean diff/worktree hygiene. RB-5 is complete and R6 is next, but owner decisions and R6 evidence still block promotion and merge; see Section 14. |
+| 1.9.0 | 2026-07-21 | R6 evidence implementation `aef41b1bac2e56bf717d9ded5328c3c601fd7037` adds a reproducible isolated canonical-workflow journey and audit revert anchor. Focused E2E is 1/0, the full suite is 744/0/0/0, and committed runtime audit is VALID 0/0 with historical evidence 18/18. The bounded evidence sub-batch is complete; R6 overall remains IN_PROGRESS and residual, R-E11, promotion, merge, Aggregate, and post-merge decisions remain open; see Section 15. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -539,3 +540,42 @@ RB-5 已完成，R6 是下一個 remediation batch，但 R6 不得在未完成�
 與 fresh-fixture、minimum gates、Aggregate、promotion disposition、merge accounting
 evidence 的情況下 promotion 或 merge。Ledger 維持 128 條，分布維持 Critical 8、
 High 31、Medium 51、Low 38；PR #3 維持 `NOT READY TO MERGE`。
+
+## 15. 2026-07-21 R6 fresh-fixture evidence 子批增補
+
+Implementation commit `aef41b1bac2e56bf717d9ded5328c3c601fd7037` 已把
+canonical `sdd-pipeline` version 1.1.0 exact bytes 複製到 `$TestDrive` 的隔離 Studio
+registry，並以 fixture-only approval 與 state 執行一個 coherent journey。Canonical
+registry 仍 denied，沒有 promotion。
+
+| R6 evidence stage | 結果 |
+|---|---|
+| Canonical denial 與 isolation | Canonical runner denied；DryRun 不留下 resumable `state.json`；canonical workflow inventory 與 `projects/`、`learning/` Git surface 前後一致 |
+| Non-ready 與 restart | `NOT_READY` reject 為 exit 44，rejected resume denied；兩次 restart 各自保留不同 run archive |
+| ECI re-entry | `ROUTE_TO_ECI` requirement latch、五檔 dossier、framed digest、`READY_FOR_MAINLINE_IMPLEMENTATION` 與 COMPLETE Readiness re-entry 全部通過 |
+| Analyze | `OPEN` Critical 被 Implement gate 拒絕；修復後 machine result 與 current artifact hashes 一致 |
+| Terminal | `T001` partial completion 仍 halted；baseline `T001`、`T002` 都存在且完成後才成功 |
+| Workflow identity | Halt 後 fixture workflow byte mutation denied；恢復 exact authorized bytes 才能繼續 |
+| Revert anchor | 九個 evidence markers 受 shared runtime contract 約束；移除 terminal marker 時 audit 必紅 |
+| Focused results | Fresh-fixture 1/0；contract negative 1/0；full suite 744/0/0/0 in 1249.12 秒；committed runtime audit VALID 0/0，historical evidence 18/18 |
+| Evidence note | 日期化 note 只對 bounded fresh-fixture 子批標為 `Ready`、`Closed`、`Batch` |
+
+這些結果滿足 R6 fresh-fixture 證據蒐集子項，但不完成 remediation plan 第 2 節 R6
+終點。第 14 節 decision blockers 全部保留：
+
+- R-A21、R-B23、R-C04、R-C06、R-D03、R-F04 與其他 residual 未修復或獲 owner
+  disposition。
+- R-E11 未獲明確 disposition；R-E09 維持 `IN_PROGRESS`。
+- Canonical `sdd-pipeline` 維持 experimental、default-disabled、execution-denied。
+- Wave-3 umbrella note 維持 `Draft`、`Open`、`TBD`、`Aggregate`。
+- PR #3 維持 `NOT READY TO MERGE`；不 push、不 merge、不預填 post-merge evidence。
+
+Owner 只授權本批同步修正 `docs/README.md` 的 ledger 索引漂移；該文件先前仍寫
+v1.10.0、125 條與 RB-2 現況，現應對齊 ledger v1.17.0、128 條與 R6 evidence 子批。
+這不是 residual acceptance 或 merge authorization。
+
+Full governance suite 已在 accounting worktree 以 744 passed、0 failed、0 skipped、
+0 not run 完成。Staged snapshot 與 committed accounting head 的 runtime、Batch、
+Aggregate 及 final diff/worktree hygiene 仍須實際驗證；任何反證都必須重新開啟
+evidence 子批。即使這些閘門符合 bounded 子批預期，R6 overall 仍維持
+`IN_PROGRESS`。
