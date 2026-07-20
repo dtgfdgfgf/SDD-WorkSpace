@@ -4,10 +4,28 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Ready
-**Related Commits**: `aef41b1bac2e56bf717d9ded5328c3c601fd7037`
+**Related Commits**: `aef41b1bac2e56bf717d9ded5328c3c601fd7037`, `28fbc8280000124e15c9c4913f6c130af1df78bb`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 **Validation Scope**: Batch
+
+## Post-Accounting Validation
+
+The committed accounting head
+`28fbc8280000124e15c9c4913f6c130af1df78bb` produced the required bounded results:
+
+| Validation surface | Observed result |
+|---|---|
+| Canonical runtime audit | `VALID=true`, 0 errors, 0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| Batch gate | BaseRef `f8e3fe0bd9d62b7f8e0110bc2a13e73548311c3f`; `VALID=true`, 0 errors, 0 warnings across 8 changed paths |
+| Aggregate gate | Expected exit 1 with exactly one `aggregate-note-not-ready` for `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` |
+| Diff and worktree hygiene | `git diff --check` passed and the worktree was clean |
+
+These results supersede the pending committed-head checks recorded later in this note. They confirm
+only the R6 fresh-fixture evidence sub-batch as `Ready`, `Closed`, and `Batch`. The Aggregate
+failure is the correct fail-closed result: the Wave-3 umbrella note, R-E09, R-E11, residual
+dispositions, promotion, merge authorization, and post-merge evidence remain incomplete.
 
 ## Summary
 
@@ -61,8 +79,8 @@ Out of scope:
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Prove removal of the terminal marker makes the canonical audit fail |
 | `docs/mainline-updates/2026-07-21-r6-fresh-fixture-evidence.md` | Record the bounded evidence sub-batch |
 | `docs/mainline-updates/README.md` | Index this bounded Ready evidence note |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Append the dated R6 evidence disposition without closing R6 overall |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record the evidence sub-batch result and retained R6 blockers |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Append the dated R6 evidence disposition and post-accounting result without closing R6 overall |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record the evidence sub-batch result, post-accounting gates, and retained R6 blockers |
 | `docs/README.md` | Reconcile the stale ledger version, count, and campaign status index |
 
 ## Impact
@@ -125,8 +143,9 @@ contradicts this bounded status must reopen this note before work continues.
 
 ## Follow-ups
 
-- Validate the staged accounting snapshot, then rerun runtime, Batch, Aggregate, and diff gates on
-  the committed accounting head; reopen this note if those results contradict its bounded status.
+- Any change after validated accounting head
+  `28fbc8280000124e15c9c4913f6c130af1df78bb` must rerun the applicable governance gates
+  before reasserting the recorded result.
 - Request owner decisions for residual dispositions, R-E11, workflow promotion, and merge only
   after the evidence sub-batch is independently verified.
 - Complete the Wave-3 Aggregate and post-merge evidence only after those separate decisions and

@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.17.0"
+version: "1.18.0"
 date: "2026-07-12"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "aef41b1bac2e56bf717d9ded5328c3c601fd7037"
+head_commit: "28fbc8280000124e15c9c4913f6c130af1df78bb"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -450,6 +450,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.15.0 | 2026-07-20 | Repair commit `3666c4e9a6553ff82774d4a06037f48846d8b0fd` restores exact production baseline reconstruction: committed audit is VALID with 18/18 sealed records, and the dedicated validator file is 91/91 with production-positive plus five shape/type/null negatives. R-A22 returns to COMPLETED; R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; final accounting gates remain pending; see Section 25. |
 | 1.16.0 | 2026-07-20 | RB-5 final gates at accounting head `44f768a12316cdb008f1fee263e03ed7ce9a8191` are complete: full suite 742/0/0/0, runtime audit VALID 0/0 with historical sealed evidence 18/18, Batch VALID 0/0 from base `de61431ae8f50d66f59157e00e4d239e9b37efdb`, Aggregate has exactly the expected umbrella `aggregate-note-not-ready`, and diff/worktree hygiene is clean. R-A22 remains COMPLETED; R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; R6 owner decisions remain open; see Section 26. |
 | 1.17.0 | 2026-07-21 | R6 evidence implementation `aef41b1bac2e56bf717d9ded5328c3c601fd7037` adds one isolated fresh-fixture journey and a contract-bound revert negative. Focused E2E is 1/0, the full suite is 744/0/0/0, and committed runtime audit is VALID 0/0 with historical evidence 18/18. The evidence sub-batch is completed, while R6 overall, R-E09, R-E11, residual dispositions, promotion, Aggregate, merge, and post-merge evidence remain open; see Section 27. |
+| 1.18.0 | 2026-07-21 | R6 evidence accounting head `28fbc8280000124e15c9c4913f6c130af1df78bb` passes runtime audit and Batch with 0 errors and 0 warnings, validates historical evidence 18/18, and has clean diff/worktree hygiene. Aggregate returns exactly one expected `aggregate-note-not-ready` for the Draft Wave-3 umbrella. The evidence sub-batch remains COMPLETED; R6 overall and every retained blocker remain open. Counts stay 128 and 8/31/51/38; see Section 28. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1152,3 +1153,26 @@ Medium 51、Low 38。Full governance suite 已在 accounting worktree 以
 evidence note 只對此 bounded 子批標為 `Ready`、`Closed`；staged snapshot 與 committed
 accounting head 的 Batch、Aggregate 及 final diff/worktree hygiene 仍須實測，任何反證
 都必須依狀態機重新開啟本子批。
+
+## 28. 2026-07-21 R6 evidence post-accounting 驗證增補
+
+本節保留第 27 節的 pre-commit 時間線，並以 accounting commit
+`28fbc8280000124e15c9c4913f6c130af1df78bb` 的實際 committed-head 結果取代其中
+尚待驗證的閘門敘述：
+
+| 驗收面 | Committed-head 結果 |
+|---|---|
+| Canonical runtime audit | `VALID=true`、0 errors、0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| Batch mainline gate | BaseRef `f8e3fe0bd9d62b7f8e0110bc2a13e73548311c3f`；`VALID=true`、0 errors、0 warnings；8 changed paths |
+| Aggregate mainline gate | 預期 exit 1；唯一 error 為 `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` 的 `aggregate-note-not-ready` |
+| Diff 與 worktree hygiene | `git diff --check` passed；worktree clean |
+
+上述結果維持 R6 fresh-fixture evidence 子批為 `COMPLETED`，日期化 note 為
+`Ready`、`Closed`、`Batch`。Aggregate 的單一 error 是正確的 fail-closed merge
+blocker，不是本子批失敗，也不得改寫成 branch green。
+
+R6 overall、R-E09、R-E11、R-J03、R-D03、R-A21、R-B23、R-C04、R-C06、R-F04
+及其他 residual dispositions 全部維持原狀。Canonical `sdd-pipeline` 仍為
+experimental、default-disabled、execution-denied；PR #3 仍 `NOT READY TO MERGE`。
+本節不新增 finding，ledger 維持 128 條與 Critical 8、High 31、Medium 51、Low 38。
