@@ -6,6 +6,65 @@ BeforeAll {
     $script:productionContract = Get-Content -LiteralPath (
         Join-Path $script:workspaceRoot 'studio/runtime/shared-runtime-contract.json'
     ) -Raw | ConvertFrom-Json -AsHashtable
+    $script:historicalEvidenceSchema = Get-Content -LiteralPath (
+        Join-Path $script:workspaceRoot 'studio/runtime/mainline-note-historical-evidence.schema.json'
+    ) -Raw | ConvertFrom-Json -AsHashtable
+    $script:historicalBatchBase = [string](
+        $script:historicalEvidenceSchema.properties.records.items.properties.batchBase.const
+    )
+
+    function New-TestHistoricalEvidencePolicy {
+        param(
+            [ValidateSet('pending', 'sealed')]
+            [string]$State = 'pending',
+            [string]$BatchBase = $script:historicalBatchBase,
+            [int]$ExpectedRecordCount = 0,
+            [AllowNull()] [object]$MigrationCommit = $null,
+            [AllowNull()] [object]$EvidenceSha256 = $null
+        )
+
+        return [ordered]@{
+            state = $State
+            batchBase = $BatchBase
+            expectedRecordCount = $ExpectedRecordCount
+            migrationCommit = $MigrationCommit
+            evidenceSha256 = $EvidenceSha256
+            evidencePath = 'studio/runtime/mainline-note-historical-evidence.json'
+            schemaPath = 'studio/runtime/mainline-note-historical-evidence.schema.json'
+            legacyBaselinePath = 'studio/runtime/mainline-note-validation-baseline.json'
+        }
+    }
+
+    function Set-TestHistoricalEvidencePolicy {
+        param(
+            [string]$Root,
+            [ValidateSet('pending', 'sealed')]
+            [string]$State = 'pending',
+            [string]$BatchBase = $script:historicalBatchBase,
+            [int]$ExpectedRecordCount = 0,
+            [AllowNull()] [object]$MigrationCommit = $null,
+            [AllowNull()] [object]$EvidenceSha256 = $null
+        )
+
+        $contractPath = Join-Path $Root 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json -AsHashtable
+        if (-not $contract.ContainsKey('mainlineReadiness')) {
+            $contract['mainlineReadiness'] = @{}
+        }
+        if ($State -eq 'sealed' -and $null -eq $EvidenceSha256) {
+            $evidenceSha256 = (
+                Get-FileHash -LiteralPath (
+                    Join-Path $Root 'studio/runtime/mainline-note-historical-evidence.json'
+                ) -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+        }
+        $contract.mainlineReadiness['historicalEvidenceMigration'] = (
+            New-TestHistoricalEvidencePolicy -State $State -BatchBase $BatchBase `
+                -ExpectedRecordCount $ExpectedRecordCount -MigrationCommit $MigrationCommit `
+                -EvidenceSha256 $EvidenceSha256
+        )
+        Write-TestJson -Path $contractPath -Value $contract
+    }
 
     function Write-TestJson {
         param([string]$Path, [object]$Value)
@@ -94,8 +153,18 @@ BeforeAll {
             schemaVersion = 1
             entries = @()
         })
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-historical-evidence.schema.json') `
+            -Value $script:historicalEvidenceSchema
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-historical-evidence.json') -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $null
+            records = @()
+        })
         Write-TestJson -Path (Join-Path $root 'studio/runtime/shared-runtime-contract.json') -Value ([ordered]@{
             sharedGatePaths = @($script:productionContract.sharedGatePaths)
+            mainlineReadiness = [ordered]@{
+                historicalEvidenceMigration = New-TestHistoricalEvidencePolicy
+            }
         })
         Write-TestJson -Path (Join-Path $root 'studio/runtime/impact-registry.json') -Value ([ordered]@{
             impactRouting = @(
@@ -190,11 +259,19 @@ BeforeAll {
             schemaVersion = 1
             entries = @()
         })
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-historical-evidence.schema.json') `
+            -Value $script:historicalEvidenceSchema
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-historical-evidence.json') -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $null
+            records = @()
+        })
         Write-TestJson -Path (Join-Path $root 'studio/runtime/shared-runtime-contract.json') -Value ([ordered]@{
             sharedGatePaths = @($script:productionContract.sharedGatePaths)
             mainlineReadiness = [ordered]@{
                 repositorySlug = [string]$script:productionContract.mainlineReadiness.repositorySlug
                 aggregateNotePaths = @($script:productionContract.mainlineReadiness.aggregateNotePaths)
+                historicalEvidenceMigration = New-TestHistoricalEvidencePolicy
             }
         })
         Write-TestJson -Path (Join-Path $root 'studio/runtime/impact-registry.json') -Value ([ordered]@{
@@ -230,6 +307,181 @@ BeforeAll {
             Root = $root
             Base = $base
             Evidence = $evidence
+        }
+    }
+
+    function Write-HistoricalEvidenceRecord {
+        param(
+            [string]$Root,
+            [string]$Path,
+            [string]$PreMigrationSha256,
+            [string]$BatchBase,
+            [string]$MigratedSha256,
+            [object[]]$HistoricalCommits,
+            [AllowNull()] [object]$MigrationCommit,
+            [string]$ExpectedStatus = 'Ready',
+            [switch]$OmitMigrationCommit
+        )
+
+        $record = [ordered]@{
+            path               = $Path
+            preMigrationSha256 = $PreMigrationSha256
+            batchBase          = $BatchBase
+            migratedSha256     = $MigratedSha256
+            historicalCommits  = @($HistoricalCommits)
+        }
+        $record['expectedStatus'] = $ExpectedStatus
+        $document = [ordered]@{
+            schemaVersion = 1
+        }
+        if (-not $OmitMigrationCommit) {
+            $document['migrationCommit'] = $MigrationCommit
+        }
+        $document['records'] = @($record)
+        Write-TestJson -Path (
+            Join-Path $Root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value $document
+    }
+
+    function Initialize-HistoricalEvidenceFixture {
+        param(
+            [ValidateSet('Draft', 'Ready', 'Merged')]
+            [string]$MigratedStatus = 'Ready',
+            [ValidateSet('Open', 'Closed')]
+            [string]$MigratedReconciliationStatus = 'Closed'
+        )
+
+        $root = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path (Join-Path $root 'docs/mainline-updates') -Force | Out-Null
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-validation-baseline.json') -Value ([ordered]@{
+            schemaVersion = 1
+            entries = @()
+        })
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/shared-runtime-contract.json') -Value ([ordered]@{
+            sharedGatePaths = @('studio/scripts/powershell/**')
+            mainlineReadiness = [ordered]@{
+                repositorySlug = [string]$script:productionContract.mainlineReadiness.repositorySlug
+                aggregateNotePaths = @()
+            }
+        })
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/impact-registry.json') -Value ([ordered]@{
+            impactRouting = @()
+        })
+        Write-FixtureText -Path (Join-Path $root 'docs/mainline-updates/README.md') -Content @'
+# Mainline Update Notes
+
+| Date | Topic | Source Branch | Status | Summary |
+|------|-------|---------------|--------|---------|
+'@
+        Write-FixtureText -Path (
+            Join-Path $root 'studio/scripts/powershell/example.ps1'
+        ) -Content "'initial'"
+
+        & git -C $root init --quiet --initial-branch=main
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to initialize historical evidence Git fixture.' }
+        Invoke-FixtureGit -Root $root -Arguments @('config', 'user.name', 'Governance Fixture') | Out-Null
+        Invoke-FixtureGit -Root $root -Arguments @('config', 'user.email', 'fixture@example.invalid') | Out-Null
+        Invoke-FixtureGit -Root $root -Arguments @(
+            'remote', 'add', 'origin', 'https://github.com/dtgfdgfgf/SDD-WorkSpace.git'
+        ) | Out-Null
+        $initialCommit = Complete-FixtureCommit -Root $root -Message 'test: historical fixture root'
+
+        $noteName = '2099-01-01-test.md'
+        $noteRelativePath = "docs/mainline-updates/$noteName"
+        $notePath = Write-TestNote -Root $root -Name $noteName -Commits TBD
+        Write-TestIndex -Root $root -Name $noteName -Status Ready
+        $historicalCommit = Complete-FixtureCommit -Root $root -Message 'docs: add legacy note'
+        $preMigrationSha = (
+            Get-FileHash -LiteralPath $notePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+
+        Write-FixtureText -Path (Join-Path $root 'unrelated-before-batch.txt') -Content 'batch marker'
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-validation-baseline.json') -Value ([ordered]@{
+            schemaVersion = 1
+            entries = @(
+                [ordered]@{
+                    path = $noteRelativePath
+                    sha256 = $preMigrationSha
+                }
+            )
+        })
+        $batchBase = Complete-FixtureCommit -Root $root -Message 'test: establish migration batch base'
+        Invoke-FixtureGit -Root $root -Arguments @('switch', '--quiet', '-c', 'feature/historical-migration') | Out-Null
+
+        Write-FixtureText -Path (
+            Join-Path $root 'studio/scripts/powershell/example.ps1'
+        ) -Content "'migration'"
+        Write-FixtureText -Path (
+            Join-Path $root 'studio/scripts/powershell/validate-mainline-notes.ps1'
+        ) -Content "'historical framework validator'"
+        $fixtureSchema = $script:historicalEvidenceSchema |
+            ConvertTo-Json -Depth 20 |
+            ConvertFrom-Json -AsHashtable
+        $fixtureSchema.properties.records.items.properties.batchBase.const = $batchBase
+        Write-TestJson -Path (
+            Join-Path $root 'studio/runtime/mainline-note-historical-evidence.schema.json'
+        ) -Value $fixtureSchema
+        Write-TestJson -Path (
+            Join-Path $root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $null
+            records = @()
+        })
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/shared-runtime-contract.json') -Value ([ordered]@{
+            sharedGatePaths = @('studio/scripts/powershell/**')
+            mainlineReadiness = [ordered]@{
+                repositorySlug = [string]$script:productionContract.mainlineReadiness.repositorySlug
+                aggregateNotePaths = @()
+                historicalEvidenceMigration = New-TestHistoricalEvidencePolicy `
+                    -State pending -BatchBase $batchBase -ExpectedRecordCount 1
+            }
+        })
+        $migrationCommit = Complete-FixtureCommit -Root $root -Message 'fix: migrate historical evidence'
+
+        Remove-Item -LiteralPath (
+            Join-Path $root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Force
+        Write-TestNote -Root $root -Name $noteName `
+            -Status $MigratedStatus -Commits $historicalCommit `
+            -ReconciliationStatus $MigratedReconciliationStatus | Out-Null
+        Write-TestIndex -Root $root -Name $noteName -Status $MigratedStatus
+        $migratedSha = (
+            Get-FileHash -LiteralPath $notePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-HistoricalEvidenceRecord -Root $root -Path $noteRelativePath `
+            -PreMigrationSha256 $preMigrationSha -BatchBase $batchBase `
+            -MigratedSha256 $migratedSha -HistoricalCommits @($historicalCommit) `
+            -MigrationCommit $migrationCommit -ExpectedStatus $MigratedStatus
+        $evidenceSha = (
+            Get-FileHash -LiteralPath (
+                Join-Path $root 'studio/runtime/mainline-note-historical-evidence.json'
+            ) -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-TestJson -Path (Join-Path $root 'studio/runtime/shared-runtime-contract.json') -Value ([ordered]@{
+            sharedGatePaths = @('studio/scripts/powershell/**')
+            mainlineReadiness = [ordered]@{
+                repositorySlug = [string]$script:productionContract.mainlineReadiness.repositorySlug
+                aggregateNotePaths = @()
+                historicalEvidenceMigration = New-TestHistoricalEvidencePolicy `
+                    -State sealed -BatchBase $batchBase -ExpectedRecordCount 1 `
+                    -MigrationCommit $migrationCommit -EvidenceSha256 $evidenceSha
+            }
+        })
+        $recordCommit = Complete-FixtureCommit -Root $root -Message 'docs: bind historical evidence'
+
+        return [pscustomobject]@{
+            Root = $root
+            NoteName = $noteName
+            NotePath = $notePath
+            NoteRelativePath = $noteRelativePath
+            InitialCommit = $initialCommit
+            HistoricalCommit = $historicalCommit
+            PreMigrationSha = $preMigrationSha
+            BatchBase = $batchBase
+            MigrationCommit = $migrationCommit
+            MigratedSha = $migratedSha
+            RecordCommit = $recordCommit
         }
     }
 }
@@ -280,6 +532,7 @@ Describe 'validate-mainline-notes state and branch reconciliation' {
             schemaVersion = 1
             entries = @([ordered]@{ path = 'docs/mainline-updates/2099-01-01-test.md'; sha256 = $hash })
         })
+        Set-TestHistoricalEvidencePolicy -Root $script:fixtureRoot -ExpectedRecordCount 1
 
         $result = Invoke-MainlineValidator -Root $script:fixtureRoot
 
@@ -295,6 +548,7 @@ Describe 'validate-mainline-notes state and branch reconciliation' {
             schemaVersion = 1
             entries = @([ordered]@{ path = 'docs/mainline-updates/2099-01-01-test.md'; sha256 = $hash })
         })
+        Set-TestHistoricalEvidencePolicy -Root $script:fixtureRoot -ExpectedRecordCount 1
         Add-Content -LiteralPath $notePath -Value 'changed'
 
         $result = Invoke-MainlineValidator -Root $script:fixtureRoot
@@ -480,6 +734,7 @@ Describe 'validate-mainline-notes state and branch reconciliation' {
             schemaVersion = 1
             entries = @([ordered]@{ path = 'docs/mainline-updates/2099-01-01-test.md'; sha256 = $hash })
         })
+        Set-TestHistoricalEvidencePolicy -Root $script:fixtureRoot -ExpectedRecordCount 1
 
         $result = Invoke-MainlineValidator -Root $script:fixtureRoot -ChangedPaths @(
             'studio/runtime/mainline-note-validation-baseline.json',
@@ -488,6 +743,37 @@ Describe 'validate-mainline-notes state and branch reconciliation' {
 
         $result.ExitCode | Should -Be 1
         $result.Data.ERRORS.category | Should -Contain 'legacy-baseline-note-changed'
+    }
+
+    It 'allows sealed no-Git structural audit but never blocking authorization' {
+        $historicalCommit = 'a' * 40
+        $migrationCommit = 'b' * 40
+        $notePath = Write-TestNote -Root $script:fixtureRoot -Commits $historicalCommit
+        $migratedSha = (
+            Get-FileHash -LiteralPath $notePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Remove-Item -LiteralPath (
+            Join-Path $script:fixtureRoot 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Force
+        Write-HistoricalEvidenceRecord -Root $script:fixtureRoot `
+            -Path 'docs/mainline-updates/2099-01-01-test.md' `
+            -PreMigrationSha256 ('c' * 64) -BatchBase $script:historicalBatchBase `
+            -MigratedSha256 $migratedSha -HistoricalCommits @($historicalCommit) `
+            -MigrationCommit $migrationCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:fixtureRoot -State sealed `
+            -ExpectedRecordCount 1 -MigrationCommit $migrationCommit
+
+        $global = Invoke-MainlineValidator -Root $script:fixtureRoot
+        $blocking = Invoke-MainlineValidator -Root $script:fixtureRoot -ChangedPaths @(
+            'studio/scripts/powershell/example.ps1',
+            'docs/mainline-updates/2099-01-01-test.md'
+        ) -RequireReady -ReadinessScope Batch
+
+        $global.ExitCode | Should -Be 0 -Because $global.Raw
+        $global.Data.HISTORICAL_EVIDENCE_MIGRATION_STATE | Should -Be 'sealed'
+        $blocking.ExitCode | Should -Be 1
+        $blocking.Data.ERRORS.category | Should -Contain 'historical-evidence-git-context'
+        $blocking.Data.ERRORS.category | Should -Contain 'commit-evidence-git-context-required'
     }
 }
 
@@ -987,5 +1273,789 @@ Describe 'validate-mainline-notes Git-backed evidence integrity' {
         $result.Data.ERRORS.category | Should -Contain 'branch-note-missing'
         $result.Data.CHANGED_PATHS | Should -Contain 'studio/scripts/powershell/setup-eci.ps1'
         @($result.Data.CHANGED_PATHS).Count | Should -Be 1
+    }
+}
+
+Describe 'validate-mainline-notes bound historical evidence migration' {
+    BeforeEach {
+        $script:historicalFixture = Initialize-HistoricalEvidenceFixture
+    }
+
+    AfterEach {
+        if ($script:historicalFixture -and (Test-Path -LiteralPath $script:historicalFixture.Root)) {
+            Remove-Item -LiteralPath $script:historicalFixture.Root -Recurse -Force
+        }
+    }
+
+    It 'accepts an exact record-bound historical reference without treating it as in-range evidence' {
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 0 -Because $result.Raw
+        $result.Data.HISTORICAL_EVIDENCE_COUNT | Should -Be 1
+        $result.Data.HISTORICAL_EVIDENCE_VALID | Should -Be 1
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED | Should -Contain (
+            "$($script:historicalFixture.NoteRelativePath)@$($script:historicalFixture.HistoricalCommit)"
+        )
+        $result.Data.ERRORS.category | Should -Not -Contain 'commit-evidence-out-of-range'
+    }
+
+    It 'retains the old out-of-range denial when no exact historical record exists' {
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $null
+            records = @()
+        })
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'commit-evidence-out-of-range'
+    }
+
+    It 'does not let a migrated Ready note satisfy current-batch readiness or path coverage' {
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase -RequireReady -ReadinessScope Batch
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'branch-note-not-ready'
+        $result.Data.ERRORS.category | Should -Contain 'branch-evidence-coverage-missing'
+    }
+
+    It 'validates an initially sealed Draft record without promoting it into current readiness' {
+        Remove-Item -LiteralPath $script:historicalFixture.Root -Recurse -Force
+        $script:historicalFixture = Initialize-HistoricalEvidenceFixture `
+            -MigratedStatus Draft -MigratedReconciliationStatus Open
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 0 -Because $result.Raw
+        $result.Data.HISTORICAL_EVIDENCE_VALID | Should -Be 1
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+
+        $blocking = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase -RequireReady -ReadinessScope Batch
+        $blocking.ExitCode | Should -Be 1
+        $blocking.Data.ERRORS.category | Should -Contain 'branch-note-not-ready'
+    }
+
+    It 'rejects a record path that was not in the exact baseline at batchBase' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path 'docs/mainline-updates/2099-01-01-not-baselined.md' `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-not-baselined'
+    }
+
+    It 'rejects an arbitrary per-record batch base through the fixed schema binding' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.HistoricalCommit `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-schema'
+    }
+
+    It 'rejects a backslash path alias at the JSON schema boundary' {
+        $evidencePath = Join-Path (
+            $script:historicalFixture.Root
+        ) 'studio/runtime/mainline-note-historical-evidence.json'
+        $document = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json -AsHashtable
+        $document.records[0].path = 'docs/mainline-updates/2099-01-01-test\alias.md'
+        Write-TestJson -Path $evidencePath -Value $document
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-schema'
+    }
+
+    It 'rejects a pre-migration SHA that does not match the batch-base baseline and blob' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 ('0' * 64) -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-pre-sha-mismatch'
+    }
+
+    It 'rejects a migrated SHA that never existed as a committed sealed snapshot' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase -MigratedSha256 ('0' * 64) `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-snapshot-missing'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-seal-mismatch'
+    }
+
+    It 'rejects a historical commit that is not an ancestor of batchBase' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.MigrationCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-historical-nonancestor'
+    }
+
+    It 'rejects an ancestor that was neither the add nor last-touch note commit at batchBase' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.BatchBase) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-history-anchor-mismatch'
+    }
+
+    It 'rejects a blob object in historicalCommits' {
+        $blobPath = Join-Path $script:historicalFixture.Root 'historical-blob.txt'
+        Write-FixtureText -Path $blobPath -Content 'not a commit'
+        $blobOutput = @(Invoke-FixtureGit -Root $script:historicalFixture.Root -Arguments @(
+            'hash-object', '-w', $blobPath
+        ))
+        $blobHash = ([string]$blobOutput[-1]).Trim()
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($blobHash) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-commit-invalid'
+    }
+
+    It 'rejects null historical commit evidence through the schema' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($null) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-schema'
+    }
+
+    It 'rejects a missing migrationCommit through the schema' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $null -OmitMigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-schema'
+    }
+
+    It 'rejects a migration commit outside batchBase through validation head' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.HistoricalCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1 `
+            -MigrationCommit $script:historicalFixture.HistoricalCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-migration-out-of-range'
+    }
+
+    It 'invalidates a stale record when the migrated note is reused and changed later' {
+        Add-Content -LiteralPath $script:historicalFixture.NotePath -Value 'later mutation'
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-note-surface-dirty'
+        $result.Data.ERRORS.category | Should -Contain 'commit-evidence-out-of-range'
+    }
+
+    It 'rejects current status drift from expectedStatus' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit -ExpectedStatus Draft
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-status-mismatch'
+    }
+
+    It 'rejects mixed historical and current refs in Related Commits' {
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName `
+            -Commits "$($script:historicalFixture.HistoricalCommit); $($script:historicalFixture.MigrationCommit)" | Out-Null
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-related-commits-mismatch'
+    }
+
+    It 'rejects overlap between the current legacy baseline and historical records' {
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            entries = @(
+                [ordered]@{
+                    path = $script:historicalFixture.NoteRelativePath
+                    sha256 = $script:historicalFixture.MigratedSha
+                }
+            )
+        })
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-baseline-overlap'
+    }
+
+    It 'does not reopen a sealed migration when records are cleared and the baseline is restored' {
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $script:historicalFixture.MigrationCommit
+            records = @()
+        })
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            entries = @(
+                [ordered]@{
+                    path = $script:historicalFixture.NoteRelativePath
+                    sha256 = $script:historicalFixture.PreMigrationSha
+                }
+            )
+        })
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.HISTORICAL_EVIDENCE_MIGRATION_STATE | Should -Be 'sealed'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-transition'
+    }
+
+    It 'rejects dirty authority bytes even when the record semantics are unchanged' {
+        Add-Content -LiteralPath (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value ''
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-authority-surface-dirty'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-seal-mismatch'
+        $result.Data.ERRORS.category | Should -Contain 'commit-evidence-out-of-range'
+    }
+
+    It 'rejects worktree note and record substitution that does not match HeadRef' {
+        Add-Content -LiteralPath $script:historicalFixture.NotePath -Value 'dirty substituted note'
+        $dirtySha = (
+            Get-FileHash -LiteralPath $script:historicalFixture.NotePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase -MigratedSha256 $dirtySha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-note-surface-dirty'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-snapshot-missing'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-seal-mismatch'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-authority-surface-dirty'
+    }
+
+    It 'rejects a committed post-seal note and record rewrite without a new contract digest' {
+        Add-Content -LiteralPath $script:historicalFixture.NotePath `
+            -Value 'committed post-seal rewrite'
+        $rewrittenSha = (
+            Get-FileHash -LiteralPath $script:historicalFixture.NotePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase -MigratedSha256 $rewrittenSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: attempt post-seal record rewrite' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.RecordCommit
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-seal-mismatch'
+        $result.Data.ERRORS.category | Should -Contain 'commit-evidence-out-of-range'
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+    }
+
+    It 'rejects a coordinated post-seal note record and contract digest rewrite' {
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName `
+            -Commits $script:historicalFixture.HistoricalCommit `
+            -Rows @(
+                '| `studio/scripts/powershell/example.ps1` | `review_only` | `no_change` | Coordinated rewrite. |'
+            ) | Out-Null
+        $rewrittenSha = (
+            Get-FileHash -LiteralPath $script:historicalFixture.NotePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase -MigratedSha256 $rewrittenSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1 `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: coordinate post-seal authority rewrite' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.RecordCommit
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain (
+            'historical-evidence-sealed-snapshot-mismatch'
+        )
+        $result.Data.ERRORS.category | Should -Contain 'commit-evidence-out-of-range'
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+    }
+
+    It 'rejects a two-commit pending reset and second seal migration pointer bypass' {
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            entries = @(
+                [ordered]@{
+                    path = $script:historicalFixture.NoteRelativePath
+                    sha256 = $script:historicalFixture.PreMigrationSha
+                }
+            )
+        })
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $null
+            records = @()
+        })
+        $schemaPath = Join-Path (
+            $script:historicalFixture.Root
+        ) 'studio/runtime/mainline-note-historical-evidence.schema.json'
+        $schema = Get-Content -LiteralPath $schemaPath -Raw |
+            ConvertFrom-Json -AsHashtable
+        $schema['description'] = 'Attempted second migration authority.'
+        Write-TestJson -Path $schemaPath -Value $schema
+        Write-FixtureText -Path (
+            Join-Path $script:historicalFixture.Root 'studio/scripts/powershell/validate-mainline-notes.ps1'
+        ) -Content "'attempted second migration validator'"
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State pending -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1
+        $secondMigrationCommit = Complete-FixtureCommit `
+            -Root $script:historicalFixture.Root `
+            -Message 'test: attempt second pending migration root'
+
+        Remove-Item -LiteralPath (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Force
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $secondMigrationCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1 -MigrationCommit $secondMigrationCommit
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: attempt second historical evidence seal' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain (
+            'historical-evidence-sealed-snapshot-mismatch'
+        )
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+    }
+
+    It 'rejects a shifted batch base framework reset and reseal bypass' {
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            entries = @(
+                [ordered]@{
+                    path = $script:historicalFixture.NoteRelativePath
+                    sha256 = $script:historicalFixture.MigratedSha
+                }
+            )
+        })
+        $shiftedBatchBase = Complete-FixtureCommit `
+            -Root $script:historicalFixture.Root `
+            -Message 'test: attempt shifted migration batch base'
+
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-historical-evidence.json'
+        ) -Value ([ordered]@{
+            schemaVersion = 1
+            migrationCommit = $null
+            records = @()
+        })
+        $schemaPath = Join-Path (
+            $script:historicalFixture.Root
+        ) 'studio/runtime/mainline-note-historical-evidence.schema.json'
+        $schema = Get-Content -LiteralPath $schemaPath -Raw |
+            ConvertFrom-Json -AsHashtable
+        $schema.properties.records.items.properties.batchBase.const = $shiftedBatchBase
+        Write-TestJson -Path $schemaPath -Value $schema
+        Write-FixtureText -Path (
+            Join-Path $script:historicalFixture.Root 'studio/scripts/powershell/validate-mainline-notes.ps1'
+        ) -Content "'attempted shifted-base migration validator'"
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State pending -BatchBase $shiftedBatchBase -ExpectedRecordCount 1
+        $shiftedMigrationCommit = Complete-FixtureCommit `
+            -Root $script:historicalFixture.Root `
+            -Message 'test: attempt shifted-base pending framework'
+
+        Remove-Item -LiteralPath (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Force
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName `
+            -Commits $script:historicalFixture.RecordCommit | Out-Null
+        $shiftedMigratedSha = (
+            Get-FileHash -LiteralPath $script:historicalFixture.NotePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.MigratedSha `
+            -BatchBase $shiftedBatchBase -MigratedSha256 $shiftedMigratedSha `
+            -HistoricalCommits @($script:historicalFixture.RecordCommit) `
+            -MigrationCommit $shiftedMigrationCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $shiftedBatchBase -ExpectedRecordCount 1 `
+            -MigrationCommit $shiftedMigrationCommit
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: attempt shifted-base historical evidence seal' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $shiftedBatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain (
+            'historical-evidence-sealed-snapshot-mismatch'
+        )
+        $result.Data.ERRORS.category | Should -Contain (
+            'historical-evidence-batch-base-mismatch'
+        )
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+    }
+
+    It 'lets a later note leave special mode and pass only through ordinary in-range evidence' {
+        Write-FixtureText -Path (
+            Join-Path $script:historicalFixture.Root 'studio/scripts/powershell/example.ps1'
+        ) -Content "'later ordinary implementation'"
+        $currentCommit = Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'fix: later ordinary implementation'
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName -Commits $currentCommit | Out-Null
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'docs: update former historical note normally' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.RecordCommit `
+            -RequireReady -ReadinessScope Batch
+
+        $result.ExitCode | Should -Be 0 -Because $result.Raw
+        $result.Data.HISTORICAL_EVIDENCE_VALID | Should -Be 0
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+    }
+
+    It 'denies a later committed note change that retains only old historical refs' {
+        Add-Content -LiteralPath $script:historicalFixture.NotePath `
+            -Value 'later change with stale historical evidence'
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'docs: later note with old-only evidence' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.RecordCommit
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'commit-evidence-out-of-range'
+        $result.Data.HISTORICAL_EVIDENCE_APPLIED.Count | Should -Be 0
+    }
+
+    It 'binds the mainline index bytes to HeadRef while sealed records exist' {
+        Add-Content -LiteralPath (
+            Join-Path $script:historicalFixture.Root 'docs/mainline-updates/README.md'
+        ) -Value ''
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $indexErrors = @(
+            $result.Data.ERRORS |
+                Where-Object {
+                    $_.category -eq 'historical-evidence-authority-surface-dirty' -and
+                    $_.path -eq 'docs/mainline-updates/README.md'
+                }
+        )
+        $indexErrors.Count | Should -Be 1
+    }
+
+    It 'rejects case-alias duplicate record paths and incomplete exact-set sealing' {
+        $evidencePath = Join-Path (
+            $script:historicalFixture.Root
+        ) 'studio/runtime/mainline-note-historical-evidence.json'
+        $document = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json -AsHashtable
+        $alias = $document.records[0] |
+            ConvertTo-Json -Depth 12 |
+            ConvertFrom-Json -AsHashtable
+        $alias.path = $alias.path.Replace('-test.md', '-TEST.md')
+        $document.records = @($document.records[0], $alias)
+        Write-TestJson -Path $evidencePath -Value $document
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-duplicate'
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-record-set-mismatch'
+    }
+
+    It 'rejects abbreviated and full aliases in historical Related Commits' {
+        $shortHistorical = $script:historicalFixture.HistoricalCommit.Substring(0, 7)
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName `
+            -Commits "$($script:historicalFixture.HistoricalCommit); $shortHistorical" | Out-Null
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-related-commits-mismatch'
+    }
+
+    It 'rejects arbitrary residual text in historical Related Commits' {
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName `
+            -Commits "$($script:historicalFixture.HistoricalCommit); TBD" | Out-Null
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-related-commits-mismatch'
+    }
+
+    It 'rejects migrationCommit when it equals the selected HeadRef' {
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.RecordCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1 -MigrationCommit $script:historicalFixture.RecordCommit
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-migration-out-of-range'
+    }
+
+    It 'rejects an in-range prior migrationCommit that did not establish the framework' {
+        Write-FixtureText -Path (
+            Join-Path $script:historicalFixture.Root 'unrelated-after-record.txt'
+        ) -Content 'later head'
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: later head for migration scope' | Out-Null
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase `
+            -MigratedSha256 $script:historicalFixture.MigratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.RecordCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1 -MigrationCommit $script:historicalFixture.RecordCommit
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: bind unrelated prior migration commit' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'historical-evidence-migration-scope'
+    }
+
+    It 'does not let historical evidence cover a later current-batch path change' {
+        Write-FixtureText -Path (
+            Join-Path $script:historicalFixture.Root 'studio/scripts/powershell/example.ps1'
+        ) -Content "'later uncited change'"
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'fix: later uncited shared change' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase -RequireReady -ReadinessScope Batch
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'branch-evidence-coverage-missing'
+    }
+
+    It 'does not let a historical migration note satisfy must_update reconciliation' {
+        Write-TestJson -Path (
+            Join-Path $script:historicalFixture.Root 'studio/runtime/impact-registry.json'
+        ) -Value ([ordered]@{
+            impactRouting = @(
+                [ordered]@{
+                    changeType = 'historical_fixture'
+                    trigger = 'studio/scripts/powershell/example.ps1'
+                    rules = @(
+                        [ordered]@{
+                            target = 'studio/scripts/powershell/example.ps1'
+                            impact = 'must_update'
+                            reason = 'Fixture target must be updated.'
+                        }
+                    )
+                }
+            )
+        })
+        Write-TestNote -Root $script:historicalFixture.Root `
+            -Name $script:historicalFixture.NoteName `
+            -Commits $script:historicalFixture.HistoricalCommit `
+            -Rows @(
+                '| `studio/scripts/powershell/example.ps1` | `must_update` | `updated` | Historical-only claim. |'
+            ) | Out-Null
+        $migratedSha = (
+            Get-FileHash -LiteralPath $script:historicalFixture.NotePath -Algorithm SHA256
+        ).Hash.ToLowerInvariant()
+        Write-HistoricalEvidenceRecord -Root $script:historicalFixture.Root `
+            -Path $script:historicalFixture.NoteRelativePath `
+            -PreMigrationSha256 $script:historicalFixture.PreMigrationSha `
+            -BatchBase $script:historicalFixture.BatchBase -MigratedSha256 $migratedSha `
+            -HistoricalCommits @($script:historicalFixture.HistoricalCommit) `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+        Set-TestHistoricalEvidencePolicy -Root $script:historicalFixture.Root `
+            -State sealed -BatchBase $script:historicalFixture.BatchBase `
+            -ExpectedRecordCount 1 `
+            -MigrationCommit $script:historicalFixture.MigrationCommit
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'docs: add historical-only reconciliation claim' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase -RequireReady -ReadinessScope Batch
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'must-update-reconciliation-missing'
+    }
+
+    It 'does not let a historical migration note substitute for an Aggregate anchor' {
+        $contractPath = Join-Path $script:historicalFixture.Root 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json -AsHashtable
+        $contract.mainlineReadiness.aggregateNotePaths = @($script:historicalFixture.NoteRelativePath)
+        Write-TestJson -Path $contractPath -Value $contract
+        Complete-FixtureCommit -Root $script:historicalFixture.Root `
+            -Message 'test: configure historical aggregate anchor' | Out-Null
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase -RequireReady -ReadinessScope Aggregate
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.ERRORS.category | Should -Contain 'aggregate-note-not-ready'
     }
 }

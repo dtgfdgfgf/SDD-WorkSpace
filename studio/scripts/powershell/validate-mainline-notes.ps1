@@ -67,6 +67,7 @@ if ($Help) {
 $script:validationErrors = [System.Collections.Generic.List[object]]::new()
 $script:validationWarnings = [System.Collections.Generic.List[object]]::new()
 $script:legacyBaselineApplied = [System.Collections.Generic.List[string]]::new()
+$script:historicalEvidenceApplied = [System.Collections.Generic.List[string]]::new()
 
 function Add-ValidationIssue {
     param(
@@ -321,6 +322,33 @@ function Get-CommitReferences {
     )
 }
 
+function Get-ExactCommitReferenceList {
+    param([AllowNull()] [string]$Value)
+
+    $references = [System.Collections.Generic.List[string]]::new()
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return [pscustomobject][ordered]@{ Valid = $false; References = @() }
+    }
+
+    foreach ($rawToken in @($Value -split '[,;]')) {
+        $token = ([string]$rawToken).Trim()
+        if ($token -cmatch '^([0-9a-f]{40})$') {
+            $references.Add([string]$Matches[1])
+            continue
+        }
+        if ($token -cmatch '^`([0-9a-f]{40})`$') {
+            $references.Add([string]$Matches[1])
+            continue
+        }
+        return [pscustomobject][ordered]@{ Valid = $false; References = @() }
+    }
+    $unique = @($references | Sort-Object -Unique -CaseSensitive)
+    return [pscustomobject][ordered]@{
+        Valid      = ($references.Count -gt 0 -and $unique.Count -eq $references.Count)
+        References = @($references)
+    }
+}
+
 function Get-PullRequestReferences {
     param([AllowNull()] [string]$Value)
 
@@ -388,6 +416,846 @@ function Resolve-GitCommit {
         return $null
     }
     return $resolved
+}
+
+function Test-GitAncestor {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Ancestor,
+        [Parameter(Mandatory)] [string]$Descendant
+    )
+
+    $result = Invoke-GitCapture -Root $Root -Arguments @(
+        'merge-base', '--is-ancestor', $Ancestor, $Descendant
+    )
+    return ($result.ExitCode -eq 0)
+}
+
+function Get-GitBlobSha256 {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Commit,
+        [Parameter(Mandatory)] [string]$Path
+    )
+
+    $normalizedPath = Convert-ToRepositoryPath $Path
+    $objectResult = Invoke-GitCapture -Root $Root -Arguments @(
+        'rev-parse', '--verify', "$Commit`:$normalizedPath"
+    )
+    if ($objectResult.ExitCode -ne 0 -or $objectResult.Output.Count -eq 0) {
+        return $null
+    }
+    $objectId = ([string]$objectResult.Output[-1]).Trim().ToLowerInvariant()
+    if ($objectId -notmatch '^[0-9a-f]{40,64}$') {
+        return $null
+    }
+
+    $typeResult = Invoke-GitCapture -Root $Root -Arguments @('cat-file', '-t', $objectId)
+    if (
+        $typeResult.ExitCode -ne 0 -or
+        $typeResult.Output.Count -eq 0 -or
+        ([string]$typeResult.Output[-1]).Trim() -ne 'blob'
+    ) {
+        return $null
+    }
+
+    $process = $null
+    $buffer = $null
+    try {
+        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = 'git'
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        foreach ($argument in @('-C', $Root, 'cat-file', 'blob', $objectId)) {
+            $startInfo.ArgumentList.Add([string]$argument)
+        }
+
+        $process = [System.Diagnostics.Process]::new()
+        $process.StartInfo = $startInfo
+        if (-not $process.Start()) {
+            return $null
+        }
+        $errorTask = $process.StandardError.ReadToEndAsync()
+        $buffer = [System.IO.MemoryStream]::new()
+        $process.StandardOutput.BaseStream.CopyTo($buffer)
+        $process.WaitForExit()
+        $null = $errorTask.GetAwaiter().GetResult()
+        if ($process.ExitCode -ne 0) {
+            return $null
+        }
+
+        $digest = [System.Security.Cryptography.SHA256]::HashData($buffer.ToArray())
+        return [System.Convert]::ToHexString($digest).ToLowerInvariant()
+    } catch {
+        return $null
+    } finally {
+        if ($buffer) { $buffer.Dispose() }
+        if ($process) { $process.Dispose() }
+    }
+}
+
+function Get-GitNoteHistoryAnchors {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$AtCommit,
+        [Parameter(Mandatory)] [string]$Path
+    )
+
+    $anchors = @{}
+    $lastTouchResult = Invoke-GitCapture -Root $Root -Arguments @(
+        'log', '-1', '--format=%H', $AtCommit, '--', $Path
+    )
+    foreach ($line in @($lastTouchResult.Output)) {
+        $commit = ([string]$line).Trim().ToLowerInvariant()
+        if ($commit -match '^[0-9a-f]{40}$') {
+            $anchors[$commit] = $true
+        }
+    }
+
+    $addResult = Invoke-GitCapture -Root $Root -Arguments @(
+        'log', '--diff-filter=A', '--format=%H', $AtCommit, '--', $Path
+    )
+    foreach ($line in @($addResult.Output)) {
+        $commit = ([string]$line).Trim().ToLowerInvariant()
+        if ($commit -match '^[0-9a-f]{40}$') {
+            $anchors[$commit] = $true
+        }
+    }
+    return $anchors
+}
+
+function Get-GitCommitChangedPathSet {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Commit
+    )
+
+    $result = Invoke-GitCapture -Root $Root -Arguments @(
+        'diff-tree', '--root', '--no-commit-id', '--name-only', '-r', $Commit, '--'
+    )
+    if ($result.ExitCode -ne 0) {
+        return $null
+    }
+    $paths = @{}
+    foreach ($line in @($result.Output)) {
+        $path = Convert-ToRepositoryPath ([string]$line)
+        if ($path) {
+            $paths[$path] = $true
+        }
+    }
+    return $paths
+}
+
+function Read-GitJsonAtCommit {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Commit,
+        [Parameter(Mandatory)] [string]$Path
+    )
+
+    $result = Invoke-GitCapture -Root $Root -Arguments @(
+        'show', "$Commit`:$Path"
+    )
+    if ($result.ExitCode -ne 0 -or $result.Output.Count -eq 0) {
+        return $null
+    }
+    try {
+        return (($result.Output -join "`n") | ConvertFrom-Json -AsHashtable)
+    } catch {
+        return $null
+    }
+}
+
+function Get-HistoricalEvidencePolicyDocument {
+    param([AllowNull()] [object]$Contract)
+
+    if (
+        $Contract -isnot [System.Collections.IDictionary] -or
+        -not $Contract.ContainsKey('mainlineReadiness') -or
+        $Contract.mainlineReadiness -isnot [System.Collections.IDictionary] -or
+        -not $Contract.mainlineReadiness.ContainsKey('historicalEvidenceMigration') -or
+        $Contract.mainlineReadiness.historicalEvidenceMigration -isnot [System.Collections.IDictionary]
+    ) {
+        return $null
+    }
+    return $Contract.mainlineReadiness.historicalEvidenceMigration
+}
+
+function Test-HistoricalEvidencePolicySnapshot {
+    param(
+        [AllowNull()] [object]$Policy,
+        [Parameter(Mandatory)] [ValidateSet('pending', 'sealed')] [string]$State,
+        [Parameter(Mandatory)] [string]$BatchBase,
+        [Parameter(Mandatory)] [int]$ExpectedRecordCount,
+        [AllowNull()] [object]$MigrationCommit,
+        [AllowNull()] [object]$EvidenceSha256
+    )
+
+    $requiredFields = @(
+        'state',
+        'batchBase',
+        'expectedRecordCount',
+        'migrationCommit',
+        'evidenceSha256',
+        'evidencePath',
+        'schemaPath',
+        'legacyBaselinePath'
+    )
+    if (
+        $Policy -isnot [System.Collections.IDictionary] -or
+        $Policy.Count -ne $requiredFields.Count -or
+        @($requiredFields | Where-Object { -not $Policy.ContainsKey($_) }).Count -gt 0
+    ) {
+        return $false
+    }
+
+    $recordCountIsInteger = (
+        $Policy.expectedRecordCount -is [byte] -or
+        $Policy.expectedRecordCount -is [int16] -or
+        $Policy.expectedRecordCount -is [int32] -or
+        $Policy.expectedRecordCount -is [int64]
+    )
+    $nullFieldsMatch = if ($State -eq 'pending') {
+        $null -eq $Policy.migrationCommit -and
+        $null -eq $Policy.evidenceSha256 -and
+        $null -eq $MigrationCommit -and
+        $null -eq $EvidenceSha256
+    } else {
+        $Policy.migrationCommit -is [string] -and
+        [string]$Policy.migrationCommit -ceq [string]$MigrationCommit -and
+        $Policy.evidenceSha256 -is [string] -and
+        [string]$Policy.evidenceSha256 -ceq [string]$EvidenceSha256
+    }
+
+    return (
+        [string]$Policy.state -ceq $State -and
+        [string]$Policy.batchBase -ceq $BatchBase -and
+        $recordCountIsInteger -and
+        [int64]$Policy.expectedRecordCount -eq $ExpectedRecordCount -and
+        $nullFieldsMatch -and
+        [string]$Policy.evidencePath -ceq 'studio/runtime/mainline-note-historical-evidence.json' -and
+        [string]$Policy.schemaPath -ceq 'studio/runtime/mainline-note-historical-evidence.schema.json' -and
+        [string]$Policy.legacyBaselinePath -ceq 'studio/runtime/mainline-note-validation-baseline.json'
+    )
+}
+
+function Test-HistoricalEvidenceDocumentSnapshot {
+    param(
+        [AllowNull()] [object]$Document,
+        [Parameter(Mandatory)] [ValidateSet('pending', 'sealed')] [string]$State,
+        [Parameter(Mandatory)] [int]$ExpectedRecordCount,
+        [AllowNull()] [object]$MigrationCommit
+    )
+
+    $schemaVersionIsInteger = (
+        $Document -is [System.Collections.IDictionary] -and
+        (
+            $Document.schemaVersion -is [byte] -or
+            $Document.schemaVersion -is [int16] -or
+            $Document.schemaVersion -is [int32] -or
+            $Document.schemaVersion -is [int64]
+        )
+    )
+    if (
+        $Document -isnot [System.Collections.IDictionary] -or
+        $Document.Count -ne 3 -or
+        -not $Document.ContainsKey('schemaVersion') -or
+        -not $Document.ContainsKey('migrationCommit') -or
+        -not $Document.ContainsKey('records') -or
+        -not $schemaVersionIsInteger -or
+        [int64]$Document.schemaVersion -ne 1 -or
+        $Document.records -isnot [System.Collections.IList]
+    ) {
+        return $false
+    }
+
+    if ($State -eq 'pending') {
+        return (
+            $null -eq $Document.migrationCommit -and
+            @($Document.records).Count -eq 0
+        )
+    }
+    return (
+        $Document.migrationCommit -is [string] -and
+        [string]$Document.migrationCommit -ceq [string]$MigrationCommit -and
+        @($Document.records).Count -eq $ExpectedRecordCount
+    )
+}
+
+function Get-GitCommitParents {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Commit
+    )
+
+    $result = Invoke-GitCapture -Root $Root -Arguments @(
+        'rev-list', '--parents', '-n', '1', $Commit
+    )
+    if ($result.ExitCode -ne 0 -or $result.Output.Count -eq 0) {
+        return @()
+    }
+    $parts = @(([string]$result.Output[-1]).Trim() -split '\s+')
+    if ($parts.Count -lt 2) {
+        return @()
+    }
+    return @(
+        $parts[1..($parts.Count - 1)] |
+            Where-Object { [string]$_ -match '^[0-9a-f]{40}$' }
+    )
+}
+
+function Get-GitPathAdditionCommits {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$HeadCommit,
+        [Parameter(Mandatory)] [string]$Path
+    )
+
+    $result = Invoke-GitCapture -Root $Root -Arguments @(
+        'log',
+        '--full-history',
+        '--reverse',
+        '--format=%H',
+        '--diff-filter=A',
+        $HeadCommit,
+        '--',
+        $Path
+    )
+    if ($result.ExitCode -ne 0) {
+        return @()
+    }
+    return @(
+        $result.Output |
+            ForEach-Object { ([string]$_).Trim().ToLowerInvariant() } |
+            Where-Object { $_ -match '^[0-9a-f]{40}$' }
+    )
+}
+
+function Read-ExactLegacyBaselineAtCommit {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Commit
+    )
+
+    $path = 'studio/runtime/mainline-note-validation-baseline.json'
+    $document = Read-GitJsonAtCommit -Root $Root -Commit $Commit -Path $path
+    $schemaVersionIsInteger = (
+        $document -is [System.Collections.IDictionary] -and
+        (
+            $document.schemaVersion -is [byte] -or
+            $document.schemaVersion -is [int16] -or
+            $document.schemaVersion -is [int32] -or
+            $document.schemaVersion -is [int64]
+        )
+    )
+    if (
+        $document -isnot [System.Collections.IDictionary] -or
+        $document.Count -ne 2 -or
+        -not $document.ContainsKey('schemaVersion') -or
+        -not $document.ContainsKey('entries') -or
+        -not $schemaVersionIsInteger -or
+        [int64]$document.schemaVersion -ne 1 -or
+        $document.entries -isnot [System.Collections.IList] -or
+        @($document.entries).Count -eq 0
+    ) {
+        return $null
+    }
+
+    $entries = [System.Collections.Generic.Dictionary[string,string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    $aliases = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
+    foreach ($entry in @($document.entries)) {
+        if (
+            $entry -isnot [System.Collections.IDictionary] -or
+            $entry.Count -ne 2 -or
+            -not $entry.ContainsKey('path') -or
+            -not $entry.ContainsKey('sha256')
+        ) {
+            return $null
+        }
+        $rawPath = [string]$entry.path
+        $entryPath = Convert-ToRepositoryPath $rawPath
+        $sha256 = [string]$entry.sha256
+        if (
+            -not $entryPath -or
+            $rawPath -cne $entryPath -or
+            $sha256 -cnotmatch '^[0-9a-f]{64}$' -or
+            -not $aliases.Add($entryPath)
+        ) {
+            return $null
+        }
+        $blobSha = Get-GitBlobSha256 -Root $Root -Commit $Commit -Path $entryPath
+        if (-not $blobSha -or $blobSha -cne $sha256) {
+            return $null
+        }
+        $entries.Add($entryPath, $sha256)
+    }
+    return ,$entries
+}
+
+function Get-HistoricalEvidenceFrameworkOrigin {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$HeadCommit
+    )
+
+    $contractPath = 'studio/runtime/shared-runtime-contract.json'
+    $evidencePath = 'studio/runtime/mainline-note-historical-evidence.json'
+    $schemaPath = 'studio/runtime/mainline-note-historical-evidence.schema.json'
+    $baselinePath = 'studio/runtime/mainline-note-validation-baseline.json'
+    $evidenceAdds = @(
+        Get-GitPathAdditionCommits -Root $Root -HeadCommit $HeadCommit -Path $evidencePath
+    )
+    $schemaAdds = @(
+        Get-GitPathAdditionCommits -Root $Root -HeadCommit $HeadCommit -Path $schemaPath
+    )
+    if (
+        $evidenceAdds.Count -eq 0 -or
+        $schemaAdds.Count -eq 0 -or
+        $evidenceAdds[0] -cne $schemaAdds[0]
+    ) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path $evidencePath `
+            -Message (
+                'Evidence JSON and schema must share one immutable first-add framework commit ' +
+                'in the selected Head ancestry.'
+            )
+        return $null
+    }
+
+    $migrationCommit = [string]$evidenceAdds[0]
+    $parentCandidates = [System.Collections.Generic.List[object]]::new()
+    foreach ($parent in @(Get-GitCommitParents -Root $Root -Commit $migrationCommit)) {
+        $baseline = Read-ExactLegacyBaselineAtCommit -Root $Root -Commit $parent
+        $parentEvidenceSha = Get-GitBlobSha256 -Root $Root -Commit $parent -Path $evidencePath
+        $parentSchemaSha = Get-GitBlobSha256 -Root $Root -Commit $parent -Path $schemaPath
+        if ($baseline -and -not $parentEvidenceSha -and -not $parentSchemaSha) {
+            $parentCandidates.Add([pscustomobject][ordered]@{
+                Commit   = $parent
+                Baseline = $baseline
+            })
+        }
+    }
+    if ($parentCandidates.Count -ne 1) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path $baselinePath `
+            -Message (
+                'The immutable framework commit must have one direct parent with an exact ' +
+                'nonempty legacy baseline and no historical evidence framework.'
+            )
+        return $null
+    }
+
+    $batchBase = [string]$parentCandidates[0].Commit
+    $baseline = $parentCandidates[0].Baseline
+    $expectedRecordCount = [int]$baseline.Count
+    $frameworkPaths = @(
+        'studio/scripts/powershell/validate-mainline-notes.ps1',
+        $schemaPath,
+        $evidencePath,
+        $contractPath
+    )
+    $changedPaths = Get-GitCommitChangedPathSet -Root $Root -Commit $migrationCommit
+    $pendingEvidence = Read-GitJsonAtCommit -Root $Root -Commit $migrationCommit `
+        -Path $evidencePath
+    $pendingSchema = Read-GitJsonAtCommit -Root $Root -Commit $migrationCommit `
+        -Path $schemaPath
+    $pendingSchemaSha = Get-GitBlobSha256 -Root $Root -Commit $migrationCommit `
+        -Path $schemaPath
+    $pendingContract = Read-GitJsonAtCommit -Root $Root -Commit $migrationCommit `
+        -Path $contractPath
+    $pendingPolicy = Get-HistoricalEvidencePolicyDocument -Contract $pendingContract
+    $parentBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $batchBase `
+        -Path $baselinePath
+    $migrationBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $migrationCommit `
+        -Path $baselinePath
+    $originValid = (
+        $null -ne $changedPaths -and
+        @($frameworkPaths | Where-Object { -not $changedPaths.Contains($_) }).Count -eq 0 -and
+        (Test-HistoricalEvidenceDocumentSnapshot -Document $pendingEvidence `
+            -State pending -ExpectedRecordCount $expectedRecordCount `
+            -MigrationCommit $null) -and
+        $pendingSchema -and
+        $pendingSchemaSha -and
+        [string]$pendingSchema.properties.records.items.properties.batchBase.const -ceq $batchBase -and
+        $parentBaselineSha -and
+        $migrationBaselineSha -ceq $parentBaselineSha -and
+        (Test-HistoricalEvidencePolicySnapshot -Policy $pendingPolicy `
+            -State pending -BatchBase $batchBase `
+            -ExpectedRecordCount $expectedRecordCount `
+            -MigrationCommit $null -EvidenceSha256 $null)
+    )
+    if (-not $originValid) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path $contractPath `
+            -Message (
+                'The immutable first-add commit must establish the exact pending framework ' +
+                'against its derived baseline parent.'
+            )
+        return $null
+    }
+
+    return [pscustomobject][ordered]@{
+        MigrationCommit    = $migrationCommit
+        BatchBase          = $batchBase
+        ExpectedRecordCount = $expectedRecordCount
+        Baseline           = $baseline
+        SchemaSha          = $pendingSchemaSha
+    }
+}
+
+function Get-FirstHistoricalEvidenceSealSnapshot {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$HeadCommit,
+        [Parameter(Mandatory)] [string]$ExpectedBatchBase,
+        [Parameter(Mandatory)] [string]$ExpectedMigrationCommit,
+        [Parameter(Mandatory)] [int]$ExpectedRecordCount
+    )
+
+    $contractPath = 'studio/runtime/shared-runtime-contract.json'
+    $evidencePath = 'studio/runtime/mainline-note-historical-evidence.json'
+    $schemaPath = 'studio/runtime/mainline-note-historical-evidence.schema.json'
+    $baselinePath = 'studio/runtime/mainline-note-validation-baseline.json'
+    $historyResult = Invoke-GitCapture -Root $Root -Arguments @(
+        'rev-list',
+        '--reverse',
+        '--topo-order',
+        '--ancestry-path',
+        "$ExpectedBatchBase..$HeadCommit",
+        '--',
+        $contractPath
+    )
+    if ($historyResult.ExitCode -ne 0) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path $contractPath `
+            -Message 'Unable to enumerate the pending-to-sealed policy history.'
+        return $null
+    }
+
+    $transitionCandidates = [System.Collections.Generic.List[object]]::new()
+    foreach ($line in @($historyResult.Output)) {
+        $commit = ([string]$line).Trim().ToLowerInvariant()
+        if ($commit -notmatch '^[0-9a-f]{40}$') { continue }
+        $candidateContract = Read-GitJsonAtCommit -Root $Root -Commit $commit `
+            -Path $contractPath
+        $candidatePolicy = Get-HistoricalEvidencePolicyDocument -Contract $candidateContract
+        if (-not $candidatePolicy -or [string]$candidatePolicy.state -cne 'sealed') {
+            continue
+        }
+
+        $pendingParents = [System.Collections.Generic.List[string]]::new()
+        foreach ($parent in @(Get-GitCommitParents -Root $Root -Commit $commit)) {
+            if (-not (Test-GitAncestor -Root $Root -Ancestor $ExpectedBatchBase -Descendant $parent)) {
+                continue
+            }
+            $parentContract = Read-GitJsonAtCommit -Root $Root -Commit $parent `
+                -Path $contractPath
+            $parentPolicy = Get-HistoricalEvidencePolicyDocument -Contract $parentContract
+            if ($parentPolicy -and [string]$parentPolicy.state -ceq 'pending') {
+                $pendingParents.Add($parent)
+            }
+        }
+        if ($pendingParents.Count -gt 0) {
+            $transitionCandidates.Add([pscustomobject][ordered]@{
+                Commit        = $commit
+                Policy        = $candidatePolicy
+                PendingParents = @($pendingParents)
+            })
+        }
+    }
+
+    $batchBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $ExpectedBatchBase `
+        -Path $baselinePath
+    $validCandidates = [System.Collections.Generic.List[object]]::new()
+    foreach ($candidate in @($transitionCandidates)) {
+        $candidateMigrationCommit = if (
+            $candidate.Policy.migrationCommit -is [string] -and
+            [string]$candidate.Policy.migrationCommit -cmatch '^[0-9a-f]{40}$'
+        ) {
+            [string]$candidate.Policy.migrationCommit
+        } else {
+            $null
+        }
+        $resolvedCandidateMigration = if ($candidateMigrationCommit) {
+            Resolve-GitCommit -Root $Root -Reference $candidateMigrationCommit
+        } else {
+            $null
+        }
+        $candidateEvidence = Read-GitJsonAtCommit -Root $Root -Commit $candidate.Commit `
+            -Path $evidencePath
+        $candidateEvidenceSha = Get-GitBlobSha256 -Root $Root -Commit $candidate.Commit `
+            -Path $evidencePath
+        $candidateSchema = Read-GitJsonAtCommit -Root $Root -Commit $candidate.Commit `
+            -Path $schemaPath
+        $candidateSchemaSha = Get-GitBlobSha256 -Root $Root -Commit $candidate.Commit `
+            -Path $schemaPath
+        $candidateBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $candidate.Commit `
+            -Path $baselinePath
+        $candidateValid = (
+            $candidateMigrationCommit -and
+            $candidateMigrationCommit -ceq $ExpectedMigrationCommit -and
+            $resolvedCandidateMigration -ceq $candidateMigrationCommit -and
+            $candidateMigrationCommit -cne $ExpectedBatchBase -and
+            $candidateMigrationCommit -cne $candidate.Commit -and
+            (Test-GitAncestor -Root $Root -Ancestor $ExpectedBatchBase `
+                -Descendant $candidateMigrationCommit) -and
+            (Test-GitAncestor -Root $Root -Ancestor $candidateMigrationCommit `
+                -Descendant $candidate.Commit) -and
+            $candidateEvidenceSha -and
+            $candidateEvidenceSha -cmatch '^[0-9a-f]{64}$' -and
+            (Test-HistoricalEvidencePolicySnapshot -Policy $candidate.Policy `
+                -State sealed -BatchBase $ExpectedBatchBase `
+                -ExpectedRecordCount $ExpectedRecordCount `
+                -MigrationCommit $candidateMigrationCommit `
+                -EvidenceSha256 $candidateEvidenceSha) -and
+            (Test-HistoricalEvidenceDocumentSnapshot -Document $candidateEvidence `
+                -State sealed -ExpectedRecordCount $ExpectedRecordCount `
+                -MigrationCommit $candidateMigrationCommit) -and
+            $candidateSchema -and
+            $candidateSchemaSha -and
+            [string]$candidateSchema.properties.records.items.properties.batchBase.const -ceq $ExpectedBatchBase -and
+            -not $candidateBaselineSha
+        )
+
+        $exactPendingParent = $null
+        $exactPendingSchemaSha = $null
+        foreach ($parent in @($candidate.PendingParents)) {
+            $parentContract = Read-GitJsonAtCommit -Root $Root -Commit $parent `
+                -Path $contractPath
+            $parentPolicy = Get-HistoricalEvidencePolicyDocument -Contract $parentContract
+            $parentEvidence = Read-GitJsonAtCommit -Root $Root -Commit $parent `
+                -Path $evidencePath
+            $parentSchema = Read-GitJsonAtCommit -Root $Root -Commit $parent `
+                -Path $schemaPath
+            $parentSchemaSha = Get-GitBlobSha256 -Root $Root -Commit $parent `
+                -Path $schemaPath
+            $parentBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $parent `
+                -Path $baselinePath
+            if (
+                (Test-HistoricalEvidencePolicySnapshot -Policy $parentPolicy `
+                    -State pending -BatchBase $ExpectedBatchBase `
+                    -ExpectedRecordCount $ExpectedRecordCount `
+                    -MigrationCommit $null -EvidenceSha256 $null) -and
+                (Test-HistoricalEvidenceDocumentSnapshot -Document $parentEvidence `
+                    -State pending -ExpectedRecordCount $ExpectedRecordCount `
+                    -MigrationCommit $null) -and
+                $parentSchema -and
+                $parentSchemaSha -and
+                [string]$parentSchema.properties.records.items.properties.batchBase.const -ceq $ExpectedBatchBase -and
+                $batchBaselineSha -and
+                $parentBaselineSha -ceq $batchBaselineSha -and
+                $candidateMigrationCommit -and
+                (Test-GitAncestor -Root $Root -Ancestor $candidateMigrationCommit `
+                    -Descendant $parent)
+            ) {
+                $exactPendingParent = $parent
+                $exactPendingSchemaSha = $parentSchemaSha
+                break
+            }
+        }
+        if (
+            $candidateValid -and
+            $exactPendingParent -and
+            $candidateSchemaSha -ceq $exactPendingSchemaSha
+        ) {
+            $validCandidates.Add([pscustomobject][ordered]@{
+                Commit          = $candidate.Commit
+                PendingParent   = $exactPendingParent
+                MigrationCommit = $candidateMigrationCommit
+                Policy          = $candidate.Policy
+                EvidenceSha     = $candidateEvidenceSha
+                SchemaSha       = $candidateSchemaSha
+            })
+        }
+    }
+
+    $firstCandidates = [System.Collections.Generic.List[object]]::new()
+    foreach ($candidate in @($validCandidates)) {
+        $hasEarlierCandidate = $false
+        foreach ($other in @($validCandidates)) {
+            if (
+                $other.Commit -cne $candidate.Commit -and
+                (Test-GitAncestor -Root $Root -Ancestor $other.Commit `
+                    -Descendant $candidate.Commit)
+            ) {
+                $hasEarlierCandidate = $true
+                break
+            }
+        }
+        if (-not $hasEarlierCandidate) {
+            $firstCandidates.Add($candidate)
+        }
+    }
+    if ($firstCandidates.Count -ne 1) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path $contractPath `
+            -Message (
+                'The immutable batchBase..Head history must contain one absolute first valid ' +
+                'pending-to-sealed transition.'
+            )
+        return $null
+    }
+    return $firstCandidates[0]
+}
+
+function Test-CurrentHistoricalEvidenceSealSnapshot {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$HeadCommit,
+        [Parameter(Mandatory)] [object]$SealSnapshot
+    )
+
+    $contractPath = 'studio/runtime/shared-runtime-contract.json'
+    $evidencePath = 'studio/runtime/mainline-note-historical-evidence.json'
+    $schemaPath = 'studio/runtime/mainline-note-historical-evidence.schema.json'
+    $headContract = Read-GitJsonAtCommit -Root $Root -Commit $HeadCommit `
+        -Path $contractPath
+    $headPolicy = Get-HistoricalEvidencePolicyDocument -Contract $headContract
+    $policyFields = @(
+        'state',
+        'batchBase',
+        'expectedRecordCount',
+        'migrationCommit',
+        'evidenceSha256',
+        'evidencePath',
+        'schemaPath',
+        'legacyBaselinePath'
+    )
+    $policyMatches = (
+        $headPolicy -is [System.Collections.IDictionary] -and
+        $headPolicy.Count -eq $policyFields.Count -and
+        $SealSnapshot.Policy -is [System.Collections.IDictionary] -and
+        $SealSnapshot.Policy.Count -eq $policyFields.Count
+    )
+    if ($policyMatches) {
+        foreach ($field in $policyFields) {
+            if (
+                -not $headPolicy.ContainsKey($field) -or
+                -not $SealSnapshot.Policy.ContainsKey($field)
+            ) {
+                $policyMatches = $false
+                break
+            }
+            $headValue = $headPolicy[$field]
+            $sealValue = $SealSnapshot.Policy[$field]
+            if ($null -eq $headValue -or $null -eq $sealValue) {
+                if (-not ($null -eq $headValue -and $null -eq $sealValue)) {
+                    $policyMatches = $false
+                    break
+                }
+            } elseif (
+                $field -eq 'expectedRecordCount' -and
+                [int64]$headValue -ne [int64]$sealValue
+            ) {
+                $policyMatches = $false
+                break
+            } elseif (
+                $field -ne 'expectedRecordCount' -and
+                [string]$headValue -cne [string]$sealValue
+            ) {
+                $policyMatches = $false
+                break
+            }
+        }
+    }
+
+    $headEvidenceSha = Get-GitBlobSha256 -Root $Root -Commit $HeadCommit `
+        -Path $evidencePath
+    $headSchemaSha = Get-GitBlobSha256 -Root $Root -Commit $HeadCommit `
+        -Path $schemaPath
+    $valid = (
+        $policyMatches -and
+        $headEvidenceSha -and
+        $headEvidenceSha -ceq $SealSnapshot.EvidenceSha -and
+        $headSchemaSha -and
+        $headSchemaSha -ceq $SealSnapshot.SchemaSha
+    )
+    if (-not $valid) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path $evidencePath `
+            -Message (
+                'Current historical migration policy, evidence records, and schema must equal ' +
+                "their first sealed snapshot at commit '$($SealSnapshot.Commit)'."
+            )
+    }
+    return $valid
+}
+
+function Get-HistoricalEvidenceMigrationRole {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$CommitReference,
+        [Parameter(Mandatory)] [string]$BatchBase,
+        [Parameter(Mandatory)] [string]$UpperBound,
+        [Parameter(Mandatory)] [int]$ExpectedRecordCount,
+        [Parameter(Mandatory)] [string]$ExpectedSchemaSha
+    )
+
+    $commit = Resolve-GitCommit -Root $Root -Reference $CommitReference
+    $rangeValid = (
+        $commit -and
+        $commit -ceq $CommitReference -and
+        $commit -cne $BatchBase -and
+        $commit -cne $UpperBound -and
+        (Test-GitAncestor -Root $Root -Ancestor $BatchBase -Descendant $commit) -and
+        (Test-GitAncestor -Root $Root -Ancestor $commit -Descendant $UpperBound)
+    )
+    $scopeValid = $false
+    if ($rangeValid) {
+        $frameworkPaths = @(
+            'studio/scripts/powershell/validate-mainline-notes.ps1',
+            'studio/runtime/mainline-note-historical-evidence.schema.json',
+            'studio/runtime/mainline-note-historical-evidence.json',
+            'studio/runtime/shared-runtime-contract.json'
+        )
+        $changedPaths = Get-GitCommitChangedPathSet -Root $Root -Commit $commit
+        $pendingEvidence = Read-GitJsonAtCommit -Root $Root -Commit $commit `
+            -Path 'studio/runtime/mainline-note-historical-evidence.json'
+        $pendingSchema = Read-GitJsonAtCommit -Root $Root -Commit $commit `
+            -Path 'studio/runtime/mainline-note-historical-evidence.schema.json'
+        $pendingSchemaSha = Get-GitBlobSha256 -Root $Root -Commit $commit `
+            -Path 'studio/runtime/mainline-note-historical-evidence.schema.json'
+        $pendingContract = Read-GitJsonAtCommit -Root $Root -Commit $commit `
+            -Path 'studio/runtime/shared-runtime-contract.json'
+        $pendingPolicy = Get-HistoricalEvidencePolicyDocument -Contract $pendingContract
+        $migrationBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $commit `
+            -Path 'studio/runtime/mainline-note-validation-baseline.json'
+        $batchBaselineSha = Get-GitBlobSha256 -Root $Root -Commit $BatchBase `
+            -Path 'studio/runtime/mainline-note-validation-baseline.json'
+        $scopeValid = (
+            $null -ne $changedPaths -and
+            @($frameworkPaths | Where-Object { -not $changedPaths.Contains($_) }).Count -eq 0 -and
+            (Test-HistoricalEvidenceDocumentSnapshot -Document $pendingEvidence `
+                -State pending -ExpectedRecordCount $ExpectedRecordCount `
+                -MigrationCommit $null) -and
+            $pendingSchema -and
+            $pendingSchemaSha -ceq $ExpectedSchemaSha -and
+            [string]$pendingSchema.properties.records.items.properties.batchBase.const -ceq $BatchBase -and
+            $batchBaselineSha -and
+            $migrationBaselineSha -ceq $batchBaselineSha -and
+            (Test-HistoricalEvidencePolicySnapshot -Policy $pendingPolicy `
+                -State pending -BatchBase $BatchBase `
+                -ExpectedRecordCount $ExpectedRecordCount `
+                -MigrationCommit $null -EvidenceSha256 $null)
+        )
+    }
+
+    return [pscustomobject][ordered]@{
+        Commit     = $commit
+        RangeValid = $rangeValid
+        ScopeValid = $scopeValid
+    }
 }
 
 function Get-GitBranchContext {
@@ -607,13 +1475,16 @@ function Read-MainlineNote {
 function Read-LegacyBaseline {
     param(
         [Parameter(Mandatory)] [string]$Root,
-        [Parameter(Mandatory)] [string]$BaselinePath
+        [Parameter(Mandatory)] [string]$BaselinePath,
+        [switch]$AllowMissing
     )
 
     $entries = @{}
     if (-not (Test-Path -LiteralPath $BaselinePath -PathType Leaf)) {
-        Add-ValidationIssue -Severity error -Category 'legacy-baseline' -Path (Convert-ToRepositoryPath ($BaselinePath.Substring($Root.Length).TrimStart('\', '/'))) `
-            -Message 'The hash-bound legacy note migration baseline is missing.'
+        if (-not $AllowMissing) {
+            Add-ValidationIssue -Severity error -Category 'legacy-baseline' -Path (Convert-ToRepositoryPath ($BaselinePath.Substring($Root.Length).TrimStart('\', '/'))) `
+                -Message 'The hash-bound legacy note migration baseline is missing while migration state is pending.'
+        }
         return $entries
     }
 
@@ -638,6 +1509,659 @@ function Read-LegacyBaseline {
             -Message "Invalid legacy baseline JSON: $($_.Exception.Message)"
     }
     return $entries
+}
+
+function Read-HistoricalEvidenceRecords {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$EvidencePath,
+        [Parameter(Mandatory)] [string]$SchemaPath
+    )
+
+    $relativeEvidencePath = Convert-ToRepositoryPath (
+        $EvidencePath.Substring($Root.Length).TrimStart('\', '/')
+    )
+    $relativeSchemaPath = Convert-ToRepositoryPath (
+        $SchemaPath.Substring($Root.Length).TrimStart('\', '/')
+    )
+    if (-not (Test-Path -LiteralPath $SchemaPath -PathType Leaf)) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-schema' -Path $relativeSchemaPath `
+            -Message 'The historical evidence record schema is missing.'
+        return [pscustomobject][ordered]@{
+            schemaValid     = $false
+            migrationCommit = $null
+            records         = @()
+        }
+    }
+    if (-not (Test-Path -LiteralPath $EvidencePath -PathType Leaf)) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-record' -Path $relativeEvidencePath `
+            -Message 'The historical evidence migration record is missing.'
+        return [pscustomobject][ordered]@{
+            schemaValid     = $false
+            migrationCommit = $null
+            records         = @()
+        }
+    }
+
+    $raw = $null
+    try {
+        $raw = Get-Content -LiteralPath $EvidencePath -Raw -ErrorAction Stop
+        $schemaDiagnostics = @()
+        $schemaValid = Test-Json -Json $raw -SchemaFile $SchemaPath `
+            -ErrorAction SilentlyContinue -ErrorVariable +schemaDiagnostics
+        if (-not $schemaValid) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-schema' -Path $relativeEvidencePath `
+                -Message 'The historical evidence migration record does not conform to its JSON schema.'
+            return [pscustomobject][ordered]@{
+                schemaValid     = $false
+                migrationCommit = $null
+                records         = @()
+            }
+        }
+        $document = $raw | ConvertFrom-Json -AsHashtable
+    } catch {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-record' -Path $relativeEvidencePath `
+            -Message "Unable to read the historical evidence migration record: $($_.Exception.Message)"
+        return [pscustomobject][ordered]@{
+            schemaValid     = $false
+            migrationCommit = $null
+            records         = @()
+        }
+    }
+
+    $records = @(
+        $document.records | ForEach-Object {
+            [pscustomobject][ordered]@{
+                rawPath              = [string]$_.path
+                path                 = Convert-ToRepositoryPath ([string]$_.path)
+                preMigrationSha256   = ([string]$_.preMigrationSha256).ToLowerInvariant()
+                batchBase            = ([string]$_.batchBase).ToLowerInvariant()
+                migratedSha256       = ([string]$_.migratedSha256).ToLowerInvariant()
+                historicalCommits    = @(
+                    $_.historicalCommits | ForEach-Object {
+                        ([string]$_).ToLowerInvariant()
+                    }
+                )
+                expectedStatus       = [string]$_.expectedStatus
+            }
+        }
+    )
+    return [pscustomobject][ordered]@{
+        schemaValid     = $true
+        migrationCommit = if ($null -eq $document.migrationCommit) {
+            $null
+        } else {
+            ([string]$document.migrationCommit).ToLowerInvariant()
+        }
+        records         = @($records)
+    }
+}
+
+function Read-HistoricalEvidencePolicy {
+    param(
+        [Parameter(Mandatory)] [string]$ContractPath,
+        [Parameter(Mandatory)] [string]$SchemaPath
+    )
+
+    $contractRelativePath = 'studio/runtime/shared-runtime-contract.json'
+    try {
+        $contract = Get-Content -LiteralPath $ContractPath -Raw -ErrorAction Stop |
+            ConvertFrom-Json -AsHashtable
+    } catch {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path $contractRelativePath `
+            -Message "Unable to read historical evidence migration policy: $($_.Exception.Message)"
+        return $null
+    }
+
+    if (
+        -not $contract.ContainsKey('mainlineReadiness') -or
+        $contract.mainlineReadiness -isnot [System.Collections.IDictionary] -or
+        -not $contract.mainlineReadiness.ContainsKey('historicalEvidenceMigration') -or
+        $contract.mainlineReadiness.historicalEvidenceMigration -isnot [System.Collections.IDictionary]
+    ) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path $contractRelativePath `
+            -Message 'mainlineReadiness.historicalEvidenceMigration policy is required.'
+        return $null
+    }
+
+    $policy = $contract.mainlineReadiness.historicalEvidenceMigration
+    $requiredFields = @(
+        'state',
+        'batchBase',
+        'expectedRecordCount',
+        'migrationCommit',
+        'evidenceSha256',
+        'evidencePath',
+        'schemaPath',
+        'legacyBaselinePath'
+    )
+    if (@($requiredFields | Where-Object { -not $policy.ContainsKey($_) }).Count -gt 0) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path $contractRelativePath `
+            -Message 'Historical evidence migration policy is missing required fields.'
+        return $null
+    }
+
+    $state = [string]$policy.state
+    $batchBase = [string]$policy.batchBase
+    $recordCountIsInteger = (
+        $policy.expectedRecordCount -is [byte] -or
+        $policy.expectedRecordCount -is [int16] -or
+        $policy.expectedRecordCount -is [int32] -or
+        $policy.expectedRecordCount -is [int64]
+    )
+    $pathsMatch = (
+        [string]$policy.evidencePath -ceq 'studio/runtime/mainline-note-historical-evidence.json' -and
+        [string]$policy.schemaPath -ceq 'studio/runtime/mainline-note-historical-evidence.schema.json' -and
+        [string]$policy.legacyBaselinePath -ceq 'studio/runtime/mainline-note-validation-baseline.json'
+    )
+    $migrationCommitValid = if ($state -eq 'pending') {
+        $null -eq $policy.migrationCommit
+    } else {
+        $policy.migrationCommit -is [string] -and
+        [string]$policy.migrationCommit -cmatch '^[0-9a-f]{40}$'
+    }
+    $evidenceShaValid = if ($state -eq 'pending') {
+        $null -eq $policy.evidenceSha256
+    } else {
+        $policy.evidenceSha256 -is [string] -and
+        [string]$policy.evidenceSha256 -cmatch '^[0-9a-f]{64}$'
+    }
+    if (
+        $state -notin @('pending', 'sealed') -or
+        $batchBase -cnotmatch '^[0-9a-f]{40}$' -or
+        -not $recordCountIsInteger -or
+        [int64]$policy.expectedRecordCount -lt 0 -or
+        -not $migrationCommitValid -or
+        -not $evidenceShaValid -or
+        -not $pathsMatch
+    ) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path $contractRelativePath `
+            -Message 'Historical evidence migration policy has invalid state, batchBase, count, migrationCommit, evidenceSha256, or authority paths.'
+        return $null
+    }
+
+    try {
+        $schema = Get-Content -LiteralPath $SchemaPath -Raw -ErrorAction Stop |
+            ConvertFrom-Json -AsHashtable
+        $schemaBatchBase = [string]$schema.properties.records.items.properties.batchBase.const
+    } catch {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path 'studio/runtime/mainline-note-historical-evidence.schema.json' `
+            -Message "Unable to inspect the schema batchBase binding: $($_.Exception.Message)"
+        return $null
+    }
+    if ($schemaBatchBase -cne $batchBase) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path 'studio/runtime/mainline-note-historical-evidence.schema.json' `
+            -Message 'The schema batchBase const must exactly match the contract migration policy.'
+        return $null
+    }
+
+    return [pscustomobject][ordered]@{
+        state               = $state
+        batchBase           = $batchBase
+        expectedRecordCount = [int]$policy.expectedRecordCount
+        migrationCommit     = if ($null -eq $policy.migrationCommit) {
+            $null
+        } else {
+            [string]$policy.migrationCommit
+        }
+        evidenceSha256      = if ($null -eq $policy.evidenceSha256) {
+            $null
+        } else {
+            [string]$policy.evidenceSha256
+        }
+        evidencePath        = [string]$policy.evidencePath
+        schemaPath          = [string]$policy.schemaPath
+        legacyBaselinePath  = [string]$policy.legacyBaselinePath
+    }
+}
+
+function Test-HistoricalEvidenceTransition {
+    param(
+        [Parameter(Mandatory)] [object]$Policy,
+        [Parameter(Mandatory)] [int]$RecordCount,
+        [Parameter(Mandatory)] [int]$BaselineCount,
+        [Parameter(Mandatory)] [bool]$BaselineExists,
+        [AllowNull()] [object]$EvidenceMigrationCommit
+    )
+
+    $valid = if ($Policy.state -eq 'pending') {
+        $RecordCount -eq 0 -and
+        $BaselineExists -and
+        $BaselineCount -eq $Policy.expectedRecordCount -and
+        $null -eq $EvidenceMigrationCommit -and
+        $null -eq $Policy.migrationCommit
+    } else {
+        $RecordCount -eq $Policy.expectedRecordCount -and
+        -not $BaselineExists -and
+        $BaselineCount -eq 0 -and
+        $EvidenceMigrationCommit -ceq $Policy.migrationCommit
+    }
+    if (-not $valid) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-transition' `
+            -Path 'studio/runtime/mainline-note-historical-evidence.json' `
+            -Message (
+                "Migration state '$($Policy.state)' requires its exact atomic record/baseline counts; " +
+                "found records=$RecordCount, baseline=$BaselineCount, baselineExists=$BaselineExists."
+            )
+    }
+    return $valid
+}
+
+function Test-HeadBoundAuthoritySurface {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$HeadCommit,
+        [Parameter(Mandatory)] [string[]]$Paths,
+        [string[]]$AllowAbsentPaths = @()
+    )
+
+    $valid = $true
+    foreach ($path in @($Paths)) {
+        $absolutePath = Join-Path $Root ($path.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+        $worktreeSha = if (Test-Path -LiteralPath $absolutePath -PathType Leaf) {
+            Get-RepositoryFileHash -Path $absolutePath
+        } else {
+            $null
+        }
+        $headSha = Get-GitBlobSha256 -Root $Root -Commit $HeadCommit -Path $path
+        $bothAbsentAndAllowed = (
+            $path -in $AllowAbsentPaths -and
+            -not $worktreeSha -and
+            -not $headSha
+        )
+        if (
+            -not $bothAbsentAndAllowed -and
+            (-not $worktreeSha -or -not $headSha -or $worktreeSha -ne $headSha)
+        ) {
+            $valid = $false
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-authority-surface-dirty' `
+                -Path $path `
+                -Message 'Historical migration authority bytes must exactly match the selected HeadRef.'
+        }
+    }
+    return $valid
+}
+
+function Read-LegacyBaselineAtCommit {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$Commit
+    )
+
+    $result = Invoke-GitCapture -Root $Root -Arguments @(
+        'show', "$Commit`:studio/runtime/mainline-note-validation-baseline.json"
+    )
+    if ($result.ExitCode -ne 0 -or $result.Output.Count -eq 0) {
+        return $null
+    }
+
+    try {
+        $document = ($result.Output -join "`n") | ConvertFrom-Json -AsHashtable
+        $entries = @{}
+        foreach ($entry in @($document.entries)) {
+            $path = Convert-ToRepositoryPath ([string]$entry.path)
+            if (-not $path -or -not $entry.sha256 -or $entries.ContainsKey($path)) {
+                return $null
+            }
+            $entries[$path] = ([string]$entry.sha256).ToLowerInvariant()
+        }
+        return $entries
+    } catch {
+        return $null
+    }
+}
+
+function Test-HistoricalEvidenceRecords {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [object[]]$Records,
+        [Parameter(Mandatory)] [System.Collections.IDictionary]$CurrentBaseline,
+        [Parameter(Mandatory)] [System.Collections.IDictionary]$NotesByPath,
+        [Parameter(Mandatory)] [string]$HeadReference,
+        [Parameter(Mandatory)] [string]$ExpectedBatchBase,
+        [Parameter(Mandatory)] [string]$ExpectedMigrationCommit,
+        [Parameter(Mandatory)] [int]$ExpectedRecordCount,
+        [Parameter(Mandatory)] [bool]$AuthoritySurfaceClean
+    )
+
+    $validated = @{}
+    $resolvedHead = Resolve-GitCommit -Root $Root -Reference $HeadReference
+    if (-not $resolvedHead) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-git-context' `
+            -Message "Unable to resolve historical evidence validation head '$HeadReference'."
+        return $validated
+    }
+
+    $frameworkOrigin = Get-HistoricalEvidenceFrameworkOrigin -Root $Root `
+        -HeadCommit $resolvedHead
+    if (-not $frameworkOrigin) {
+        return $validated
+    }
+    $batchBase = [string]$frameworkOrigin.BatchBase
+    $canonicalMigrationCommit = [string]$frameworkOrigin.MigrationCommit
+    $canonicalRecordCount = [int]$frameworkOrigin.ExpectedRecordCount
+    $canonicalBatchBaseline = $frameworkOrigin.Baseline
+    $headSchema = Read-GitJsonAtCommit -Root $Root -Commit $resolvedHead `
+        -Path 'studio/runtime/mainline-note-historical-evidence.schema.json'
+    $headSchemaBatchBase = if ($headSchema) {
+        [string]$headSchema.properties.records.items.properties.batchBase.const
+    } else {
+        $null
+    }
+    $currentOriginFactsMatch = (
+        $ExpectedBatchBase -ceq $batchBase -and
+        $ExpectedMigrationCommit -ceq $canonicalMigrationCommit -and
+        $ExpectedRecordCount -eq $canonicalRecordCount -and
+        $headSchemaBatchBase -ceq $batchBase
+    )
+    if (-not $currentOriginFactsMatch) {
+        Add-ValidationIssue -Severity error `
+            -Category 'historical-evidence-sealed-snapshot-mismatch' `
+            -Path 'studio/runtime/shared-runtime-contract.json' `
+            -Message (
+                'Current policy and operative schema must equal the canonical migration commit, ' +
+                'batch base, and record count derived from the immutable framework first-add history.'
+            )
+    }
+
+    $sealSnapshot = Get-FirstHistoricalEvidenceSealSnapshot -Root $Root `
+        -HeadCommit $resolvedHead -ExpectedBatchBase $batchBase `
+        -ExpectedMigrationCommit $canonicalMigrationCommit `
+        -ExpectedRecordCount $canonicalRecordCount
+    $sealedSnapshotValid = $false
+    if ($sealSnapshot) {
+        $headMatchesSeal = Test-CurrentHistoricalEvidenceSealSnapshot `
+            -Root $Root -HeadCommit $resolvedHead -SealSnapshot $sealSnapshot
+        $currentPointerMatchesSeal = (
+            $ExpectedMigrationCommit -ceq $sealSnapshot.MigrationCommit
+        )
+        if ($headMatchesSeal -and -not $currentPointerMatchesSeal) {
+            Add-ValidationIssue -Severity error `
+                -Category 'historical-evidence-sealed-snapshot-mismatch' `
+                -Path 'studio/runtime/shared-runtime-contract.json' `
+                -Message 'Current migrationCommit must equal the commit bound by the first sealed snapshot.'
+        }
+        $sealedSnapshotValid = (
+            $headMatchesSeal -and
+            $currentPointerMatchesSeal -and
+            $currentOriginFactsMatch
+        )
+    }
+
+    $sealedMigrationCommit = if ($sealSnapshot) {
+        [string]$sealSnapshot.MigrationCommit
+    } else {
+        $null
+    }
+    $sealedMigrationRole = if ($sealedMigrationCommit) {
+        Get-HistoricalEvidenceMigrationRole -Root $Root `
+            -CommitReference $sealedMigrationCommit -BatchBase $batchBase `
+            -UpperBound $sealSnapshot.Commit `
+            -ExpectedRecordCount $canonicalRecordCount `
+            -ExpectedSchemaSha $sealSnapshot.SchemaSha
+    } else {
+        $null
+    }
+    $migrationCommit = if ($sealedMigrationRole) {
+        $sealedMigrationRole.Commit
+    } else {
+        $null
+    }
+    $migrationCommitValid = (
+        $sealedMigrationRole -and
+        $sealedMigrationRole.RangeValid -and
+        $sealedMigrationRole.ScopeValid
+    )
+    if (-not $sealedMigrationRole -or -not $sealedMigrationRole.RangeValid) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-migration-out-of-range' `
+            -Message (
+                'The first sealed snapshot must bind a prior framework commit strictly inside ' +
+                'batchBase..first-seal..validation-head.'
+            )
+    } elseif (-not $sealedMigrationRole.ScopeValid) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-migration-scope' `
+            -Message (
+                'The migration commit derived from the first seal must establish the fixed ' +
+                'framework plus exact pending evidence, baseline, schema, and policy.'
+            )
+    }
+
+    if ($sealSnapshot -and $ExpectedMigrationCommit -cne $sealedMigrationCommit) {
+        $currentMigrationRole = Get-HistoricalEvidenceMigrationRole -Root $Root `
+            -CommitReference $ExpectedMigrationCommit -BatchBase $batchBase `
+            -UpperBound $resolvedHead -ExpectedRecordCount $canonicalRecordCount `
+            -ExpectedSchemaSha $sealSnapshot.SchemaSha
+        if (-not $currentMigrationRole.RangeValid) {
+            Add-ValidationIssue -Severity error `
+                -Category 'historical-evidence-migration-out-of-range' `
+                -Message 'Current migrationCommit is outside the fixed batchBase..validation-head range.'
+        } elseif (-not $currentMigrationRole.ScopeValid) {
+            Add-ValidationIssue -Severity error `
+                -Category 'historical-evidence-migration-scope' `
+                -Message 'Current migrationCommit does not establish the exact pending framework role.'
+        }
+    }
+
+    $recordPathSet = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    foreach ($record in @($Records)) {
+        $null = $recordPathSet.Add([string]$record.path)
+    }
+    $batchPathSet = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    foreach ($path in @($canonicalBatchBaseline.Keys)) {
+        $null = $batchPathSet.Add([string]$path)
+    }
+    $recordSetComplete = (
+        $recordPathSet.Count -eq $batchPathSet.Count -and
+        @($recordPathSet | Where-Object { -not $batchPathSet.Contains($_) }).Count -eq 0 -and
+        @($batchPathSet | Where-Object { -not $recordPathSet.Contains($_) }).Count -eq 0
+    )
+    if (-not $recordSetComplete) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-record-set-mismatch' `
+            -Path 'studio/runtime/mainline-note-historical-evidence.json' `
+            -Message 'Sealed record paths must exactly equal every legacy baseline path at batchBase.'
+    }
+
+    $seenPaths = @{}
+    foreach ($record in @($Records)) {
+        $path = [string]$record.path
+        $recordErrorCount = $script:validationErrors.Count
+
+        if ([string]$record.rawPath -cne $path) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-path-noncanonical' -Path $path `
+                -Message 'Historical evidence paths must already be canonical repository paths.'
+        }
+        if ($seenPaths.ContainsKey($path)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-duplicate' -Path $path `
+                -Message 'Historical evidence records must use unique note paths.'
+            continue
+        }
+        $seenPaths[$path] = $true
+
+        if ($CurrentBaseline.Contains($path)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-baseline-overlap' -Path $path `
+                -Message 'A note path cannot remain in the legacy baseline after receiving a historical evidence record.'
+        }
+        if (-not $canonicalBatchBaseline.ContainsKey($path)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-not-baselined' -Path $path `
+                -Message 'The exact note path was not present in the legacy baseline at batchBase.'
+        } elseif (
+            [string]$canonicalBatchBaseline[$path] -cne
+            [string]$record.preMigrationSha256
+        ) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-pre-sha-mismatch' -Path $path `
+                -Message 'preMigrationSha256 does not match the exact legacy baseline entry at batchBase.'
+        }
+        if (-not $NotesByPath.Contains($path)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-note-missing' -Path $path `
+                -Message 'Historical evidence record points to a missing current note.'
+            continue
+        }
+        $note = $NotesByPath[$path]
+
+        if ([string]$record.batchBase -cne $batchBase) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-batch-base-mismatch' -Path $path `
+                -Message 'Record batchBase must exactly match the contract and schema binding.'
+            continue
+        }
+        $preMigrationBlobSha = Get-GitBlobSha256 -Root $Root -Commit $batchBase -Path $path
+        if (
+            -not $preMigrationBlobSha -or
+            $preMigrationBlobSha -ne [string]$record.preMigrationSha256
+        ) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-pre-sha-mismatch' -Path $path `
+                -Message 'preMigrationSha256 does not match the note bytes at batchBase.'
+        }
+
+        $historyAnchors = Get-GitNoteHistoryAnchors -Root $Root -AtCommit $batchBase -Path $path
+        $historicalCommitSet = @{}
+        foreach ($historicalReference in @($record.historicalCommits)) {
+            $historicalCommit = Resolve-GitCommit -Root $Root -Reference ([string]$historicalReference)
+            if (-not $historicalCommit -or $historicalCommit -ne [string]$historicalReference) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-commit-invalid' -Path $path `
+                    -Message 'Every historical commit must identify one exact commit object.'
+                continue
+            }
+            $historicalCommitSet[$historicalCommit] = $true
+            if (-not (Test-GitAncestor -Root $Root -Ancestor $historicalCommit -Descendant $batchBase)) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-historical-nonancestor' -Path $path `
+                    -Message "Historical commit '$historicalCommit' is not an ancestor of batchBase."
+                continue
+            }
+            if (-not $historyAnchors.Contains($historicalCommit)) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-history-anchor-mismatch' -Path $path `
+                    -Message "Historical commit '$historicalCommit' is neither the add nor last-touch commit for the note at batchBase."
+            }
+        }
+
+        if ($migrationCommit -and $historicalCommitSet.Contains($migrationCommit)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-commit-role-overlap' -Path $path `
+                -Message 'migrationCommit cannot also be declared as a historical commit.'
+        }
+
+        $headNoteSha = Get-GitBlobSha256 -Root $Root -Commit $resolvedHead -Path $path
+        if (-not $headNoteSha -or $note.sha256 -cne $headNoteSha) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-note-surface-dirty' -Path $path `
+                -Message 'A record-path note must exactly match its selected HeadRef bytes during Git validation.'
+        }
+        $sealedSnapshotExists = (
+            $sealSnapshot -and
+            (Get-GitBlobSha256 -Root $Root -Commit $sealSnapshot.Commit -Path $path) -ceq
+                [string]$record.migratedSha256
+        )
+        if (-not $sealedSnapshotExists) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-snapshot-missing' -Path $path `
+                -Message 'migratedSha256 must equal the note bytes in the first sealed snapshot.'
+        }
+
+        $currentMatchesSealedSnapshot = (
+            $headNoteSha -and
+            $headNoteSha -ceq [string]$record.migratedSha256
+        )
+        if ($currentMatchesSealedSnapshot) {
+            if ($note.status -ne [string]$record.expectedStatus) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-status-mismatch' -Path $path `
+                    -Message "Sealed note status '$($note.status)' does not match expectedStatus '$($record.expectedStatus)'."
+            }
+
+            $exactRelatedCommits = Get-ExactCommitReferenceList -Value $note.relatedCommits
+            $expectedCommitSet = @{}
+            foreach ($commit in @($record.historicalCommits)) {
+                $expectedCommitSet[[string]$commit] = $true
+            }
+            $currentCommitSet = @{}
+            foreach ($reference in @($exactRelatedCommits.References)) {
+                $currentCommitSet[[string]$reference] = $true
+            }
+            $relatedCommitsMatch = (
+                $exactRelatedCommits.Valid -and
+                $currentCommitSet.Count -eq $expectedCommitSet.Count -and
+                @($currentCommitSet.Keys | Where-Object { -not $expectedCommitSet.Contains($_) }).Count -eq 0
+            )
+            if (-not $relatedCommitsMatch) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-related-commits-mismatch' -Path $path `
+                    -Message 'Related Commits must resolve to exactly historicalCommits; migrationCommit is not note or current-path authorization evidence.'
+            }
+        }
+
+        if (
+            $currentMatchesSealedSnapshot -and
+            $AuthoritySurfaceClean -and
+            $migrationCommitValid -and
+            $sealedSnapshotValid -and
+            $recordSetComplete -and
+            $script:validationErrors.Count -eq $recordErrorCount
+        ) {
+            $validated[$path] = [pscustomobject][ordered]@{
+                path                = $path
+                historicalCommits   = @($record.historicalCommits)
+                historicalCommitSet = $historicalCommitSet
+            }
+        }
+    }
+    return $validated
+}
+
+function Test-HistoricalEvidenceStructuralRecords {
+    param(
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [object[]]$Records,
+        [Parameter(Mandatory)] [System.Collections.IDictionary]$NotesByPath
+    )
+
+    $seenPaths = @{}
+    foreach ($record in @($Records)) {
+        $path = [string]$record.path
+        if ([string]$record.rawPath -cne $path) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-path-noncanonical' -Path $path `
+                -Message 'Historical evidence paths must already be canonical repository paths.'
+        }
+        if ($seenPaths.ContainsKey($path)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-duplicate' -Path $path `
+                -Message 'Historical evidence records must use unique note paths.'
+            continue
+        }
+        $seenPaths[$path] = $true
+
+        if (-not $NotesByPath.Contains($path)) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-note-missing' -Path $path `
+                -Message 'Historical evidence record points to a missing current note.'
+            continue
+        }
+        $note = $NotesByPath[$path]
+        if ($note.sha256 -ceq [string]$record.migratedSha256) {
+            if ($note.status -ne [string]$record.expectedStatus) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-status-mismatch' -Path $path `
+                    -Message "Sealed note status '$($note.status)' does not match expectedStatus '$($record.expectedStatus)'."
+            }
+
+            $exactRelatedCommits = Get-ExactCommitReferenceList -Value $note.relatedCommits
+            $expectedCommitSet = @{}
+            foreach ($commit in @($record.historicalCommits)) {
+                $expectedCommitSet[[string]$commit] = $true
+            }
+            $currentCommitSet = @{}
+            foreach ($reference in @($exactRelatedCommits.References)) {
+                $currentCommitSet[[string]$reference] = $true
+            }
+            if (
+                -not $exactRelatedCommits.Valid -or
+                $currentCommitSet.Count -ne $expectedCommitSet.Count -or
+                @($currentCommitSet.Keys | Where-Object { -not $expectedCommitSet.Contains($_) }).Count -gt 0
+            ) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-related-commits-mismatch' -Path $path `
+                    -Message 'Related Commits must resolve to exactly historicalCommits; migrationCommit is not note or current-path authorization evidence.'
+            }
+        }
+    }
 }
 
 function Read-MainlineIndex {
@@ -742,10 +2266,48 @@ $WorkspaceRoot = [System.IO.Path]::GetFullPath($WorkspaceRoot)
 $notesRoot = Join-Path $WorkspaceRoot 'docs/mainline-updates'
 $indexPath = Join-Path $notesRoot 'README.md'
 $baselinePath = Join-Path $WorkspaceRoot 'studio/runtime/mainline-note-validation-baseline.json'
+$historicalEvidencePath = Join-Path $WorkspaceRoot 'studio/runtime/mainline-note-historical-evidence.json'
+$historicalEvidenceSchemaPath = Join-Path $WorkspaceRoot 'studio/runtime/mainline-note-historical-evidence.schema.json'
 $contractPath = Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json'
 $registryPath = Join-Path $WorkspaceRoot 'studio/runtime/impact-registry.json'
 
-$legacyBaseline = Read-LegacyBaseline -Root $WorkspaceRoot -BaselinePath $baselinePath
+$historicalEvidencePolicy = Read-HistoricalEvidencePolicy -ContractPath $contractPath `
+    -SchemaPath $historicalEvidenceSchemaPath
+$historicalEvidenceDocument = Read-HistoricalEvidenceRecords -Root $WorkspaceRoot `
+    -EvidencePath $historicalEvidencePath -SchemaPath $historicalEvidenceSchemaPath
+$historicalEvidenceRecords = @($historicalEvidenceDocument.records)
+$baselineExists = Test-Path -LiteralPath $baselinePath -PathType Leaf
+$allowMissingBaseline = (
+    $historicalEvidencePolicy -and
+    $historicalEvidencePolicy.state -eq 'sealed'
+)
+$legacyBaseline = Read-LegacyBaseline -Root $WorkspaceRoot -BaselinePath $baselinePath `
+    -AllowMissing:$allowMissingBaseline
+$historicalEvidenceSealValid = $true
+if ($historicalEvidencePolicy) {
+    $null = Test-HistoricalEvidenceTransition -Policy $historicalEvidencePolicy `
+        -RecordCount $historicalEvidenceRecords.Count -BaselineCount $legacyBaseline.Count `
+        -BaselineExists $baselineExists `
+        -EvidenceMigrationCommit $historicalEvidenceDocument.migrationCommit
+    if ($historicalEvidencePolicy.state -eq 'sealed') {
+        $currentEvidenceSha = if (
+            Test-Path -LiteralPath $historicalEvidencePath -PathType Leaf
+        ) {
+            Get-RepositoryFileHash -Path $historicalEvidencePath
+        } else {
+            $null
+        }
+        if (
+            -not $currentEvidenceSha -or
+            $currentEvidenceSha -cne $historicalEvidencePolicy.evidenceSha256
+        ) {
+            $historicalEvidenceSealValid = $false
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-seal-mismatch' `
+                -Path 'studio/runtime/mainline-note-historical-evidence.json' `
+                -Message 'Sealed historical evidence bytes must match contract evidenceSha256.'
+        }
+    }
+}
 $indexEntries = Read-MainlineIndex -IndexPath $indexPath
 $notes = [System.Collections.Generic.List[object]]::new()
 $notesByPath = @{}
@@ -882,6 +2444,105 @@ $repositorySlug = if ($configuredRepositorySlug) {
     $originRepositorySlug
 }
 
+$historicalEvidenceByPath = @{}
+$historicalBatchBaseline = @{}
+$historicalHeadCommit = if ($gitAvailable) {
+    Resolve-GitCommit -Root $WorkspaceRoot -Reference $HeadRef
+} else {
+    $null
+}
+if (
+    $historicalEvidencePolicy -and
+    $gitAvailable -and
+    $historicalEvidencePolicy.expectedRecordCount -gt 0
+) {
+    $resolvedPolicyBase = Resolve-GitCommit -Root $WorkspaceRoot `
+        -Reference $historicalEvidencePolicy.batchBase
+    if (
+        -not $resolvedPolicyBase -or
+        $resolvedPolicyBase -cne $historicalEvidencePolicy.batchBase
+    ) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-batch-base-invalid' `
+            -Path 'studio/runtime/shared-runtime-contract.json' `
+            -Message 'The contract historical batchBase does not resolve to its exact commit.'
+    } else {
+        $baselineAtPolicyBase = Read-LegacyBaselineAtCommit -Root $WorkspaceRoot `
+            -Commit $resolvedPolicyBase
+        if ($null -eq $baselineAtPolicyBase) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-batch-baseline-invalid' `
+                -Path 'studio/runtime/mainline-note-validation-baseline.json' `
+                -Message 'Unable to read the legacy baseline blob at the fixed batchBase.'
+        } else {
+            $historicalBatchBaseline = $baselineAtPolicyBase
+            if ($historicalBatchBaseline.Count -ne $historicalEvidencePolicy.expectedRecordCount) {
+                Add-ValidationIssue -Severity error -Category 'historical-evidence-batch-baseline-invalid' `
+                    -Path 'studio/runtime/mainline-note-validation-baseline.json' `
+                    -Message 'The fixed batchBase baseline count does not match expectedRecordCount.'
+            }
+            if ($historicalEvidencePolicy.state -eq 'pending') {
+                $currentBaselineSha = if ($baselineExists) {
+                    Get-RepositoryFileHash -Path $baselinePath
+                } else {
+                    $null
+                }
+                $batchBaselineSha = Get-GitBlobSha256 -Root $WorkspaceRoot `
+                    -Commit $resolvedPolicyBase `
+                    -Path 'studio/runtime/mainline-note-validation-baseline.json'
+                if (
+                    -not $currentBaselineSha -or
+                    -not $batchBaselineSha -or
+                    $currentBaselineSha -ne $batchBaselineSha
+                ) {
+                    Add-ValidationIssue -Severity error -Category 'historical-evidence-pending-baseline-mismatch' `
+                        -Path 'studio/runtime/mainline-note-validation-baseline.json' `
+                        -Message 'Pending migration requires the exact legacy baseline bytes from batchBase.'
+                }
+            }
+        }
+    }
+}
+
+if (
+    $historicalEvidenceRecords.Count -gt 0 -or
+    ($historicalEvidencePolicy -and $historicalEvidencePolicy.state -eq 'sealed')
+) {
+    if (-not $historicalEvidencePolicy) {
+        Add-ValidationIssue -Severity error -Category 'historical-evidence-policy' `
+            -Path 'studio/runtime/shared-runtime-contract.json' `
+            -Message 'Historical evidence records cannot be validated without migration policy.'
+    } elseif (-not $gitAvailable -or -not $historicalHeadCommit) {
+        Test-HistoricalEvidenceStructuralRecords -Records $historicalEvidenceRecords `
+            -NotesByPath $notesByPath
+        if ($RequireReady -or $baseRefMode) {
+            Add-ValidationIssue -Severity error -Category 'historical-evidence-git-context' `
+                -Path 'studio/runtime/mainline-note-historical-evidence.json' `
+                -Message 'Blocking or BaseRef validation of historical evidence requires an available Git worktree.'
+        }
+    } else {
+        $authorityPaths = @(
+            $historicalEvidencePolicy.evidencePath,
+            $historicalEvidencePolicy.schemaPath,
+            'studio/runtime/shared-runtime-contract.json',
+            $historicalEvidencePolicy.legacyBaselinePath,
+            'docs/mainline-updates/README.md'
+        )
+        $authoritySurfaceClean = Test-HeadBoundAuthoritySurface -Root $WorkspaceRoot `
+            -HeadCommit $historicalHeadCommit -Paths $authorityPaths `
+            -AllowAbsentPaths @($historicalEvidencePolicy.legacyBaselinePath)
+        $authoritySurfaceClean = (
+            $authoritySurfaceClean -and
+            $historicalEvidenceSealValid
+        )
+        $historicalEvidenceByPath = Test-HistoricalEvidenceRecords -Root $WorkspaceRoot `
+            -Records $historicalEvidenceRecords -CurrentBaseline $legacyBaseline `
+            -NotesByPath $notesByPath `
+            -HeadReference $HeadRef -ExpectedBatchBase $historicalEvidencePolicy.batchBase `
+            -ExpectedMigrationCommit $historicalEvidencePolicy.migrationCommit `
+            -ExpectedRecordCount $historicalEvidencePolicy.expectedRecordCount `
+            -AuthoritySurfaceClean $authoritySurfaceClean
+    }
+}
+
 foreach ($note in @($notes)) {
     if ($note.status -notin @('Ready', 'Merged')) { continue }
 
@@ -918,6 +2579,19 @@ foreach ($note in @($notes)) {
 
         if ($baseRefMode -and $noteChanged) {
             if (-not $branchContext -or -not $branchContext.Commits.ContainsKey($resolved)) {
+                $historicalRecord = if ($historicalEvidenceByPath.ContainsKey($note.path)) {
+                    $historicalEvidenceByPath[$note.path]
+                } else {
+                    $null
+                }
+                $isBoundHistoricalReference = (
+                    $historicalRecord -and
+                    $historicalRecord.historicalCommitSet.Contains($resolved)
+                )
+                if ($isBoundHistoricalReference) {
+                    $script:historicalEvidenceApplied.Add("$($note.path)@$resolved")
+                    continue
+                }
                 $evidenceHasErrors = $true
                 Add-ValidationIssue -Severity error -Category 'commit-evidence-out-of-range' -Path $note.path `
                     -Message "Related commit '$reference' is outside the merge-base..HeadRef branch range."
@@ -1065,6 +2739,7 @@ if ($branchMode) {
 
     $closedReadyNotes = @($changedNotes | Where-Object {
         $_.status -in @('Ready', 'Merged') -and
+        -not $historicalEvidenceByPath.ContainsKey($_.path) -and
         $_.reconciliationStatus -eq 'Closed' -and
         $_.hasReconciliationSection -and
         -not $_.reconciliationSectionMalformed -and
@@ -1112,6 +2787,7 @@ if ($branchMode) {
             }
             $aggregateNoteEligible = (
                 $null -ne $aggregateNote -and
+                -not $historicalEvidenceByPath.ContainsKey($aggregatePath) -and
                 $aggregateNote.status -in @('Ready', 'Merged') -and
                 $aggregateNote.reconciliationStatus -eq 'Closed' -and
                 $aggregateNote.hasReconciliationSection -and
@@ -1245,7 +2921,16 @@ $result = [pscustomobject][ordered]@{
     WARNINGS                  = @($script:validationWarnings)
     NOTE_COUNT                = $notes.Count
     LEGACY_BASELINE_COUNT     = $legacyBaseline.Count
+    LEGACY_BASELINE_EXISTS    = [bool]$baselineExists
     LEGACY_BASELINE_APPLIED   = @($script:legacyBaselineApplied)
+    HISTORICAL_EVIDENCE_COUNT = $historicalEvidenceRecords.Count
+    HISTORICAL_EVIDENCE_VALID = $historicalEvidenceByPath.Count
+    HISTORICAL_EVIDENCE_APPLIED = @($script:historicalEvidenceApplied)
+    HISTORICAL_EVIDENCE_MIGRATION_STATE = if ($historicalEvidencePolicy) {
+        $historicalEvidencePolicy.state
+    } else {
+        $null
+    }
     BRANCH_MODE               = $branchMode
     BASE_REF_MODE             = $baseRefMode
     READINESS_SCOPE           = if ($PSBoundParameters.ContainsKey('ReadinessScope')) { $ReadinessScope } else { $null }

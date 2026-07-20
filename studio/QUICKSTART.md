@@ -69,7 +69,7 @@ code projects/studio-automation/studio-automation.code-workspace
 <!-- governance-anchor: quickstart-seven-stage-workflow -->
 ## 七階段工作流程
 
-所有交付工作都必須依序執行：
+所有 project 與 consumer feature 交付都必須依序執行：
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
@@ -81,6 +81,12 @@ code projects/studio-automation/studio-automation.code-workspace
 
 補充規則：
 
+- Studio Constitution 2.1 的等效證據路徑只適用 contract 指定的 canonical workspace
+  governance repo，而且批次必須只維護 shared layer。實作前缺少 owner 授權計畫或
+  ledger IDs 時必須走完整七階段；有效進入後若仍缺判別性 negative tests、canonical
+  audit、完整 suite 或 `Ready`、`Closed` Batch note，則必須維持 `Draft` 與 `NOT READY`。
+- `projects/`、`learning/`、外部 repo 與一般 feature 不得使用此路徑。Batch Ready 也不得
+  取代 contract 指定的 Aggregate note、promotion gate 或 R6 fresh-fixture E2E。
 - `/speckit.discover` 是可選的 pre-spec 輔助步驟。
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令。
 - `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段。
@@ -113,7 +119,7 @@ code projects/studio-automation/studio-automation.code-workspace
 
 ## Optional: Workflow Runtime（Wave 3）
 
-七階段流程仍以 agent prompt + setup-*.ps1 entry gate 為主流程驅動。`studio/workflows/sdd-pipeline/` 額外提供一份**可選**的編排層，把七階段、readiness 8 種 primary status、ECI 3 種 authorization outcome 寫成單一 yaml workflow，並由 `run-workflow.ps1` 帶 RunState（`<project>/.workflow/runs/<feature>/state.json`，本機暫態、不進 Git）做 halt-and-resume。此編排層目前為 experimental、預設停用，需經 catalog 授權才能執行。
+七階段流程仍以 agent prompt + setup-*.ps1 entry gate 為主流程驅動。`studio/workflows/sdd-pipeline/` 額外提供一份**可選**的編排層，把七階段、readiness 8 種 primary status、ECI 4 種 authorization outcome 寫成單一 yaml workflow，並由 `run-workflow.ps1` 帶 RunState（`<project>/.workflow/runs/<feature>/state.json`，本機暫態、不進 Git）做 halt-and-resume。此編排層目前為 experimental、預設停用，需經 catalog 授權才能執行。
 
 依賴：
 

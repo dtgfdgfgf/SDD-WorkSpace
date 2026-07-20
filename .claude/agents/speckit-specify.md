@@ -97,7 +97,7 @@ Given that feature description, do this:
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
        Each criterion must be verifiable without implementation details
     7. Identify Key Entities (if data involved)
-    8. Return: SUCCESS (spec ready for clarification and subsequent readiness triage)
+    8. Return: SUCCESS (spec ready for `/speckit.clarify`)
 
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
 
@@ -139,7 +139,7 @@ Given that feature description, do this:
       
       ## Notes
       
-       - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.readiness`
+       - Items marked incomplete require spec updates before `/speckit.clarify`; Specify does not route directly to `/speckit.readiness`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
@@ -158,8 +158,8 @@ Given that feature description, do this:
 
       - **If [NEEDS CLARIFICATION] markers remain**:
         1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
-        2. **LIMIT CHECK**: If more than 3 markers exist, keep only the 3 most critical (by scope/security/UX impact) and make informed guesses for the rest
-        3. For each clarification needed (max 3), present options to user in this format:
+        2. Every material marker MUST remain in the specification and MUST be presented for user resolution; do not cap, discard, or answer any marker by guessing.
+        3. For each clarification needed, present options to user in this format:
 
            ```markdown
            ## Question [N]: [Topic]
@@ -185,7 +185,7 @@ Given that feature description, do this:
            - Each cell should have spaces around content: `| Content |` not `|Content|`
            - Header separator must have at least 3 dashes: `|--------|`
            - Test that the table renders correctly in markdown preview
-        5. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
+        5. Number every question sequentially (Q1, Q2, Q3, and so on)
         6. Present all questions together before waiting for responses
         7. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
@@ -193,7 +193,7 @@ Given that feature description, do this:
 
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.readiness`).
+7. Report completion with branch name, spec file path, checklist results, and the `/speckit.clarify` handoff. `/speckit.clarify` is the only next-phase handoff from Specify; do not route directly to `/speckit.readiness`.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

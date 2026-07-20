@@ -40,7 +40,7 @@ impact_on_change:
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.8.0
+**Version:** 1.9.0
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects and SDD workflows
 
@@ -71,7 +71,9 @@ Classification MUST be declared in the project's `README.md` or `.specify/memory
 
 ## 2. SDD Workflow (Mandatory Sequence)
 
-All projects MUST follow the SDD sequence below without skipping steps:
+Project and consumer-feature delivery MUST follow the SDD sequence below without skipping steps.
+The only alternative is the evidence-equivalent canonical workspace governance route defined in
+Section 2.1; that route is not available to ordinary project or feature delivery.
 
 - /speckit.specify — Create initial specification
 - /speckit.clarify — Resolve ambiguities
@@ -93,6 +95,44 @@ commands. They support the workflow but are not part of the seven mandatory deli
 the seven mandatory delivery stages, but when readiness identifies an external capability blocker,
 teams MUST run `/speckit.eci` with `readiness/eci-trigger.md` before returning to
 `/speckit.readiness`.
+
+## 2.1 Canonical Workspace Governance Self-Application
+
+The canonical workspace governance repository MAY enter an evidence-equivalent self-application
+route instead of creating per-batch `specs/<feature>/` artifacts only when every entry prerequisite
+below is satisfied before implementation:
+
+- Repository identity matches the shared runtime contract's
+  `mainlineReadiness.repositorySlug` canonical workspace identity, and the active Git root owns
+  this Studio Constitution and the shared runtime contract.
+- The delivery target is limited to shared-layer governance, runtime agents, prompts, templates,
+  hooks, shared scripts, or their canonical explanatory documents.
+- The batch does not deliver behavior for a consumer project, learning project, external project,
+  or general product feature.
+- A dated, owner-authorized remediation plan identifies the batch scope and ledger IDs before
+  implementation.
+
+After entry, the batch MUST remain `Draft` and `NOT READY` until every closure prerequisite below
+is satisfied:
+
+- Every closure has a discriminating negative test that fails against the pre-batch implementation
+  and passes against the proposed implementation.
+- The canonical shared-runtime audit reports zero errors and zero warnings, the complete governance
+  suite passes without reducing the baseline, and repository diff hygiene passes.
+- A dedicated mainline update note is `Ready`, has `Reconciliation Status: Closed`, cites real
+  in-range commit evidence, and reconciles every required impact target for that batch.
+
+This route is an evidence-equivalent governance route, not a stage waiver. A `Ready` batch note
+proves only the coherent batch. It MUST NOT make the branch merge-ready, authorize a runtime
+promotion, or replace a contract-designated aggregate note. Any remediation plan requirement for
+fresh-fixture seven-stage evidence, aggregate acceptance, promotion, or post-merge verification
+remains mandatory.
+
+If any entry prerequisite is missing, the work MUST use the seven mandatory stages. If any closure
+prerequisite is missing after valid entry, the batch MUST remain `Draft` and `NOT READY`. A missing
+project constitution or an adapter marker such as `N/A (workspace root)` MUST NOT be treated as
+permission to use this route. Work under `projects/`, `learning/`, any external repository, and
+ordinary feature delivery always remains subject to the seven-stage sequence.
 
 ## 3. Specification Requirements (spec.md)
 
@@ -258,12 +298,16 @@ Interpretation rules:
 
 ## 9. Implementation Rules
 
-During implementation:
+During project or consumer-feature implementation:
 
 - Work MUST follow the task list exactly
 - No feature MAY be added unless included in the spec
 - Small-scope TDD MAY be used where beneficial
 - Any specification change MUST update spec, readiness artifacts, `intent-ledger.md`, plan, and tasks with version bumps when those artifacts are affected
+
+During a valid Section 2.1 self-application batch, work MUST stay within the owner-authorized
+remediation plan, declared ledger IDs, and shared-only scope. Missing requirements MUST NOT be
+assumed; they require owner clarification, a dated plan or ledger update, or a `Draft` result.
 
 ## 10. AI Agent Collaboration Rules
 
@@ -278,9 +322,15 @@ AI agents MUST operate under the following principles:
   - plan: assist in technical reasoning
   - tasks: propose decompositions and acceptance criteria
   - implement: assist in generation of code/comments/docs
-- AI MUST follow spec/readiness/eci/plan/tasks and MAY NOT hallucinate or assume missing requirements
+- For project and consumer-feature delivery, AI MUST follow spec/readiness/eci/plan/tasks and MAY
+  NOT hallucinate or assume missing requirements.
+- For a Section 2.1 batch, AI MUST follow the owner-authorized remediation plan, ledger IDs, and
+  declared shared-only scope and MAY NOT hallucinate or assume missing requirements.
 - All AI-generated content MUST be manually reviewed
-- AI MAY NOT skip SDD stages or suggest skipping stages
+- For project and consumer-feature delivery, AI MAY NOT skip SDD stages or suggest skipping stages.
+  Entering Section 2.1 only after all entry prerequisites are proven, then keeping the batch
+  `Draft` until all closure prerequisites are proven, is an alternative governance route, not
+  permission to waive stages.
 
 Auxiliary command roles (per Section 2 plus the version command):
 
@@ -355,7 +405,11 @@ All AI-generated `.md` files MUST follow these formatting rules:
 <!-- governance-anchor: constitution-section-11-required-project-structure -->
 ## 11. Required Project Structure
 
-Each project MUST contain the following base paths. Items marked "when required" or "when triggered" are conditional on their trigger criteria being met (see relevant sections for details):
+Each project and consumer-feature delivery surface MUST contain the following base paths. Items
+marked "when required" or "when triggered" are conditional on their trigger criteria being met
+(see relevant sections for details). The canonical workspace governance root using Section 2.1 is
+not a project or consumer-feature delivery surface and instead carries the evidence required by
+that section:
 
 | Path | Purpose |
 |------|--------|
@@ -421,6 +475,11 @@ For this workspace governance repo, any branch intended to merge into `main` tha
 shared-layer governance, runtime agents, prompts, templates, hooks, shared scripts, or their
 canonical explanatory docs MUST add a dedicated update note under `docs/mainline-updates/`.
 
+For a Section 2.1 self-application batch, the update note is required evidence but is not sufficient
+by itself. The owner-authorized plan, ledger IDs, discriminating tests, canonical audit, complete
+governance suite, Batch reconciliation, and any contract-designated Aggregate or fresh-fixture
+requirements remain independently mandatory.
+
 Additional rules:
 
 - Each note MUST be indexed in `docs/mainline-updates/README.md`.
@@ -446,6 +505,7 @@ constitution.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.9.0 | 2026-07-20 | Defined the evidence-equivalent self-application route for canonical workspace shared-layer governance while preserving seven-stage project delivery and Aggregate acceptance. |
 | 1.8.0 | 2026-04-27 | Added runtime agent bootstrap governance for AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md synchronization. |
 | 1.7.0 | 2026-04-10 | Shared-layer consistency update and document authority classification. |
 
@@ -576,4 +636,3 @@ If recurring friction points are found:
 | Practice | `learnings.md` updated |
 | Internal | `retrospective.md` exists + `learnings.md` updated (if applicable) |
 | Client | `retrospective.md` exists + `learnings.md` updated (if applicable) |
-

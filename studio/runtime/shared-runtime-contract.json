@@ -456,6 +456,117 @@
       ]
     },
     {
+      "id": "constitution-canonical-workspace-self-application",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "## 2.1 Canonical Workspace Governance Self-Application",
+        "`mainlineReadiness.repositorySlug` canonical workspace identity",
+        "limited to shared-layer governance",
+        "does not deliver behavior for a consumer project",
+        "dated, owner-authorized remediation plan",
+        "ledger IDs before",
+        "every entry prerequisite",
+        "After entry, the batch MUST remain `Draft` and `NOT READY`",
+        "every closure prerequisite",
+        "discriminating negative test that fails against the pre-batch implementation",
+        "canonical shared-runtime audit reports zero errors and zero warnings",
+        "complete governance",
+        "suite passes without reducing the baseline",
+        "dedicated mainline update note is `Ready`",
+        "has `Reconciliation Status: Closed`",
+        "not a stage waiver",
+        "proves only the coherent batch",
+        "MUST NOT make the branch merge-ready",
+        "replace a contract-designated aggregate note",
+        "fresh-fixture seven-stage evidence",
+        "MUST NOT be treated as",
+        "Work under `projects/`,",
+        "`learning/`, any external repository, and",
+        "During project or consumer-feature implementation:",
+        "During a valid Section 2.1 self-application batch",
+        "For project and consumer-feature delivery, AI MUST follow spec/readiness/eci/plan/tasks",
+        "For a Section 2.1 batch, AI MUST follow the owner-authorized remediation plan",
+        "Each project and consumer-feature delivery surface MUST contain the following base paths."
+      ]
+    },
+    {
+      "id": "readme-canonical-workspace-self-application",
+      "path": "README.md",
+      "mustContainAll": [
+        "所有 project 與 consumer feature 的正式交付都遵循固定順序",
+        "只有 contract 指定的 canonical workspace governance repo",
+        "才可在實作前以 owner 授權的日期化計畫與 ledger IDs",
+        "進入後必須維持 `Draft` 與 `NOT READY`",
+        "這不是跳階權限",
+        "不適用 `projects/`、`learning/`、外部 repo 或",
+        "Batch 完成不代表 Aggregate 可合併",
+        "R6 fresh-fixture E2E"
+      ]
+    },
+    {
+      "id": "quickstart-canonical-workspace-self-application",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "所有 project 與 consumer feature 交付都必須依序執行",
+        "Studio Constitution 2.1 的等效證據路徑只適用 contract 指定的 canonical workspace",
+        "governance repo，而且批次必須只維護 shared layer。",
+        "實作前缺少 owner 授權計畫或",
+        "必須維持 `Draft` 與 `NOT READY`",
+        "`projects/`、`learning/`、外部 repo 與一般 feature 不得使用此路徑",
+        "取代 contract 指定的 Aggregate note",
+        "R6 fresh-fixture E2E"
+      ]
+    },
+    {
+      "id": "sdd-guide-canonical-workspace-self-application",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "project 與 consumer feature 的每個階段必須完成後才能進入下一階段",
+        "canonical workspace governance repo 的等效證據路徑",
+        "entry prerequisites",
+        "等 closure",
+        "prerequisites 全部成立",
+        "此路徑不是七階段 waiver",
+        "`projects/`、`learning/`、外部 repo 與",
+        "一般 feature 一律維持完整七階段",
+        "Batch Ready 不能取代 contract 指定的 Aggregate note"
+      ]
+    },
+    {
+      "id": "copilot-canonical-workspace-self-application",
+      "path": ".github/copilot-instructions.md",
+      "mustContainAll": [
+        "All project and consumer-feature delivery MUST follow this sequence:",
+        "Only the contract-designated canonical workspace governance repository may use Constitution",
+        "Section 2.1 for a shared-layer maintenance batch",
+        "only after every entry prerequisite in that",
+        "The batch remains Draft until every closure prerequisite is proven.",
+        "not available to consumer projects or ordinary feature delivery.",
+        "Infer permission to use the Constitution Section 2.1 route from a missing project constitution",
+        "For a Constitution Section 2.1 batch, reference the owner-authorized dated plan"
+      ]
+    },
+    {
+      "id": "historical-mainline-evidence-schema",
+      "path": "studio/runtime/mainline-note-historical-evidence.schema.json",
+      "mustContainAll": [
+        "\"additionalProperties\": false",
+        "\"migrationCommit\"",
+        "\"records\"",
+        "\"const\": \"de61431ae8f50d66f59157e00e4d239e9b37efdb\"",
+        "^docs/mainline-updates/"
+      ]
+    },
+    {
+      "id": "historical-mainline-evidence-record",
+      "path": "studio/runtime/mainline-note-historical-evidence.json",
+      "mustContainAll": [
+        "\"schemaVersion\": 1",
+        "\"migrationCommit\":",
+        "\"records\":"
+      ]
+    },
+    {
       "id": "constitution-readiness-closure",
       "path": "studio/constitution/constitution.md",
       "mustContainAll": [
@@ -589,6 +700,24 @@
     }
   ],
   "agentInvariants": [
+    {
+      "id": "specify-agent-clarification-truthfulness",
+      "path": ".github/agents/speckit.specify.agent.md",
+      "mustContainAll": [
+        "Every material marker MUST remain in the specification and MUST be presented for user resolution; do not cap, discard, or answer any marker by guessing.",
+        "For each clarification needed, present options to user in this format:",
+        "Number every question sequentially (Q1, Q2, Q3, and so on)",
+        "Items marked incomplete require spec updates before `/speckit.clarify`; Specify does not route directly to `/speckit.readiness`",
+        "`/speckit.clarify` is the only next-phase handoff from Specify; do not route directly to `/speckit.readiness`."
+      ]
+    },
+    {
+      "id": "spec-kit-claude-least-privilege-tools",
+      "path": ".github/agents/spec-kit.agent.md",
+      "mustContainAll": [
+        "claude-tools: ['Read', 'Glob', 'Grep', 'WebFetch']"
+      ]
+    },
     {
       "id": "readiness-agent-semantics",
       "path": ".github/agents/speckit.readiness.agent.md",
@@ -882,6 +1011,8 @@
         ".github/copilot-instructions.md",
         "-From",
         "-StudioConstitutionVersion",
+        "Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement.",
+        "The canonical workspace governance repository may enter Constitution Section 2.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven.",
         "governance-anchor: agents-tool-notes",
         "governance-anchor: claude-direct-imports",
         "governance-anchor: claude-tool-notes"
@@ -928,6 +1059,31 @@
         "reconciliation-section-missing",
         "reconciliation-section-malformed",
         "legacy-baseline-note-changed",
+        "historicalEvidenceMigration",
+        "historical-evidence-transition",
+        "historical-evidence-record-set-mismatch",
+        "historical-evidence-authority-surface-dirty",
+        "historical-evidence-note-surface-dirty",
+        "historical-evidence-related-commits-mismatch",
+        "historical-evidence-migration-scope",
+        "historical-evidence-seal-mismatch",
+        "historical-evidence-sealed-snapshot-mismatch",
+        "historical-evidence-snapshot-missing",
+        "Get-FirstHistoricalEvidenceSealSnapshot",
+        "Get-HistoricalEvidenceFrameworkOrigin",
+        "Get-GitPathAdditionCommits",
+        "Read-ExactLegacyBaselineAtCommit",
+        "--diff-filter=A",
+        "immutable first-add",
+        "pending",
+        "sealed",
+        "ExpectedBatchBase",
+        "expectedRecordCount",
+        "migrationCommit",
+        "evidenceSha256",
+        "mainline-note-historical-evidence.json",
+        "mainline-note-historical-evidence.schema.json",
+        "docs/mainline-updates/README.md",
         "must-update-target-missing",
         "must-update-reconciliation-missing",
         "must_update requires disposition updated with concrete evidence"
@@ -944,7 +1100,20 @@
         "required-mainline-readiness-policy-missing",
         "requiredNonCommandGitHubAgentFiles",
         "validate-mainline-notes.ps1",
-        "MAINLINE_NOTE_VALID"
+        "MAINLINE_NOTE_VALID",
+        "seed-claude-agents.ps1",
+        "'-Verify'",
+        "claude-agent-mirror-parity",
+        "CLAUDE_AGENT_PARITY_VALID",
+        "$claudeParityResult.VALID -is [bool]",
+        "$claudeParityResult.VALID -eq $true",
+        "$claudeParityResult.ERROR_COUNT -is [long]",
+        "$claudeParityResult.ERROR_COUNT -eq 0",
+        "$claudeParityResult.ERRORS -is [array]",
+        "@($claudeParityResult.ERRORS).Count -eq 0",
+        "validFieldIsBoolean",
+        "errorCountIsInteger",
+        "errorsIsArray"
       ]
     },
     {
@@ -1421,7 +1590,22 @@
         "Claude shared runtime authority after generation",
         "UTF8Encoding]::new($false, $true)",
         "WriteAllText",
-        "-join \"`n\""
+        "-join \"`n\"",
+        "[switch]$Verify",
+        "Convert-ToNormalizedAgentText",
+        "sourceToolsDeclared",
+        "$lines.Add('tools: []')",
+        "claude-agent-content-drift",
+        "unsupported-tool-mapping",
+        "an explicit claude-tools field cannot mask an unknown source permission",
+        "approvedNonPortableToolMap",
+        "explicit-tool-permission-broadening",
+        "claude-tools-permission-broadening",
+        "frontmatter-list-invalid",
+        "Get-ChildItem -LiteralPath $OutputDir -Force -Recurse",
+        "[System.IO.Path]::GetRelativePath",
+        "claude-agent-mirror-unexpected-directory",
+        "Test-ClaudeAgentParity"
       ]
     },
     {
@@ -2061,7 +2245,17 @@
     "repositorySlug": "dtgfdgfgf/sdd-workspace",
     "aggregateNotePaths": [
       "docs/mainline-updates/2026-05-05-studio-workflows-runtime.md"
-    ]
+    ],
+    "historicalEvidenceMigration": {
+      "state": "pending",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "expectedRecordCount": 18,
+      "migrationCommit": null,
+      "evidenceSha256": null,
+      "evidencePath": "studio/runtime/mainline-note-historical-evidence.json",
+      "schemaPath": "studio/runtime/mainline-note-historical-evidence.schema.json",
+      "legacyBaselinePath": "studio/runtime/mainline-note-validation-baseline.json"
+    }
   },
   "sharedGatePaths": [
     "AGENTS.md",
@@ -2080,6 +2274,8 @@
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
     "studio/runtime/analysis-result.schema.json",
+    "studio/runtime/mainline-note-historical-evidence.json",
+    "studio/runtime/mainline-note-historical-evidence.schema.json",
     "studio/runtime/mainline-note-validation-baseline.json",
     "studio/extensions/**",
     "studio/templates/project-init/.gitignore",

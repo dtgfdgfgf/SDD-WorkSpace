@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dtgfdgfgf/SDD-WorkSpace/studio/runtime/mainline-note-historical-evidence.schema.json",
+  "title": "Mainline note historical evidence migration records",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "migrationCommit",
+    "records"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "migrationCommit": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      ]
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "preMigrationSha256",
+          "batchBase",
+          "migratedSha256",
+          "historicalCommits",
+          "expectedStatus"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^docs/mainline-updates/[0-9]{4}-[0-9]{2}-[0-9]{2}-[^/\\\\]+\\.md$"
+          },
+          "preMigrationSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "batchBase": {
+            "type": "string",
+            "const": "de61431ae8f50d66f59157e00e4d239e9b37efdb"
+          },
+          "migratedSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "historicalCommits": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            }
+          },
+          "expectedStatus": {
+            "type": "string",
+            "enum": [
+              "Draft",
+              "Ready",
+              "Merged"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

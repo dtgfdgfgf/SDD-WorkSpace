@@ -53,7 +53,16 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 | `analyze` | 分析報告 |
 | `implement` | `src/` 與 `tests/` |
 
-**關鍵規則**：每個階段必須完成後才能進入下一階段，不可跳過。
+**關鍵規則**：project 與 consumer feature 的每個階段必須完成後才能進入下一階段，
+不可跳過。
+
+Studio Constitution 2.1 另定義 canonical workspace governance repo 的等效證據路徑。它
+只適用 shared-layer 維護，並以實作前存在 owner 授權的日期化計畫與 ledger IDs 作為
+entry prerequisites。進入後仍須維持 `Draft` 與 `NOT READY`，直到判別性 negative tests、
+canonical audit、完整 governance suite，以及 `Ready`、`Closed` 的 Batch note 等 closure
+prerequisites 全部成立。此路徑不是七階段 waiver；`projects/`、`learning/`、外部 repo 與
+一般 feature 一律維持完整七階段。Batch Ready 不能取代 contract 指定的 Aggregate note、
+promotion gate 或 R6 fresh-fixture E2E。
 
 `intent-ledger.md` 不是新 stage，而是只有在核心 spec 項目被 represented、deferred 或正式 dropped 時才建立的 secondary artifact。
 

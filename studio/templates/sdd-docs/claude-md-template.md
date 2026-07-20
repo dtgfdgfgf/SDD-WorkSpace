@@ -38,7 +38,8 @@ Hard rules:
 - Studio Constitution has highest authority.
 - Project Constitution can only add stricter rules.
 - Agent context files are adapters, not constitutions.
-- Governed delivery work follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- The canonical workspace governance repository may enter Constitution Section 2.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven.
 - If documents conflict, flag drift instead of silently choosing.
 <!-- END GENERATED GOVERNANCE BOOTSTRAP -->
 

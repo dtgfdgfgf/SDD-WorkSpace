@@ -61,6 +61,37 @@ BeforeAll {
             Raw      = $raw
         }
     }
+
+    function script:Set-ClaudeVerifierFixtureResult {
+        param(
+            [Parameter(Mandatory)] [string]$FixtureRoot,
+            [Parameter(Mandatory)] [string]$ValidExpression,
+            [Parameter(Mandatory)] [string]$ErrorCountExpression,
+            [Parameter(Mandatory)] [string]$ErrorsExpression
+        )
+
+        $seedPath = Join-Path $FixtureRoot 'studio/scripts/powershell/seed-claude-agents.ps1'
+        $content = [System.IO.File]::ReadAllText($seedPath)
+        $anchor = '$ErrorActionPreference = ''Stop'''
+        $replacement = @"
+`$ErrorActionPreference = 'Stop'
+if (`$Verify) {
+    [PSCustomObject][ordered]@{
+        VALID       = $ValidExpression
+        ERROR_COUNT = $ErrorCountExpression
+        ERRORS      = $ErrorsExpression
+    } | ConvertTo-Json -Depth 4
+    exit 0
+}
+"@
+        $content.Contains($anchor, [System.StringComparison]::Ordinal) | Should -BeTrue
+        $content = $content.Replace($anchor, $replacement, [System.StringComparison]::Ordinal)
+        [System.IO.File]::WriteAllText(
+            $seedPath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+    }
 }
 
 # ============================================================
@@ -197,6 +228,135 @@ Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
 
         $audit.ExitCode | Should -Not -Be 0
         @($audit.Result.FAILURES.id) | Should -Contain 'unexpected-rogue-agent.md'
+    }
+
+    It 'fails when a generated Claude agent mirror is blank' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $mirrorPath = Join-Path $fixtureRoot '.claude/agents/speckit-specify.md'
+        [System.IO.File]::WriteAllText(
+            $mirrorPath,
+            '',
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+        @($audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errors.id) | Should -Contain 'claude-agent-content-drift'
+    }
+
+    It 'fails when a generated Claude agent mirror body drifts from its source' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $mirrorPath = Join-Path $fixtureRoot '.claude/agents/speckit-specify.md'
+        $content = [System.IO.File]::ReadAllText($mirrorPath)
+        [System.IO.File]::WriteAllText(
+            $mirrorPath,
+            ($content + "`nFixture-only mirror drift.`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+        @($audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errors.id) | Should -Contain 'claude-agent-content-drift'
+    }
+
+    It 'fails when the generated Claude agent authority contains nested entries' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $roguePath = Join-Path $fixtureRoot '.claude/agents/nested/rogue.md'
+        $rogueParent = Split-Path -Parent $roguePath
+        New-Item -ItemType Directory -Path $rogueParent -Force | Out-Null
+        [System.IO.File]::WriteAllText(
+            $roguePath,
+            "# Nested rogue`n",
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+        @($audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errors.id) | Should -Contain 'claude-agent-mirror-unexpected-directory'
+        @($audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errors.id) | Should -Contain 'claude-agent-mirror-unexpected'
+    }
+
+    It 'rejects a string false verdict from the Claude parity verifier' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Set-ClaudeVerifierFixtureResult `
+            -FixtureRoot $fixtureRoot `
+            -ValidExpression "'false'" `
+            -ErrorCountExpression '0' `
+            -ErrorsExpression '@()'
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        $audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].validFieldIsBoolean | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+    }
+
+    It 'rejects a non-integer error count from an otherwise successful Claude parity verifier' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Set-ClaudeVerifierFixtureResult `
+            -FixtureRoot $fixtureRoot `
+            -ValidExpression '$true' `
+            -ErrorCountExpression "'0'" `
+            -ErrorsExpression '@()'
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        $audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errorCountIsInteger | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+    }
+
+    It 'rejects a nonzero native error count from an otherwise successful Claude parity verifier' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Set-ClaudeVerifierFixtureResult `
+            -FixtureRoot $fixtureRoot `
+            -ValidExpression '$true' `
+            -ErrorCountExpression '1' `
+            -ErrorsExpression '@()'
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        $audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errorCountIsInteger | Should -BeTrue
+        $audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errorCount | Should -Be 1
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+    }
+
+    It 'rejects concealed child errors behind a true Claude parity verdict' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Set-ClaudeVerifierFixtureResult `
+            -FixtureRoot $fixtureRoot `
+            -ValidExpression '$true' `
+            -ErrorCountExpression '0' `
+            -ErrorsExpression "@('concealed error')"
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        $audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errorsIsArray | Should -BeTrue
+        @($audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errors).Count | Should -Be 1
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
+    }
+
+    It 'rejects a null child error ledger behind a true Claude parity verdict' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        Set-ClaudeVerifierFixtureResult `
+            -FixtureRoot $fixtureRoot `
+            -ValidExpression '$true' `
+            -ErrorCountExpression '0' `
+            -ErrorsExpression '$null'
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeFalse
+        $audit.Result.CLAUDE_AGENT_PARITY_CHECKS[0].errorsIsArray | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'claude-agent-mirror-parity'
     }
 
     It 'checks requiredCommands layering inside the audit itself' {

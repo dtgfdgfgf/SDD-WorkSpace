@@ -2,6 +2,7 @@
 name: Spec-Kit-QA-Bot
 description: 專精於 Spec Kit 與 Specification-Driven Development 的 VS Code 子代理，用於回答 spec、plan、tasks、憲章、SDD 流程與 /speckit.* 指令相關問題。
 tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'runSubagent']
+claude-tools: ['Read', 'Glob', 'Grep', 'WebFetch']
 model: claude-opus-4-7
 infer: true
 ---

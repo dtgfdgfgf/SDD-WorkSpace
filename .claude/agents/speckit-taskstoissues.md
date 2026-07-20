@@ -1,6 +1,7 @@
 ---
 name: speckit-taskstoissues
 description: "Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts."
+tools: Read, Glob, Grep, Bash
 model: claude-opus-4-7
 ---
 

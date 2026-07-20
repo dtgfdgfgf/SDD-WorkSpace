@@ -160,6 +160,7 @@ $commandChecks = @()
 $githubAgentChecks = @()
 $promptStubChecks = @()
 $claudeAgentChecks = @()
+$claudeAgentParityChecks = @()
 $templateChecks = @()
 $docSemanticChecks = @()
 $agentSemanticChecks = @()
@@ -396,6 +397,76 @@ if (-not $contract) {
         $failures += New-AuditFailure -Category 'claude-agents' -Id ("unexpected-{0}" -f $unexpectedClaudeAgentFile) -Message "Unexpected Claude shared agent not declared in contract: $unexpectedClaudeAgentFile" -Path $claudeAgentPath
     }
 
+    $claudeSeedVerifierPath = Join-Path $PSScriptRoot 'seed-claude-agents.ps1'
+    $claudeParityInvocation = if (Test-Path -LiteralPath $claudeSeedVerifierPath -PathType Leaf) {
+        Invoke-JsonScriptDetailed `
+            -ScriptPath $claudeSeedVerifierPath `
+            -Arguments @('-WorkspaceRoot', $paths.WORKSPACE_ROOT, '-Verify', '-Json')
+    } else {
+        [ordered]@{ EXIT_CODE = 1; RAW = $null; OUTPUT = $null }
+    }
+    $claudeParityResult = $claudeParityInvocation.OUTPUT
+    $claudeParityValidFieldIsBoolean = (
+        $null -ne $claudeParityResult -and
+        ($claudeParityResult.VALID -is [bool])
+    )
+    $claudeParityErrorCountIsInteger = (
+        $null -ne $claudeParityResult -and
+        ($claudeParityResult.ERROR_COUNT -is [long])
+    )
+    $claudeParityErrorsIsArray = (
+        $null -ne $claudeParityResult -and
+        ($claudeParityResult.ERRORS -is [array])
+    )
+    $claudeParityValid = (
+        (Test-Path -LiteralPath $claudeSeedVerifierPath -PathType Leaf) -and
+        $null -ne $claudeParityResult -and
+        $claudeParityInvocation.EXIT_CODE -eq 0 -and
+        $claudeParityValidFieldIsBoolean -and
+        $claudeParityResult.VALID -eq $true -and
+        $claudeParityErrorCountIsInteger -and
+        $claudeParityResult.ERROR_COUNT -eq 0 -and
+        $claudeParityErrorsIsArray -and
+        @($claudeParityResult.ERRORS).Count -eq 0
+    )
+    $claudeAgentParityChecks += [ordered]@{
+        verifierPath = $claudeSeedVerifierPath
+        valid        = $claudeParityValid
+        validFieldIsBoolean = $claudeParityValidFieldIsBoolean
+        errorCountIsInteger = $claudeParityErrorCountIsInteger
+        errorsIsArray = $claudeParityErrorsIsArray
+        exitCode     = [int]$claudeParityInvocation.EXIT_CODE
+        errorCount   = if ($claudeParityErrorCountIsInteger) { [long]$claudeParityResult.ERROR_COUNT } else { $null }
+        errors       = if ($claudeParityResult) { @($claudeParityResult.ERRORS) } else { @() }
+    }
+    if (-not $claudeParityValid) {
+        $parityMessages = @()
+        if ($claudeParityResult) {
+            foreach ($childError in @($claudeParityResult.ERRORS)) {
+                $childMessage = if ($childError -is [string]) {
+                    [string]$childError
+                } else {
+                    [string]$childError.message
+                }
+                if (-not [string]::IsNullOrWhiteSpace($childMessage)) {
+                    $parityMessages += $childMessage
+                }
+            }
+        }
+        if ($parityMessages.Count -eq 0) {
+            $parityMessages = if ($claudeParityResult) {
+                @('Claude agent parity verification output was invalid or internally inconsistent.')
+            } else {
+                @('Claude agent parity verifier did not return structured JSON output.')
+            }
+        }
+        $failures += New-AuditFailure `
+            -Category 'claude-agents' `
+            -Id 'claude-agent-mirror-parity' `
+            -Message ($parityMessages -join '; ') `
+            -Path $paths.SHARED_CLAUDE_AGENTS_DIR
+    }
+
     $templatesDir = Join-Path $paths.STUDIO_ROOT 'templates/sdd-docs'
     foreach ($templateName in @($contract.requiredDocTemplates | ForEach-Object { [string]$_ })) {
         $templatePath = Join-Path $templatesDir $templateName
@@ -587,6 +658,8 @@ $result = [ordered]@{
     GITHUB_AGENT_CHECKS        = $githubAgentChecks
     PROMPT_STUB_CHECKS        = $promptStubChecks
     CLAUDE_AGENT_CHECKS       = $claudeAgentChecks
+    CLAUDE_AGENT_PARITY_CHECKS = $claudeAgentParityChecks
+    CLAUDE_AGENT_PARITY_VALID = if ($claudeAgentParityChecks.Count -gt 0) { [bool]$claudeAgentParityChecks[0].valid } else { $false }
     TEMPLATE_CHECKS           = $templateChecks
     DOC_SEMANTIC_CHECKS       = $docSemanticChecks
     AGENT_SEMANTIC_CHECKS     = $agentSemanticChecks

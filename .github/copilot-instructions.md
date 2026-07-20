@@ -7,7 +7,7 @@ This file is the GitHub Copilot runtime adapter for this project.
 
 **Bootstrap Version:** 1
 **Studio Constitution:** `studio/constitution/constitution.md`
-**Studio Constitution Version:** 1.8.0
+**Studio Constitution Version:** 1.9.0
 **Project Constitution:** `N/A (workspace root)`
 
 This runtime adapter participates in dual-layer constitution governance.
@@ -25,7 +25,8 @@ Hard rules:
 - Studio Constitution has highest authority.
 - Project Constitution can only add stricter rules.
 - Agent context files are adapters, not constitutions.
-- Governed delivery work follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- The canonical workspace governance repository may enter Constitution Section 2.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven.
 - If documents conflict, flag drift instead of silently choosing.
 <!-- END GENERATED GOVERNANCE BOOTSTRAP -->
 
@@ -88,7 +89,7 @@ Priority rules:
 
 ## Mandatory Workflow
 
-All delivery work MUST follow this sequence:
+All project and consumer-feature delivery MUST follow this sequence:
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
@@ -100,6 +101,10 @@ All delivery work MUST follow this sequence:
 
 Workflow support:
 
+- Only the contract-designated canonical workspace governance repository may use Constitution
+  Section 2.1 for a shared-layer maintenance batch, and only after every entry prerequisite in that
+  section is proven. The batch remains Draft until every closure prerequisite is proven. This is
+  not available to consumer projects or ordinary feature delivery.
 - `/speckit.discover` is an optional pre-spec aid for messy or incomplete inputs.
 - `/speckit.checklist`, `/speckit.constitution`, and `/speckit.taskstoissues` are auxiliary commands.
 - `/speckit.eci` is the specialized shared runtime command for `ROUTE_TO_ECI` cases. It consumes `readiness/eci-trigger.md`, writes `readiness/eci/*.md`, and then returns control to `/speckit.readiness`.
@@ -223,7 +228,9 @@ Recommended types:
 
 Never:
 
-- Skip an SDD stage
+- Skip an SDD stage during project or consumer-feature delivery
+- Infer permission to use the Constitution Section 2.1 route from a missing project constitution or
+  an `N/A (workspace root)` adapter marker
 - Run `/speckit.plan` without a `READY_FOR_PLAN` readiness assessment
 - Treat `/speckit.eci` as direct authorization for planning without re-running `/speckit.readiness`
 - Treat `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` ECI authorization as sufficient for planning
@@ -237,7 +244,10 @@ Never:
 Always:
 
 - Resolve ambiguity before readiness, planning, or implementation
-- Reference spec, readiness, plan, tasks, and constitutions when making changes
+- For project or consumer-feature delivery, reference spec, readiness, plan, tasks, and
+  constitutions when making changes
+- For a Constitution Section 2.1 batch, reference the owner-authorized dated plan, ledger IDs,
+  discriminating evidence, Batch note, and contract-designated Aggregate obligations
 - Flag document drift and missing updates
 - Preserve the studio-first centralized runtime model
 - Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources

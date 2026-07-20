@@ -102,6 +102,102 @@ Describe 'constitution phase accuracy' {
     }
 }
 
+Describe 'canonical workspace governance self-application route' {
+    BeforeAll {
+        $script:selfApplicationMatches = [regex]::Matches(
+            $constitution,
+            '(?ms)^## 2\.1 Canonical Workspace Governance Self-Application\s*$.*?(?=^## \d)'
+        )
+        $script:selfApplicationSection = if ($selfApplicationMatches.Count -eq 1) {
+            $selfApplicationMatches[0].Value
+        } else {
+            ''
+        }
+    }
+
+    It 'defines exactly one section-bounded evidence-equivalent route' {
+        $selfApplicationMatches.Count | Should -Be 1
+        $selfApplicationSection | Should -Match 'evidence-equivalent self-application'
+        $selfApplicationSection | Should -Match 'not a stage waiver'
+    }
+
+    It 'binds the route to the contract-designated canonical repository and shared-only scope' {
+        $selfApplicationSection | Should -Match 'mainlineReadiness\.repositorySlug'
+        $selfApplicationSection | Should -Match 'limited to shared-layer governance'
+        $selfApplicationSection | Should -Match 'does not deliver behavior for a consumer project'
+    }
+
+    It 'keeps projects learning external repositories and ordinary features on seven stages' {
+        $selfApplicationSection | Should -Match 'Work under `projects/`,'
+        $selfApplicationSection | Should -Match '`learning/`, any external repository, and\s+ordinary feature delivery'
+        $selfApplicationSection | Should -Match 'always remains subject to the\s+seven-stage sequence'
+        $selfApplicationSection | Should -Match 'MUST NOT be treated as\s+permission'
+    }
+
+    It 'requires owner scope discriminating evidence machine gates and closed Batch accounting' {
+        $selfApplicationSection | Should -Match 'dated, owner-authorized remediation plan'
+        $selfApplicationSection | Should -Match 'ledger IDs before\s+implementation'
+        $selfApplicationSection | Should -Match 'discriminating negative test that fails against the pre-batch implementation'
+        $selfApplicationSection | Should -Match 'canonical shared-runtime audit reports zero errors and zero warnings'
+        $selfApplicationSection | Should -Match 'complete governance\s+suite passes without reducing the baseline'
+        $selfApplicationSection | Should -Match 'dedicated mainline update note is `Ready`'
+        $selfApplicationSection | Should -Match 'has `Reconciliation Status: Closed`'
+    }
+
+    It 'separates pre-implementation entry from post-implementation closure' {
+        $selfApplicationSection | Should -Match 'every entry prerequisite\s+below is satisfied before implementation'
+        $selfApplicationSection | Should -Match 'After entry, the batch MUST remain `Draft` and `NOT READY`'
+        $selfApplicationSection | Should -Match 'every closure prerequisite'
+        $selfApplicationSection | Should -Match 'If any entry prerequisite is missing, the work MUST use the seven mandatory stages'
+        $selfApplicationSection | Should -Match 'If any closure\s+prerequisite is missing after valid entry, the batch MUST remain `Draft` and `NOT READY`'
+    }
+
+    It 'prevents Batch evidence from replacing Aggregate promotion or fresh-fixture obligations' {
+        $selfApplicationSection | Should -Match 'proves only the coherent batch'
+        $selfApplicationSection | Should -Match 'MUST NOT make the branch merge-ready'
+        $selfApplicationSection | Should -Match 'replace a contract-designated aggregate note'
+        $selfApplicationSection | Should -Match 'fresh-fixture seven-stage evidence'
+    }
+
+    It 'keeps the constitution version and newest changelog row aligned at 1.9.0' {
+        $constitution | Should -Match '(?m)^\*\*Version:\*\* 1\.9\.0$'
+        $changelogRows = @(
+            [regex]::Matches($constitution, '(?m)^\| (1\.\d+\.\d+) \| \d{4}-\d{2}-\d{2} \|') |
+                ForEach-Object { $_.Groups[1].Value }
+        )
+        $changelogRows.Count | Should -BeGreaterThan 0
+        $changelogRows[0] | Should -Be '1.9.0'
+    }
+
+    It 'propagates the scoped route and 1.9.0 version through root adapters and templates' {
+        $paths = @(
+            'AGENTS.md',
+            'CLAUDE.md',
+            '.github/copilot-instructions.md',
+            'studio/templates/sdd-docs/agents-md-template.md',
+            'studio/templates/sdd-docs/claude-md-template.md',
+            'studio/templates/sdd-docs/copilot-instructions-template.md'
+        )
+        foreach ($relativePath in $paths) {
+            $content = Get-Content -LiteralPath (Join-Path $WorkspaceRoot $relativePath) -Raw
+            $content | Should -Match 'Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement\.'
+            $content | Should -Match 'canonical workspace governance repository may enter Constitution Section 2\.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven\.'
+            if ($relativePath -notmatch 'template\.md$') {
+                $content | Should -Match '\*\*Studio Constitution Version:\*\* 1\.9\.0'
+            }
+        }
+    }
+
+    It 'scopes implementation AI and project-structure duties without weakening either route' {
+        $constitution | Should -Match '(?m)^During project or consumer-feature implementation:$'
+        $constitution | Should -Match 'During a valid Section 2\.1 self-application batch, work MUST stay within the owner-authorized\s+remediation plan, declared ledger IDs, and shared-only scope\.'
+        $constitution | Should -Match 'For project and consumer-feature delivery, AI MUST follow spec/readiness/eci/plan/tasks'
+        $constitution | Should -Match 'For a Section 2\.1 batch, AI MUST follow the owner-authorized remediation plan, ledger IDs, and\s+declared shared-only scope'
+        $constitution | Should -Match 'Each project and consumer-feature delivery surface MUST contain the following base paths\.'
+        $constitution | Should -Match 'canonical workspace governance root using Section 2\.1 is\s+not a project or consumer-feature delivery surface'
+    }
+}
+
 Describe 'requiredMirrorPairs removed' {
     It 'contract no longer contains requiredMirrorPairs' {
         $contract.ContainsKey('requiredMirrorPairs') | Should -BeFalse -Because 'sdd-agents template mirror layer has been removed'

@@ -107,7 +107,7 @@ pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope Cu
 
 ## SDD 工作流程
 
-所有正式交付都遵循固定順序：
+所有 project 與 consumer feature 的正式交付都遵循固定順序：
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
@@ -119,6 +119,13 @@ pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope Cu
 
 補充：
 
+- 只有 contract 指定的 canonical workspace governance repo，且交付內容只限 shared-layer
+  維護時，才可在實作前以 owner 授權的日期化計畫與 ledger IDs 進入 Studio Constitution
+  2.1 的等效證據路徑。這不是跳階權限，也不適用 `projects/`、`learning/`、外部 repo 或
+  一般 feature。
+- 進入後必須維持 `Draft` 與 `NOT READY`，直到舊版失敗而新版通過的 negative tests、
+  canonical audit、完整 governance suite，以及 `Ready`、`Closed` 的 Batch note 全部成立。
+  Batch 完成不代表 Aggregate 可合併，也不能取代 R6 fresh-fixture E2E。
 - `/speckit.discover` 是可選的 pre-spec discovery 階段
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令
 - `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段
