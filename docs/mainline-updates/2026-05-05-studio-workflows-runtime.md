@@ -51,16 +51,38 @@ mainline-note validator file passes 91 of 91 tests. The exact production baselin
 while `TwoField`, `ExtraField`, `SubstitutedField`, `WrongType`, and `Null` are denied; the
 contract anchor also rejects a revert to the former `Count=2` shortcut.
 
-RB-5 is completed and R-A22 returns to `COMPLETED`. The 18-note historical portion of R-E09 is
-complete, but R-E09 remains `IN_PROGRESS` for this umbrella note, R6 evidence, final merge
-accounting, and post-merge verification. A diagnostic Batch run after the repair has 18 of 18
-historical records valid and no sealed mismatch; its 33 errors derive only from the RB-5 note
-still being Draft and its coverage, not-ready, and reconciliation-missing consequences. Final
-full-suite, Batch, and Aggregate results remain pending until the accounting edits are complete.
+At the repair-head point, RB-5 was completed and R-A22 returned to `COMPLETED`. The 18-note
+historical portion of R-E09 was complete, but R-E09 remained `IN_PROGRESS` for this umbrella note,
+R6 evidence, final merge accounting, and post-merge verification. A diagnostic Batch run after the
+repair had 18 of 18 historical records valid and no sealed mismatch; its 33 errors derived only
+from the RB-5 note still being Draft and its coverage, not-ready, and reconciliation-missing
+consequences. At that point, final full-suite, Batch, and Aggregate results were still pending
+until the accounting edits were complete.
 
-This umbrella note remains `Draft`, `TBD`, `Open`, and `Aggregate`. R6 is the next remediation
-batch after the accounting final gates are rerun. `sdd-pipeline` remains experimental,
-default-disabled, and execution-denied.
+This umbrella note remained `Draft`, `TBD`, `Open`, and `Aggregate`. R6 would be the next
+remediation batch after the accounting final gates were rerun. `sdd-pipeline` remained
+experimental, default-disabled, and execution-denied.
+
+### Final Accounting Validation Superseding the Pending-Gate Statements
+
+Final validation at committed head `44f768a12316cdb008f1fee263e03ed7ce9a8191`
+produced the following observed results:
+
+| Validation surface | Observed result |
+|---|---|
+| Full governance suite | 742 passed, 0 failed, 0 skipped in 1115.2 seconds |
+| Canonical runtime audit | `VALID=true`, 0 errors, 0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| RB-5 Batch gate | BaseRef `de61431ae8f50d66f59157e00e4d239e9b37efdb`; `VALID=true`, 0 errors, 0 warnings |
+| Aggregate gate | Expected nonzero result with exactly one `aggregate-note-not-ready` for this umbrella note |
+| Diff and worktree hygiene | `git diff --check` passed and the worktree was clean |
+
+The Aggregate result preserves the current merge disposition: this note remains `Draft` with
+`Related Commits: TBD`, reconciliation `Open`, and validation scope `Aggregate`. R-E09 remains
+`IN_PROGRESS`; R6 is the next remediation batch and must provide the fresh-fixture, promotion
+decision, final merge-accounting, and post-merge evidence. `sdd-pipeline` remains experimental,
+default-disabled, and execution-denied. These results do not authorize workflow promotion or
+merge.
 
 ## Summary
 

@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.15.0"
+version: "1.16.0"
 date: "2026-07-12"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "3666c4e9a6553ff82774d4a06037f48846d8b0fd"
+head_commit: "44f768a12316cdb008f1fee263e03ed7ce9a8191"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -448,6 +448,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.13.0 | 2026-07-20 | RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01/R-D04/R-D05/R-E07，新增 High R-A22；migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 證據並完成 R-A22。R-E09 的歷史 note 子項完成但整項維持 IN_PROGRESS。ledger 增至 128（Critical 8 / High 31 / Medium 51 / Low 38）；分支仍 NOT READY TO MERGE，見第 23 節。 |
 | 1.14.0 | 2026-07-20 | Post-accounting gates at head `64669c43d531d9dd699d60e163e7b1c755d64963` refute only RB-5 Ready and R-A22 closure: Pester remains 737/0/0, but runtime audit has one sealed-snapshot mismatch, Batch has 22 errors, and Aggregate has 19. R-A22 returns to IN_PROGRESS; R-D01/R-D04/R-D05/R-E07 remain COMPLETED and R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; see Section 24. |
 | 1.15.0 | 2026-07-20 | Repair commit `3666c4e9a6553ff82774d4a06037f48846d8b0fd` restores exact production baseline reconstruction: committed audit is VALID with 18/18 sealed records, and the dedicated validator file is 91/91 with production-positive plus five shape/type/null negatives. R-A22 returns to COMPLETED; R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; final accounting gates remain pending; see Section 25. |
+| 1.16.0 | 2026-07-20 | RB-5 final gates at accounting head `44f768a12316cdb008f1fee263e03ed7ce9a8191` are complete: full suite 742/0/0/0, runtime audit VALID 0/0 with historical sealed evidence 18/18, Batch VALID 0/0 from base `de61431ae8f50d66f59157e00e4d239e9b37efdb`, Aggregate has exactly the expected umbrella `aggregate-note-not-ready`, and diff/worktree hygiene is clean. R-A22 remains COMPLETED; R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; R6 owner decisions remain open; see Section 26. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1048,3 +1049,40 @@ R6 是下一個 remediation batch；但本次 accounting 後的 full suite、run
 Batch、Aggregate 與 diff hygiene 仍須依實際結果收尾。PR #3 仍
 `NOT READY TO MERGE`，`sdd-pipeline` 維持 experimental、default-disabled 與
 execution-denied。
+
+## 26. 2026-07-20 RB-5 final accounting gates 與 R6 preflight 增補
+
+本節 supersede 第 25 節中 final accounting gates 尚待重跑的句子，並保留第 25 節作為
+repair closure 在 accounting 前的歷史記錄。Accounting commit
+`44f768a12316cdb008f1fee263e03ed7ce9a8191` 的 RB-5 final gates 已觀察到以下結果：
+
+| 驗收面 | Final result |
+|---|---|
+| Full governance suite | 742 passed / 0 failed / 0 skipped / 0 not run，1115.2 秒 |
+| Runtime audit | `VALID=true`、0 errors、0 warnings |
+| Historical sealed evidence | 18/18 valid |
+| Batch gate | Base `de61431ae8f50d66f59157e00e4d239e9b37efdb`；`VALID=true`、0 errors、0 warnings |
+| Aggregate gate | Exactly one expected error：canonical umbrella note 的 `aggregate-note-not-ready` |
+| Diff and worktree hygiene | `git diff --check` 通過；committed head worktree clean |
+
+這些結果完成 RB-5 final accounting acceptance。R-A22 維持 `COMPLETED`；R-E09 維持
+`IN_PROGRESS`，因 canonical umbrella note、R6 evidence、final merge accounting 與
+post-merge verification 仍未完成。Aggregate 的單一 expected error 是 R6 前的正確
+fail-closed 結果，不是 merge authorization。
+
+### R6 Preflight Owner Decisions
+
+以下事項尚未獲 owner 裁定，agent 不得自行關閉 finding、接受 residual risk、promotion
+workflow 或授權 merge：
+
+| Decision area | 未裁定事項 | R6 前限制 |
+|---|---|---|
+| Residual merge dispositions | R-A21、R-B23、R-C04、R-C06、R-F04 與其他仍 open ledger IDs 應在 R6 修復、明確 defer，或採取何種 owner-approved disposition | 未有逐項 owner 決定與帳務前，不得把 residuals 視為已關閉或已接受 |
+| R-E11 | Ledger 已存在不自動完成 R-E11；仍需 R6 明確 disposition | 不標示 `COMPLETED`，不以 RB-5 gate 綠燈吸收 |
+| Workflow promotion | `sdd-pipeline` 應 promotion 或維持 non-promotion | Owner 決定與 fresh-fixture evidence 前維持 experimental、default-disabled、execution-denied |
+| Merge and post-merge accounting | Merge authorization、final PR/commit/merge references、mainline note closure與 post-merge validation 記錄 | 決定與證據完成前不得 merge，也不得預填 post-merge closure |
+
+本節不新增 finding，不改變任何未列為 RB-5 closure 的狀態。Ledger 維持 128 條，
+嚴重度維持 Critical 8、High 31、Medium 51、Low 38。RB-5 已完成，R6 是下一個
+remediation batch；但在上述 owner decisions 與 R6 evidence 完成前，PR #3 維持
+`NOT READY TO MERGE`，不得 promotion 或 merge。

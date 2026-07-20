@@ -60,8 +60,30 @@ historical refutation.
 A post-repair diagnostic Batch run already reports historical evidence valid for 18 of 18 records
 with no sealed-snapshot mismatch. Its 33 errors are limited to the note still being `Draft` at
 diagnostic time and the resulting coverage, not-ready, and reconciliation-missing derivatives.
-The final full governance suite, Batch gate, and Aggregate gate must be rerun after these accounting
-edits; this note does not pre-claim those final results.
+At that diagnostic point, the final full governance suite, Batch gate, and Aggregate gate still
+had to be rerun after the accounting edits; this historical subsection did not pre-claim those
+results.
+
+### Final Accounting Validation Superseding the Pending-Gate Statements
+
+The required final validation was completed at committed head
+`44f768a12316cdb008f1fee263e03ed7ce9a8191` after the accounting edits:
+
+| Validation surface | Observed result |
+|---|---|
+| Full governance suite | 742 passed, 0 failed, 0 skipped in 1115.2 seconds |
+| Canonical runtime audit | `VALID=true`, 0 errors, 0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| Batch gate | BaseRef `de61431ae8f50d66f59157e00e4d239e9b37efdb`; `VALID=true`, 0 errors, 0 warnings |
+| Aggregate gate | Expected nonzero result with exactly one `aggregate-note-not-ready` for `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` |
+| Diff and worktree hygiene | `git diff --check` passed and the worktree was clean |
+
+These observed results supersede only the pending-gate statements in the preceding repair
+chronology. They preserve the post-accounting refutation, confirm RB-5 as `Ready`, `Closed`, and
+`Batch`, and keep R-A22 `COMPLETED`. R-E09 remains `IN_PROGRESS`; the Wave-3 umbrella note remains
+`Draft`, `TBD`, `Open`, and `Aggregate`. The result does not authorize workflow promotion or merge.
+R6 is the next remediation batch, and `sdd-pipeline` remains experimental, default-disabled, and
+execution-denied.
 
 ## Summary
 
@@ -178,7 +200,9 @@ Out of scope:
   scope drift, dirty authority surfaces, record rewriting, missing Git context, and attempted use
   of historical hashes as current readiness evidence.
 - The last complete pre-repair accounting suite reported 737 passed, 0 failed, and 0 skipped.
-  The final full-suite rerun after this accounting update remains pending.
+  Final accounting validation at
+  `44f768a12316cdb008f1fee263e03ed7ce9a8191` reports 742 passed, 0 failed, and
+  0 skipped in 1115.2 seconds.
 - On committed repair `3666c4e9a6553ff82774d4a06037f48846d8b0fd`,
   `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` reports `VALID=true`,
   0 errors, and 0 warnings.
@@ -194,9 +218,9 @@ Out of scope:
 - Batch acceptance uses
   `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef
   de61431ae8f50d66f59157e00e4d239e9b37efdb -HeadRef HEAD -RequireReady
-  -ReadinessScope Batch -Json`. The post-repair diagnostic already has 18 of 18 historical records
-  valid and no sealed mismatch; the final Batch result must be recorded only after these accounting
-  edits are complete.
+  -ReadinessScope Batch -Json`. At validated head
+  `44f768a12316cdb008f1fee263e03ed7ce9a8191`, it reports `VALID=true`, 0 errors,
+  and 0 warnings with 18 of 18 historical records valid.
 
 ## Merge Notes
 
@@ -208,12 +232,12 @@ Out of scope:
 - The aggregate Wave-3 note remains Draft, R-E09 remains `IN_PROGRESS`, and PR #3 remains
   `NOT READY TO MERGE`.
 - `sdd-pipeline` remains experimental, default-disabled, and execution-denied. R6 is the next
-  remediation batch after the accounting final gates are rerun.
+  remediation batch.
 
 ## Follow-ups
 
-- Rerun the final full governance suite, runtime audit, Batch gate, Aggregate gate, and diff hygiene
-  after the accounting edits; record only their observed results.
+- Any change after validated head `44f768a12316cdb008f1fee263e03ed7ce9a8191` must
+  rerun the applicable governance gates before reasserting the recorded result.
 - R6 must then run fresh-fixture seven-stage E2E, satisfy every minimum merge gate, decide
   promotion, finalize the aggregate note, merge only when authorized, and perform post-merge
   validation.

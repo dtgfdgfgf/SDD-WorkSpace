@@ -63,7 +63,7 @@ running the audit and left a partially updated runtime after failure.
 | `docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md` | Correct the upgrade transaction description and preserve R-F04 as open. |
 | `studio/runtime/shared-runtime-contract.json` | Add revert-sensitive invariants for all RB-4 acceptance surfaces. |
 | `studio/tests/` | Add discriminating extension, worktree, consumer, and upgrade tests. |
-| This note and `docs/mainline-updates/README.md` | Record RB-4 as an in-progress coherent Batch. |
+| This note and `docs/mainline-updates/README.md` | Record RB-4 as a completed, Ready coherent Batch. |
 
 ## Impact
 

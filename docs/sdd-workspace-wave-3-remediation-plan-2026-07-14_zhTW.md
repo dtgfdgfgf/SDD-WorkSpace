@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.7.0"
+version: "1.8.0"
 date: "2026-07-14"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "3666c4e9a6553ff82774d4a06037f48846d8b0fd"
+head_commit: "44f768a12316cdb008f1fee263e03ed7ce9a8191"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -206,6 +206,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.5.0 | 2026-07-20 | RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01/R-D04/R-D05/R-E07 並建立新 High R-A22；migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 證據並完成 R-A22。R-E09 只完成歷史 note 子項，整項維持 IN_PROGRESS；R6 是下一批，分支仍 NOT READY TO MERGE。 |
 | 1.6.0 | 2026-07-20 | Post-accounting gates at head `64669c43d531d9dd699d60e163e7b1c755d64963` reopen RB-5 and R-A22: Pester remains 737/0/0, while runtime audit has one sealed-snapshot mismatch, Batch has 22 errors, and Aggregate has 19. R-D01/R-D04/R-D05/R-E07 remain COMPLETED; R-E09 remains IN_PROGRESS. R-A22 repair must precede R6; see Section 12. |
 | 1.7.0 | 2026-07-20 | Repair commit `3666c4e9a6553ff82774d4a06037f48846d8b0fd` restores RB-5 closure: committed audit is VALID with 18/18 sealed records; the dedicated validator file is 91/91; production-positive plus five shape/type/null negatives and the contract revert anchor close R-A22. R-E09 remains IN_PROGRESS; final accounting gates remain pending; R6 is next. |
+| 1.8.0 | 2026-07-20 | RB-5 final gates at accounting head `44f768a12316cdb008f1fee263e03ed7ce9a8191` complete with full suite 742/0/0/0, runtime audit VALID 0/0 and historical sealed 18/18, Batch VALID 0/0 from base `de61431ae8f50d66f59157e00e4d239e9b37efdb`, exactly one expected Aggregate umbrella error, and clean diff/worktree hygiene. RB-5 is complete and R6 is next, but owner decisions and R6 evidence still block promotion and merge; see Section 14. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -506,3 +507,35 @@ suite、runtime audit、Batch、Aggregate 與 diff hygiene 收尾。
 Critical 8、High 31、Medium 51、Low 38。`sdd-pipeline` 在 R6 決策前維持
 experimental、default-disabled 與 execution-denied，PR #3 維持
 `NOT READY TO MERGE`。
+
+## 14. 2026-07-20 RB-5 final gates 與 R6 preflight 增補
+
+本節 supersede 第 13 節中 accounting 後 final gates 尚待重跑的句子，並保留第 13 節
+作為 repair closure 的歷史記錄。Accounting commit
+`44f768a12316cdb008f1fee263e03ed7ce9a8191` 已完成 RB-5 final acceptance：
+
+| 驗收面 | Final result |
+|---|---|
+| Full governance suite | 742 passed / 0 failed / 0 skipped / 0 not run，1115.2 秒 |
+| Runtime audit | `VALID=true`、0 errors、0 warnings |
+| Historical sealed evidence | 18/18 valid |
+| Batch gate | Base `de61431ae8f50d66f59157e00e4d239e9b37efdb`；`VALID=true`、0 errors、0 warnings |
+| Aggregate gate | Exactly one expected error：canonical umbrella note 的 `aggregate-note-not-ready` |
+| Diff and worktree hygiene | `git diff --check` 通過；committed head worktree clean |
+
+RB-5 維持完成，R-A22 維持 `COMPLETED`，R-E09 維持 `IN_PROGRESS`。Aggregate 的單一
+expected error 正確保留 R6 merge boundary，不授權 promotion 或 merge。
+
+### R6 Preflight Decision Blockers
+
+| Decision area | Owner 尚未裁定 | 執行限制 |
+|---|---|---|
+| Residual merge dispositions | R-A21、R-B23、R-C04、R-C06、R-F04 與其他 open findings 的修復、defer 或 owner-approved disposition | Agent 不得自行關閉或接受；逐項裁定前不得宣稱 merge-ready |
+| R-E11 | R6 必須給出明確 disposition；現有 ledger 不自動完成 R-E11 | 不標示 `COMPLETED`，不由 RB-5 吸收 |
+| Workflow promotion | Promotion `sdd-pipeline` 或維持 non-promotion | Owner 決定與 fresh-fixture evidence 前維持 experimental、default-disabled、execution-denied |
+| Merge and post-merge accounting | Merge authorization、final PR/commit/merge references、umbrella closure 與 post-merge validation | 決定及 evidence 完成前不得 merge，也不得預先記錄 post-merge success |
+
+RB-5 已完成，R6 是下一個 remediation batch，但 R6 不得在未完成上述 owner decisions
+與 fresh-fixture、minimum gates、Aggregate、promotion disposition、merge accounting
+evidence 的情況下 promotion 或 merge。Ledger 維持 128 條，分布維持 Critical 8、
+High 31、Medium 51、Low 38；PR #3 維持 `NOT READY TO MERGE`。
