@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.5.0"
+version: "1.6.0"
 date: "2026-07-14"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "26da9a7412d902f2dfff48df23d04662687f4a9d"
+head_commit: "64669c43d531d9dd699d60e163e7b1c755d64963"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -204,6 +204,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.3.0 | 2026-07-20 | 記錄 owner Choice A，明確區分 Batch closure 與 Aggregate merge readiness；implementation commit `4f757e5` 關閉 R-A17/R-A18 並完成新 finding R-A20。另以 R-A21 保存 middle `/**/` zero-level matcher 殘留。Batch gate 全綠；Aggregate gate 只因 Wave-3 umbrella note 仍 Draft 而如實 fail-closed；分支仍 NOT READY TO MERGE。 |
 | 1.4.0 | 2026-07-20 | 記錄 owner 核准把 R-C03 納入 RB-4 schema gate 必要相依；implementation commit `9819e30` 完成 R-C01/R-C02/R-C03/R-C05/R-C07/R-C08、R-A19 與 R-F06。R-C04/R-C06/R-F04 保持 OPEN；完整 suite 664/0、audit 0/0，分支仍 NOT READY TO MERGE。 |
 | 1.5.0 | 2026-07-20 | RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01/R-D04/R-D05/R-E07 並建立新 High R-A22；migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 證據並完成 R-A22。R-E09 只完成歷史 note 子項，整項維持 IN_PROGRESS；R6 是下一批，分支仍 NOT READY TO MERGE。 |
+| 1.6.0 | 2026-07-20 | Post-accounting gates at head `64669c43d531d9dd699d60e163e7b1c755d64963` reopen RB-5 and R-A22: Pester remains 737/0/0, while runtime audit has one sealed-snapshot mismatch, Batch has 22 errors, and Aggregate has 19. R-D01/R-D04/R-D05/R-E07 remain COMPLETED; R-E09 remains IN_PROGRESS. R-A22 repair must precede R6; see Section 12. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -431,3 +432,35 @@ umbrella note 與 Aggregate acceptance、作出 `sdd-pipeline` promotion decisio
 獲授權後才可 merge 和執行 post-merge verification。`sdd-pipeline` 在此之前維持
 experimental、default-disabled 與 execution-denied。RB-5 使分支更接近可合併，但
 PR #3 仍 `NOT READY TO MERGE`。
+
+## 12. 2026-07-20 RB-5 post-accounting 誠實性還原增補
+
+Accounting commit `64669c43d531d9dd699d60e163e7b1c755d64963` 後的必要最終閘門
+推翻第 11 節的 RB-5 完成與「R6 是下一批」結論。完整 governance suite 仍為
+737 passed / 0 failed / 0 skipped；但 runtime audit 為 `VALID=false`，唯一 error 是
+`historical-evidence-sealed-snapshot-mismatch`。Batch gate 有 22 errors，包括同一
+blocker、17 個衍生 historical out-of-range errors 與四個
+`must-update-reconciliation-open`；Aggregate gate 有 19 errors。
+
+目前診斷根因是 `Read-ExactLegacyBaselineAtCommit` 拒絕 production legacy baseline metadata
+shape，使 `HISTORICAL_EVIDENCE_VALID=0`。RB-5 note 因而降為 `Draft`、`Open`。這項新
+證據只推翻 R-A22 closure 與 RB-5 Batch readiness，不推翻 agent truthfulness、mirror
+parity、least-privilege mapping 或 constitutional self-application boundary。
+
+| ID | 目前狀態 | 修復前 disposition |
+|---|---|---|
+| R-D01 | COMPLETED | 維持完成 |
+| R-D04 | COMPLETED | 維持完成 |
+| R-D05 | COMPLETED | 維持完成 |
+| R-E07 | COMPLETED | 維持完成 |
+| R-A22 | IN_PROGRESS | 修復 production legacy baseline shape reconstruction，補判別性測試並重跑全部 final gates |
+| R-E09 | IN_PROGRESS | 歷史子項與 Aggregate、merge accounting、R6 義務都不得冒充整項 closure |
+
+下一步是修復 R-A22，並要求 runtime audit 0 errors / 0 warnings、完整 suite 至少
+737 passed / 0 failed、Batch gate 全綠及 diff hygiene 通過。Aggregate 在 R6 前仍應只因
+canonical umbrella note 為 `Draft` 而 fail-closed，不得保留 R-A22 或 RB-5 reconciliation
+錯誤。修復完成並把 RB-5 note 恢復為 `Ready`、`Closed` 前，不得進入 R6。
+
+本節不新增 finding，不改變 128 條 ledger 總數與 Critical 8、High 31、Medium 51、
+Low 38 的分布。`sdd-pipeline` 繼續維持 experimental、default-disabled 與
+execution-denied；PR #3 繼續維持 `NOT READY TO MERGE`。

@@ -3,11 +3,32 @@
 **Date**: 2026-07-20
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `78c47eb0f3da7e75f3ba79943ea44f55984677a1`, `26da9a7412d902f2dfff48df23d04662687f4a9d`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 **Validation Scope**: Batch
+
+## Revalidation (2026-07-20, Post-Accounting)
+
+The required post-accounting gates at committed head
+`64669c43d531d9dd699d60e163e7b1c755d64963` refuted this note's `Ready` and `Closed`
+status and the R-A22 closure claim. The full governance suite still reports 737 passed, 0 failed,
+and 0 skipped, but the canonical runtime audit reports `VALID=false` with one
+`historical-evidence-sealed-snapshot-mismatch`. The Batch gate reports 22 errors: the same sealed
+snapshot blocker, 17 derived historical out-of-range errors, and four
+`must-update-reconciliation-open` errors. The Aggregate gate reports 19 errors.
+
+The confirmed immediate root cause is that `Read-ExactLegacyBaselineAtCommit` rejects the
+production legacy baseline metadata shape, so `HISTORICAL_EVIDENCE_VALID=0`. This evidence
+supersedes only the R-A22 completion and RB-5 Batch-readiness claims. R-D01, R-D04, R-D05, and
+R-E07 remain `COMPLETED`; R-A22 returns to `IN_PROGRESS`, and R-E09 remains `IN_PROGRESS`.
+
+Re-entry requires a discriminating repair for the production legacy baseline shape, a canonical
+runtime audit with zero errors and zero warnings, the full governance suite at no less than the
+737-test baseline, and a clean Batch gate. The four corrected `must_update` rows below remain
+`pending` until that repaired final gate succeeds. R6 is not the next executable batch while this
+RB-5 repair is open.
 
 ## Summary
 
@@ -30,10 +51,11 @@ permissions. RVR-12 also showed that the workspace used mainline notes and machi
 undeclared alternative to per-feature SDD artifacts, while 18 historical notes retained
 `Related Commits: TBD`.
 
-RB-5 closes the agent and self-application authority gaps. Historical note recovery is deliberately
-separate from current branch authorization: migrated historical commits cannot satisfy Batch or
-Aggregate readiness, path coverage, or `must_update` reconciliation. The Wave-3 aggregate note
-stays Draft until R6.
+The implementation commit closes the agent and self-application authority gaps, but the
+post-accounting revalidation above proves that the historical evidence framework is not yet a
+valid closure for R-A22. Historical note recovery remains separate from current branch
+authorization: migrated historical commits cannot satisfy Batch or Aggregate readiness, path
+coverage, or `must_update` reconciliation. The Wave-3 aggregate note stays Draft.
 
 ## Scope
 
@@ -52,8 +74,8 @@ RB-5 disposition:
 | R-D04 | COMPLETED | Canonical audit verifies deterministic normalized Claude mirror content, including missing, extra, empty, and body-drift cases. |
 | R-D05 | COMPLETED | Tool conversion uses explicit least-privilege mappings and fails before writes on malformed, unsupported, or permission-broadening input. |
 | R-E07 | COMPLETED | Constitution 1.9.0 defines the shared-only workspace self-application entry and closure boundary without weakening project delivery. |
-| R-A22 | COMPLETED | The one-time historical migration is schema-bound, base-bound, commit-role-bound, hash-sealed, and excluded from current authorization. |
-| R-E09 | IN_PROGRESS | The 18-note historical portion is complete; the Wave-3 Aggregate note and final merge accounting remain R6 obligations. |
+| R-A22 | IN_PROGRESS | The committed migration is not valid canonical evidence because the sealed snapshot cannot be reconstructed from the production legacy baseline metadata shape. |
+| R-E09 | IN_PROGRESS | The 18-note truth review and file updates landed, but their canonical historical-evidence validation is blocked by R-A22; the Wave-3 Aggregate note and final merge accounting also remain open. |
 
 Out of scope:
 
@@ -86,7 +108,8 @@ Out of scope:
   unrestricted dependent agent.
 - Workspace shared-layer maintenance has a narrow constitutional route with the same evidence
   obligations as this repair campaign; projects and ordinary features still use all seven stages.
-- Historical notes become auditable debt records but cannot prove current merge readiness.
+- Historical notes are intended to become auditable debt records, but the current sealed snapshot
+  is invalid and cannot prove current merge readiness.
 
 ## Impact Reconciliation
 
@@ -96,11 +119,11 @@ Out of scope:
 | `studio/QUICKSTART.md` | `must_update` | `updated` | Commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` documents the entry and closure prerequisites and preserves the R6 boundary. |
 | `studio/SDD-QUICKSTART-GUIDE.md` | `must_update` | `updated` | Commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` aligns the methodology guide with Constitution Section 2.1. |
 | `.github/agents/*.agent.md` | `must_review` | `updated` | Specify contradictions and unsafe explicit tool declarations are removed at the canonical source in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`. |
-| `.claude/agents/*.md` | `must_review` | `updated` | Source-derived mirrors were regenerated and normalized parity is part of the canonical audit. |
+| `.claude/agents/*.md` | `must_update` | `pending` | Source-derived mirrors were regenerated in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
 | `studio/templates/sdd-docs/*.md` | `must_review` | `updated` | The three runtime-adapter templates carry the Constitution 1.9.0 scoped self-application bootstrap. |
-| `AGENTS.md` | `must_review` | `updated` | Generated Constitution 1.9.0 bootstrap is synchronized and audit-verified. |
-| `CLAUDE.md` | `must_review` | `updated` | Generated Constitution 1.9.0 bootstrap is synchronized and audit-verified. |
-| `.github/copilot-instructions.md` | `must_review` | `updated` | Generated bootstrap and the workspace-only manual boundary are aligned with Constitution 1.9.0. |
+| `AGENTS.md` | `must_update` | `pending` | The Constitution 1.9.0 bootstrap was synchronized in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
+| `CLAUDE.md` | `must_update` | `pending` | The Constitution 1.9.0 bootstrap was synchronized in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
+| `.github/copilot-instructions.md` | `must_update` | `pending` | The generated bootstrap and workspace-only boundary were updated in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
 | `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | Revert-sensitive R-D01/R-D04/R-D05/R-E07/R-A22 invariants and the sealed historical migration policy bind the closure. |
 | `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `updated` | Canonical audit now invokes normalized Claude parity and validates the sealed historical authority surfaces. |
 | `studio/constitution/constitution.md` | `maybe_review` | `updated` | Version 1.9.0 adds the evidence-equivalent, shared-only self-application route while retaining Aggregate and R6 obligations. |
@@ -118,35 +141,41 @@ Out of scope:
   properties, path aliases and duplicates, wrong immutable base, wrong commit roles, migration
   scope drift, dirty authority surfaces, record rewriting, missing Git context, and attempted use
   of historical hashes as current readiness evidence.
-- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` reports `VALID=true`,
-  0 errors, and 0 warnings.
 - `pwsh ./studio/scripts/powershell/run-governance-tests.ps1` reports 737 passed, 0 failed, and
   0 skipped.
-- The historical migration reports state `sealed`, 18 records, and 18 valid records. All 18 legacy
-  notes were reviewed: 17 are `Merged` with reconciliation `Closed`; the disproven
-  `2026-04-10-shared-layer-consistency-fix.md` remains `Draft` with reconciliation `Open`.
+- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` currently reports
+  `VALID=false` with one `historical-evidence-sealed-snapshot-mismatch`; this is the blocking
+  canonical result even though the stored migration state is `sealed`.
+- All 18 legacy notes were reviewed: 17 are `Merged` with reconciliation `Closed`; the disproven
+  `2026-04-10-shared-layer-consistency-fix.md` remains `Draft` with reconciliation `Open`. Their
+  stored records do not constitute valid current evidence while
+  `HISTORICAL_EVIDENCE_VALID=0`.
 - The legacy baseline file is removed after the sealed transition; historical references are
   excluded from Batch and Aggregate commit evidence, path coverage, and reconciliation.
 - `git diff --check` passes.
 - Batch acceptance uses
   `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef
   de61431ae8f50d66f59157e00e4d239e9b37efdb -HeadRef HEAD -RequireReady
-  -ReadinessScope Batch -Json`. This Ready note cites only the implementation and migration
-  commits and does not use an accounting self-reference.
+  -ReadinessScope Batch -Json`. At head
+  `64669c43d531d9dd699d60e163e7b1c755d64963` it reports 22 errors and does not authorize
+  Batch readiness.
 
 ## Merge Notes
 
-- Ready status covers only the coherent RB-5 Batch implemented by
+- Draft status retains the implementation and migration evidence from
   `78c47eb0f3da7e75f3ba79943ea44f55984677a1` and sealed by
-  `26da9a7412d902f2dfff48df23d04662687f4a9d`.
-- RB-5 makes the branch closer to mergeable but does not make it merge-ready.
+  `26da9a7412d902f2dfff48df23d04662687f4a9d`, but neither commit currently closes R-A22.
+- RB-5 remains open and does not make the branch merge-ready.
 - The aggregate Wave-3 note remains Draft, R-E09 remains `IN_PROGRESS`, and PR #3 remains
   `NOT READY TO MERGE`.
-- `sdd-pipeline` remains experimental, default-disabled, and execution-denied. R6 is the next
-  required batch.
+- `sdd-pipeline` remains experimental, default-disabled, and execution-denied. The R-A22 repair
+  and repaired RB-5 final gates must precede R6.
 
 ## Follow-ups
 
-- R6 must run fresh-fixture seven-stage E2E, satisfy every minimum merge gate, decide promotion,
-  finalize the aggregate note, merge only when authorized, and perform post-merge validation.
+- Repair R-A22's production legacy-baseline reconstruction and rerun the runtime, Pester, Batch,
+  Aggregate, and diff-hygiene gates before advancing to R6.
+- After RB-5 is truthfully Ready, R6 must run fresh-fixture seven-stage E2E, satisfy every minimum
+  merge gate, decide promotion, finalize the aggregate note, merge only when authorized, and
+  perform post-merge validation.
 - Unrelated open ledger items remain independent and are not absorbed by this batch.

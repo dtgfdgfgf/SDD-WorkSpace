@@ -28,6 +28,20 @@ This note stays `Draft` with `Related Commits: TBD`, reconciliation `Open`, and 
 non-ready routes, satisfy the minimum merge gates, decide promotion, finalize Aggregate evidence,
 and perform authorized merge and post-merge verification. PR #3 remains `NOT READY TO MERGE`.
 
+### Post-Accounting Revalidation (2026-07-20)
+
+This subsection supersedes the preceding statement that RB-1 through RB-5 provide coherent Batch
+repairs. At accounting head `64669c43d531d9dd699d60e163e7b1c755d64963`, the full
+governance suite remains 737 passed, 0 failed, and 0 skipped, but the canonical runtime audit is
+`VALID=false` with one `historical-evidence-sealed-snapshot-mismatch`. Batch reports 22 errors and
+Aggregate reports 19 errors. `Read-ExactLegacyBaselineAtCommit` currently rejects the production
+legacy baseline metadata shape, leaving `HISTORICAL_EVIDENCE_VALID=0`.
+
+R-D01, R-D04, R-D05, and R-E07 remain `COMPLETED`. R-A22 is `IN_PROGRESS`, R-E09 remains
+`IN_PROGRESS`, and RB-5 is not Ready. The R-A22 repair and repaired RB-5 final gates must complete
+before R6 can begin. This Aggregate note remains `Draft`, `TBD`, `Open`, and `Aggregate`;
+`sdd-pipeline` remains experimental, default-disabled, and execution-denied.
+
 ## Summary
 
 - **Stream A (security hardening)** mirrors upstream `github/spec-kit` v0.3.0 PR #1809 (shell-injection robustness) and v0.7.5 PR #2229/#2296 (directory-traversal in agent command write paths). Eight existing PowerShell scripts now invoke the already-shipped `Assert-PathInsideRoot` / `Test-PathInsideRoot` helpers from `common.ps1`. New regression suite `studio/tests/path-traversal-hardening.Tests.ps1` covers every call site. Eight new `scriptInvariants` lock the contract; `script_change` impact route gains a `must_review` advisory pointing at the new tests.

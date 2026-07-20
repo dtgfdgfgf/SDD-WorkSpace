@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.13.0"
+version: "1.14.0"
 date: "2026-07-12"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "26da9a7412d902f2dfff48df23d04662687f4a9d"
+head_commit: "64669c43d531d9dd699d60e163e7b1c755d64963"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -81,6 +81,15 @@ R-E07，並建立新 High finding R-A22 的 fail-closed 歷史證據框架；mig
 umbrella note 與最終 merge accounting 仍留 R6，因此 R-E09 維持 `IN_PROGRESS`。
 ledger 現為 128 條（Critical 8、High 31、Medium 51、Low 38）。RB-5 使分支更接近
 可合併，但 R6 仍未完成，PR #3 仍 `NOT READY TO MERGE`。詳見第 23 節。
+
+**2026-07-20 RB-5 post-accounting 誠實性還原**：accounting commit
+`64669c43d531d9dd699d60e163e7b1c755d64963` 後的必要閘門推翻 RB-5 Ready 與
+R-A22 closure。完整 Pester 仍為 737 passed / 0 failed / 0 skipped，但 runtime audit
+為 `VALID=false` 且有一個 `historical-evidence-sealed-snapshot-mismatch`；Batch 為
+22 errors，Aggregate 為 19 errors。R-D01、R-D04、R-D05 與 R-E07 維持
+`COMPLETED`，R-A22 還原為 `IN_PROGRESS`，R-E09 維持 `IN_PROGRESS`。ledger 總數與
+嚴重度仍為 128 條及 Critical 8、High 31、Medium 51、Low 38。RB-5 修復完成前不得
+進入 R6；詳見第 24 節。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -426,6 +435,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.11.0 | 2026-07-20 | RB-3 implementation commit `4f757e5` 完成 R-A17/R-A18；新增並完成 High R-A20，新增且保留 Medium R-A21 為 OPEN。ledger 由 125 增至 127（Critical 8 / High 30 / Medium 51 / Low 38）。Batch gate 全綠；Aggregate gate 只因 Wave-3 umbrella note 仍 Draft 而如實失敗。分支仍 NOT READY TO MERGE，見第 21 節。 |
 | 1.12.0 | 2026-07-20 | RB-4 implementation commit `9819e30` 完成 R-C01/R-C02/R-C03/R-C05/R-C07/R-C08、R-A19 與 R-F06；記錄 owner 核准 R-C03 為 schema gate 必要相依，並保留 R-C04/R-C06/R-F04 為 OPEN。完整 suite 664/0、audit 0/0；ledger 維持 127 條，分支仍 NOT READY TO MERGE，見第 22 節。 |
 | 1.13.0 | 2026-07-20 | RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01/R-D04/R-D05/R-E07，新增 High R-A22；migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 證據並完成 R-A22。R-E09 的歷史 note 子項完成但整項維持 IN_PROGRESS。ledger 增至 128（Critical 8 / High 31 / Medium 51 / Low 38）；分支仍 NOT READY TO MERGE，見第 23 節。 |
+| 1.14.0 | 2026-07-20 | Post-accounting gates at head `64669c43d531d9dd699d60e163e7b1c755d64963` refute only RB-5 Ready and R-A22 closure: Pester remains 737/0/0, but runtime audit has one sealed-snapshot mismatch, Batch has 22 errors, and Aggregate has 19. R-A22 returns to IN_PROGRESS; R-D01/R-D04/R-D05/R-E07 remain COMPLETED and R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; see Section 24. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -935,3 +945,50 @@ Medium 51、Low 38 更新為 Critical 8、High 31、Medium 51、Low 38。RB-5 �
 分支更接近可合併，但不使分支 merge-ready。Wave-3 remediation sequence 的下一批為
 R6；整體 open-findings ledger 的其他 backlog 仍各自保留。PR #3 仍
 `NOT READY TO MERGE`。
+
+## 24. 2026-07-20 RB-5 post-accounting 誠實性還原增補
+
+本節依 note 狀態機與 append-only ledger 規則，取代第 23 節中 RB-5 已完成及 R-A22
+`COMPLETED` 的宣稱，不改寫第 23 節的歷史證據。Accounting commit
+`64669c43d531d9dd699d60e163e7b1c755d64963` 是本次 revalidation 的 committed head；
+implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 與 migration commit
+`26da9a7412d902f2dfff48df23d04662687f4a9d` 仍保留為已落地變更證據。
+
+Post-accounting 機器結果如下：
+
+| 驗收面 | 結果 |
+|---|---|
+| Full governance suite | 737 passed / 0 failed / 0 skipped |
+| Runtime audit | `VALID=false`；一個 `historical-evidence-sealed-snapshot-mismatch` |
+| Batch gate | 22 errors；同一 sealed-snapshot blocker、17 個衍生 historical out-of-range errors、四個 `must-update-reconciliation-open` |
+| Aggregate gate | 19 errors |
+
+目前診斷根因是 `Read-ExactLegacyBaselineAtCommit` 拒絕 production legacy baseline metadata
+shape，因此 `HISTORICAL_EVIDENCE_VALID=0`。這個反例推翻 R-A22 的 sealed historical
+evidence closure，也使 RB-5 note 必須由 `Ready`、`Closed` 降為 `Draft`、`Open`。RB-5
+note 中 `.claude/agents/*.md`、`AGENTS.md`、`CLAUDE.md` 與
+`.github/copilot-instructions.md` 的 impact 已依 route 從 `must_review` 修正為
+`must_update`，Disposition 保持 `pending`，直到 repaired final Batch gate 成功。
+
+**日期化狀態：**
+
+| ID | 2026-07-20 post-accounting 狀態 | 本次 superseding disposition |
+|---|---|---|
+| R-D01 | COMPLETED | Specify truthfulness closure 未被 sealed historical evidence 反例推翻 |
+| R-D04 | COMPLETED | Claude mirror deterministic parity closure 未被 sealed historical evidence 反例推翻 |
+| R-D05 | COMPLETED | Least-privilege tool mapping closure 未被 sealed historical evidence 反例推翻 |
+| R-E07 | COMPLETED | Constitution 1.9.0 self-application boundary 未被 sealed historical evidence 反例推翻 |
+| R-A22 | IN_PROGRESS | Production legacy baseline metadata shape 無法由 current reader 重建，sealed snapshot 尚非有效 canonical evidence |
+| R-E09 | IN_PROGRESS | 歷史 note 子項受 R-A22 blocker 影響，Wave-3 Aggregate、merge accounting 與 R6 義務也仍未完成 |
+
+R-A22 的重新進入條件是：以 production metadata shape 建立會在舊 reader 失敗、修復後
+通過的判別性測試；修復 exact legacy baseline reconstruction；runtime audit 回到 0 errors、
+0 warnings；完整 suite 不低於 737 且 0 failed；Batch gate 全綠。Aggregate 在 R6 前仍應
+因 umbrella note 為 `Draft` 而 fail-closed，但不得再包含 R-A22 或 RB-5 reconciliation
+錯誤。
+
+本節不新增 finding，也不重開未被反例推翻的 R-D01、R-D04、R-D05 或 R-E07。ledger
+總數維持 128，嚴重度維持 Critical 8、High 31、Medium 51、Low 38。R-A22 與 R-E09
+均為 `IN_PROGRESS`，RB-5 修復是下一步；R6 不是目前下一個可執行批次。PR #3 維持
+`NOT READY TO MERGE`，`sdd-pipeline` 維持 experimental、default-disabled 與
+execution-denied。
