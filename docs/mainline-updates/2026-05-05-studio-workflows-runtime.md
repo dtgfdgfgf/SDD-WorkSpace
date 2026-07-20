@@ -42,6 +42,26 @@ R-D01, R-D04, R-D05, and R-E07 remain `COMPLETED`. R-A22 is `IN_PROGRESS`, R-E09
 before R6 can begin. This Aggregate note remains `Draft`, `TBD`, `Open`, and `Aggregate`;
 `sdd-pipeline` remains experimental, default-disabled, and execution-denied.
 
+### Repair Closure Superseding Post-Accounting Revalidation
+
+Repair commit `3666c4e9a6553ff82774d4a06037f48846d8b0fd` supersedes the R-A22 and
+RB-5 disposition in the immediately preceding subsection. Its committed runtime audit reports
+`VALID=true`, 0 errors, 0 warnings, and 18 of 18 historical sealed records valid. The dedicated
+mainline-note validator file passes 91 of 91 tests. The exact production baseline is accepted,
+while `TwoField`, `ExtraField`, `SubstitutedField`, `WrongType`, and `Null` are denied; the
+contract anchor also rejects a revert to the former `Count=2` shortcut.
+
+RB-5 is completed and R-A22 returns to `COMPLETED`. The 18-note historical portion of R-E09 is
+complete, but R-E09 remains `IN_PROGRESS` for this umbrella note, R6 evidence, final merge
+accounting, and post-merge verification. A diagnostic Batch run after the repair has 18 of 18
+historical records valid and no sealed mismatch; its 33 errors derive only from the RB-5 note
+still being Draft and its coverage, not-ready, and reconciliation-missing consequences. Final
+full-suite, Batch, and Aggregate results remain pending until the accounting edits are complete.
+
+This umbrella note remains `Draft`, `TBD`, `Open`, and `Aggregate`. R6 is the next remediation
+batch after the accounting final gates are rerun. `sdd-pipeline` remains experimental,
+default-disabled, and execution-denied.
+
 ## Summary
 
 - **Stream A (security hardening)** mirrors upstream `github/spec-kit` v0.3.0 PR #1809 (shell-injection robustness) and v0.7.5 PR #2229/#2296 (directory-traversal in agent command write paths). Eight existing PowerShell scripts now invoke the already-shipped `Assert-PathInsideRoot` / `Test-PathInsideRoot` helpers from `common.ps1`. New regression suite `studio/tests/path-traversal-hardening.Tests.ps1` covers every call site. Eight new `scriptInvariants` lock the contract; `script_change` impact route gains a `must_review` advisory pointing at the new tests.

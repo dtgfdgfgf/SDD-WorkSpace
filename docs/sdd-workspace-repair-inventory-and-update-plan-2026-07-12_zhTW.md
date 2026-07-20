@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.14.0"
+version: "1.15.0"
 date: "2026-07-12"
 last_updated: "2026-07-20"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "64669c43d531d9dd699d60e163e7b1c755d64963"
+head_commit: "3666c4e9a6553ff82774d4a06037f48846d8b0fd"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -90,6 +90,17 @@ R-A22 closure。完整 Pester 仍為 737 passed / 0 failed / 0 skipped，但 run
 `COMPLETED`，R-A22 還原為 `IN_PROGRESS`，R-E09 維持 `IN_PROGRESS`。ledger 總數與
 嚴重度仍為 128 條及 Critical 8、High 31、Medium 51、Low 38。RB-5 修復完成前不得
 進入 R6；詳見第 24 節。
+
+**2026-07-20 RB-5 sealed baseline repair 完成**：repair commit
+`3666c4e9a6553ff82774d4a06037f48846d8b0fd` 以 exact five-field production
+metadata shape 修復 historical baseline reconstruction。Committed runtime audit 為
+`VALID=true`、0 errors、0 warnings，historical sealed evidence 為 18/18；dedicated
+validator file 為 91 passed / 0 failed。Production positive 通過，`TwoField`、
+`ExtraField`、`SubstitutedField`、`WrongType` 與 `Null` 全部被拒絕，contract anchor
+也阻擋舊 `Count=2` shortcut revert。R-A22 恢復 `COMPLETED`，R-E09 維持
+`IN_PROGRESS`；ledger 總數與嚴重度仍為 128 條及 Critical 8、High 31、Medium 51、
+Low 38。RB-5 完成，R6 是下一批；final accounting gates 尚待本次文件更新後重跑，
+詳見第 25 節。
 
 2026-07-13 owner decision review 已完成。第 6 節以 18 個「邏輯決策」記錄裁定；原表實際為 17 列、19 個 finding ID，其中 R-F04/R-H15 是同一能力鏈，R-I07/R-I08 則拆成兩個獨立清理決策。所有裁定均已標明執行時序與驗收邊界。
 
@@ -436,6 +447,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.12.0 | 2026-07-20 | RB-4 implementation commit `9819e30` 完成 R-C01/R-C02/R-C03/R-C05/R-C07/R-C08、R-A19 與 R-F06；記錄 owner 核准 R-C03 為 schema gate 必要相依，並保留 R-C04/R-C06/R-F04 為 OPEN。完整 suite 664/0、audit 0/0；ledger 維持 127 條，分支仍 NOT READY TO MERGE，見第 22 節。 |
 | 1.13.0 | 2026-07-20 | RB-5 implementation commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1` 完成 R-D01/R-D04/R-D05/R-E07，新增 High R-A22；migration commit `26da9a7412d902f2dfff48df23d04662687f4a9d` 封存 18 份歷史 note 證據並完成 R-A22。R-E09 的歷史 note 子項完成但整項維持 IN_PROGRESS。ledger 增至 128（Critical 8 / High 31 / Medium 51 / Low 38）；分支仍 NOT READY TO MERGE，見第 23 節。 |
 | 1.14.0 | 2026-07-20 | Post-accounting gates at head `64669c43d531d9dd699d60e163e7b1c755d64963` refute only RB-5 Ready and R-A22 closure: Pester remains 737/0/0, but runtime audit has one sealed-snapshot mismatch, Batch has 22 errors, and Aggregate has 19. R-A22 returns to IN_PROGRESS; R-D01/R-D04/R-D05/R-E07 remain COMPLETED and R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; see Section 24. |
+| 1.15.0 | 2026-07-20 | Repair commit `3666c4e9a6553ff82774d4a06037f48846d8b0fd` restores exact production baseline reconstruction: committed audit is VALID with 18/18 sealed records, and the dedicated validator file is 91/91 with production-positive plus five shape/type/null negatives. R-A22 returns to COMPLETED; R-E09 remains IN_PROGRESS. Counts stay 128 and 8/31/51/38; final accounting gates remain pending; see Section 25. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -990,5 +1002,49 @@ R-A22 的重新進入條件是：以 production metadata shape 建立會在舊 r
 本節不新增 finding，也不重開未被反例推翻的 R-D01、R-D04、R-D05 或 R-E07。ledger
 總數維持 128，嚴重度維持 Critical 8、High 31、Medium 51、Low 38。R-A22 與 R-E09
 均為 `IN_PROGRESS`，RB-5 修復是下一步；R6 不是目前下一個可執行批次。PR #3 維持
+`NOT READY TO MERGE`，`sdd-pipeline` 維持 experimental、default-disabled 與
+execution-denied。
+
+## 25. 2026-07-20 RB-5 sealed baseline repair closure 增補
+
+本節 supersede 第 24 節的 R-A22 `IN_PROGRESS` 與「R6 尚非下一批」結論，並保留該節
+作為 post-accounting 反例的歷史記錄。Repair commit
+`3666c4e9a6553ff82774d4a06037f48846d8b0fd` 修復
+`Read-ExactLegacyBaselineAtCommit`：immutable framework parent 現在必須精確包含
+`schemaVersion`、`purpose`、`created`、`removalBatch` 與 `entries` 五個 production
+metadata fields，並保留既有 path、blob hash、first-add 與 first-seal checks。
+
+Committed repair evidence 如下：
+
+| 驗收面 | 已觀察結果 |
+|---|---|
+| Runtime audit | `VALID=true`、0 errors、0 warnings |
+| Historical sealed evidence | 18/18 valid |
+| Dedicated mainline-note validator file | 91 passed / 0 failed |
+| Discriminating metadata matrix | Production positive 通過；`TwoField`、`ExtraField`、`SubstitutedField`、`WrongType`、`Null` 全部拒絕 |
+| Revert anchor | Shared runtime contract 拒絕舊 `Count=2` shortcut |
+
+Repair 後的 diagnostic Batch 已顯示 historical evidence 18/18，且沒有
+`historical-evidence-sealed-snapshot-mismatch`。該次 33 errors 全部源於 RB-5 note
+仍為 `Draft`，以及由此產生的 coverage、not-ready 與 reconciliation-missing errors；
+它不是 final Batch 結果。完整 governance suite、final Batch 與 Aggregate 必須在本次
+accounting edits 完成後重跑，本節不預先宣稱其結果。
+
+**日期化狀態：**
+
+| ID | 2026-07-20 repair closure 狀態 | Superseding disposition |
+|---|---|---|
+| R-D01 | COMPLETED | 狀態不變；Specify truthfulness closure 未被本次修復改動 |
+| R-D04 | COMPLETED | 狀態不變；Claude mirror parity closure 未被本次修復改動 |
+| R-D05 | COMPLETED | 狀態不變；least-privilege tool mapping closure 未被本次修復改動 |
+| R-E07 | COMPLETED | 狀態不變；Constitution 1.9.0 self-application boundary 未被本次修復改動 |
+| R-A22 | COMPLETED | Exact production baseline reconstruction、18/18 committed audit 與判別 matrix 完成 closure |
+| R-E09 | IN_PROGRESS | 18-note historical portion 已完成；Wave-3 umbrella、R6、merge accounting 與 post-merge evidence 仍未完成 |
+
+本節不新增 finding，不吸收 R-A13、R-A21、R-B23、R-C04、R-C06、R-E01、R-E02、
+R-E03、R-E04、R-E06、R-E08、R-E12、R-F04、R-I02 或其他 open IDs。ledger
+總數維持 128，嚴重度維持 Critical 8、High 31、Medium 51、Low 38。RB-5 已完成，
+R6 是下一個 remediation batch；但本次 accounting 後的 full suite、runtime audit、
+Batch、Aggregate 與 diff hygiene 仍須依實際結果收尾。PR #3 仍
 `NOT READY TO MERGE`，`sdd-pipeline` 維持 experimental、default-disabled 與
 execution-denied。
