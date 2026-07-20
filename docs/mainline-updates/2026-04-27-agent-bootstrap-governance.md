@@ -3,9 +3,10 @@
 **Date**: 2026-04-27
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: `TBD`
+**Status**: Merged
+**Related Commits**: `1a8078bec9f9c549c390a1f280bc2a7f81dc235f`
 **Related PR**: `N/A`
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -43,6 +44,31 @@ project.
 - Editing one adapter requires the other two to be synchronized before commit.
 - Studio Constitution changes refresh root adapter metadata and require a mainline update note.
 
+## Impact Reconciliation
+
+Historical reconciliation is closed only for recovering the exact introducing commit and confirming
+the scoped five-file bootstrap governance, synchronization scripts, hook checks, templates, and
+documentation changes. Current migration-route reconciliation belongs to
+`docs/mainline-updates/2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this historical note
+is excluded from current readiness authorization.
+
+## Revalidation (2026-07-20)
+
+Git history identifies `1a8078bec9f9c549c390a1f280bc2a7f81dc235f` as both the introducing and
+last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`8b6149ac99266e6ce56738bd686359b3bf0c71b00aef5ee718056775dc91fcef`.
+
+No material correction is required for the scoped bootstrap-governance changes. Merged status
+records exact historical commit recovery only and does not close later adapter routing, worktree,
+or audit findings.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+Any counts or outcomes in it are historical and were not rerun by RB-5 as current acceptance
+evidence. Neither this note nor its historical commit can satisfy current Batch or Aggregate
+readiness, path coverage, `must_update` reconciliation, runtime promotion, or the R6 fresh-fixture
+gate.
+
 ## Validation
 
 - `git diff --check`
@@ -52,7 +78,7 @@ project.
 
 ## Merge Notes
 
-- Ready once Pester and runtime audit pass.
+- The historical batch landed after its contemporaneous validation.
 - No existing `projects/*` or `learning/*` migration is included.
 
 ## Follow-ups

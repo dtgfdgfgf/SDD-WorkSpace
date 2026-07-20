@@ -2247,11 +2247,11 @@
       "docs/mainline-updates/2026-05-05-studio-workflows-runtime.md"
     ],
     "historicalEvidenceMigration": {
-      "state": "pending",
+      "state": "sealed",
       "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
       "expectedRecordCount": 18,
-      "migrationCommit": null,
-      "evidenceSha256": null,
+      "migrationCommit": "78c47eb0f3da7e75f3ba79943ea44f55984677a1",
+      "evidenceSha256": "1cbb98f6edea8e096501112fac7196f84524ffdd9e6b69e63dc5b859d29d7a5e",
       "evidencePath": "studio/runtime/mainline-note-historical-evidence.json",
       "schemaPath": "studio/runtime/mainline-note-historical-evidence.schema.json",
       "legacyBaselinePath": "studio/runtime/mainline-note-validation-baseline.json"

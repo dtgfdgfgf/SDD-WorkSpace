@@ -3,9 +3,10 @@
 **Date**: 2026-04-04
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: `TBD`
+**Status**: Merged
+**Related Commits**: `254d2035940291697b4dce501b68dcc14108be0d`
 **Related PR**: `N/A`
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -72,6 +73,31 @@ Non-goals:
 - Shared-layer validation now treats Claude shared agents as a machine-verifiable runtime surface
   instead of a purely documented convention.
 
+## Impact Reconciliation
+
+Historical reconciliation is closed only for recovering the exact introducing commit and confirming
+the scoped Claude junction, initialization, worktree bootstrap, contract, and documentation
+changes. Current migration-route reconciliation belongs to
+`docs/mainline-updates/2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this historical note
+is excluded from current readiness authorization.
+
+## Revalidation (2026-07-20)
+
+Git history identifies `254d2035940291697b4dce501b68dcc14108be0d` as both the introducing and
+last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`4688d740a3c8f46e9ab026cb07e9616b9e44dc45830aa787738ead28eabee550`.
+
+No material correction is required for the scoped Claude junction runtime introduced by that
+commit. Merged status records exact historical commit recovery only; later content-parity and
+least-privilege hardening remain separate changes.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+Any counts or outcomes in it are historical and were not rerun by RB-5 as current acceptance
+evidence. Neither this note nor its historical commit can satisfy current Batch or Aggregate
+readiness, path coverage, `must_update` reconciliation, runtime promotion, or the R6 fresh-fixture
+gate.
+
 ## Validation
 
 - `.\studio\scripts\powershell\seed-claude-agents.ps1 -WorkspaceRoot .`
@@ -83,7 +109,7 @@ Non-goals:
 
 ## Merge Notes
 
-- Ready to merge as a shared-layer runtime/governance batch.
+- The shared-layer runtime and governance batch landed in the historical commit recorded above.
 - The workspace root `/.claude/agents/` directory becomes the canonical Claude shared runtime
   authority after this change; future project-local Claude agent support would require a separate
   governance change.

@@ -7,9 +7,25 @@
 **Date**: 2026-04-30
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Merged
+**Related Commits**: `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
+
+## Revalidation (2026-07-20)
+
+Git history identifies `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6` as both the introducing
+and last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`8f52b99a0cba7edd89f6ec8e1cfb1974971acefeb936d94a5169452b4f1d0622`.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+RB-5 did not rerun those historical counts as current acceptance evidence. Neither this note nor
+its historical commit can satisfy present Batch or Aggregate evidence, path coverage,
+`must_update` reconciliation, runtime promotion, or the R6 fresh-fixture gate.
+
+No material correction is required for the scoped bug fixes. Merged status records exact
+historical commit recovery only and does not make this note current acceptance evidence.
 
 ## Update — 2026-05-01
 
@@ -59,6 +75,13 @@ A v1.8.0 deep review identified eight pure-bug cases where the workspace governa
 - `check-speckit-runtime.ps1 -Json` continues to return `VALID` and `FAILURES` empty (impact-registry currently fresh).
 - Behavior change: a stale impact-registry will now make `check-speckit-runtime.ps1` fail instead of warn. Developers MUST run `generate-impact-registry.ps1 -Write` before committing if they have introduced a new `drift-governance` block.
 - `create-new-feature.ps1` will now refuse to scaffold a `specs/<branch>/` directory when `git checkout -b` fails (e.g. branch already exists). Recover by deleting the conflicting branch or stashing the dirty worktree, then re-run.
+
+## Impact Reconciliation
+
+This historical note is sealed migration evidence only. It is excluded from current
+reconciliation and cannot satisfy current `must_update` routes. Current RB-5 reconciliation is
+owned by `2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this note records no
+present-day update disposition.
 
 ## Validation
 

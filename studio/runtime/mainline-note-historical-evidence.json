@@ -1,5 +1,186 @@
 {
   "schemaVersion": 1,
-  "migrationCommit": null,
-  "records": []
+  "migrationCommit": "78c47eb0f3da7e75f3ba79943ea44f55984677a1",
+  "records": [
+    {
+      "path": "docs/mainline-updates/2026-04-02-project-worktree-parity-governance.md",
+      "preMigrationSha256": "d805f5492bdd42c559df225af4618ef72f076d18657461b907d03c5315251a3c",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "4df3508b1c08e656d735f831003e3c0ea93303b141ce734c9979bab6de7b7a50",
+      "historicalCommits": [
+        "d1ddfbb3aa5bc28916af2c121218e04648279a09"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-04-claude-junction-runtime.md",
+      "preMigrationSha256": "4688d740a3c8f46e9ab026cb07e9616b9e44dc45830aa787738ead28eabee550",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "2cb47ae40c9bbb5c166e7ae448fbc2ae1b7e957c2603875749a2fc804901b410",
+      "historicalCommits": [
+        "254d2035940291697b4dce501b68dcc14108be0d"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-10-shared-layer-consistency-fix.md",
+      "preMigrationSha256": "e665de253412bd0b510c211fccb9354be3a1ea08ad482dbe62790084c95e472f",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "1f86b801e2bb1a2e41a6852028ec427c565742b802ccd6c25171b93418a3e76c",
+      "historicalCommits": [
+        "3355fc7e6252e44f5947f44b937bf0c78493df62"
+      ],
+      "expectedStatus": "Draft"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-27-agent-bootstrap-governance.md",
+      "preMigrationSha256": "8b6149ac99266e6ce56738bd686359b3bf0c71b00aef5ee718056775dc91fcef",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "6a97bba335cd635667d0fba4d06594e408af509059d769e46fcdc382153a4ce0",
+      "historicalCommits": [
+        "1a8078bec9f9c549c390a1f280bc2a7f81dc235f"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-28-adapter-change-routing.md",
+      "preMigrationSha256": "b8918f9b65f4306ce626b0b8970887088c7e2ffd8d904e2e58bd5c1572c8756b",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "45c86d5eeb748c50da29ca6034079ba097ae399c39d752d81a82bcd941ea94b6",
+      "historicalCommits": [
+        "8fe73578909a54db9cf4743545226e303213cbb1"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-28-quickstart-adapter-invariants.md",
+      "preMigrationSha256": "ec712892629527eb2689925d92d5d22cd580f9bd4c3ecaefee460f7a8eefbdb3",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "a360e97f36b06930ec2a33c672aa2f73d1a2840dea77b06ba14b309ef8dedbdb",
+      "historicalCommits": [
+        "ef71fb3e4f37128de98841c12066118e25827295"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-28-update-constitution-invariants.md",
+      "preMigrationSha256": "289aff90699e41f9d7318fc7b727bdfb9437769db61fcd57714afaa5ca05ac62",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "64c055efde0e2c76fec211cb0bfe0f1ce666b4b893d1d504b69d6fa30485e917",
+      "historicalCommits": [
+        "a439c64d1dd14b69cefb92e034f0db35703c551d"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-28-worktree-agents-md-parity.md",
+      "preMigrationSha256": "9c0d1c84bbd46f402769243ba004dec77bb37fbc21833be9d33028d539154865",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "0bb87d5f53392b84e96f448e7f668418c153c0e3a215d27b6782ba2c50ef7290",
+      "historicalCommits": [
+        "580462832150509ecc108cfeea44e25e1a6b077c"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-adapter-template-cleanup.md",
+      "preMigrationSha256": "fa37919ccf812be0b442eb28d273a9022de17345cd508b249e675c800706a2d3",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "8b7e47488461415eb638cbe32b682c5e3447c7b601ab6746289c194ed2023a4b",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-critical-bug-cleanup.md",
+      "preMigrationSha256": "8f52b99a0cba7edd89f6ec8e1cfb1974971acefeb936d94a5169452b4f1d0622",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "4ce066e9233fc8f02892444638432b7baec8bb2f9a465611c7dd5cb9293edf8c",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-hook-enforcement-tightening.md",
+      "preMigrationSha256": "a41637531a8d15b7dc8ee6697d679db3b142d5726f59559f03ac675761a88962",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "2134e1ecc3bba5f725dbca99725dad2be30f5254e440a00b57a0096c2fbf45dc",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-impact-routing-and-contract-split.md",
+      "preMigrationSha256": "8713638f2d396606aa20ad07a84d45e328d948f42b3d9a6eb77210e5c4d1a8a1",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "13995fbdaa6f30a2fce90cb376324b78aca23f076452613cc48b3c15963e9f5e",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-init-script-refactor.md",
+      "preMigrationSha256": "92639e1c56241e672ff7c1e17433e5388fb2edd8327e7aea0079bfdad6e5a2f9",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "ab20276e9af2c7942b612334d2555cdb485ac6ee85d3711e4241893ef4709304",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-machine-enforced-governance-gates.md",
+      "preMigrationSha256": "cabfe7b6c353ad8e71438984389e560cb89b10ffa5656c2b4029ddcfc0217881",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "b8fda8cc4e7e0b1d4f717f9584877e4f7f81920e73b339a84a154ac95d98e458",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-04-30-template-completion.md",
+      "preMigrationSha256": "f4d76ca3a5a653a5a25e7778d608cc66328b57686eb497e42365c3ad7c1a90c5",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "d8eec87eb7d8b8be824d410f7edcefd66448f17299541e17096529b98971dc8f",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-05-01-housekeeping.md",
+      "preMigrationSha256": "dec2571ec27be7c8974c742f85478e804b886daa2f0da23a07e020736d8dee90",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "becbba85e6114ff4564738c87deac4f5ca9e24bdc1564887b757d752021ef266",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-05-01-stage-entry-gates.md",
+      "preMigrationSha256": "3754c9ea52e735dfdb39f9079cb661a7101c9a0b9f6ab6a41511c66d9379e94c",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "2eaa8ff2d13c079356573a2cbc5e55410701d0b2a62263edd4b66981ae935602",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    },
+    {
+      "path": "docs/mainline-updates/2026-05-01-validation-and-worktree-hardening.md",
+      "preMigrationSha256": "acad1ea4a0a1c52dc8993440e2d6ffbbfee297ae5e9ef105ca85a33fe2d0e9d9",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "migratedSha256": "cd894015273fcc49c49b49f629ad819ce8d4eeadb84df226ff8f59bee955c65f",
+      "historicalCommits": [
+        "c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6"
+      ],
+      "expectedStatus": "Merged"
+    }
+  ]
 }

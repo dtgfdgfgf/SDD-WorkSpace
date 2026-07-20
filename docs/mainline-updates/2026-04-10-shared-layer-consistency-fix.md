@@ -9,9 +9,10 @@
 **Date**: 2026-04-10
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Draft
+**Related Commits**: `3355fc7e6252e44f5947f44b937bf0c78493df62`
 **Related PR**: N/A
+**Reconciliation Status**: Open
 
 ## Summary
 
@@ -70,6 +71,39 @@ stale mirrors that undermine confidence in the governance model.
 - Audit script can auto-fix mirror drift with `-Fix` parameter
 - No breaking changes to existing projects; all changes are additive or corrective
 
+## Impact Reconciliation
+
+Reconciliation remains open because the historical commit does not prove this note's broad parity,
+auto-fix, and complete-MUST-enforcement claims. Current migration-route reconciliation belongs to
+`docs/mainline-updates/2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this historical note
+is excluded from current readiness authorization and remains Draft.
+
+## Revalidation (2026-07-20)
+
+Git history identifies `3355fc7e6252e44f5947f44b937bf0c78493df62` as both the introducing and
+last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`e665de253412bd0b510c211fccb9354be3a1ea08ad482dbe62790084c95e472f`.
+
+The historical commit added drift-governance tooling and several hook, runtime, template, and
+documentation changes, but its changed paths refute material claims in this note. It deleted all 16
+files under `studio/templates/sdd-agents/` rather than synchronizing 15 stale mirror templates or
+downgrading that mirror set. The audit accepted a `[switch]$Fix` parameter but contained no
+corresponding auto-fix write path. The statement that the hook enforced all documented MUST
+requirements was also broader than the demonstrated rule-to-gate evidence. Those parity, auto-fix,
+and complete-enforcement claims are false as written, so the note cannot be promoted to Merged.
+
+Re-entry requires a dated review that maps every retained Summary and Impact claim to the exact
+historical changed paths and discriminating evidence. Any retained auto-fix claim must demonstrate
+an actual bounded write path and a negative test; any complete-MUST-enforcement claim must include
+an exhaustive rule-to-gate inventory. Until those conditions are met, reconciliation remains Open.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+Any counts or outcomes in it are historical and were not rerun by RB-5 as current acceptance
+evidence. Neither this note nor its historical commit can satisfy current Batch or Aggregate
+readiness, path coverage, `must_update` reconciliation, runtime promotion, or the R6 fresh-fixture
+gate.
+
 ## Validation
 
 - `git diff --check`
@@ -80,11 +114,12 @@ stale mirrors that undermine confidence in the governance model.
 
 ## Merge Notes
 
-- All changes are on `main` branch directly (shared-layer governance fix)
-- No conflicts expected as changes are isolated to shared layer
-- Mirror sync was performed as final step to ensure clean audit output
+- The historical commit exists on `main`, but this note remains Draft because its broad closure
+  claims are not supported by the recovered evidence.
+- The claimed mirror synchronization and audit auto-fix behavior are not accepted as historical
+  closure evidence.
 
 ## Follow-ups
 
-- None immediate
-- Future: consider adding pre-commit validation for CLAUDE.md and copilot-instructions.md existence in project directories
+- Satisfy the dated re-entry conditions above before attempting to close this note.
+- Project adapter validation remains independent of this unproven historical closure.

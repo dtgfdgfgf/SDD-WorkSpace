@@ -7,9 +7,10 @@
 **Date**: 2026-04-30
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Merged
+**Related Commits**: `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -58,18 +59,46 @@ The Direct Imports asymmetry across the three adapter templates was correct by d
 - Future authors of `.github/agents/<scope>-instructions.md`-style agent-scoped subsets now have explicit guidance not to add a bootstrap block.
 - mainline-update note authors should now treat `Status: Ready` as a contract that `Related Commits` is filled in.
 
+## Impact Reconciliation
+
+Historical reconciliation is closed only for recovering the exact introducing commit and confirming
+the scoped adapter-text, template-comment, heading, constitution clarification, and note-template
+changes. Current migration-route reconciliation belongs to
+`docs/mainline-updates/2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this historical note
+is excluded from current readiness authorization.
+
+## Revalidation (2026-07-20)
+
+Git history identifies `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6` as both the introducing and
+last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`fa37919ccf812be0b442eb28d273a9022de17345cd508b249e675c800706a2d3`.
+
+No material correction is required for the scoped adapter and template cleanup. Merged status
+records exact historical commit recovery only. The transient `Related Commits: TBD` explanation in
+the original follow-up text ceased to apply once the historical commit was recovered.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+Any counts or outcomes in it are historical and were not rerun by RB-5 as current acceptance
+evidence. Neither this note nor its historical commit can satisfy current Batch or Aggregate
+readiness, path coverage, `must_update` reconciliation, runtime promotion, or the R6 fresh-fixture
+gate.
+
 ## Validation
 
-- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1` -> 116 passed, 0 failed.
-- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` -> `VALID: true`, `ERROR_COUNT: 0`.
+- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1` reported 116 passed and 0 failed.
+- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` reported `VALID: true` and
+  `ERROR_COUNT: 0`.
 - Manual: confirmed `.github/copilot-instructions.md` now has exactly one H1 (line 1).
 
 ## Merge Notes
 
-- This patch land independent of Patch 5 sequencing, but Patch 5 (template completion) MUST land before Patch 6 (init-script refactor).
+- This patch landed in the historical deep-review batch. Its contemporaneous sequencing rule
+  required Patch 5 (template completion) before Patch 6 (init-script refactor).
 
 ## Follow-ups
 
 - L13 (agent file naming convention writeup): keep as low-priority cosmetic. Current state: `speckit.<cmd>.agent.md` for SDD stage commands, kebab-case bare filenames (`spec-kit.agent.md`, `async-python-reviewer.md`) for non-stage agents. Document this in `studio/SDD-QUICKSTART-GUIDE.md` when next touched.
-- Existing mainline-update notes from Patches 1-4 currently have `Related Commits: TBD` and `Status: Ready` because they have not been committed yet at the time of this writing. They will be retroactively filled in once these patches land in their merge commit. Treat as expected transient state for the deep-review remediation batch.
+- The historical transient `Related Commits: TBD` state for Patches 1-4 was resolved by the
+  2026-07-20 evidence migration and is not a current exception.
 - L6 (`async-python-reviewer.md` source verification): closed. The source file exists in `.github/agents/`; the seeded note is accurate.

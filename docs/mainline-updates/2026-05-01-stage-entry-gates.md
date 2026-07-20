@@ -7,9 +7,26 @@
 **Date**: 2026-05-01
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Merged
+**Related Commits**: `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
+
+## Revalidation (2026-07-20)
+
+Git history identifies `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6` as both the introducing
+and last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`3754c9ea52e735dfdb39f9079cb661a7101c9a0b9f6ab6a41511c66d9379e94c`.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+RB-5 did not rerun those historical counts as current acceptance evidence. Neither this note nor
+its historical commit can satisfy present Batch or Aggregate evidence, path coverage,
+`must_update` reconciliation, runtime promotion, or the R6 fresh-fixture gate.
+
+No material correction is required for adding and testing the five setup scripts. The historical
+claim is limited to those script surfaces. Direct slash-command prompt wiring was explicitly out
+of scope and this note does not prove current direct-command enforcement.
 
 ## Summary
 
@@ -72,7 +89,7 @@ Out of scope:
 
 ## Impact
 
-- 166 → 189 tests, 0 failed, 0 skipped.
+- 166 to 189 tests, 0 failed, 0 skipped.
 - `check-speckit-runtime.ps1 -Json` -> `VALID: true`, `ERROR_COUNT: 0`. Five new contract invariants verified.
 - `generate-impact-registry.ps1 -Compare` -> in-sync.
 - All five entry gates produce machine-verifiable JSON; agents and CI can consume `READY=false`
@@ -87,10 +104,17 @@ Out of scope:
 - Manual smoke: each new script invoked against a fresh fixture directory produces the expected
   JSON shape and exit code.
 
+## Impact Reconciliation
+
+This historical note is sealed migration evidence only. It is excluded from current
+reconciliation and cannot satisfy current `must_update` routes. Current RB-5 reconciliation is
+owned by `2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this note records no
+present-day update disposition.
+
 ## Merge Notes
 
-- Patch 8 closes the script-layer gap that constitution §2 always implied but only enforced via
-  agent prompts. The seven-stage order is now machine-verifiable for the first time.
+- Patch 8 added machine-verifiable entry checks for the five new script surfaces. It did not wire
+  direct slash-command prompts, which remained outside this historical batch.
 - No external-facing behavior change for happy-path callers because none of the existing scripts
   were touched. The new scripts are purely additive.
 - `-Force` exists for genuine emergencies (recovering an inherited feature, replaying a partial

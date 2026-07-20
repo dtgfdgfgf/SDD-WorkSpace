@@ -7,14 +7,37 @@
 **Date**: 2026-04-30
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Merged
+**Related Commits**: `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
+
+## Revalidation (2026-07-20)
+
+Git history identifies `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6` as both the introducing
+and last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`8713638f2d396606aa20ad07a84d45e328d948f42b3d9a6eb77210e5c4d1a8a1`.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+RB-5 did not rerun those historical counts as current acceptance evidence. Neither this note nor
+its historical commit can satisfy present Batch or Aggregate evidence, path coverage,
+`must_update` reconciliation, runtime promotion, or the R6 fresh-fixture gate.
+
+At `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`, `auxiliaryCommands` already contained
+six commands, including `speckit.eci`; Constitution Section 10 listed five general auxiliary
+roles and treated ECI separately. This patch therefore did not resolve R-E01. Regenerating
+`impact-registry.json` also did not resolve the generated-artifact authority contradiction
+tracked by R-E04.
 
 ## Summary
 
-- Split `requiredCommands` into explicit `mandatoryStageCommands` (the seven SDD delivery stages) and `auxiliaryCommands` (the supporting commands), preserving the union for backward compatibility.
-- Define the role of each auxiliary command (`checklist`, `constitution`, `discover`, `taskstoissues`, `version`) in constitution Section 10 so `speckit.version` is no longer an undefined orphan in the contract.
+- Split `requiredCommands` into explicit `mandatoryStageCommands` (the seven SDD delivery stages)
+  and `auxiliaryCommands` (six supporting commands at that commit, including `eci`), preserving
+  the union for backward compatibility.
+- Define five general auxiliary roles (`checklist`, `constitution`, `discover`, `taskstoissues`,
+  `version`) in constitution Section 10 so `speckit.version` is no longer an undefined orphan in
+  the contract; ECI remained separately described as a specialized command.
 - Add `worktree_parity_change` impact route so edits to `docs/project-worktree-parity-governance.md` produce explicit advisories for `new-project-worktree.ps1`, init scripts, contract, and onboarding docs.
 - Add `readiness_change` impact route so readiness-assessment edits explicitly flag `intent-ledger.md`, `plan.md`, `tasks.md`, and the ECI dossier for review.
 - Extend `spec_change` route with surface-truthfulness advisories on `README.md` and `studio/QUICKSTART.md` (constitution Section 12).
@@ -53,7 +76,7 @@ Direct edits to `.claude/agents/*.md` are silently overwritten on the next seed-
 
 ## Impact
 
-- 111 → 116 tests passing (5 new). All previously passing tests still pass.
+- 111 to 116 tests passing (5 new). All previously passing tests still pass.
 - `check-speckit-runtime.ps1 -Json` still `VALID: true`, `ERROR_COUNT: 0`, `WARNING_COUNT: 0`.
 - `generate-impact-registry.ps1 -Compare` reports fresh.
 - Behavior change for committers: editing `docs/project-worktree-parity-governance.md` will now produce explicit must_update / must_review / maybe_review advisories from the impact router. The pre-commit hook does not block on advisories — they are guidance.
@@ -66,6 +89,13 @@ Direct edits to `.claude/agents/*.md` are silently overwritten on the next seed-
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` -> `VALID: true`.
 - `pwsh ./studio/scripts/powershell/generate-impact-registry.ps1 -Compare` -> exit 0.
 - `pwsh ./studio/scripts/powershell/seed-claude-agents.ps1` -> 15 agents seeded, copilot-instructions.md correctly skipped with warning (M12 flow from Patch 1).
+
+## Impact Reconciliation
+
+This historical note is sealed migration evidence only. It is excluded from current
+reconciliation and cannot satisfy current `must_update` routes. Current RB-5 reconciliation is
+owned by `2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this note records no
+present-day update disposition.
 
 ## Merge Notes
 
