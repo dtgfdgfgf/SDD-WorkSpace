@@ -104,6 +104,12 @@
             "type": "string"
           }
         },
+        "templates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "docs": {
           "type": "array",
           "items": {

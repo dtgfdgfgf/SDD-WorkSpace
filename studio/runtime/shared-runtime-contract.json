@@ -155,7 +155,8 @@
       "path": ".gitignore",
       "mustContainAll": [
         ".claude/settings.local.json",
-        ".claude/.agent-*-backup/"
+        ".claude/.agent-*-backup/",
+        "/resources/studio-runtime/.extension-transactions/"
       ]
     },
     {
@@ -164,7 +165,34 @@
       "mustContainAll": [
         "/packages/",
         ".claude/settings.local.json",
-        ".claude/.agent-*-backup/"
+        ".claude/.agent-*-backup/",
+        "/.claude/agents/",
+        "/.github/agents/"
+      ]
+    },
+    {
+      "id": "extension-catalog-content-approval-migration",
+      "path": "studio/extensions/catalog.json",
+      "mustContainAll": [
+        "\"version\": \"1.2.0\"",
+        "\"reviewStatus\": \"draft\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"contentSha256\":",
+        "\"approvedContentSha256\": null"
+      ]
+    },
+    {
+      "id": "extension-policy-content-approval-migration",
+      "path": "studio/extensions/POLICY.md",
+      "mustContainAll": [
+        "catalog.json` document format is version `1.2.0`",
+        "approvals without verifiable evidence for the current bytes are",
+        "cleared and returned to draft review, experimental trust, and disabled-by-default state",
+        "`contentSha256` binds the catalog entry to the current extension bytes",
+        "`approvedContentSha256` binds approval evidence to the reviewed bytes",
+        "Retained transaction journals and baselines are local recovery evidence",
+        "must not be staged, committed, or shared"
       ]
     },
     {
@@ -1124,6 +1152,205 @@
       ]
     },
     {
+      "id": "common-worktree-local-hooks",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Set-ProjectWorktreeHooksPath",
+        "config --local extensions.worktreeConfig true",
+        "config --worktree core.hooksPath",
+        "config --worktree --get core.hooksPath",
+        "configScope  = 'worktree'"
+      ]
+    },
+    {
+      "id": "extension-registry-schema-path-and-transaction-helpers",
+      "path": "studio/scripts/powershell/extension-registry-common.ps1",
+      "mustContainAll": [
+        "function Test-ExtensionJsonDocument",
+        "Test-Json -Json $raw -Schema $schema -ErrorAction Stop",
+        "function Assert-ExtensionTreeHasNoReparsePoints",
+        "$rootItem = Get-Item -LiteralPath $Root",
+        "function Resolve-ExtensionEntryPoint",
+        "Assert-PathInsideRoot -Root $scopeRoot",
+        "Resolve-ExistingPathInsideRoot -Root $scopeRoot",
+        "function Get-ExtensionContentSha256",
+        "$pathToken = [Convert]::ToBase64String",
+        "function Assert-ExtensionOutputInsideWorkspace",
+        "$physicalOutput",
+        "$physicalProtected",
+        "function New-ExtensionTransactionDirectory",
+        "function Write-ExtensionTransactionRecoveryJournal",
+        ".recovery.json.",
+        "[System.IO.File]::Move($temporaryPath, $journalPath, $true)",
+        "function Save-ExtensionTransactionFileBaseline",
+        ".sha256",
+        "function Restore-ExtensionTransactionFileBaseline",
+        "[System.IO.File]::Move($temporaryPath, $sourcePath, $true)",
+        "Extension transaction restore verification failed",
+        "function Move-ExtensionMirrorToTransaction",
+        "function Restore-ExtensionMirrorFromTransaction"
+      ]
+    },
+    {
+      "id": "extension-registry-schema-and-approval-validation",
+      "path": "studio/scripts/powershell/validate-extension-registry.ps1",
+      "mustContainAll": [
+        "Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_CATALOG_PATH",
+        "Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_STATE_PATH",
+        "Test-ExtensionJsonDocument -Path $manifestPath",
+        "Resolve-ExistingPathInsideRoot -Root $paths.EXTENSIONS_ROOT",
+        "Get-ExtensionContentSha256",
+        "approvedBy, approvedAt, and approvedContentSha256 must be set or cleared together",
+        "Catalog contentSha256 does not match actual extension bytes",
+        "Content-bound approval is stale"
+      ]
+    },
+    {
+      "id": "add-extension-validated-transaction",
+      "path": "studio/scripts/powershell/add-extension.ps1",
+      "mustContainAll": [
+        "Extension source manifest is invalid before mutation",
+        "Resolve-ExtensionEntryPoint",
+        "Test-ExtensionJsonValue",
+        "reviewStatus   = 'draft'",
+        "trustLevel     = 'experimental'",
+        "approvedContentSha256 = $null",
+        "Save-ExtensionTransactionFileBaseline",
+        "$catalogMutationAttempted = $true",
+        "$stateMutationAttempted = $true",
+        "Restore-ExtensionTransactionFileBaseline",
+        "Restore-ExtensionMirrorFromTransaction",
+        "$rollbackErrors.Count -eq 0",
+        "Recovery evidence retained at:",
+        "Extension add/replace failed:"
+      ]
+    },
+    {
+      "id": "export-extensions-bounded-transaction",
+      "path": "studio/scripts/powershell/export-extensions.ps1",
+      "mustContainAll": [
+        "Assert-ExtensionOutputInsideWorkspace",
+        "Assert-ExtensionTreeHasNoReparsePoints",
+        "Resolve-ExtensionEntryPoint",
+        "Extension export target escapes declared scope",
+        "Extension export target escapes final declared scope",
+        "$stagingDir",
+        "$backupDir",
+        "$outputPromoted = $true",
+        "Extension export failed:",
+        "Export succeeded, but obsolete backup cleanup failed",
+        "CLEANUP_WARNING"
+      ]
+    },
+    {
+      "id": "extension-state-mirror-transaction",
+      "path": "studio/scripts/powershell/set-extension-state.ps1",
+      "mustContainAll": [
+        "Extension registry is invalid; refusing state mutation",
+        "Test-ExtensionJsonDocument",
+        "Save-ExtensionTransactionFileBaseline",
+        "$stateMutationAttempted = $true",
+        "Restore-ExtensionTransactionFileBaseline",
+        "Move-ExtensionMirrorToTransaction",
+        "Restore-ExtensionMirrorFromTransaction",
+        "$rollbackErrors.Count -eq 0",
+        "Recovery evidence retained at:",
+        "MIRROR_INVALIDATED"
+      ]
+    },
+    {
+      "id": "remove-extension-validated-transaction",
+      "path": "studio/scripts/powershell/remove-extension.ps1",
+      "mustContainAll": [
+        "Extension registry is invalid before removal",
+        "Test-ExtensionJsonValue",
+        "Save-ExtensionTransactionFileBaseline",
+        "$catalogMutationAttempted = $true",
+        "$stateMutationAttempted = $true",
+        "Restore-ExtensionTransactionFileBaseline",
+        "Move-ExtensionMirrorToTransaction",
+        "Restore-ExtensionMirrorFromTransaction",
+        "$rollbackErrors.Count -eq 0",
+        "Recovery evidence retained at:",
+        "MIRROR_INVALIDATED"
+      ]
+    },
+    {
+      "id": "extension-lifecycle-discriminating-tests",
+      "path": "studio/tests/extension-lifecycle.Tests.ps1",
+      "mustContainAll": [
+        "applies all three JSON schemas before accepting registry or manifest data",
+        "rejects normalized cross-scope entry points before any mutation",
+        "rejects an extension root directory that is a junction to external authority",
+        "rolls back catalog target and state when the second replacement write fails",
+        "retains hash-bound recovery evidence when state rollback cannot write its baseline",
+        "keeps retained transaction evidence out of root git status and git add",
+        "restores a transaction baseline through verified same-directory atomic replacement",
+        "detects byte replacement after approval even when manifest identity is unchanged",
+        "denies a workspace alias whose physical output overlaps the extension authority root",
+        "exercises add approve enable export disable re-enable export and remove lifecycle"
+      ]
+    },
+    {
+      "id": "upgrade-runtime-transaction-boundary",
+      "path": "studio/scripts/powershell/upgrade-studio-runtime.ps1",
+      "mustContainAll": [
+        "function Assert-UpgradePathPhysicalContainment",
+        "Resolve-ExistingPathInsideRoot",
+        "function Disable-StagedRuntimeMirror",
+        "function Get-UpgradeCandidateHashManifest",
+        "function Assert-UpgradeCandidateManifestUnchanged",
+        "function Get-TrustedUpgradeAuthorityManifest",
+        "function Assert-TrustedUpgradeAuthorityUnchanged",
+        "function New-TrustedUpgradeAuditBundle",
+        "function Invoke-UpgradeTrustedCandidateVerification",
+        "runtimeCheckPhase = 'trusted-staging'",
+        "$env:SDD_STUDIO_ROOT",
+        "$AuditResult.OUTPUT.VALID -is [bool]",
+        "$AuditResult.OUTPUT.ERROR_COUNT -is [long]",
+        "$AuditResult.OUTPUT.WARNING_COUNT -is [long]",
+        "function New-UpgradeBaseline",
+        "function Write-UpgradeTransactionJournal",
+        "[System.IO.File]::Move($temporaryPath, $Path, $true)",
+        "function Assert-UpgradeBaselineIntegrity",
+        "function Publish-UpgradeFileAtomically",
+        "ExpectedSha256",
+        "function Restore-UpgradeTargets",
+        "-ExpectedSha256 ([string]$record.hash)",
+        "Canonical runtime rollback completed and was verified",
+        "$preserveTransactionEvidence = $true",
+        "Recovery evidence retained at:",
+        "runtimeMirror = if ($invalidateRuntimeMirror) { 'invalidated' }"
+      ]
+    },
+    {
+      "id": "upgrade-runtime-transaction-tests",
+      "path": "studio/tests/upgrade-studio-runtime.Tests.ps1",
+      "mustContainAll": [
+        "rejects a canonical target parent junction before touching its outside sentinel",
+        "rejects a snapshot source junction that resolves outside the snapshot root",
+        "denies a string false audit verdict instead of coercing it to true",
+        "denies a wrong-type ERROR_COUNT from the trusted audit",
+        "denies a null WARNING_COUNT from the trusted audit",
+        "denies a self-approving candidate checker with the frozen trusted checker",
+        "denies a self-approving candidate audit dependency using the frozen dependency closure",
+        "never executes a candidate checker that writes an absolute canonical path",
+        "never lets candidate code tamper with trusted authority or baseline siblings",
+        "never executes candidate version or export smoke scripts",
+        "rolls back an earlier promoted file after a later apply failure and permits a clean retry",
+        "retains a durable transaction journal when rollback verification fails"
+      ]
+    },
+    {
+      "id": "upgrade-runtime-operator-guidance",
+      "path": "docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md",
+      "mustContainAll": [
+        "只使用交易開始前凍結的 trusted audit bundle",
+        "candidate 內的 checker、版本與 export smoke 腳本不會在交易內執行",
+        "該鏈仍由 finding R-F04 追蹤"
+      ]
+    },
+    {
       "id": "create-new-feature-consumer-git-boundary",
       "path": "studio/scripts/powershell/create-new-feature.ps1",
       "mustContainAll": [
@@ -1202,11 +1429,13 @@
       "path": "studio/scripts/powershell/new-project-worktree.ps1",
       "mustContainAll": [
         "Initialize-ProjectSharedAgentJunctions",
+        "Set-ProjectWorktreeHooksPath",
         ".claude/agents",
         ".github/copilot-instructions.md",
         "CLAUDE.md",
         ".code-workspace",
         "core.hooksPath",
+        "hooksConfigScope",
         "ValidateScript"
       ]
     },

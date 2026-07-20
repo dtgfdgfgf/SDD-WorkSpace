@@ -842,12 +842,13 @@ Describe 'new-project-worktree hooksPath configuration (M8)' {
         $script:worktreeScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/new-project-worktree.ps1'
     }
 
-    It 'configures core.hooksPath relative to the new worktree root' {
-        # Build a minimal workspace + project repo on TestDrive
+    It 'stores depth-specific hooks paths per worktree without changing source or sibling worktrees' {
+        # Build a minimal workspace, source repo, and pre-existing sibling worktree on TestDrive.
         $ws = Join-Path $TestDrive 'ws-m8'
         $studio = Join-Path $ws 'studio'
         $hooks = Join-Path $ws '.githooks'
         $project = Join-Path $ws 'projects/sample'
+        $existingWorktree = Join-Path $ws 'projects/existing-peer'
 
         New-Item -ItemType Directory -Path (Join-Path $studio 'constitution') -Force | Out-Null
         Set-Content -LiteralPath (Join-Path $studio 'constitution/constitution.md') -Value '# stub' -Encoding utf8
@@ -862,20 +863,67 @@ Describe 'new-project-worktree hooksPath configuration (M8)' {
             git config user.email 'test@example.com'
             git config user.name 'Test'
             'seed' | Set-Content -LiteralPath 'seed.txt'
+            @(
+                '/.github/agents/',
+                '/.claude/agents/'
+            ) | Set-Content -LiteralPath '.gitignore' -Encoding utf8
             git add . | Out-Null
             git commit -m 'feat: seed' | Out-Null
         } finally {
             Pop-Location
         }
 
-        $worktree = Join-Path $ws 'projects/sample-wt'
-        pwsh -NoProfile -File $script:worktreeScript -SourceRoot $project -Path $worktree -Branch 'feature-x' -Json | Out-Null
+        $sourceHooksPath = '../../.githooks'
+        git -C $project config core.hooksPath $sourceHooksPath
+        $LASTEXITCODE | Should -Be 0
+        git -C $project worktree add -b existing-peer $existingWorktree | Out-Null
         $LASTEXITCODE | Should -Be 0
 
-        Test-Path -LiteralPath $worktree | Should -BeTrue
-        $hooksPath = git -C $worktree config core.hooksPath
-        $hooksPath | Should -Not -BeNullOrEmpty
-        $hooksPath | Should -Match '\.\./\.githooks'
+        $shallowWorktree = Join-Path $ws 'shallow-wt'
+        $shallowOutput = @(pwsh -NoProfile -File $script:worktreeScript `
+            -SourceRoot $project `
+            -Path $shallowWorktree `
+            -Branch 'feature-shallow' `
+            -Json 2>&1)
+        $LASTEXITCODE | Should -Be 0 -Because ($shallowOutput -join "`n")
+
+        $expectedShallowHooks = [System.IO.Path]::GetRelativePath($shallowWorktree, $hooks) -replace '\\', '/'
+        (git -C $shallowWorktree config --worktree --get core.hooksPath) |
+            Should -BeExactly $expectedShallowHooks
+        (git -C $shallowWorktree config --show-origin --get core.hooksPath) |
+            Should -Match 'config\.worktree'
+        (git -C $project config --local --get core.hooksPath) |
+            Should -BeExactly $sourceHooksPath
+        (git -C $project config --get core.hooksPath) |
+            Should -BeExactly $sourceHooksPath
+        (git -C $existingWorktree config --get core.hooksPath) |
+            Should -BeExactly $sourceHooksPath
+
+        $deepParent = Join-Path $ws 'worktrees/team'
+        New-Item -ItemType Directory -Path $deepParent -Force | Out-Null
+        $deepWorktree = Join-Path $deepParent 'deep-wt'
+        $deepOutput = @(pwsh -NoProfile -File $script:worktreeScript `
+            -SourceRoot $project `
+            -Path $deepWorktree `
+            -Branch 'feature-deep' `
+            -Json 2>&1)
+        $LASTEXITCODE | Should -Be 0 -Because ($deepOutput -join "`n")
+
+        $expectedDeepHooks = [System.IO.Path]::GetRelativePath($deepWorktree, $hooks) -replace '\\', '/'
+        (git -C $deepWorktree config --worktree --get core.hooksPath) |
+            Should -BeExactly $expectedDeepHooks
+        (git -C $deepWorktree config --show-origin --get core.hooksPath) |
+            Should -Match 'config\.worktree'
+        (git -C $project config --local --get core.hooksPath) |
+            Should -BeExactly $sourceHooksPath
+        (git -C $project config --get core.hooksPath) |
+            Should -BeExactly $sourceHooksPath
+        (git -C $existingWorktree config --get core.hooksPath) |
+            Should -BeExactly $sourceHooksPath
+        (git -C $shallowWorktree config --get core.hooksPath) |
+            Should -BeExactly $expectedShallowHooks
+        (git -C $project config --local --bool --get extensions.worktreeConfig) |
+            Should -BeExactly 'true'
     }
 }
 

@@ -78,6 +78,9 @@ studio/tests/_artifacts/
 # ===========================
 .workflow/
 
+# Extension rollback recovery evidence (local transient, may contain absolute paths)
+/resources/studio-runtime/.extension-transactions/
+
 # ===========================
 # Personal data (never commit)
 # ===========================

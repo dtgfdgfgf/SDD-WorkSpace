@@ -1791,6 +1791,85 @@ function Initialize-ProjectGitRepository {
     }
 }
 
+function Set-ProjectWorktreeHooksPath {
+    <#
+    .SYNOPSIS
+    Configure workspace hooks in a linked consumer-project worktree without changing sibling worktrees.
+
+    .DESCRIPTION
+    Linked worktrees share the repository config by default. Enable Git's worktree config extension,
+    then write core.hooksPath through --worktree so a depth-specific relative path is stored only for
+    the target worktree.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WorktreeRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkspaceRoot
+    )
+
+    $worktreeRootPath = Resolve-AbsolutePath -Path $WorktreeRoot
+    $workspaceRootPath = Resolve-AbsolutePath -Path $WorkspaceRoot
+    $hooksDir = Join-Path $workspaceRootPath '.githooks'
+
+    if (-not (Test-Path -LiteralPath $hooksDir -PathType Container)) {
+        throw "Workspace hooks directory not found: $hooksDir"
+    }
+
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        throw 'Git is required to configure consumer-project worktree hooks.'
+    }
+
+    $gitMetadataPath = Join-Path $worktreeRootPath '.git'
+    if (-not (Test-Path -LiteralPath $gitMetadataPath -PathType Leaf)) {
+        throw "Target is not a linked Git worktree: $worktreeRootPath"
+    }
+
+    $gitRootRaw = @(& git -C $worktreeRootPath rev-parse --show-toplevel 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $gitRootRaw.Count -ne 1) {
+        throw "Unable to resolve linked worktree root: $worktreeRootPath"
+    }
+
+    $gitRoot = Resolve-AbsolutePath -Path ([string]$gitRootRaw[0])
+    if (-not [System.StringComparer]::OrdinalIgnoreCase.Equals($gitRoot, $worktreeRootPath)) {
+        throw "Worktree root mismatch: expected '$worktreeRootPath', Git reported '$gitRoot'."
+    }
+
+    # extensions.worktreeConfig belongs in the shared repository config and only enables
+    # config.worktree files. The depth-specific hooks value itself must never be written there.
+    & git -C $worktreeRootPath config --local extensions.worktreeConfig true
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to enable extensions.worktreeConfig for: $worktreeRootPath"
+    }
+
+    $worktreeConfigEnabled = @(& git -C $worktreeRootPath config --local --bool --get extensions.worktreeConfig 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $worktreeConfigEnabled.Count -ne 1 -or $worktreeConfigEnabled[0] -cne 'true') {
+        throw "Git did not persist extensions.worktreeConfig for: $worktreeRootPath"
+    }
+
+    $hooksPath = [System.IO.Path]::GetRelativePath($worktreeRootPath, $hooksDir) -replace '\\', '/'
+    & git -C $worktreeRootPath config --worktree core.hooksPath $hooksPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to configure worktree-local core.hooksPath for: $worktreeRootPath"
+    }
+
+    $configuredHooksPath = @(& git -C $worktreeRootPath config --worktree --get core.hooksPath 2>$null)
+    if (
+        $LASTEXITCODE -ne 0 -or
+        $configuredHooksPath.Count -ne 1 -or
+        $configuredHooksPath[0] -cne $hooksPath
+    ) {
+        throw "Git did not persist worktree-local core.hooksPath for: $worktreeRootPath"
+    }
+
+    return [ordered]@{
+        worktreeRoot = $worktreeRootPath
+        hooksPath    = $hooksPath
+        configScope  = 'worktree'
+    }
+}
+
 # ============================================================================
 # Markdown field parsing (unified helper - M4)
 # ============================================================================

@@ -220,9 +220,48 @@ exit 0
         $ignore | Should -Match '(?m)^/packages/$'
         $ignore | Should -Match '(?m)^\.claude/settings\.local\.json$'
         $ignore | Should -Match '(?m)^\.claude/\.agent-\*-backup/$'
+        $ignore | Should -Match '(?m)^/\.github/agents/$'
+        $ignore | Should -Match '(?m)^/\.claude/agents/$'
         $attributes | Should -Match '(?m)^\*\.ps1 text eol=lf$'
         $editorConfig | Should -Match '(?m)^charset = utf-8$'
         $editorConfig | Should -Match '(?m)^end_of_line = lf$'
+    }
+
+    It 'keeps shared junction contents out of fresh status and git add dot' {
+        Set-Content `
+            -LiteralPath (Join-Path $script:workspace '.github/agents/shared-fixture.agent.md') `
+            -Value '# shared Copilot agent' `
+            -Encoding utf8
+        Set-Content `
+            -LiteralPath (Join-Path $script:workspace '.claude/agents/shared-fixture.md') `
+            -Value '# shared Claude agent' `
+            -Encoding utf8
+
+        $target = Join-Path $script:workspace 'projects/junction-isolation'
+        Initialize-ProjectFromTemplate `
+            -Name 'junction-isolation' `
+            -TargetDir $target `
+            -Type 'Internal' `
+            -TemplateDir (Join-Path $script:studio 'templates/project-init') `
+            -StudioRoot $script:studio `
+            -WorkspaceRoot $script:workspace | Out-Null
+
+        (Get-Item -LiteralPath (Join-Path $target '.github/agents') -Force).LinkType |
+            Should -Be 'Junction'
+        (Get-Item -LiteralPath (Join-Path $target '.claude/agents') -Force).LinkType |
+            Should -Be 'Junction'
+
+        $status = @(git -C $target status --porcelain=v1 --untracked-files=all)
+        $LASTEXITCODE | Should -Be 0
+        ($status -join "`n") | Should -Not -Match '(?i)\.github/agents/'
+        ($status -join "`n") | Should -Not -Match '(?i)\.claude/agents/'
+
+        git -C $target add .
+        $LASTEXITCODE | Should -Be 0
+        $stagedPaths = @(git -C $target diff --cached --name-only)
+        $LASTEXITCODE | Should -Be 0
+        ($stagedPaths -join "`n") | Should -Not -Match '(?i)^\.github/agents/'
+        ($stagedPaths -join "`n") | Should -Not -Match '(?i)^\.claude/agents/'
     }
 
     It 'creates retrospective.md for Internal projects' {

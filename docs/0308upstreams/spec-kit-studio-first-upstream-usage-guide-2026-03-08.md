@@ -1085,18 +1085,29 @@ JSON：
 .\studio\scripts\powershell\upgrade-studio-runtime.ps1 -UpstreamSnapshotDir $snapshot -Apply -Json
 ```
 
-### 14.4 Apply 後會自動做的驗證
+### 14.4 Apply 交易內的驗證
 
-- `get-speckit-version.ps1 -Json`
-- `check-speckit-runtime.ps1 -Json`
-- skills export smoke
-- extension export smoke
+2026-03-08 版本曾在 Apply 後執行 candidate 內的版本、runtime check、skills export
+與 extension export 腳本。2026-07-20 的 RB-4 安全修復已取代這項行為，因為尚未通過
+授權的 candidate 腳本不能成為自己的驗證者，也不能在 rollback baseline 建立後取得
+交易內的執行權。
 
-並把結果寫到：
+目前 Apply 交易只使用交易開始前凍結的 trusted audit bundle：
+
+- 以 trusted checker 與其固定 dependency closure 驗證 staged candidate。
+- 驗證 trusted authority bundle 與 staged candidate 在驗證期間未被改寫。
+- promotion 後，以同一組 trusted authority 再驗證 canonical runtime。
+- 任一驗證或 promotion 步驟失敗時，依 hash-bound baseline 回復完整 canonical 狀態。
+- candidate 內的 checker、版本與 export smoke 腳本不會在交易內執行。
+
+成功時將 trusted staging audit、trusted canonical audit 與 promotion 結果寫到：
 
 ```text
 resources/studio-runtime/upgrade-report.json
 ```
+
+移除交易內 candidate smoke caller 只是減少未授權執行面，不代表 extension export
+call chain 已完成治理；該鏈仍由 finding R-F04 追蹤。
 
 ### 重要注意事項
 

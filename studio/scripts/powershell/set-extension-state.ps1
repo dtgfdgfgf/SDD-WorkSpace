@@ -32,9 +32,14 @@ if ($Help) {
 }
 
 . "$PSScriptRoot/common.ps1"
+. "$PSScriptRoot/extension-registry-common.ps1"
 
 $paths = Get-StudioSharedLayerPaths -StartDir $PSScriptRoot
 $validation = Invoke-JsonScript -ScriptPath $paths.EXTENSIONS_VALIDATOR_PATH -Arguments @('-Json')
+if (-not $validation.VALID) {
+    Write-Error ("Extension registry is invalid; refusing state mutation: {0}" -f ($validation.ERRORS -join '; '))
+    exit 1
+}
 $extension = @($validation.EXTENSIONS | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
 
 if (-not $extension) {
@@ -52,18 +57,12 @@ if ($State -eq 'enabled' -and $extension.reviewStatus -notin @('approved', 'depr
     exit 1
 }
 
-$stateData = Read-JsonFile -Path $paths.EXTENSIONS_STATE_PATH
-if (-not $stateData) {
-    $stateData = [ordered]@{
-        version = '1.1.0'
-        updated = Get-IsoTimestamp
-        states  = @{}
-    }
+$stateDocument = Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_STATE_PATH -SchemaPath $paths.EXTENSIONS_STATE_SCHEMA -Label 'extension state'
+if (-not $stateDocument.VALID) {
+    Write-Error ("Extension state is invalid; refusing mutation: {0}" -f ($stateDocument.ERRORS -join '; '))
+    exit 1
 }
-
-if (-not $stateData.ContainsKey('states') -or $stateData.states -isnot [hashtable]) {
-    $stateData.states = @{}
-}
+$stateData = $stateDocument.DATA
 
 $enabled = ($State -eq 'enabled')
 $stateData.states[$Id] = [ordered]@{
@@ -74,7 +73,58 @@ $stateData.states[$Id] = [ordered]@{
 }
 $stateData.updated = Get-IsoTimestamp
 
-Write-JsonFile -Path $paths.EXTENSIONS_STATE_PATH -Data $stateData -Depth 8
+$prospectiveState = Test-ExtensionJsonValue -Data $stateData -SchemaPath $paths.EXTENSIONS_STATE_SCHEMA -Label 'prospective extension state'
+if (-not $prospectiveState.VALID) {
+    Write-Error ("Prospective extension state is invalid; refusing mutation: {0}" -f ($prospectiveState.ERRORS -join '; '))
+    exit 1
+}
+
+$transactionDir = New-ExtensionTransactionDirectory -Paths $paths -Operation 'set-state'
+$stateBaseline = Save-ExtensionTransactionFileBaseline -TransactionDir $transactionDir -SourcePath $paths.EXTENSIONS_STATE_PATH -Name 'state.json'
+$mirrorBackup = $null
+$stateMutationAttempted = $false
+
+try {
+    $mirrorBackup = Move-ExtensionMirrorToTransaction -Paths $paths -TransactionDir $transactionDir
+    $stateMutationAttempted = $true
+    Write-JsonFile -Path $paths.EXTENSIONS_STATE_PATH -Data $stateData -Depth 10
+
+    $postValidation = Invoke-JsonScript -ScriptPath $paths.EXTENSIONS_VALIDATOR_PATH -Arguments @('-Json', '-Id', $Id)
+    if (-not $postValidation.VALID) {
+        throw "Extension registry rejected the state update: $($postValidation.ERRORS -join '; ')"
+    }
+
+    Remove-Item -LiteralPath $transactionDir -Recurse -Force -ErrorAction Stop
+} catch {
+    $failure = $_
+    $rollbackErrors = @()
+    if ($stateMutationAttempted) {
+        try {
+            Restore-ExtensionTransactionFileBaseline -Baseline $stateBaseline
+        } catch {
+            $rollbackErrors += "state rollback failed: $($_.Exception.Message)"
+        }
+    }
+    try {
+        Restore-ExtensionMirrorFromTransaction -Paths $paths -BackupPath $mirrorBackup
+    } catch {
+        $rollbackErrors += "mirror rollback failed: $($_.Exception.Message)"
+    }
+    if ($rollbackErrors.Count -eq 0 -and (Test-Path -LiteralPath $transactionDir)) {
+        try {
+            Remove-Item -LiteralPath $transactionDir -Recurse -Force -ErrorAction Stop
+        } catch {
+            $rollbackErrors += "transaction cleanup failed: $($_.Exception.Message)"
+        }
+    }
+
+    $rollbackSuffix = if ($rollbackErrors.Count -gt 0) {
+        " Rollback errors: $($rollbackErrors -join '; '). Recovery evidence retained at: $transactionDir"
+    } else {
+        ' Rollback completed.'
+    }
+    throw "Extension state update failed: $($failure.Exception.Message).$rollbackSuffix"
+}
 
 $result = [ordered]@{
     ID            = $Id
@@ -83,6 +133,7 @@ $result = [ordered]@{
     PINNED_VERSION = $extension.version
     REVIEW_STATUS = $extension.reviewStatus
     STATE_PATH    = $paths.EXTENSIONS_STATE_PATH
+    MIRROR_INVALIDATED = ($null -ne $mirrorBackup)
 }
 
 if ($Json) {

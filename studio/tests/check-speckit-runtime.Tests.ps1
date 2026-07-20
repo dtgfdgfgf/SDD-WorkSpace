@@ -224,6 +224,174 @@ Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
         ($audit.Result.FAILURES.message -join "`n") | Should -Match ([regex]::Escape('studio/extensions/**'))
     }
 
+    It 'fails when worktree-local hook configuration is reverted to repository-wide config' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'
+        $content = Get-Content -LiteralPath $commonPath -Raw
+        $content = $content.Replace(
+            'config --worktree core.hooksPath',
+            'config core.hooksPath'
+        )
+        [System.IO.File]::WriteAllText(
+            $commonPath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'common-worktree-local-hooks'
+    }
+
+    It 'fails when consumer templates stop excluding shared-agent junction roots' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $ignorePath = Join-Path $fixtureRoot 'studio/templates/project-init/.gitignore'
+        $content = Get-Content -LiteralPath $ignorePath -Raw
+        $content = $content.Replace('/.github/agents/', '/.github/runtime-agents/')
+        [System.IO.File]::WriteAllText(
+            $ignorePath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'project-template-repository-hygiene-ignore'
+    }
+
+    It 'fails when the trusted staged-upgrade audit boundary is removed' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $upgradePath = Join-Path $fixtureRoot 'studio/scripts/powershell/upgrade-studio-runtime.ps1'
+        $content = Get-Content -LiteralPath $upgradePath -Raw
+        $content = $content.Replace(
+            'function New-TrustedUpgradeAuditBundle',
+            'function New-DisabledUpgradeAuditBundle'
+        )
+        [System.IO.File]::WriteAllText(
+            $upgradePath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'upgrade-runtime-transaction-boundary'
+    }
+
+    It 'fails when extension JSON schema enforcement is replaced by a constant verdict' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $helperPath = Join-Path $fixtureRoot 'studio/scripts/powershell/extension-registry-common.ps1'
+        $content = Get-Content -LiteralPath $helperPath -Raw
+        $content = $content.Replace(
+            'Test-Json -Json $raw -Schema $schema -ErrorAction Stop',
+            '$true'
+        )
+        [System.IO.File]::WriteAllText(
+            $helperPath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'extension-registry-schema-path-and-transaction-helpers'
+    }
+
+    It 'fails when extension recovery journaling is removed' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $helperPath = Join-Path $fixtureRoot 'studio/scripts/powershell/extension-registry-common.ps1'
+        $content = Get-Content -LiteralPath $helperPath -Raw
+        $content = $content.Replace(
+            'function Write-ExtensionTransactionRecoveryJournal',
+            'function Write-DisabledExtensionTransactionRecoveryJournal'
+        )
+        [System.IO.File]::WriteAllText(
+            $helperPath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'extension-registry-schema-path-and-transaction-helpers'
+    }
+
+    It 'fails when extension baseline restore stops using atomic replacement' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $helperPath = Join-Path $fixtureRoot 'studio/scripts/powershell/extension-registry-common.ps1'
+        $content = Get-Content -LiteralPath $helperPath -Raw
+        $content = $content.Replace(
+            '[System.IO.File]::Move($temporaryPath, $sourcePath, $true)',
+            '[System.IO.File]::Copy($temporaryPath, $sourcePath, $true)'
+        )
+        [System.IO.File]::WriteAllText(
+            $helperPath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'extension-registry-schema-path-and-transaction-helpers'
+    }
+
+    It 'fails when the frozen trusted candidate-verification boundary is removed' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $upgradePath = Join-Path $fixtureRoot 'studio/scripts/powershell/upgrade-studio-runtime.ps1'
+        $content = Get-Content -LiteralPath $upgradePath -Raw
+        $content = $content.Replace(
+            'function Invoke-UpgradeTrustedCandidateVerification',
+            'function Invoke-DisabledUpgradeTrustedCandidateVerification'
+        )
+        [System.IO.File]::WriteAllText(
+            $upgradePath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'upgrade-runtime-transaction-boundary'
+    }
+
+    It 'fails when upgrade rollback stops binding restoration to the baseline hash' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $upgradePath = Join-Path $fixtureRoot 'studio/scripts/powershell/upgrade-studio-runtime.ps1'
+        $content = Get-Content -LiteralPath $upgradePath -Raw
+        $content = $content.Replace(
+            '-ExpectedSha256 ([string]$record.hash)',
+            '-ExpectedSha256 (Get-FileSha256 -Path ([string]$record.backup))'
+        )
+        [System.IO.File]::WriteAllText(
+            $upgradePath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'upgrade-runtime-transaction-boundary'
+    }
+
+    It 'fails when retained extension recovery evidence is no longer ignored' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $ignorePath = Join-Path $fixtureRoot '.gitignore'
+        $content = Get-Content -LiteralPath $ignorePath -Raw
+        $content = $content.Replace(
+            '/resources/studio-runtime/.extension-transactions/',
+            '/resources/studio-runtime/.disabled-extension-transactions/'
+        )
+        [System.IO.File]::WriteAllText(
+            $ignorePath,
+            ($content -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'workspace-repository-hygiene-ignore'
+    }
+
     It 'fails when the canonical aggregate readiness note is redirected' {
         $fixtureRoot = New-RuntimeAuditFixture
         $contractPath = Join-Path $fixtureRoot 'studio/runtime/shared-runtime-contract.json'

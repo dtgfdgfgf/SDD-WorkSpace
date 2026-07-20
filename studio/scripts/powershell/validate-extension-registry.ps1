@@ -27,6 +27,7 @@ if ($Help) {
 }
 
 . "$PSScriptRoot/common.ps1"
+. "$PSScriptRoot/extension-registry-common.ps1"
 
 function New-Issue {
     param(
@@ -133,20 +134,10 @@ function Validate-ManifestData {
                         continue
                     }
 
-                    if (-not ([string]$relativePath).StartsWith("$scope/")) {
-                        $errors += New-Issue -Scope 'manifest' -Message "Entry point '$relativePath' must start with '$scope/'"
-                        continue
-                    }
-
                     try {
-                        $resolvedPath = Resolve-RelativePathInsideRoot -Root $ExtensionRoot -RelativePath $relativePath
+                        [void](Resolve-ExtensionEntryPoint -ExtensionRoot $ExtensionRoot -Scope $scope -RelativePath ([string]$relativePath))
                     } catch {
                         $errors += New-Issue -Scope 'manifest' -Message $_.Exception.Message
-                        continue
-                    }
-
-                    if (-not (Test-Path -LiteralPath $resolvedPath)) {
-                        $errors += New-Issue -Scope 'manifest' -Message "Declared entry point not found: $relativePath"
                     }
                 }
 
@@ -182,7 +173,7 @@ function Validate-CatalogEntryData {
     $reviewStatuses = Get-ExtensionRegistryReviewStatuses
     $trustLevels = Get-ExtensionRegistryTrustLevels
 
-    foreach ($field in @('id', 'version', 'title', 'sourcePath', 'reviewStatus', 'trustLevel', 'defaultEnabled', 'owner', 'runtimeScopes', 'capabilities', 'notes')) {
+    foreach ($field in @('id', 'version', 'title', 'sourcePath', 'reviewStatus', 'trustLevel', 'defaultEnabled', 'owner', 'approvedBy', 'approvedAt', 'contentSha256', 'approvedContentSha256', 'runtimeScopes', 'capabilities', 'notes')) {
         if (-not $Entry.ContainsKey($field)) {
             $errors += New-Issue -Scope 'catalog' -Message "Missing required catalog field '$field'"
         }
@@ -218,6 +209,28 @@ function Validate-CatalogEntryData {
 
     if ($Entry.ContainsKey('approvedAt') -and $null -ne $Entry.approvedAt -and -not (Test-DateTimeValue -Value $Entry.approvedAt)) {
         $errors += New-Issue -Scope 'catalog' -Message 'approvedAt must be an ISO date-time string or null'
+    }
+
+    if ($Entry.ContainsKey('contentSha256') -and [string]$Entry.contentSha256 -notmatch '^[a-f0-9]{64}$') {
+        $errors += New-Issue -Scope 'catalog' -Message 'contentSha256 must be a lowercase SHA-256 digest'
+    }
+
+    if ($Entry.ContainsKey('approvedContentSha256') -and $null -ne $Entry.approvedContentSha256 -and [string]$Entry.approvedContentSha256 -notmatch '^[a-f0-9]{64}$') {
+        $errors += New-Issue -Scope 'catalog' -Message 'approvedContentSha256 must be a lowercase SHA-256 digest or null'
+    }
+
+    $hasApprover = $Entry.ContainsKey('approvedBy') -and -not [string]::IsNullOrWhiteSpace([string]$Entry.approvedBy)
+    $hasApprovalTime = $Entry.ContainsKey('approvedAt') -and $null -ne $Entry.approvedAt
+    $hasApprovalHash = $Entry.ContainsKey('approvedContentSha256') -and $null -ne $Entry.approvedContentSha256
+    if (($hasApprover -or $hasApprovalTime -or $hasApprovalHash) -and -not ($hasApprover -and $hasApprovalTime -and $hasApprovalHash)) {
+        $errors += New-Issue -Scope 'catalog' -Message 'approvedBy, approvedAt, and approvedContentSha256 must be set or cleared together'
+    }
+
+    if ($Entry.ContainsKey('reviewStatus') -and $Entry.reviewStatus -eq 'approved' -and -not ($hasApprover -and $hasApprovalTime -and $hasApprovalHash)) {
+        $errors += New-Issue -Scope 'catalog' -Message 'reviewStatus=approved requires content-bound approval evidence'
+    }
+    if ($hasApprover -and $Entry.reviewStatus -ne 'approved') {
+        $errors += New-Issue -Scope 'catalog' -Message 'content-bound approval evidence requires reviewStatus=approved'
     }
 
     if ($Entry.defaultEnabled -eq $true) {
@@ -297,16 +310,21 @@ foreach ($requiredPath in @($paths.EXTENSIONS_ROOT, $paths.EXTENSIONS_POLICY_PAT
     }
 }
 
-$catalog = Read-JsonFile -Path $paths.EXTENSIONS_CATALOG_PATH
-$state = Read-JsonFile -Path $paths.EXTENSIONS_STATE_PATH
+$catalogDocument = Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_CATALOG_PATH -SchemaPath $paths.EXTENSIONS_CATALOG_SCHEMA -Label 'extension catalog'
+$stateDocument = Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_STATE_PATH -SchemaPath $paths.EXTENSIONS_STATE_SCHEMA -Label 'extension state'
+$errors += @($catalogDocument.ERRORS | ForEach-Object { New-Issue -Scope 'catalog' -Message $_ })
+$errors += @($stateDocument.ERRORS | ForEach-Object { New-Issue -Scope 'state' -Message $_ })
 
-if (-not $catalog) {
-    $errors += New-Issue -Scope 'catalog' -Message 'Unable to read catalog.json'
+$catalog = $catalogDocument.DATA
+$state = $stateDocument.DATA
+
+if ($catalog -isnot [System.Collections.IDictionary]) {
+    $errors += New-Issue -Scope 'catalog' -Message 'catalog root must be an object'
     $catalog = [ordered]@{ policy = @{}; extensions = @() }
 }
 
-if (-not $state) {
-    $errors += New-Issue -Scope 'state' -Message 'Unable to read state.json'
+if ($state -isnot [System.Collections.IDictionary]) {
+    $errors += New-Issue -Scope 'state' -Message 'state root must be an object'
     $state = [ordered]@{ states = @{} }
 }
 
@@ -314,11 +332,16 @@ if (-not $catalog.ContainsKey('policy') -or $catalog.policy -isnot [hashtable]) 
     $errors += New-Issue -Scope 'catalog' -Message 'policy must be an object'
 }
 
-if (-not $catalog.ContainsKey('extensions')) {
-    $errors += New-Issue -Scope 'catalog' -Message 'extensions must be present'
+if (
+    -not $catalog.ContainsKey('extensions') -or
+    $catalog.extensions -is [string] -or
+    $catalog.extensions -isnot [System.Collections.IEnumerable]
+) {
+    $errors += New-Issue -Scope 'catalog' -Message 'extensions must be an array'
+    $catalog.extensions = @()
 }
 
-if (-not $state.ContainsKey('states') -or $state.states -isnot [hashtable]) {
+if (-not $state.ContainsKey('states') -or $state.states -isnot [System.Collections.IDictionary]) {
     $errors += New-Issue -Scope 'state' -Message 'states must be an object'
     $state.states = @{}
 }
@@ -349,18 +372,34 @@ foreach ($entry in @($catalog.extensions)) {
 
 $manifestLookup = @{}
 Get-ChildItem -LiteralPath $paths.EXTENSIONS_ROOT -Directory | ForEach-Object {
+    try {
+        [void](Resolve-ExistingPathInsideRoot -Root $paths.EXTENSIONS_ROOT -Candidate $_.FullName -MessagePrefix 'Extension directory escapes extensions root through a reparse point')
+    } catch {
+        $errors += New-Issue -Scope 'manifest' -Message $_.Exception.Message
+        return
+    }
+
     $manifestPath = Join-Path $_.FullName 'manifest.json'
     if (-not (Test-Path -LiteralPath $manifestPath)) {
         return
     }
 
-    $manifest = Read-JsonFile -Path $manifestPath
-    if (-not $manifest) {
-        $errors += New-Issue -Scope 'manifest' -Message "Unable to parse manifest: $manifestPath"
+    $manifestDocument = Test-ExtensionJsonDocument -Path $manifestPath -SchemaPath $paths.EXTENSIONS_MANIFEST_SCHEMA -Label "extension manifest '$($_.Name)'"
+    $errors += @($manifestDocument.ERRORS | ForEach-Object { New-Issue -Scope 'manifest' -Message $_ })
+    $manifest = $manifestDocument.DATA
+    if ($manifest -isnot [System.Collections.IDictionary]) {
+        $errors += New-Issue -Scope 'manifest' -Message "Manifest root must be an object: $manifestPath"
         return
     }
 
     $manifestValidation = Validate-ManifestData -Manifest $manifest -ManifestPath $manifestPath -ExtensionRoot $_.FullName
+    $contentSha256 = $null
+    try {
+        $contentSha256 = Get-ExtensionContentSha256 -ExtensionRoot $_.FullName
+    } catch {
+        $manifestValidation.errors += New-Issue -Scope 'manifest' -Message $_.Exception.Message
+        $manifestValidation.valid = $false
+    }
     $manifestId = [string]$manifest.id
 
     if ($manifestLookup.ContainsKey($manifestId)) {
@@ -372,6 +411,7 @@ Get-ChildItem -LiteralPath $paths.EXTENSIONS_ROOT -Directory | ForEach-Object {
         manifest       = $manifest
         path           = $manifestPath
         root           = $_.FullName
+        contentSha256  = $contentSha256
         validation     = $manifestValidation
     }
 }
@@ -425,6 +465,17 @@ foreach ($extensionId in $allIds) {
             $extensionWarnings += New-Issue -Scope 'catalog' -Message "Catalog title differs from manifest title for '$extensionId'"
         }
 
+        if ($catalogEntry.contentSha256 -cne $manifestInfo.contentSha256) {
+            $extensionErrors += New-Issue -Scope 'catalog' -Message "Catalog contentSha256 does not match actual extension bytes for '$extensionId'"
+        }
+
+        if (
+            $null -ne $catalogEntry.approvedContentSha256 -and
+            $catalogEntry.approvedContentSha256 -cne $manifestInfo.contentSha256
+        ) {
+            $extensionErrors += New-Issue -Scope 'catalog' -Message "Content-bound approval is stale for '$extensionId'"
+        }
+
         foreach ($scope in @($catalogEntry.runtimeScopes)) {
             if ($manifestInfo.validation.runtimeScopes.Count -gt 0 -and $scope -notin $manifestInfo.validation.runtimeScopes) {
                 $extensionErrors += New-Issue -Scope 'catalog' -Message "Catalog runtime scope '$scope' not present in manifest runtimeScopes for '$extensionId'"
@@ -464,6 +515,8 @@ foreach ($extensionId in $allIds) {
         runtimeScopes    = if ($manifestInfo -and $manifestInfo.validation.runtimeScopes.Count -gt 0) { @($manifestInfo.validation.runtimeScopes) } elseif ($catalogEntry) { @($catalogEntry.runtimeScopes) } else { @() }
         capabilities     = if ($manifestInfo -and $manifestInfo.manifest.capabilities) { @($manifestInfo.manifest.capabilities) } elseif ($catalogEntry) { @($catalogEntry.capabilities) } else { @() }
         entryPoints      = if ($manifestInfo) { $manifestInfo.validation.entryPoints } else { @{} }
+        contentSha256    = if ($manifestInfo) { $manifestInfo.contentSha256 } else { $null }
+        approvedContentSha256 = if ($catalogEntry) { $catalogEntry.approvedContentSha256 } else { $null }
         cataloged        = [bool]$catalogEntry
         hasManifest      = [bool]$manifestInfo
         issues           = @($extensionErrors)

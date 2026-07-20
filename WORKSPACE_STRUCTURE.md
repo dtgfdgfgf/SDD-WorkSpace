@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.8.0
+**Version:** 1.9.0
 **Created:** 2025-12-08  
-**Updated:** 2026-04-30
+**Updated:** 2026-07-20
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -232,7 +232,10 @@ guarantee derived worktree parity. Derived worktree parity is a separate obligat
 `docs/project-worktree-parity-governance.md`.
 
 Derived worktree bootstrap uses `studio/scripts/powershell/new-project-worktree.ps1` to preserve
-the same shared junction model for Copilot and Claude runtime agents.
+the same shared junction model for Copilot and Claude runtime agents. The script enables Git
+worktree config and writes each depth-specific `core.hooksPath` with `git config --worktree`;
+creating one derived worktree therefore does not replace the hooks path used by the source or
+another worktree.
 
 ## Naming Conventions
 
@@ -263,6 +266,7 @@ the same shared junction model for Copilot and Claude runtime agents.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.9.0 | 2026-07-20 | Isolate derived-worktree hook paths in worktree config and keep shared agent junction contents outside consumer Git snapshots |
 | 1.8.0 | 2026-04-30 | Make new consumer projects independent Git repos with workspace hook configuration and machine-enforced staged governance gates |
 | 1.7.0 | 2026-04-04 | Add workspace-level Claude shared junction runtime, project init support, and derived worktree bootstrap for `.claude/agents/` |
 | 1.6.0 | 2026-04-02 | Add canonical consumer-project derived worktree parity governance and clarify that project initialization bootstrap does not automatically satisfy derived worktree parity |
