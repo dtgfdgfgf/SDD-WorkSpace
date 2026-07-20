@@ -348,7 +348,16 @@ BeforeAll {
             [ValidateSet('Draft', 'Ready', 'Merged')]
             [string]$MigratedStatus = 'Ready',
             [ValidateSet('Open', 'Closed')]
-            [string]$MigratedReconciliationStatus = 'Closed'
+            [string]$MigratedReconciliationStatus = 'Closed',
+            [ValidateSet(
+                'Production',
+                'TwoField',
+                'ExtraField',
+                'SubstitutedField',
+                'WrongType',
+                'Null'
+            )]
+            [string]$LegacyBaselineShape = 'Production'
         )
 
         $root = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
@@ -396,15 +405,44 @@ BeforeAll {
         ).Hash.ToLowerInvariant()
 
         Write-FixtureText -Path (Join-Path $root 'unrelated-before-batch.txt') -Content 'batch marker'
-        Write-TestJson -Path (Join-Path $root 'studio/runtime/mainline-note-validation-baseline.json') -Value ([ordered]@{
+        $legacyBaseline = [ordered]@{
             schemaVersion = 1
+            purpose = (
+                'Hash-bound migration ledger for the 18 legacy Ready notes whose commit evidence ' +
+                'remains TBD. R-E09 owns evidence recovery or Draft downgrade in R5.'
+            )
+            created = '2026-07-13'
+            removalBatch = 'R5'
             entries = @(
                 [ordered]@{
                     path = $noteRelativePath
                     sha256 = $preMigrationSha
                 }
             )
-        })
+        }
+        switch ($LegacyBaselineShape) {
+            'TwoField' {
+                $legacyBaseline.Remove('purpose')
+                $legacyBaseline.Remove('created')
+                $legacyBaseline.Remove('removalBatch')
+            }
+            'ExtraField' {
+                $legacyBaseline['unexpectedMetadata'] = 'not-authority'
+            }
+            'SubstitutedField' {
+                $legacyBaseline.Remove('removalBatch')
+                $legacyBaseline['unexpectedMetadata'] = 'R5'
+            }
+            'WrongType' {
+                $legacyBaseline['created'] = 20260713
+            }
+            'Null' {
+                $legacyBaseline['purpose'] = $null
+            }
+        }
+        Write-TestJson -Path (
+            Join-Path $root 'studio/runtime/mainline-note-validation-baseline.json'
+        ) -Value $legacyBaseline
         $batchBase = Complete-FixtureCommit -Root $root -Message 'test: establish migration batch base'
         Invoke-FixtureGit -Root $root -Arguments @('switch', '--quiet', '-c', 'feature/historical-migration') | Out-Null
 
@@ -1287,17 +1325,41 @@ Describe 'validate-mainline-notes bound historical evidence migration' {
         }
     }
 
-    It 'accepts an exact record-bound historical reference without treating it as in-range evidence' {
+    It 'accepts exact production legacy metadata without treating historical refs as in-range evidence' {
         $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
             -BaseRef $script:historicalFixture.BatchBase
 
         $result.ExitCode | Should -Be 0 -Because $result.Raw
         $result.Data.HISTORICAL_EVIDENCE_COUNT | Should -Be 1
         $result.Data.HISTORICAL_EVIDENCE_VALID | Should -Be 1
+        $result.Data.ERRORS.category |
+            Should -Not -Contain 'historical-evidence-sealed-snapshot-mismatch'
         $result.Data.HISTORICAL_EVIDENCE_APPLIED | Should -Contain (
             "$($script:historicalFixture.NoteRelativePath)@$($script:historicalFixture.HistoricalCommit)"
         )
         $result.Data.ERRORS.category | Should -Not -Contain 'commit-evidence-out-of-range'
+    }
+
+    It 'rejects noncanonical framework-parent legacy metadata shape <LegacyBaselineShape>' -ForEach @(
+        @{ LegacyBaselineShape = 'TwoField' }
+        @{ LegacyBaselineShape = 'ExtraField' }
+        @{ LegacyBaselineShape = 'SubstitutedField' }
+        @{ LegacyBaselineShape = 'WrongType' }
+        @{ LegacyBaselineShape = 'Null' }
+    ) {
+        param([string]$LegacyBaselineShape)
+
+        Remove-Item -LiteralPath $script:historicalFixture.Root -Recurse -Force
+        $script:historicalFixture = Initialize-HistoricalEvidenceFixture `
+            -LegacyBaselineShape $LegacyBaselineShape
+
+        $result = Invoke-MainlineValidator -Root $script:historicalFixture.Root `
+            -BaseRef $script:historicalFixture.BatchBase
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.HISTORICAL_EVIDENCE_VALID | Should -Be 0
+        $result.Data.ERRORS.category |
+            Should -Contain 'historical-evidence-sealed-snapshot-mismatch'
     }
 
     It 'retains the old out-of-range denial when no exact historical record exists' {

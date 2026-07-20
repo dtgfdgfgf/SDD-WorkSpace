@@ -749,9 +749,27 @@ function Read-ExactLegacyBaselineAtCommit {
             $document.schemaVersion -is [int64]
         )
     )
+    # The one-time authority is the exact production legacy metadata shape, not a test-only
+    # schemaVersion/entries shortcut. Exact key count plus fixed literals rejects hidden fields.
+    $legacyMetadataIsExact = (
+        $document -is [System.Collections.IDictionary] -and
+        $document.Count -eq 5 -and
+        $document.ContainsKey('purpose') -and
+        $document.ContainsKey('created') -and
+        $document.ContainsKey('removalBatch') -and
+        $document.purpose -is [string] -and
+        [string]$document.purpose -ceq (
+            'Hash-bound migration ledger for the 18 legacy Ready notes whose commit evidence ' +
+            'remains TBD. R-E09 owns evidence recovery or Draft downgrade in R5.'
+        ) -and
+        $document.created -is [string] -and
+        [string]$document.created -ceq '2026-07-13' -and
+        $document.removalBatch -is [string] -and
+        [string]$document.removalBatch -ceq 'R5'
+    )
     if (
         $document -isnot [System.Collections.IDictionary] -or
-        $document.Count -ne 2 -or
+        -not $legacyMetadataIsExact -or
         -not $document.ContainsKey('schemaVersion') -or
         -not $document.ContainsKey('entries') -or
         -not $schemaVersionIsInteger -or

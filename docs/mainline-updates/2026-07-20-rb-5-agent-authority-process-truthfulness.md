@@ -30,6 +30,19 @@ runtime audit with zero errors and zero warnings, the full governance suite at n
 `pending` until that repaired final gate succeeds. R6 is not the next executable batch while this
 RB-5 repair is open.
 
+### Repair Implementation Evidence
+
+The repair now requires the immutable framework parent to contain exactly the five production
+legacy-baseline fields `schemaVersion`, `purpose`, `created`, `removalBatch`, and `entries`, with
+fixed one-time metadata literals and the existing entry-path and blob-hash checks. It does not
+accept the former two-field test shortcut or arbitrary metadata.
+
+Six focused regression cases pass: the exact production shape is accepted, while the two-field
+shape, a sixth field, a same-count field substitution, a wrong-type value, and a null value are
+denied. The complete mainline-note validator file passes 91 of 91 tests. This note remains
+`Draft` and `Open` until the repair is committed and the production runtime, Batch, and Aggregate
+gates are rerun against that committed history.
+
 ## Summary
 
 - Remove contradictory Specify instructions that capped material clarification markers, guessed the
@@ -124,8 +137,10 @@ Out of scope:
 | `AGENTS.md` | `must_update` | `pending` | The Constitution 1.9.0 bootstrap was synchronized in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
 | `CLAUDE.md` | `must_update` | `pending` | The Constitution 1.9.0 bootstrap was synchronized in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
 | `.github/copilot-instructions.md` | `must_update` | `pending` | The generated bootstrap and workspace-only boundary were updated in commit `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; reconciliation remains open until the repaired final Batch gate succeeds. |
-| `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | Revert-sensitive R-D01/R-D04/R-D05/R-E07/R-A22 invariants and the sealed historical migration policy bind the closure. |
-| `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `updated` | Canonical audit now invokes normalized Claude parity and validates the sealed historical authority surfaces. |
+| `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | Revert-sensitive R-D01/R-D04/R-D05/R-E07/R-A22 invariants now include the exact five-field production baseline parser shape. |
+| `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `updated` | Canonical audit invokes normalized Claude parity and consumes the repaired mainline validator; no audit-script change is required. |
+| `studio/scripts/powershell/validate-mainline-notes.ps1` | `must_review` | `updated` | The repair accepts only the exact production legacy metadata and retains entry-path, blob-hash, first-add, and first-seal checks. |
+| `studio/tests/mainline-note-validation.Tests.ps1` | `must_review` | `updated` | Six focused metadata-shape cases and the full 91-test validator file pass before the repair commit. |
 | `studio/constitution/constitution.md` | `maybe_review` | `updated` | Version 1.9.0 adds the evidence-equivalent, shared-only self-application route while retaining Aggregate and R6 obligations. |
 | `studio/runtime/impact-registry.json` | `maybe_review` | `reviewed-no-change` | RB-5 changes no generated routing rule; the separate R-E04 authority-classification finding remains open. |
 | `WORKSPACE_STRUCTURE.md` | `maybe_review` | `reviewed-no-change` | RB-5 changes governance semantics but no workspace path ownership or layout. |
