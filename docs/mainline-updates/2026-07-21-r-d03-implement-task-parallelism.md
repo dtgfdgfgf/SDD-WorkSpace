@@ -9,29 +9,51 @@
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
 
+## Revalidation (2026-07-21, Self-Application Entry Reset)
+
+Implementation attempt `8101f9a380eb27c5004bece9aad77d42b2cc8a51` technically passed
+747 governance tests with 0 failures and a canonical runtime audit with 0 errors and 0 warnings.
+Those results do not authorize R-D03 closure because the attempt began before a committed,
+dated, owner-authorized R-D03 remediation plan existed. Constitution Section 2.1 makes that an
+entry prerequisite, not a post-implementation accounting field.
+
+This truth-restoration batch returns the five implementation surfaces to the pre-R-D03 semantics
+and keeps this note `Draft`, `TBD`, and `Open`. On 2026-07-21, after the defect was reported,
+the owner explicitly authorized a clean R-D03-only re-entry. The dated remediation plan is
+committed with this reset so that any later implementation begins from a parent commit containing
+both the plan and the restored baseline.
+
+Re-entry requires a new implementation commit after this reset, the discriminating old-fails and
+new-passes evidence, canonical runtime and complete governance gates, a committed Batch gate, and
+append-only accounting. The refuted attempt remains in Git history as evidence and must not be
+cited as the closing implementation.
+
 ## Summary
 
-- Align the Implement agent with the canonical Tasks meaning of `[P#]` as delivery priority.
-- Permit parallel execution only when separate dependency metadata explicitly declares it.
-- Add source-and-mirror contract anchors plus a coordinated legacy-semantics mutation test.
+- Restore truthful `Draft` and `Open` accounting after the missing pre-implementation plan was found.
+- Establish an owner-authorized R-D03-only clean re-entry plan before any new implementation.
+- Preserve R-G03 and every other residual as separate, unchanged work.
 
 ## Why This Update Exists
 
-R-D03 records an authority conflict: the canonical Tasks surface defines `[P#]` as priority and
-forbids an inline parallel marker, while the Implement agent interpreted `[P]` as permission to run
-tasks concurrently. That conflict could change execution order without the dependency metadata
-required by the task authority.
+R-D03 records an authority conflict: the Tasks agent defines `[P#]` as delivery priority and
+requires parallelism to be separate from the checklist line, while the pre-repair Implement agent
+interprets `[P]` as permission to run tasks concurrently. That conflict can change execution order
+without the dependency metadata required by the task authority.
 
-The mandatory Implement entry gate is outside this residual and remains governed by the completed
-R-D02 repair. This batch changes only task priority and parallelism interpretation.
+The first repair attempt addressed the technical conflict but did not satisfy the self-application
+entry chronology. Surface Truthfulness therefore requires a reset before the same repair can be
+re-entered. The mandatory Implement entry gate is outside this residual and remains governed by
+the completed R-D02 repair.
 
 ## Scope
 
 In scope:
 
-- Canonical Copilot Implement-agent task parsing and execution semantics.
-- Deterministically generated Claude Implement-agent mirror parity.
-- Revert-sensitive runtime-contract and Pester coverage for the R-D03 semantics.
+- R-D03 task priority and parallelism semantics only.
+- Canonical Copilot Implement-agent source and deterministic Claude mirror.
+- Revert-sensitive runtime-contract and Pester evidence.
+- Truth restoration and a committed clean re-entry plan.
 
 Out of scope:
 
@@ -43,52 +65,59 @@ Out of scope:
 
 | Path | Change |
 |------|--------|
-| `.github/agents/speckit.implement.agent.md` | Read parallelism only from separate dependency metadata and treat `[P#]` as priority |
-| `.claude/agents/speckit-implement.md` | Regenerate the dependent Implement-agent mirror with matching semantics |
-| `studio/runtime/shared-runtime-contract.json` | Anchor the required source and mirror semantics and forbid the legacy phrases |
-| `studio/tests/claude-agent-parity.Tests.ps1` | Assert the canonical priority and parallelism rules on both agent surfaces |
-| `studio/tests/check-speckit-runtime.Tests.ps1` | Mutate both surfaces back to the legacy semantics and require the audit to deny them |
+| `.github/agents/speckit.implement.agent.md` | Restore the pre-R-D03 semantics before clean re-entry |
+| `.claude/agents/speckit-implement.md` | Restore the matching dependent mirror baseline |
+| `studio/runtime/shared-runtime-contract.json` | Remove the premature R-D03 closure invariants before re-entry |
+| `studio/tests/claude-agent-parity.Tests.ps1` | Remove the premature closure assertions before re-entry |
+| `studio/tests/check-speckit-runtime.Tests.ps1` | Remove the premature coordinated mutation before re-entry |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Keep R-D03 OPEN and record the reset chronology |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Commit the owner-authorized R-D03-only re-entry plan |
+| `docs/README.md` | Align the ledger index with the reset status |
+| `docs/mainline-updates/README.md` | Keep this note indexed as Draft |
 
 ## Impact
 
-- `[P#]` cannot be interpreted as permission to execute tasks concurrently.
-- Only `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata can authorize
-  parallel task execution.
-- A coordinated source-and-mirror reversion still fails the runtime contract even when mirror
-  parity by itself remains valid.
+- Attempt `8101f9a` is retained as technically useful but non-closing evidence.
+- R-D03 remains `OPEN` until a new implementation begins after the committed plan and passes all
+  closure gates.
+- The branch, Aggregate note, workflow promotion state, and all unrelated residuals remain
+  unchanged.
 
 ## Impact Reconciliation
 
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
-| `.github/agents/*.agent.md` | `must_review` | `updated` | The canonical Implement source now uses the Tasks-authority semantics. |
-| `.claude/agents/*.md` | `must_update` | `updated` | `seed-claude-agents.ps1 -Verify -Json` reports `VALID=true` with 0 errors for the regenerated mirror. |
-| `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | Two R-D03 invariants bind the source and mirror and reject four legacy instructions. |
-| `studio/tests/*.ps1` | `must_review` | `updated` | Focused parity tests and the coordinated revert mutation cover the changed semantics. |
-| `.github/agents/speckit.tasks.agent.md` | `maybe_review` | `reviewed-no-change` | The canonical Tasks agent already defines `[P#]` as priority and separate dependency metadata as the parallelism authority. |
-| `studio/templates/commands/tasks.md` | `maybe_review` | `reviewed-no-change` | The task template already forbids inline parallel markers and supplies separate dependency metadata. |
-| `studio/constitution/constitution.md` | `maybe_review` | `reviewed-no-change` | The existing authority and Surface Truthfulness rules already require this alignment. |
+| `.github/agents/*.agent.md` | `must_review` | `pending` | Clean re-entry must update the canonical Implement source after this reset. |
+| `.claude/agents/*.md` | `must_update` | `pending` | Clean re-entry must regenerate and verify the dependent mirror after the plan exists. |
+| `studio/runtime/shared-runtime-contract.json` | `must_review` | `pending` | Clean re-entry must restore contract-bound R-D03 invariants. |
+| `.githooks/pre-commit.ps1` | `must_review` | `pending` | Clean re-entry must confirm that the generic staged contract consumer requires no code change. |
+| `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `pending` | Clean re-entry must prove that the generic audit consumes both R-D03 invariants. |
+| `studio/tests/*.ps1` | `must_review` | `pending` | Clean re-entry must restore focused parity and coordinated revert coverage. |
+| `.github/agents/speckit.tasks.agent.md` | `maybe_review` | `reviewed-no-change` | It already defines `[P#]` as delivery priority and requires parallelism outside the checklist line. |
+| `studio/templates/sdd-docs/tasks-template.md` | `maybe_review` | `reviewed-no-change` | It defines `[P#]` as priority, contains no inline `[P]` marker, and supplies separate `Depends on` metadata. |
+| `studio/constitution/constitution.md` | `maybe_review` | `reviewed-no-change` | Section 2.1 requires this reset and the committed pre-implementation plan. |
 
 ## Validation
 
-- Before the semantic repair, the new focused parity assertions reported 18 passed and 2 failed.
-- After the repair, `pwsh -NoProfile -Command "Invoke-Pester -Path './studio/tests/claude-agent-parity.Tests.ps1' -Output Detailed"` reports 20 passed and 0 failed.
-- The coordinated source-and-mirror legacy mutation test reports 1 passed and 0 failed; it requires
-  Claude parity to remain valid while both R-D03 contract invariants fail.
-- `pwsh ./studio/scripts/powershell/seed-claude-agents.ps1 -Verify -Json` reports `VALID=true` and 0 errors.
-- `git diff --cached --check` passes.
-- The canonical runtime audit, full governance suite, committed Batch gate, and final accounting
-  validation remain pending while this note is Draft.
+- Attempt `8101f9a` produced the intended discriminating evidence: pre-repair assertions were
+  18 passed and 2 failed; proposed parity was 20 passed and 0 failed; coordinated mutation was
+  1 passed and 0 failed.
+- Attempt `8101f9a` also reported 747 passed, 0 failed, 0 skipped, and 0 not run in the full suite,
+  plus runtime `VALID=true` with 0 errors and 0 warnings. These are explicitly non-closing results.
+- The truth-restoration commit must verify the restored baseline, canonical audit, complete
+  governance suite, staged hook, and diff hygiene before commit.
+- Clean re-entry validation remains pending while this note is Draft.
 
 ## Merge Notes
 
-- This Draft records an implementation batch in progress and does not authorize merge.
-- The branch remains `NOT READY TO MERGE`; R6 and the aggregate Wave-3 obligations remain open.
+- This note is `Draft` and does not authorize R-D03 closure or merge.
+- The branch remains `NOT READY TO MERGE`; R6, R-E09, R-E11, residual dispositions, promotion,
+  Aggregate acceptance, merge accounting, and post-merge evidence remain open.
 - `sdd-pipeline` remains experimental, default-disabled, and execution-denied.
 
 ## Follow-ups
 
-- Commit the implementation, run the canonical runtime audit and full governance suite, and then
-  complete append-only ledger and remediation-plan accounting in a separate commit.
-- Reconcile R-G03 separately against an explicitly pinned CLI, template, and upstream-doc version;
-  this batch does not choose between the conflicting version facts.
+- Commit this reset and owner-authorized plan before reapplying any R-D03 implementation.
+- Re-enter R-D03 in a new implementation commit, rerun all required gates, and account for closure
+  only if every result remains valid.
+- Reconcile R-G03 separately against explicitly pinned CLI, template, and upstream-doc versions.

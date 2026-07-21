@@ -176,43 +176,6 @@ Describe 'check-speckit-runtime.ps1 bad-state fixtures' {
             Should -Match 'R6_FRESH_FIXTURE_TERMINAL_SUCCESS'
     }
 
-    It 'fails when source and mirror jointly restore the pre-R-D03 inline parallel-marker semantics' {
-        $fixtureRoot = New-RuntimeAuditFixture
-        $paths = @(
-            (Join-Path $fixtureRoot '.github/agents/speckit.implement.agent.md'),
-            (Join-Path $fixtureRoot '.claude/agents/speckit-implement.md')
-        )
-        $replacements = [ordered]@{
-            '**Task dependencies and parallelism**: Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines' = '**Task dependencies**: Sequential vs parallel execution rules'
-            '**Task details**: ID, description, file paths, priority `[P#]`, risk, and story metadata' = '**Task details**: ID, description, file paths, parallel markers [P]'
-            '**Priority is not parallelism**: Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.' = ''
-            '**Respect dependencies**: Run tasks in dependency order; only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together' = '**Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together'
-            'Halt execution if any task without explicit parallel metadata fails' = 'Halt execution if any non-parallel task fails'
-            'For tasks explicitly declared parallel by `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata, continue with successful tasks and report failed ones' = 'For parallel tasks [P], continue with successful tasks, report failed ones'
-        }
-
-        foreach ($path in $paths) {
-            $content = [System.IO.File]::ReadAllText($path)
-            foreach ($entry in $replacements.GetEnumerator()) {
-                $content.Contains($entry.Key, [System.StringComparison]::Ordinal) | Should -BeTrue
-                $content = $content.Replace($entry.Key, $entry.Value, [System.StringComparison]::Ordinal)
-            }
-            [System.IO.File]::WriteAllText(
-                $path,
-                ($content -replace "`r`n?", "`n"),
-                [System.Text.UTF8Encoding]::new($false)
-            )
-        }
-
-        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
-
-        $audit.ExitCode | Should -Not -Be 0
-        $audit.Result.VALID | Should -BeFalse
-        $audit.Result.CLAUDE_AGENT_PARITY_VALID | Should -BeTrue
-        @($audit.Result.FAILURES.id) | Should -Contain 'implement-agent-task-parallelism-semantics'
-        @($audit.Result.FAILURES.id) | Should -Contain 'implement-claude-task-parallelism-semantics'
-    }
-
     It 'fails closed when powershell-yaml is unavailable' {
         $fixtureRoot = New-RuntimeAuditFixture
         $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot -WithoutYamlModule

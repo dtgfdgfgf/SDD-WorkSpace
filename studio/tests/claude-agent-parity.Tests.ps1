@@ -136,40 +136,6 @@ Describe 'Specify agent clarification truthfulness' {
     }
 }
 
-Describe 'Implement task priority and parallelism truthfulness' {
-    BeforeAll {
-        $script:implementAgentPaths = @(
-            (Join-Path $WorkspaceRoot '.github/agents/speckit.implement.agent.md'),
-            (Join-Path $WorkspaceRoot '.claude/agents/speckit-implement.md')
-        )
-    }
-
-    It 'treats P-number labels as priority and reads parallelism only from separate dependency metadata' {
-        foreach ($path in $script:implementAgentPaths) {
-            $content = Get-Content -LiteralPath $path -Raw
-            $content | Should -Match ([regex]::Escape('Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines'))
-            $content | Should -Match ([regex]::Escape('Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.'))
-            $content | Should -Match ([regex]::Escape('only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together'))
-        }
-    }
-
-    It 'rejects the pre-R-D03 inline parallel-marker instructions' {
-        $legacyInstructions = @(
-            'parallel markers [P]',
-            'parallel tasks [P] can run together',
-            'For parallel tasks [P]',
-            'any non-parallel task fails'
-        )
-
-        foreach ($path in $script:implementAgentPaths) {
-            $content = Get-Content -LiteralPath $path -Raw
-            foreach ($legacyInstruction in $legacyInstructions) {
-                $content | Should -Not -Match ([regex]::Escape($legacyInstruction))
-            }
-        }
-    }
-}
-
 Describe 'Canonical Claude tool mappings' {
     It 'keeps the Spec Kit QA bot mapping repo-bounded without WebSearch' {
         $source = Get-Content -LiteralPath (Join-Path $WorkspaceRoot '.github/agents/spec-kit.agent.md') -Raw

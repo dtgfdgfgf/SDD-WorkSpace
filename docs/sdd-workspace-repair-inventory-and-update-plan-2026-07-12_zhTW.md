@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.19.0"
+version: "1.20.0"
 date: "2026-07-12"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f2df26e98300c034f7fa03c7831b8f00aa6c470a"
+head_commit: "8101f9a380eb27c5004bece9aad77d42b2cc8a51"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -452,6 +452,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.17.0 | 2026-07-21 | R6 evidence implementation `aef41b1bac2e56bf717d9ded5328c3c601fd7037` adds one isolated fresh-fixture journey and a contract-bound revert negative. Focused E2E is 1/0, the full suite is 744/0/0/0, and committed runtime audit is VALID 0/0 with historical evidence 18/18. The evidence sub-batch is completed, while R6 overall, R-E09, R-E11, residual dispositions, promotion, Aggregate, merge, and post-merge evidence remain open; see Section 27. |
 | 1.18.0 | 2026-07-21 | R6 evidence accounting head `28fbc8280000124e15c9c4913f6c130af1df78bb` passes runtime audit and Batch with 0 errors and 0 warnings, validates historical evidence 18/18, and has clean diff/worktree hygiene. Aggregate returns exactly one expected `aggregate-note-not-ready` for the Draft Wave-3 umbrella. The evidence sub-batch remains COMPLETED; R6 overall and every retained blocker remain open. Counts stay 128 and 8/31/51/38; see Section 28. |
 | 1.19.0 | 2026-07-21 | Owner-authorized accounting-only reconciliation records final tested head `f2df26e98300c034f7fa03c7831b8f00aa6c470a`: full suite 744/0/0/0, runtime and Batch VALID 0/0, historical evidence 18/18, and exactly one expected Aggregate umbrella blocker. The stale claim that fresh-fixture evidence remained pending is superseded without changing any finding disposition, promotion state, or merge authorization. Counts stay 128 and 8/31/51/38; see Section 29. |
+| 1.20.0 | 2026-07-21 | Truth restoration for the R-D03 self-application entry defect. Attempt `8101f9a380eb27c5004bece9aad77d42b2cc8a51` passed its technical gates but cannot close R-D03 because no committed R-D03-only plan preceded implementation. This version restores the pre-R-D03 semantics, keeps the note Draft/Open, and records the owner's explicit 2026-07-21 authorization for a clean re-entry after this plan commit. Counts remain 128 and 8/31/51/38, with folded status unchanged at 75 COMPLETED / 46 OPEN / 6 DECIDED / 1 IN_PROGRESS; see Section 30. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1208,3 +1209,49 @@ Canonical umbrella note 維持 `Draft`、`Related Commits: TBD`、reconciliation
 validation scope `Aggregate`。Workflow promotion 仍未裁定；`sdd-pipeline` 維持
 experimental、default-disabled、execution-denied。本批不新增 finding、不 promotion、
 不 push、不 merge，也不記錄 post-merge success；PR #3 維持 `NOT READY TO MERGE`。
+
+## 30. 2026-07-21 R-D03 self-application entry truth restoration 與 clean re-entry authorization 增補
+
+Implementation attempt `8101f9a380eb27c5004bece9aad77d42b2cc8a51` 在技術面完成
+20/20 focused parity、1/0 coordinated mutation、747/0/0/0 full suite 與 runtime
+`VALID=true`、0 errors、0 warnings，但其 parent commit 尚無 committed、日期化且
+owner-authorized 的 R-D03-only remediation plan。Constitution Section 2.1 把這項要求
+定義為 implementation 前的 entry prerequisite，不能由 post-implementation accounting
+回填。因此上述證據不具 R-D03 closure 資格。
+
+本節保留第 29 節的歷史，並 supersede 任何把 `8101f9a` 當成 closing implementation
+的敘述。本 truth-restoration batch 將 canonical source、Claude mirror、兩個 R-D03
+contract invariants 與三個新增 tests 恢復到 pre-R-D03 語義基線；為通過 diff hygiene，
+兩份 agent 的既有行尾空白同時正規化，不改變舊語義。
+
+Owner 在 entry defect 被回報後，於 2026-07-21 明確授權 clean re-entry。授權範圍只含
+R-D03 剩餘的 task priority 與 parallelism 語義；R-D02 已完成的 mandatory Implement
+first-action gate 不重複計算。R-G03 的 CLI、template 與 upstream docs 版本事實另案
+reconcile，其他 residual、`projects/`、`learning/`、promotion、Aggregate、merge、
+post-merge、push 與 PR thread resolution 全部排除。
+
+| ID 或範圍 | 2026-07-21 truth-restoration 狀態 | Disposition |
+|---|---|---|
+| Attempt `8101f9a` | NOT ACCEPTED FOR CLOSURE | 技術證據保留於 Git history，但缺失 pre-implementation plan |
+| R-D03 | OPEN | 恢復 pre-R-D03 語義；只能由本 plan commit 之後的新 implementation 與完整 gates 關閉 |
+| R-D02 | COMPLETED，狀態不變 | Mandatory first-action gate 不由本批重複計算 |
+| R-G03 | OPEN，狀態不變 | 不裁定版本事實、不修改 obstacle review、不接受或 defer |
+| R6 overall / R-E09 | IN_PROGRESS，狀態不變 | Residuals、R-E11、promotion、Aggregate、merge 與 post-merge evidence 仍未完成 |
+| 其他 residuals | 狀態不變 | 未修復、未接受、未 defer |
+
+Clean re-entry 只有在本節與 remediation plan Section 18 已 committed，且五個
+implementation surfaces 已回復基線後才可開始。新 implementation 必須重新產生
+old-fails/new-passes evidence、contract revert anchors、Claude deterministic parity、
+runtime 0/0、完整 suite、Batch、Aggregate expected blocker 與 diff/worktree hygiene。
+任何失敗都維持 note `Draft`、reconciliation `Open`、R-D03 `OPEN`。
+
+Ledger 總數維持 128，嚴重度維持 Critical 8、High 31、Medium 51、Low 38；
+latest-record-wins 維持 75 COMPLETED / 46 OPEN / 6 DECIDED / 1 IN_PROGRESS。
+High 維持 22 COMPLETED / 8 OPEN / 1 IN_PROGRESS，未關閉 High 仍為 9 條：
+R-B23、R-D03、R-E09、R-F02、R-G01、R-G02、R-G03、R-H03、R-J03。
+
+Metadata `head_commit` 指向被本節判定不具 closure 資格的 attempt，作為 drift
+evidence，而非 Ready head；本 truth-restoration commit 不預填自身 hash。Canonical
+umbrella note 維持 `Draft`、`TBD`、`Open`、`Aggregate`；`sdd-pipeline` 維持
+experimental、default-disabled、execution-denied。PR #3 維持
+`NOT READY TO MERGE`。
