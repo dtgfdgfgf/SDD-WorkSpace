@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Ready
-**Related Commits**: `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`
+**Related Commits**: `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`, `7ad8bb76eccccf91a7b87954ce19f97c3ff12951`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Closed
 **Validation Scope**: Batch
@@ -36,10 +36,10 @@ The clean re-entry implementation begins after truth-restoration and plan commit
 to that committed old-semantic baseline, the focused file reported 18 passed and 2 failed.
 
 Commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` reapplies the bounded R-D03 source,
-mirror, contract, and test changes. The implementation-head runtime and full governance suite are
-green, so this note records the coherent R-D03 implementation as `Ready` with reconciliation
-`Closed`. Committed accounting-head Batch and Aggregate validation remain pending and are not
-pre-claimed by this status transition.
+mirror, contract, and test changes. Accounting commit
+`7ad8bb76eccccf91a7b87954ce19f97c3ff12951` records the coherent R-D03 implementation as
+`Ready` with reconciliation `Closed`. Its exact committed tree passed runtime, the complete suite,
+Batch validation, and the expected Aggregate check before this final-gate addendum.
 
 ## Summary
 
@@ -85,9 +85,9 @@ Out of scope:
 | `studio/tests/claude-agent-parity.Tests.ps1` | Reset in `687625a`, then restore the two focused assertions |
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Reset in `687625a`, then restore the coordinated revert mutation |
 | `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve the reset chronology and record R-D03 COMPLETED by the clean re-entry commit |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record implementation evidence and retain the pending accounting-head gates |
-| `docs/README.md` | Align the ledger index with v1.21.0 and the R-D03 disposition |
-| `docs/mainline-updates/README.md` | Index this note with the same Ready status and pending final-gate boundary |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record implementation evidence and the completed accounting-head gates |
+| `docs/README.md` | Align the ledger index with v1.22.0 and the R-D03 disposition |
+| `docs/mainline-updates/README.md` | Index this note with the same Ready status and final-gate evidence |
 
 ## Impact
 
@@ -132,22 +132,30 @@ Out of scope:
   -Json` reports `VALID=true`, 0 errors, and 0 warnings.
 - At the same implementation head, the complete governance suite reports 747 passed, 0 failed,
   0 skipped, and 0 not run.
-- The accounting commit does not exist yet. Committed accounting-head runtime, full suite, Batch,
-  Aggregate, and diff/worktree hygiene remain pending and are not claimed here.
+- Accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951` reports runtime
+  `VALID=true`, 0 errors, 0 warnings, and 18 of 18 historical evidence records valid.
+- The same accounting tree reports 747 passed, 0 failed, 0 skipped, and 0 not run in 1041.44
+  seconds. It is byte-identical to the formal accounting commit because the detached candidate
+  and branch commit use the same tree, parent, message, and commit metadata.
+- Batch validation from BaseRef `687625af6a9df299c1037e1ba3ec29ef154dc6d3` reports
+  `VALID=true`, 0 errors, 0 warnings, and 10 changed paths.
+- Aggregate validation against `origin/main` exits 1 with exactly one error:
+  `aggregate-note-not-ready` for `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md`.
+- `git diff --check` passes and both the accounting worktree and isolated candidate worktree are
+  clean.
 
 ## Merge Notes
 
 - `Ready` and `Closed` apply only to the coherent R-D03 clean re-entry implementation in commit
   `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`; they do not authorize merge.
-- Accounting-head Batch and Aggregate results remain pending. Any contrary final result requires
-  immediate demotion to `Draft` and `Open`, with R-D03 restored to `OPEN`.
+- Accounting-head Batch is valid, while Aggregate remains blocked only by the expected Draft
+  umbrella note. Any later contrary evidence requires immediate demotion to `Draft` and `Open`,
+  with R-D03 restored to `OPEN`.
 - The branch remains `NOT READY TO MERGE`; R6, R-E09, R-E11, residual dispositions, promotion,
   Aggregate acceptance, merge accounting, and post-merge evidence remain open.
 - `sdd-pipeline` remains experimental, default-disabled, and execution-denied.
 
 ## Follow-ups
 
-- Commit this accounting patch, then run the canonical runtime audit, complete governance suite,
-  Batch validation, expected Aggregate validation, and diff/worktree hygiene on the committed head.
-- Append the actual accounting-head results without rewriting this reset and re-entry chronology.
+- Continue R6 without treating this bounded Batch closure as Aggregate acceptance or promotion.
 - Reconcile R-G03 separately against explicitly pinned CLI, template, and upstream-doc versions.

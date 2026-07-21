@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.21.0"
+version: "1.22.0"
 date: "2026-07-12"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "2f941002009b1e05b33d790e7c6c8fc06e8daf3c"
+head_commit: "7ad8bb76eccccf91a7b87954ce19f97c3ff12951"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -454,6 +454,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.19.0 | 2026-07-21 | Owner-authorized accounting-only reconciliation records final tested head `f2df26e98300c034f7fa03c7831b8f00aa6c470a`: full suite 744/0/0/0, runtime and Batch VALID 0/0, historical evidence 18/18, and exactly one expected Aggregate umbrella blocker. The stale claim that fresh-fixture evidence remained pending is superseded without changing any finding disposition, promotion state, or merge authorization. Counts stay 128 and 8/31/51/38; see Section 29. |
 | 1.20.0 | 2026-07-21 | Truth restoration for the R-D03 self-application entry defect. Attempt `8101f9a380eb27c5004bece9aad77d42b2cc8a51` passed its technical gates but cannot close R-D03 because no committed R-D03-only plan preceded implementation. This version restores the pre-R-D03 semantics, keeps the note Draft/Open, and records the owner's explicit 2026-07-21 authorization for a clean re-entry after this plan commit. Counts remain 128 and 8/31/51/38, with folded status unchanged at 75 COMPLETED / 46 OPEN / 6 DECIDED / 1 IN_PROGRESS; see Section 30. |
 | 1.21.0 | 2026-07-21 | Authorized clean re-entry commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`, whose parent contains reset and plan commit `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, completes R-D03 without reusing refuted attempt `8101f9a` as closure evidence. Focused old semantics are 18/2, new semantics are 20/0, coordinated mutation is 1/0, the implementation-head full suite is 747/0/0/0, and runtime is VALID 0/0. R-D03 becomes COMPLETED; folded status is 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. Accounting-head Batch and Aggregate gates remain pending; see Section 31. |
+| 1.22.0 | 2026-07-21 | Final verification of accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951`: exact-tree full suite 747/0/0/0, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 10 paths from `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, exactly one expected Aggregate `aggregate-note-not-ready`, and clean diff/worktrees. This supersedes only the pending-gate text in Section 31; R-D03 remains COMPLETED and every other disposition is unchanged; see Section 32. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1310,3 +1311,32 @@ commit，不預填本 accounting commit hash。Canonical umbrella note 維持 `D
 `TBD`、`Open`、`Aggregate`；`sdd-pipeline` 維持 experimental、default-disabled、
 execution-denied。PR #3 維持 `NOT READY TO MERGE`；本批不 promotion、不 push、
 不 merge、不 resolve PR threads，也不記錄 post-merge success。
+
+## 32. 2026-07-21 R-D03 accounting-head final gates 增補
+
+本節只回填第 31 節明列為 pending 的 committed accounting-head gates，不改寫 reset、
+authorization、invalid attempt 或 clean re-entry implementation 的歷史。Accounting commit
+`7ad8bb76eccccf91a7b87954ce19f97c3ff12951` 與先行 detached candidate 使用相同 tree、
+parent、message 與 commit metadata，因此完整 suite 與 runtime 證據精確綁定正式 branch
+commit，而不是以相似內容推論。
+
+| 驗收面 | Accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951` 已觀察結果 |
+|---|---|
+| Full governance suite | 747 passed、0 failed、0 skipped、0 not run，1041.44 秒 |
+| Canonical runtime audit | `VALID=true`、0 errors、0 warnings |
+| Historical sealed evidence | 18 of 18 records valid |
+| Batch gate | BaseRef `687625af6a9df299c1037e1ba3ec29ef154dc6d3`；`VALID=true`、0 errors、0 warnings；10 changed paths |
+| Aggregate gate | 預期 exit 1；唯一 error 是 canonical umbrella note 的 `aggregate-note-not-ready` |
+| Diff 與 worktree hygiene | `git diff --check` passed；正式與隔離 candidate worktree 均 clean |
+
+R-D03 維持 `COMPLETED`；ledger 維持 128 條、Critical 8 / High 31 / Medium 51 /
+Low 38，以及 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS。High 維持
+23 COMPLETED / 7 OPEN / 1 IN_PROGRESS；8 個未完成 High 仍為 R-B23、R-E09、
+R-F02、R-G01、R-G02、R-G03、R-H03、R-J03。R-G03 未被接受、defer 或修復。
+
+Metadata `head_commit` 指向已完整驗證的 accounting head，不預填本 addendum commit 的
+自我參照 hash。Canonical umbrella note 維持 `Draft`、`TBD`、`Open`、`Aggregate`；
+`sdd-pipeline` 維持 experimental、default-disabled、execution-denied。R6 overall 與
+R-E09 維持 `IN_PROGRESS`；R-E11、其他 residual dispositions、promotion、merge 與
+post-merge evidence 仍未完成。PR #3 維持 `NOT READY TO MERGE`；本批不 push、不 merge、
+不 resolve PR threads。
