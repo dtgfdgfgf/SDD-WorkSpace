@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.17.0"
+version: "1.18.0"
 date: "2026-07-14"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "180abc05b8eaaa6fb32a753e81931f14e10ef726"
+head_commit: "e24d958421b4dc90ed04d507f008d7ec2bc3bec3"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -216,6 +216,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.15.0 | 2026-07-21 | Records the owner-authorized prospective plan for the R-F04 status/count truth restoration. The owner preserves R-F04 as DECIDED, meaning the retirement direction remains authorized but unimplemented. This entry does not yet supersede the later RB-4 OPEN record, change folded counts, or resume the R6 residual audit; implementation must begin only after this plan commit. See Section 21. |
 | 1.16.0 | 2026-07-21 | Implements the append-only R-F04 status clarification after entry-plan commit `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`. R-F04 is authoritatively DECIDED, meaning retirement is authorized but unimplemented; R-H15 remains DECIDED, every other finding is unchanged, and the 128-item fold remains 76/45/6/1. The dedicated Batch note remains Draft/Open/TBD until a later accounting commit and exact-tree gates; see Section 22. |
 | 1.17.0 | 2026-07-21 | Final accounting records owner Choice A after no-scope gate drift-stop: R-A20's explicit Batch/Aggregate contract is authoritative. Exact-tree results are full suite 747/0/0/0, runtime VALID 0/0 with 18/18 historical evidence, Batch VALID 0/0 across 5 paths from `6b749a1`, and exactly the expected Aggregate umbrella blocker. Implementation `180abc0` is cited by the Ready/Closed Batch note; R-F04/R-H15 remain DECIDED but unimplemented, R-E09 retains the five umbrella coverage obligations, and R6 remains IN_PROGRESS. See Section 23. |
+| 1.18.0 | 2026-07-21 | Owner Choice A establishes the prospective conservative R6 convergence plan. Residual audit adds OPEN R-B25/R-B26, producing 130 findings and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. Seventeen bounded safety/truthfulness findings are authorized for direct repair; 35 non-critical findings may later become DISPOSITIONED only with exact Wave-4 re-entry triggers; R-E09/R-J03 remain terminal blockers. `sdd-pipeline` stays experimental, default-disabled and execution-denied. This version is plan-only and must be committed before implementation; see Section 24. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -847,3 +848,87 @@ all other finding dispositions are unchanged, inventory stays 128, and the fold 
 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. This completes only bounded status/count
 truth restoration and allows the read-only residual audit to resume. `sdd-pipeline` stays
 experimental, default-disabled, and execution-denied; PR #3 stays `NOT READY TO MERGE`.
+
+## 24. 2026-07-21 R6 conservative non-promotion convergence entry plan
+
+The owner selected Choice A after the read-only residual audit resumed from the reconciled R-F04
+fold. R6 will make the branch progressively mergeable without promoting the workflow: directly
+repair reachable safety and current-surface truthfulness defects, then use explicit Wave-4
+dispositions for the remaining non-critical backlog. A disposition is a conditional deferral, not
+implementation or unconditional risk acceptance.
+
+The audit found two independent workflow defects, registered in ledger Section 36 as R-B25 Low
+and R-B26 Medium. R-B25 is the unenforced workflow
+`minStudioConstitutionVersion` compatibility field. R-B26 is the mismatch between deprecated
+enablement and `sync` policy versus the workflow mutator, shared authorization and schemas. They
+are not extension subcases and begin `OPEN`. The ledger is now 130 findings with severity
+8 Critical / 31 High / 52 Medium / 39 Low and current fold 76 `COMPLETED` / 47 `OPEN` /
+6 `DECIDED` / 1 `IN_PROGRESS` / 0 `DISPOSITIONED`.
+
+### Authorized disposition matrix
+
+| Destination after future evidence | IDs | Count |
+|---|---|---:|
+| Direct repair from OPEN | R-A21, R-B18, R-B25, R-B26, R-C04, R-C06, R-E02, R-E08, R-E11, R-G01, R-G03, R-G04, R-H03, R-H04, R-H06, R-H09 | 16 |
+| Implement DECIDED item | R-D07 | 1 |
+| Wave-4 disposition from OPEN | R-A13, R-B23, R-D08, R-D09, R-D10, R-D11, R-E01, R-E03, R-E04, R-E06, R-E12, R-F01, R-F02, R-F03, R-F05, R-G02, R-G05, R-G07, R-G08, R-G09, R-G11, R-G12, R-H07, R-H14, R-H18, R-I01, R-I02, R-I04, R-I05, R-I09 | 30 |
+| Wave-4 disposition from DECIDED | R-D06, R-D12, R-F04, R-H15, R-I03 | 5 |
+| Terminal blockers, unchanged | R-E09, R-J03 | 2 |
+
+All 54 non-completed findings appear exactly once. No destination status is applied by this entry
+plan. After future direct repairs and dispositions, but before merge, the only permitted fold is
+93 `COMPLETED` / 1 `OPEN` / 1 `IN_PROGRESS` / 35 `DISPOSITIONED`. R-E09 and R-J03 may
+be completed only by real umbrella, merge and post-merge evidence.
+
+### Execution batches
+
+1. R6-A1 governance authority and entry truth: implement R-E11, R-D07, R-E02, R-E08, R-H03
+   and R-H04 together so Constitution, adapters, README and structure surfaces do not receive
+   partial closure. Ledger default authority remains `informational`; only the exact
+   `finding_status` selector `finding-status-record-v1` becomes `source_of_truth`. Add the dedicated
+   schema and validator, a complete 130-ID revision-1 snapshot with R-E11 still OPEN, delta-only
+   later revisions with unique strictly consecutive numbering, fold/index parity, BaseRef history preservation, audit integration and
+   discriminating tamper tests. The runtime contract stores structural policy rather than current
+   counts. Constitution moves to 1.10.0 with all three generated root adapters. R-E04 remains
+   independent and is not absorbed.
+2. R6-A2 feature binding: complete R-A21 and R-B18 with one repository-root resolver, explicit
+   `-FeatureDir` handoffs across canonical agents, Claude mirrors and workflow messages, and a
+   matcher that handles zero through multiple middle directories without near-prefix leakage.
+3. R6-A3 lifecycle truthfulness: complete R-C04/R-B25 field retirement and R-C06/R-B26
+   deprecated/source hardening. Extension and workflow behavior, tests and accounting remain
+   independently identifiable. No change may promote `sdd-pipeline`.
+4. R6-A4 documentation/configuration truth: complete R-G01, R-G03, R-G04, R-H06 and R-H09
+   without editing consumer repositories. Quarantine stale guidance, restore current shared-surface
+   truth, comply with Constitution Section 10.1, relocate the historical six-stage document and
+   remove unsafe or stale VS Code settings.
+5. R6-A5 accounting: after the implementation commits exist, append status records only for
+   evidence-backed completions, then append all 35 owner-approved Wave-4 dispositions with the
+   exact trigger table in ledger Section 36.2. R-B23 can be deferred only while the workflow is
+   experimental, default-disabled and execution-denied; R-D12 cannot be implemented within the
+   current no-consumer-drift boundary.
+6. R6-A6 umbrella checkpoint: reconcile R-E09 only as far as actual evidence permits under
+   permanent non-promotion, and stop for separate merge authorization. R-J03 and post-merge
+   portions of R-E09 remain open before an actual merge.
+
+Each closing finding requires a test that fails against the pre-repair implementation, passes on
+the repaired implementation and is protected by a revert-sensitive runtime or document contract
+invariant. R-E11 must reject missing/scopeless/ambiguous/schema-invalid/count-mismatched,
+missing-revision-1, duplicate/out-of-order/non-consecutive-revision, fold-mismatched,
+index-mismatched and history-rewritten ledgers. R-A21/R-B18 must reject path and
+feature-boundary counterexamples. R-C04/R-B25 must reject field reintroduction. R-C06/R-B26
+must reject new or stale-pin deprecated enablement and all `sync`, null and wrong-type variants.
+Each direct document/configuration closure needs its own mutation that restores the stale surface
+and proves the contract fails.
+
+Implementation and accounting commits remain separate. Final accounting must pass the complete
+governance suite without reducing the current 747-pass baseline, canonical runtime with
+`VALID=true` and 0 errors/0 warnings, explicit Batch validation from the committed entry-plan
+base, Aggregate validation with only the canonical umbrella blocker, and `git diff --check` plus
+clean exact-tree worktree verification. Choice A retains explicit scopes; the obsolete no-scope
+diagnostic has no acceptance authority.
+
+The Wave-4 re-entry triggers in ledger Section 36.2 are part of this authorization and must be
+copied into the status accounting records rather than replaced with a generic backlog label. The
+dedicated note stays `Draft`, `TBD` and reconciliation `Open` until implementation and exact-tree
+accounting evidence exist. This plan does not push, merge, promote, record post-merge success or
+resolve PR threads. PR #3 remains `NOT READY TO MERGE`.

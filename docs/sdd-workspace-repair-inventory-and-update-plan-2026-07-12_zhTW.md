@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.25.0"
+version: "1.26.0"
 date: "2026-07-12"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "180abc05b8eaaa6fb32a753e81931f14e10ef726"
+head_commit: "e24d958421b4dc90ed04d507f008d7ec2bc3bec3"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -23,7 +23,7 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22。因此目前為 128 條，編為 R-A01 至 R-A22、R-B01 至 R-B24、其餘區域至 R-J03。現況分佈：Critical 8、High 31、Medium 51、Low 38。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22；2026-07-21 R6 residual audit 再新增 R-B25 與 R-B26。因此目前為 130 條，編為 R-A01 至 R-A22、R-B01 至 R-B26、其餘區域至 R-J03。現況分佈：Critical 8、High 31、Medium 52、Low 39。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
@@ -125,7 +125,7 @@ canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與
 resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復（見第 14 節），R-B18
 保持 open。
 
-建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 127 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan；R-B23 與 R-A21 另依日期化增補處理）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；RB-4、RB-5、R6 與其他未完成 findings 在實作時仍須依當下證據調整。
+建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 130 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan；R-B23、R-A21、R-B25 與 R-B26 另依日期化增補處理）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；RB-4、RB-5、R6 與其他未完成 findings 在實作時仍須依當下證據調整。
 
 ## 1. 範圍與排除
 
@@ -367,7 +367,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 4. R-B16 的 gitignore 必須跟隨 R-B06 的最終 relocation，不在舊路徑先做永久政策。
 5. R-G06 與 R-E05 必須原子處理：移除 manifest presence 面時，同批建立 mainline-note reconciliation 與 merge CI。
 6. R-D12 在 R3 只可建立安全遷移前提；若 Copilot overlay 尚未完成，temporary allowlist 必須保留到 R5，不能先刪 shared agent。
-7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 127 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan；R-B23 與 R-A21 依日期化增補另行排程）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
+7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 130 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan；R-B23、R-A21、R-B25 與 R-B26 依日期化增補另行排程）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
 8. R-E09 在 R5 處理既有 Ready/Draft notes 的歷史帳務與失真修復；R6 只做本輪 final commit/PR/merge hash 回填與合併後驗證。兩批不得把同一工作重複計為完成。
 
 ## 6. Owner 已裁定的 18 項決策
@@ -458,6 +458,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.23.0 | 2026-07-21 | During the owner-authorized read-only R6 residual audit, drift-stop found that the original owner decision and final folded counts treat R-F04 as DECIDED while later RB-4 records call it OPEN. The owner selected DECIDED on 2026-07-21, meaning the retirement direction remains authorized but unimplemented. This version commits only the prospective truth-restoration plan; it does not yet append a latest-status row, change a finding disposition, or resume the residual audit. See Section 33. |
 | 1.24.0 | 2026-07-21 | After committed owner-authorized plan `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`, this accounting-only implementation appends the authoritative R-F04 latest-status clarification: DECIDED means retirement is authorized but unimplemented. It supersedes only the later RB-4 OPEN label, preserves R-H15 as DECIDED and every other finding disposition, and reconciles the existing 128-item fold as 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. Final committed-accounting gates remain pending; see Section 34. |
 | 1.25.0 | 2026-07-21 | Final accounting for implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726`. After a drift-stop proved the obsolete no-scope command incompatible with R-A20, the owner selected the current explicit-scope contract: Batch must be green and Aggregate may retain only the canonical umbrella blocker. The exact accounting tree passes the 747-test suite, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 5 paths from `6b749a1`, and diff hygiene; Aggregate has exactly the expected umbrella blocker. R-F04/R-H15 remain DECIDED but unimplemented, the five umbrella coverage obligations remain under R-E09, and the fold stays 76/45/6/1. See Section 35. |
+| 1.26.0 | 2026-07-21 | Owner Choice A authorizes a prospective conservative R6 convergence plan: keep `sdd-pipeline` non-promoted and denied, directly repair 17 bounded safety and truthfulness findings, and later disposition 35 non-critical items to Wave-4 with explicit re-entry triggers. Residual audit adds OPEN R-B25 and R-B26, raising the ledger to 130 findings with severity 8/31/52/39 and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. This version is plan-only: no existing finding is completed or dispositioned, R-E09/R-J03 remain terminal blockers, and implementation may start only after this plan is committed. See Section 36. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1468,3 +1469,137 @@ commit. The canonical umbrella note remains `Draft` / `TBD` / `Open` / `Aggregat
 `sdd-pipeline` remains experimental, default-disabled, and execution-denied. PR #3 remains
 `NOT READY TO MERGE`; this batch does not retire skills, promote, push, merge, record post-merge
 success, or resolve PR threads.
+
+## 36. 2026-07-21 R6 conservative non-promotion convergence entry plan
+
+Owner selected Choice A on 2026-07-21 after the reconciled 128-item fold was re-audited. The
+authorized direction is conservative convergence: repair bounded safety and current-surface
+truthfulness defects that remain reachable, keep the canonical workflow non-promoted, and move
+non-critical backlog to Wave-4 only through explicit `DISPOSITIONED` records with re-entry
+triggers. `DISPOSITIONED` in this plan means owner-approved deferral under a named condition; it
+does not mean implemented, harmless, or accepted without conditions.
+
+The same residual audit found two workflow analogues that cannot be silently absorbed into the
+extension findings:
+
+| ID | Severity | 2026-07-21 finding | Required disposition | Current status |
+|---|---|---|---|---|
+| R-B25 | Low | `studio/workflows/sdd-pipeline/manifest.json` declares `compatibility.minStudioConstitutionVersion=1.8.0`, but workflow validation, listing, authorization and runtime audit never compare or enforce it; the Studio Constitution is already newer, so the field is an outdated, unenforced compatibility claim | Retire the workflow field, add an absence invariant and a discriminating re-add mutation; field removal must not be described as workflow promotion | OPEN |
+| R-B26 | Medium | Workflow policy says deprecated workflows are not newly enabled and remote sync is unsupported, but `set-workflow-state.ps1` and shared authorization allow a deprecated workflow to be enabled, while workflow catalog/state schemas still accept the producerless `sync` source | Deny absent, disabled or stale-pin deprecated enablement; permit only an already-enabled same-pin deprecated no-op; remove `sync` from schemas, catalog, policy and shared parsing; add strict negatives and revert anchors | OPEN |
+
+These two rows raise the inventory from 128 to 130. Severity becomes Critical 8, High 31,
+Medium 52 and Low 39. No prior finding status changes in this entry-plan commit. The current fold
+is therefore 76 `COMPLETED`, 47 `OPEN`, 6 `DECIDED`, 1 `IN_PROGRESS` and 0
+`DISPOSITIONED`.
+
+### 36.1 Prospective per-finding disposition matrix
+
+The following matrix is exhaustive for the 54 findings that are not `COMPLETED` after R-B25 and
+R-B26 are registered. It is authorization for future work, not a status update in this commit.
+
+| Prospective disposition | Finding IDs | Count | Closure boundary |
+|---|---|---:|---|
+| Direct repair from `OPEN` | R-A21, R-B18, R-B25, R-B26, R-C04, R-C06, R-E02, R-E08, R-E11, R-G01, R-G03, R-G04, R-H03, R-H04, R-H06, R-H09 | 16 | May become `COMPLETED` only after implementation, old-fails/new-passes evidence, contract anchors and exact-tree gates |
+| Implement existing owner decision | R-D07 | 1 | May move from `DECIDED` to `COMPLETED` only after path/type scope is machine-anchored and governed documents remain Section 10.1 compliant |
+| Wave-4 disposition from `OPEN` | R-A13, R-B23, R-D08, R-D09, R-D10, R-D11, R-E01, R-E03, R-E04, R-E06, R-E12, R-F01, R-F02, R-F03, R-F05, R-G02, R-G05, R-G07, R-G08, R-G09, R-G11, R-G12, R-H07, R-H14, R-H18, R-I01, R-I02, R-I04, R-I05, R-I09 | 30 | May become `DISPOSITIONED` only in a later accounting record that preserves the re-entry trigger |
+| Wave-4 disposition from `DECIDED` | R-D06, R-D12, R-F04, R-H15, R-I03 | 5 | Owner direction remains valid, but implementation is deferred and must not be called complete |
+| Terminal blocker | R-E09, R-J03 | 2 | Both retain their current status until real umbrella, merge and post-merge evidence exist |
+
+If all authorized direct repairs and Wave-4 dispositions later pass their gates, the pre-merge
+fold will be 93 `COMPLETED`, 1 `OPEN`, 1 `IN_PROGRESS`, 35 `DISPOSITIONED` and 0
+`DECIDED`. Only actual merge and post-merge validation may produce the terminal 95
+`COMPLETED` / 35 `DISPOSITIONED` fold. Neither target fold is asserted by this plan commit.
+
+### 36.2 Wave-4 re-entry triggers
+
+| Finding IDs | Mandatory re-entry trigger |
+|---|---|
+| R-A13 | Before adding or materially expanding `mustContainAll` literal assertions, or before the next contract-invariant refactor |
+| R-B23 | Before any workflow promotion, execution authorization, or use of RunState/sidecar data as trusted evidence; deferral is valid only while `sdd-pipeline` stays experimental, default-disabled and execution-denied |
+| R-F01, R-F02, R-F03, R-F05, R-G02 | Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time |
+| R-D08, R-D09, R-D10, R-D11 | Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors |
+| R-E01, R-E03, R-E04, R-E06, R-E12 | Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again |
+| R-G05, R-G07, R-G08, R-G09, R-G11, R-G12 | Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised |
+| R-H07, R-H14, R-H18 | Before the affected root asset, reserved directory or language policy is presented as a current supported surface |
+| R-I01 | Before the shared-runtime upgrade scope is expanded or changed |
+| R-I02 | Before adapter templates or the bootstrap generator are changed |
+| R-I04, R-I05 | Before a project claims complete prompt or knowledge-capture closure |
+| R-I09 | Before the extension operator surface is documented or used externally |
+| R-D06 | Before agent reseed or a model lifecycle, availability, cost or policy change |
+| R-D12 | Only after a separate owner-authorized consumer exception and a decision between project-local Copilot overlay and Claude-only support; current `projects/` and `learning/` exclusion prevents implementation |
+| R-F04, R-H15 | Before agent-skill export/install is reused, advertised or repopulated |
+| R-I03 | Before route-aware auto-scaffold work or workflow promotion |
+
+R-E04 remains independent authority drift. R-E11 may use the current generator-first operation
+during its bounded implementation, but must not claim that `impact-registry.json` authority is
+fully reconciled. R-E11 also cannot partially edit README authority wording and absorb R-H03;
+R-H03 requires its complete direct-repair contract.
+
+### 36.3 Authorized implementation sequence
+
+1. Governance authority and current entry surfaces: R-E11, R-D07, R-E02, R-E08, R-H03 and
+   R-H04. Keep the ledger document default `informational`; create only a machine-bounded
+   `finding_status` scope with `source_of_truth` authority. The exact selector is
+   `finding-status-record-v1`; `studio/runtime/finding-status-record.schema.json` defines record
+   shape, `studio/scripts/powershell/validate-finding-status-ledger.ps1` owns fold validation, and
+   `shared-runtime-contract.json` references structure but never duplicates the current counts.
+   Add append-only JSON delta records, deterministic fold/index parity, BaseRef history
+   preservation and runtime fail-closed integration. Revision 1 must contain the complete 130-ID
+   snapshot with R-E11 still `OPEN`, and its IDs must match the independently parsed first
+   severity-definition occurrence for each finding ID; later historical status tables do not create
+   duplicate definitions. Revisions must be unique, appear in strict consecutive order beginning at
+   1, and reject a delta before the full snapshot. Later revisions contain deltas plus the complete
+   resulting count/fold. Only a later accounting record may complete R-E11. Constitution moves to 1.10.0 and the three generated
+   root adapters move with it. Full R-H03 and R-H04 repairs are required if their surfaces are
+   touched.
+2. Shared feature binding and mainline matcher: R-A21 and R-B18. Use one repository-root based
+   feature resolver in every setup/check entrypoint, pass named `-FeatureDir` through canonical
+   agents, deterministic Claude mirrors and workflow handoffs, and correct middle `/**/` matching
+   so zero, one and multiple directory levels work without near-prefix leakage.
+3. Extension and workflow lifecycle truthfulness: R-C04, R-C06, R-B25 and R-B26. Remove both
+   unenforced extension compatibility fields and the workflow analogue; remove dead `sync`
+   provenance; deny new deprecated enablement while preserving only an already-enabled same-pin
+   no-op. Extension and workflow findings remain separate in tests and accounting.
+4. Shared documentation and configuration truthfulness: R-G01, R-G03, R-G04, R-H06 and R-H09.
+   Update the shared governance status surface without changing consumer repositories; quarantine
+   superseded upstream guidance; make the strategy document Section 10.1 compliant; relocate the
+   historical six-stage file and repair references; remove stale or unsafe VS Code settings.
+5. In a separate accounting change, append exact per-ID `COMPLETED` records only for repairs whose
+   implementation and evidence exist. Then append the 35 owner-approved Wave-4
+   `DISPOSITIONED` records with the triggers in Section 36.2. Do not convert R-E09 or R-J03.
+6. Reconcile the canonical Wave-3 umbrella under permanent non-promotion and stop at a merge
+   authorization checkpoint. Do not merge, push, promote, claim post-merge success or resolve PR
+   threads without separate authority.
+
+Implementation commits and accounting commits must remain separate. A failure in any sub-batch
+does not permit partial closure of its multi-part finding, and a green focused test does not replace
+the final exact-tree gates.
+
+### 36.4 Discriminating acceptance contract
+
+| Surface | Required old-fails/new-passes evidence |
+|---|---|
+| R-E11 | Missing ledger; missing scoped authority; missing revision 1; duplicate, out-of-order or non-consecutive revisions; duplicate or ambiguous IDs; invalid enum, null or wrong type; count/fold/index mismatch; rewritten BaseRef records; and reverted audit invocation must all fail closed. Historical Markdown prose is not a status source. |
+| R-A21 | Direct, one-level and multi-level governed paths must match; near-prefix, sibling and normalized backslash counterexamples must not match. Reverting the matcher must break the contract. |
+| R-B18 | Foreign repository, sibling `specs`, nested feature, traversal, branch or environment rebind, and omitted named handoff must be rejected; repository-owned direct and normalized relative feature paths remain positive controls. |
+| R-C04 and R-B25 | Reintroducing any retired compatibility field must fail a schema or contract absence invariant. Removal cannot change workflow promotion state. |
+| R-C06 and R-B26 | Missing, disabled and stale-pin deprecated enablement plus `sync`, wrong-type and null provenance must be denied; an already-enabled same-pin deprecated no-op is the bounded positive control. |
+| R-D07, R-E02, R-E08 | Mutating the path/type scope, current phase, review date or adapter parity must break constitution/adapter contract tests; governed SDD and governance documents remain free of prohibited emoji, arrow and tree syntax. |
+| R-G01, R-G03, R-G04, R-H03, R-H04, R-H06, R-H09 | Removing status/superseded/authority/workflow/relocation/configuration anchors or restoring stale references and settings must fail dedicated document/configuration tests. Each finding requires its own revert-sensitive invariant. |
+
+Every closing accounting tree must run:
+
+- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`, expecting `VALID=true`,
+  0 errors and 0 warnings.
+- `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`, expecting no regression below the
+  current 747 passed baseline and 0 failed.
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef <committed-entry-plan> -HeadRef HEAD -RequireReady -ReadinessScope Batch -Json`, expecting `VALID=true`, 0 errors and 0 warnings.
+- The same validator with `-ReadinessScope Aggregate`, expecting nonzero only for the canonical
+  Wave-3 umbrella while it remains Draft; no additional error is permitted.
+- `git diff --check` and clean exact-tree worktree verification.
+
+Choice A preserves explicit Batch/Aggregate scope. The obsolete no-scope invocation is not an
+acceptance gate and must not be relabeled green. This plan itself changes no finding beyond adding
+R-B25/R-B26 as `OPEN`; the dedicated note remains `Draft`, `TBD` and reconciliation `Open`.
+PR #3 remains `NOT READY TO MERGE`, and `sdd-pipeline` remains experimental, default-disabled
+and execution-denied.
