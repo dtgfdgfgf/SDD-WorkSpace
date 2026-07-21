@@ -3,10 +3,10 @@
 **Date**: 2026-07-21
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Revalidation (2026-07-21, Self-Application Entry Reset)
@@ -23,26 +23,29 @@ implementation surfaces to the pre-R-D03 semantics and kept this note `Draft`, `
 R-D03-only re-entry. The dated remediation plan was committed with that reset so that the new
 implementation begins from a parent commit containing both the plan and the restored baseline.
 
-Re-entry requires a new implementation commit after this reset, the discriminating old-fails and
-new-passes evidence, canonical runtime and complete governance gates, a committed Batch gate, and
-append-only accounting. The refuted attempt remains in Git history as evidence and must not be
-cited as the closing implementation.
+Clean re-entry implementation requires a new commit after this reset, discriminating old-fails and
+new-passes evidence, and canonical runtime and complete governance gates. Retaining the final
+`Ready` and `COMPLETED` states additionally requires a committed accounting head, Batch validation,
+the expected Aggregate result, and append-only evidence. The refuted attempt remains in Git history
+and must not be cited as the closing implementation.
 
 ## Clean Re-entry Implementation (2026-07-21)
 
-This candidate implementation begins after truth-restoration and plan commit
+The clean re-entry implementation begins after truth-restoration and plan commit
 `687625af6a9df299c1037e1ba3ec29ef154dc6d3`. With only the new focused assertions applied
 to that committed old-semantic baseline, the focused file reported 18 passed and 2 failed.
 
-The candidate now reapplies the bounded R-D03 source, mirror, contract, and test changes. Related
-commit evidence remains `TBD` until this candidate is committed; this note remains `Draft` and
-reconciliation remains `Open` until the new implementation and all closure gates exist.
+Commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` reapplies the bounded R-D03 source,
+mirror, contract, and test changes. The implementation-head runtime and full governance suite are
+green, so this note records the coherent R-D03 implementation as `Ready` with reconciliation
+`Closed`. Committed accounting-head Batch and Aggregate validation remain pending and are not
+pre-claimed by this status transition.
 
 ## Summary
 
-- Restore truthful `Draft` and `Open` accounting after the missing pre-implementation plan was found.
-- Establish an owner-authorized R-D03-only clean re-entry plan before any new implementation.
-- Reapply the R-D03 repair only after the reset and plan commit exist in the parent history.
+- Preserve the truthful reset chronology after the missing pre-implementation plan was found.
+- Use the committed owner-authorized R-D03-only clean re-entry plan as the implementation parent.
+- Complete the R-D03 repair only through the post-authorization commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`.
 - Preserve R-G03 and every other residual as separate, unchanged work.
 
 ## Why This Update Exists
@@ -81,16 +84,16 @@ Out of scope:
 | `studio/runtime/shared-runtime-contract.json` | Reset in `687625a`, then restore the two R-D03 invariants |
 | `studio/tests/claude-agent-parity.Tests.ps1` | Reset in `687625a`, then restore the two focused assertions |
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Reset in `687625a`, then restore the coordinated revert mutation |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Keep R-D03 OPEN and record the reset chronology |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Commit the owner-authorized R-D03-only re-entry plan |
-| `docs/README.md` | Align the ledger index with the reset status |
-| `docs/mainline-updates/README.md` | Keep this note indexed as Draft |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve the reset chronology and record R-D03 COMPLETED by the clean re-entry commit |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record implementation evidence and retain the pending accounting-head gates |
+| `docs/README.md` | Align the ledger index with v1.21.0 and the R-D03 disposition |
+| `docs/mainline-updates/README.md` | Index this note with the same Ready status and pending final-gate boundary |
 
 ## Impact
 
 - Attempt `8101f9a` is retained as technically useful but non-closing evidence.
-- R-D03 remains `OPEN` until a new implementation begins after the committed plan and passes all
-  closure gates.
+- R-D03 is completed only by clean re-entry commit
+  `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`; R-D02 is not double-counted.
 - The branch, Aggregate note, workflow promotion state, and all unrelated residuals remain
   unchanged.
 
@@ -98,12 +101,12 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
-| `.github/agents/*.agent.md` | `must_review` | `pending` | Clean re-entry must update the canonical Implement source after this reset. |
-| `.claude/agents/*.md` | `must_update` | `pending` | Clean re-entry must regenerate and verify the dependent mirror after the plan exists. |
-| `studio/runtime/shared-runtime-contract.json` | `must_review` | `pending` | Clean re-entry must restore contract-bound R-D03 invariants. |
-| `.githooks/pre-commit.ps1` | `must_review` | `pending` | Clean re-entry must confirm that the generic staged contract consumer requires no code change. |
-| `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `pending` | Clean re-entry must prove that the generic audit consumes both R-D03 invariants. |
-| `studio/tests/*.ps1` | `must_review` | `pending` | Clean re-entry must restore focused parity and coordinated revert coverage. |
+| `.github/agents/*.agent.md` | `must_review` | `updated` | Commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` applies the canonical Tasks-authority semantics after the committed reset and plan. |
+| `.claude/agents/*.md` | `must_update` | `updated` | Commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` contains the regenerated mirror; deterministic verification reports `VALID=true` with 0 errors. |
+| `studio/runtime/shared-runtime-contract.json` | `must_review` | `updated` | Commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` restores the source and mirror R-D03 invariants after authorization. |
+| `.githooks/pre-commit.ps1` | `must_review` | `reviewed-no-change` | The existing hook invokes the staged canonical runtime audit and requires no R-D03-specific logic. |
+| `studio/scripts/powershell/check-speckit-runtime.ps1` | `must_review` | `reviewed-no-change` | The generic path-contract consumer rejects the coordinated legacy mutation through both R-D03 invariant IDs. |
+| `studio/tests/*.ps1` | `must_review` | `updated` | Commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` restores focused parity assertions and the coordinated source-and-mirror mutation. |
 | `.github/agents/speckit.tasks.agent.md` | `maybe_review` | `reviewed-no-change` | It already defines `[P#]` as delivery priority and requires parallelism outside the checklist line. |
 | `studio/templates/sdd-docs/tasks-template.md` | `maybe_review` | `reviewed-no-change` | It defines `[P#]` as priority, contains no inline `[P]` marker, and supplies separate `Depends on` metadata. |
 | `studio/constitution/constitution.md` | `maybe_review` | `reviewed-no-change` | Section 2.1 requires this reset and the committed pre-implementation plan. |
@@ -120,24 +123,31 @@ Out of scope:
   `VALID=true` with 0 errors and 0 warnings, staged hook pass, and clean diff hygiene.
 - After the plan commit, applying only the new R-D03 focused assertions to the restored old
   semantics reports 18 passed and 2 failed.
-- The clean re-entry candidate reports focused parity 20 passed and 0 failed. The coordinated
-  source-and-mirror legacy mutation reports 1 passed and 0 failed with 40 not run; Claude parity
-  remains valid while both R-D03 contract invariants fail.
+- Clean re-entry commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` reports focused
+  parity 20 passed and 0 failed. The coordinated source-and-mirror legacy mutation reports
+  1 passed and 0 failed; Claude parity remains valid while both R-D03 contract invariants fail.
 - `pwsh ./studio/scripts/powershell/seed-claude-agents.ps1 -Verify -Json` reports
-  `VALID=true` and 0 errors for the candidate mirror.
-- Candidate full-suite, committed runtime, Batch, Aggregate, and accounting evidence remain
-  pending while this note is Draft.
+  `VALID=true` and 0 errors for the committed mirror.
+- At the same implementation head, `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1
+  -Json` reports `VALID=true`, 0 errors, and 0 warnings.
+- At the same implementation head, the complete governance suite reports 747 passed, 0 failed,
+  0 skipped, and 0 not run.
+- The accounting commit does not exist yet. Committed accounting-head runtime, full suite, Batch,
+  Aggregate, and diff/worktree hygiene remain pending and are not claimed here.
 
 ## Merge Notes
 
-- This note is `Draft` and does not authorize R-D03 closure or merge.
+- `Ready` and `Closed` apply only to the coherent R-D03 clean re-entry implementation in commit
+  `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`; they do not authorize merge.
+- Accounting-head Batch and Aggregate results remain pending. Any contrary final result requires
+  immediate demotion to `Draft` and `Open`, with R-D03 restored to `OPEN`.
 - The branch remains `NOT READY TO MERGE`; R6, R-E09, R-E11, residual dispositions, promotion,
   Aggregate acceptance, merge accounting, and post-merge evidence remain open.
 - `sdd-pipeline` remains experimental, default-disabled, and execution-denied.
 
 ## Follow-ups
 
-- Commit this reset and owner-authorized plan before reapplying any R-D03 implementation.
-- Re-enter R-D03 in a new implementation commit, rerun all required gates, and account for closure
-  only if every result remains valid.
+- Commit this accounting patch, then run the canonical runtime audit, complete governance suite,
+  Batch validation, expected Aggregate validation, and diff/worktree hygiene on the committed head.
+- Append the actual accounting-head results without rewriting this reset and re-entry chronology.
 - Reconcile R-G03 separately against explicitly pinned CLI, template, and upstream-doc versions.
