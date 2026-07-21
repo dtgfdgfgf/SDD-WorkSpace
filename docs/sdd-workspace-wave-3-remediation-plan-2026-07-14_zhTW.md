@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.14.0"
+version: "1.15.0"
 date: "2026-07-14"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "7ad8bb76eccccf91a7b87954ce19f97c3ff12951"
+head_commit: "6b749a1f153dc88412714db0ed6d8708170c5936"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -213,6 +213,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.12.0 | 2026-07-21 | Truth restoration rejects `8101f9a380eb27c5004bece9aad77d42b2cc8a51` as R-D03 closure evidence because no committed R-D03-only plan preceded it, while preserving its technically green diagnostics. After that defect was reported, the owner explicitly authorized a prospective clean re-entry limited to R-D03. This version restores the five implementation surfaces before the new implementation begins; R-D03 remains OPEN and every other residual remains unchanged; see Section 18. |
 | 1.13.0 | 2026-07-21 | Clean re-entry implementation `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` follows committed reset and authorization parent `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, completes the remaining R-D03 task-priority and parallelism semantics, and leaves the refuted `8101f9a` attempt non-closing. Focused old/new evidence is 18/2 and 20/0, coordinated mutation is 1/0, full suite is 747/0/0/0, and runtime is VALID 0/0. Accounting-head Batch and Aggregate gates remain pending; see Section 19. |
 | 1.14.0 | 2026-07-21 | Accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951` completes the pending R-D03 final gates: exact-tree full suite 747/0/0/0, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 10 paths, exactly one expected Aggregate umbrella blocker, and clean hygiene. R-D03 remains COMPLETED, while R6 overall and all other residuals retain their prior states; see Section 20. |
+| 1.15.0 | 2026-07-21 | Records the owner-authorized prospective plan for the R-F04 status/count truth restoration. The owner preserves R-F04 as DECIDED, meaning the retirement direction remains authorized but unimplemented. This entry does not yet supersede the later RB-4 OPEN record, change folded counts, or resume the R6 residual audit; implementation must begin only after this plan commit. See Section 21. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -761,3 +762,31 @@ promotion、Aggregate acceptance、merge 與 post-merge evidence 仍未完成。
 umbrella note 維持 `Draft`、`TBD`、`Open`、`Aggregate`；`sdd-pipeline` 維持
 experimental、default-disabled、execution-denied。PR #3 維持 `NOT READY TO MERGE`；
 本批不 push、不 merge、不 resolve PR threads。
+
+## 21. 2026-07-21 R-F04 status drift-stop 與 owner-authorized entry plan
+
+唯讀 R6 residual audit 發現 R-F04 的 status 與 final folded counts 不可同時成立。原 owner
+decision 將 R-F04/R-H15 退役方向標為 `DECIDED`；較晚 RB-4 記錄把 R-F04 寫成
+`OPEN`；最新 folded summary 仍為 76 COMPLETED / 45 OPEN / 6 DECIDED /
+1 IN_PROGRESS，且只有把 R-F04 計為 `DECIDED` 才能得到該數字。若採後來的 `OPEN`，
+則應為 76 / 46 / 5 / 1。
+
+Owner 於 2026-07-21 裁定保留 R-F04 `DECIDED`。其精確語意是「退役方向已裁定、實作尚未
+完成」，不是 closure、risk acceptance 或 defer。R-H15 維持 `DECIDED`；R-F04 仍須在
+後續授權批次移除剩餘 scripts、audit、contract、docs、tests 與 output surface，才可考慮
+`COMPLETED` 或 `DISPOSITIONED`。
+
+本節只建立 Constitution Section 2.1 要求的 committed entry plan。實作與驗收邊界為：
+
+1. implementation parent 必須包含本節；
+2. 只以日期化增補 supersede R-F04 的 RB-4 `OPEN` 字面狀態，不改寫歷史段落；
+3. section-bounded old/new parser 必須在舊樹辨識 status/count ambiguity，並在新樹唯一得到
+   128 條與 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS；
+4. R-F04、R-H15 都維持未完成，其他 126 條 finding disposition 不變；
+5. dedicated Batch note 在實作前維持 `Draft`、`TBD`、reconciliation `Open`；
+6. final accounting tree 必須通過 runtime、完整 governance suite、Batch、預期 Aggregate
+   umbrella blocker 與 diff hygiene，才可標記本 truth-restoration Batch 為 Ready。
+
+本 entry plan 不執行 skills 退役、不 promotion、不 push、不 merge，也不恢復 residual audit。
+`sdd-pipeline` 與 canonical umbrella note 的狀態保持不變，PR #3 仍
+`NOT READY TO MERGE`。

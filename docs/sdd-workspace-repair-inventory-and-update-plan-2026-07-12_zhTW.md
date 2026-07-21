@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.22.0"
+version: "1.23.0"
 date: "2026-07-12"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "7ad8bb76eccccf91a7b87954ce19f97c3ff12951"
+head_commit: "6b749a1f153dc88412714db0ed6d8708170c5936"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -455,6 +455,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.20.0 | 2026-07-21 | Truth restoration for the R-D03 self-application entry defect. Attempt `8101f9a380eb27c5004bece9aad77d42b2cc8a51` passed its technical gates but cannot close R-D03 because no committed R-D03-only plan preceded implementation. This version restores the pre-R-D03 semantics, keeps the note Draft/Open, and records the owner's explicit 2026-07-21 authorization for a clean re-entry after this plan commit. Counts remain 128 and 8/31/51/38, with folded status unchanged at 75 COMPLETED / 46 OPEN / 6 DECIDED / 1 IN_PROGRESS; see Section 30. |
 | 1.21.0 | 2026-07-21 | Authorized clean re-entry commit `2f941002009b1e05b33d790e7c6c8fc06e8daf3c`, whose parent contains reset and plan commit `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, completes R-D03 without reusing refuted attempt `8101f9a` as closure evidence. Focused old semantics are 18/2, new semantics are 20/0, coordinated mutation is 1/0, the implementation-head full suite is 747/0/0/0, and runtime is VALID 0/0. R-D03 becomes COMPLETED; folded status is 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. Accounting-head Batch and Aggregate gates remain pending; see Section 31. |
 | 1.22.0 | 2026-07-21 | Final verification of accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951`: exact-tree full suite 747/0/0/0, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 10 paths from `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, exactly one expected Aggregate `aggregate-note-not-ready`, and clean diff/worktrees. This supersedes only the pending-gate text in Section 31; R-D03 remains COMPLETED and every other disposition is unchanged; see Section 32. |
+| 1.23.0 | 2026-07-21 | During the owner-authorized read-only R6 residual audit, drift-stop found that the original owner decision and final folded counts treat R-F04 as DECIDED while later RB-4 records call it OPEN. The owner selected DECIDED on 2026-07-21, meaning the retirement direction remains authorized but unimplemented. This version commits only the prospective truth-restoration plan; it does not yet append a latest-status row, change a finding disposition, or resume the residual audit. See Section 33. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1340,3 +1341,45 @@ Metadata `head_commit` 指向已完整驗證的 accounting head，不預填本 a
 R-E09 維持 `IN_PROGRESS`；R-E11、其他 residual dispositions、promotion、merge 與
 post-merge evidence 仍未完成。PR #3 維持 `NOT READY TO MERGE`；本批不 push、不 merge、
 不 resolve PR threads。
+
+## 33. 2026-07-21 R-F04 status drift-stop 與 prospective truth-restoration plan
+
+R6 residual disposition audit 以唯讀方式重建 128 條 finding 的 latest-record-wins 狀態時，
+發現 R-F04 有兩個互斥的 current-surface 解讀：
+
+| Evidence | Recorded meaning |
+|---|---|
+| 第 3 節 R-F04 與第 6 節 owner decision | `DECIDED`；退役 agent-skills export/install 能力鏈的方向已裁定，但尚未實作 |
+| 第 22 節 RB-4 residual record 與 remediation plan 第 11 節 | `OPEN`；只移除 upgrade caller，不把 partial alignment 冒充完整退役 |
+| 第 31、32 節 folded summary | 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS；此數字只有把 R-F04 計為 `DECIDED` 才成立 |
+
+若採較晚 RB-4 的 `OPEN` 字面狀態，精確折疊應為 76 COMPLETED / 46 OPEN /
+5 DECIDED / 1 IN_PROGRESS。文件同時保留該字面狀態與另一組計數，構成不能由 agent
+自行選邊的 ledger drift。
+
+Owner 於 2026-07-21 明確裁定，R-F04 的 authoritative status 應為 `DECIDED`。此裁定只表示
+退役方向仍有效，不表示三支 scripts、audit、contract、docs、tests 或
+`resources/agent-skill-packs/` 已完成移除。R-H15 維持原有 `DECIDED`；任何
+`COMPLETED` 或 `DISPOSITIONED` 宣稱仍須另有實作與驗收證據。
+
+本節是 implementation 前的 prospective plan，不新增 R-F04 latest-status row，也不宣稱
+上述矛盾已在本 commit 修復。Required sequence 如下：
+
+1. 先提交本日期化 owner-authorized plan，以及 `Draft`、`Open`、`TBD` 的 dedicated
+   mainline note。
+2. 只在該 plan commit 之後，以新的 accounting-only implementation commit 追加
+   R-F04 `DECIDED` clarification；不改寫第 22 節歷史記錄。
+3. 以 section-bounded parser 對 pre-implementation parent 與 proposed tree 做判別：舊樹
+   必須回報 R-F04 status/count ambiguity，新樹必須唯一折疊為 128 條以及
+   76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS。
+4. 驗證 R-F04 與 R-H15 都沒有被誤標 `COMPLETED` 或 `DISPOSITIONED`，且所有其他 finding
+   狀態不變。
+5. 另以 accounting commit 將 dedicated note 更新為 `Ready`、reconciliation `Closed`，
+   並引用真實 implementation commit；其 exact tree 必須通過 runtime、完整 governance
+   suite、Batch、預期 Aggregate blocker 與 diff hygiene。
+6. 只有上述順序全數成立後，才從一致的 ledger 恢復唯讀 R6 residual disposition audit。
+
+本批只處理 R-F04 status/count truth restoration，不執行 R-F04 retirement，不處理 R-H15，
+不變更 R-E11、workflow promotion、Aggregate、merge 或其他 residual disposition。
+Canonical `sdd-pipeline` 維持 experimental、default-disabled、execution-denied；PR #3
+維持 `NOT READY TO MERGE`。
