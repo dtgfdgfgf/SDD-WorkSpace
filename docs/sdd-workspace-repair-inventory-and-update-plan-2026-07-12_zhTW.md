@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.24.0"
+version: "1.25.0"
 date: "2026-07-12"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "bab1ce93aec28819a0c68a3ed7f6e85d3de53442"
+head_commit: "180abc05b8eaaa6fb32a753e81931f14e10ef726"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -457,6 +457,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.22.0 | 2026-07-21 | Final verification of accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951`: exact-tree full suite 747/0/0/0, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 10 paths from `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, exactly one expected Aggregate `aggregate-note-not-ready`, and clean diff/worktrees. This supersedes only the pending-gate text in Section 31; R-D03 remains COMPLETED and every other disposition is unchanged; see Section 32. |
 | 1.23.0 | 2026-07-21 | During the owner-authorized read-only R6 residual audit, drift-stop found that the original owner decision and final folded counts treat R-F04 as DECIDED while later RB-4 records call it OPEN. The owner selected DECIDED on 2026-07-21, meaning the retirement direction remains authorized but unimplemented. This version commits only the prospective truth-restoration plan; it does not yet append a latest-status row, change a finding disposition, or resume the residual audit. See Section 33. |
 | 1.24.0 | 2026-07-21 | After committed owner-authorized plan `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`, this accounting-only implementation appends the authoritative R-F04 latest-status clarification: DECIDED means retirement is authorized but unimplemented. It supersedes only the later RB-4 OPEN label, preserves R-H15 as DECIDED and every other finding disposition, and reconciles the existing 128-item fold as 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. Final committed-accounting gates remain pending; see Section 34. |
+| 1.25.0 | 2026-07-21 | Final accounting for implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726`. After a drift-stop proved the obsolete no-scope command incompatible with R-A20, the owner selected the current explicit-scope contract: Batch must be green and Aggregate may retain only the canonical umbrella blocker. The exact accounting tree passes the 747-test suite, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 5 paths from `6b749a1`, and diff hygiene; Aggregate has exactly the expected umbrella blocker. R-F04/R-H15 remain DECIDED but unimplemented, the five umbrella coverage obligations remain under R-E09, and the fold stays 76/45/6/1. See Section 35. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1425,3 +1426,45 @@ accounting commit 改為 `Ready`、`Closed` 並引用真實 hash。Canonical umb
 `Draft`、`TBD`、`Open`、`Aggregate`；`sdd-pipeline` 維持 experimental、default-disabled、
 execution-denied。R6 audit 仍暫停，PR #3 仍 `NOT READY TO MERGE`；本批不執行 retirement、
 promotion、push、merge 或 PR thread resolution。
+
+## 35. 2026-07-21 R-F04 truth-restoration final accounting 與 scope-aware gate 裁定
+
+Implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726` follows committed entry plan
+`bab1ce93aec28819a0c68a3ed7f6e85d3de53442` and contains the Section 34 authoritative
+status row. Before accounting, the handoff's no-scope `-RequireReady` command returned nonzero:
+one `arguments` error because current R-A20 requires an explicit scope, plus five
+`branch-evidence-coverage-missing` records. The repository template already prescribes
+`-ReadinessScope Batch`, while CI and merge readiness use `-ReadinessScope Aggregate`.
+
+This conflict triggered drift-stop. Owner then selected Choice A on 2026-07-21: this bounded
+accounting uses explicit Batch as its blocking green gate and separately requires Aggregate to
+return only the canonical umbrella blocker. The failed no-scope command remains diagnostic
+evidence and is not relabeled green. No validator behavior or runtime contract changed.
+
+| Final gate | Exact accounting-tree result |
+|---|---|
+| Hardened ledger fold | `VALID=true`、0 ambiguities；128 findings；Critical 8 / High 31 / Medium 51 / Low 38；76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS |
+| Full governance suite | 747 passed、0 failed、0 skipped、0 not run |
+| Canonical runtime audit | `VALID=true`、0 errors、0 warnings；historical evidence 18/18 |
+| Explicit Batch | BaseRef `6b749a1f153dc88412714db0ed6d8708170c5936`；`VALID=true`、0 errors、0 warnings；5 changed paths |
+| Explicit Aggregate | Expected exit 1；唯一 error 是 canonical umbrella note 的 `aggregate-note-not-ready` |
+| No-scope drift diagnostic | Expected exit 1；1 個 `arguments` 與 5 個 `branch-evidence-coverage-missing`；依 owner Choice A 不具 acceptance authority |
+| Diff 與 worktree hygiene | `git diff --check` passed；detached candidate 與正式 branch tree 相同 |
+
+No-scope diagnostic 的五個 coverage paths 是 `.github/agents/speckit.clarify.agent.md`、
+`.github/agents/speckit.tasks.agent.md`、`studio/runtime/impact-registry.json`、
+`studio/workflows/state.json`、`studio/workflows/state.schema.json`。它們是 canonical umbrella
+與 R-E09 既有未完成 Aggregate reconciliation 的具體義務；本 Batch 不修復、不 defer、
+不接受風險，也不另把它們吸收為 R-F04 closure evidence。
+
+Dedicated note now cites implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726` and is
+`Ready` / `Closed` / `Batch`. R-F04 and R-H15 remain `DECIDED` with retirement unimplemented;
+the other 126 finding dispositions are unchanged. R6 overall and R-E09 remain `IN_PROGRESS`.
+The read-only residual audit may resume from the consistent fold, but Aggregate acceptance,
+promotion, merge, and post-merge evidence remain blocked.
+
+Metadata `head_commit` points to the implementation and does not self-reference this accounting
+commit. The canonical umbrella note remains `Draft` / `TBD` / `Open` / `Aggregate`;
+`sdd-pipeline` remains experimental, default-disabled, and execution-denied. PR #3 remains
+`NOT READY TO MERGE`; this batch does not retire skills, promote, push, merge, record post-merge
+success, or resolve PR threads.

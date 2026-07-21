@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.16.0"
+version: "1.17.0"
 date: "2026-07-14"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "bab1ce93aec28819a0c68a3ed7f6e85d3de53442"
+head_commit: "180abc05b8eaaa6fb32a753e81931f14e10ef726"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -215,6 +215,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.14.0 | 2026-07-21 | Accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951` completes the pending R-D03 final gates: exact-tree full suite 747/0/0/0, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 10 paths, exactly one expected Aggregate umbrella blocker, and clean hygiene. R-D03 remains COMPLETED, while R6 overall and all other residuals retain their prior states; see Section 20. |
 | 1.15.0 | 2026-07-21 | Records the owner-authorized prospective plan for the R-F04 status/count truth restoration. The owner preserves R-F04 as DECIDED, meaning the retirement direction remains authorized but unimplemented. This entry does not yet supersede the later RB-4 OPEN record, change folded counts, or resume the R6 residual audit; implementation must begin only after this plan commit. See Section 21. |
 | 1.16.0 | 2026-07-21 | Implements the append-only R-F04 status clarification after entry-plan commit `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`. R-F04 is authoritatively DECIDED, meaning retirement is authorized but unimplemented; R-H15 remains DECIDED, every other finding is unchanged, and the 128-item fold remains 76/45/6/1. The dedicated Batch note remains Draft/Open/TBD until a later accounting commit and exact-tree gates; see Section 22. |
+| 1.17.0 | 2026-07-21 | Final accounting records owner Choice A after no-scope gate drift-stop: R-A20's explicit Batch/Aggregate contract is authoritative. Exact-tree results are full suite 747/0/0/0, runtime VALID 0/0 with 18/18 historical evidence, Batch VALID 0/0 across 5 paths from `6b749a1`, and exactly the expected Aggregate umbrella blocker. Implementation `180abc0` is cited by the Ready/Closed Batch note; R-F04/R-H15 remain DECIDED but unimplemented, R-E09 retains the five umbrella coverage obligations, and R6 remains IN_PROGRESS. See Section 23. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -820,3 +821,29 @@ hygiene。只有完成該 accounting sequence 後才恢復 R6 residual audit。C
 `sdd-pipeline` 仍 experimental、default-disabled、execution-denied；PR #3 仍
 `NOT READY TO MERGE`，且本批不 retirement、不 promotion、不 push、不 merge、不 resolve
 PR threads。
+
+## 23. 2026-07-21 R-F04 final accounting 與 gate drift resolution
+
+Implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726` has the required committed-plan parent
+and append-only R-F04 `DECIDED` row. Accounting preflight proved that the handoff's no-scope
+`-RequireReady` command conflicts with completed R-A20: current validation rejects missing
+`ReadinessScope`, while the canonical template specifies explicit Batch and CI uses Aggregate.
+
+Owner selected Choice A on 2026-07-21. Therefore the blocking accounting contract is explicit
+Batch green from immutable base `6b749a1f153dc88412714db0ed6d8708170c5936`, plus an explicit
+Aggregate run whose only permitted error is the canonical `aggregate-note-not-ready`. The
+no-scope command remains an expected-failing diagnostic with one `arguments` error and five
+`branch-evidence-coverage-missing` records; it is not accepted as green and does not change code.
+
+The exact accounting tree reports 747 passed / 0 failed / 0 skipped / 0 not run, runtime
+`VALID=true` with 0 errors, 0 warnings, and 18/18 historical evidence, and Batch `VALID=true`
+with 0 errors, 0 warnings, and 5 paths. Aggregate returns exactly the expected umbrella blocker;
+diff hygiene passes. The dedicated note cites `180abc05b8eaaa6fb32a753e81931f14e10ef726`, is
+`Ready` / `Closed`, and keeps validation scope `Batch`.
+
+The five no-scope coverage paths remain concrete R-E09/Aggregate obligations and are not closed,
+deferred, accepted, or absorbed by this batch. R-F04 and R-H15 remain `DECIDED` but unimplemented;
+all other finding dispositions are unchanged, inventory stays 128, and the fold stays
+76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. This completes only bounded status/count
+truth restoration and allows the read-only residual audit to resume. `sdd-pipeline` stays
+experimental, default-disabled, and execution-denied; PR #3 stays `NOT READY TO MERGE`.
