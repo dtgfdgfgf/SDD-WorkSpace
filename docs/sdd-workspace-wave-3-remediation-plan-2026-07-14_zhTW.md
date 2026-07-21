@@ -1,14 +1,14 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.18.0"
+version: "1.19.0"
 date: "2026-07-14"
-last_updated: "2026-07-21"
+last_updated: "2026-07-22"
 language: "zh-TW"
 status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "e24d958421b4dc90ed04d507f008d7ec2bc3bec3"
+head_commit: "f669e3dcd116ed8ff612b9a8875167bd5b3a3881"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -217,6 +217,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.16.0 | 2026-07-21 | Implements the append-only R-F04 status clarification after entry-plan commit `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`. R-F04 is authoritatively DECIDED, meaning retirement is authorized but unimplemented; R-H15 remains DECIDED, every other finding is unchanged, and the 128-item fold remains 76/45/6/1. The dedicated Batch note remains Draft/Open/TBD until a later accounting commit and exact-tree gates; see Section 22. |
 | 1.17.0 | 2026-07-21 | Final accounting records owner Choice A after no-scope gate drift-stop: R-A20's explicit Batch/Aggregate contract is authoritative. Exact-tree results are full suite 747/0/0/0, runtime VALID 0/0 with 18/18 historical evidence, Batch VALID 0/0 across 5 paths from `6b749a1`, and exactly the expected Aggregate umbrella blocker. Implementation `180abc0` is cited by the Ready/Closed Batch note; R-F04/R-H15 remain DECIDED but unimplemented, R-E09 retains the five umbrella coverage obligations, and R6 remains IN_PROGRESS. See Section 23. |
 | 1.18.0 | 2026-07-21 | Owner Choice A establishes the prospective conservative R6 convergence plan. Residual audit adds OPEN R-B25/R-B26, producing 130 findings and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. Seventeen bounded safety/truthfulness findings are authorized for direct repair; 35 non-critical findings may later become DISPOSITIONED only with exact Wave-4 re-entry triggers; R-E09/R-J03 remain terminal blockers. `sdd-pipeline` stays experimental, default-disabled and execution-denied. This version is plan-only and must be committed before implementation; see Section 24. |
+| 1.19.0 | 2026-07-22 | R6-A1 preflight after committed plan `f669e3d` finds that R-H03 cannot absorb the cross-surface contradiction between constitutional dependent-mirror classification and generator/contract/current-doc claims that `.claude/agents/` is runtime authority. Owner authorizes new High OPEN R-H20 and direct repair. Ledger becomes 131 with severity 8/32/52/39 and fold 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS; direct repairs become 18 including R-D07. This is still pre-implementation; see Section 25. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -932,3 +933,43 @@ copied into the status accounting records rather than replaced with a generic ba
 dedicated note stays `Draft`, `TBD` and reconciliation `Open` until implementation and exact-tree
 accounting evidence exist. This plan does not push, merge, promote, record post-merge success or
 resolve PR threads. PR #3 remains `NOT READY TO MERGE`.
+
+## 25. 2026-07-22 R6-A1 Claude mirror authority scope correction
+
+Plan commit `f669e3dcd116ed8ff612b9a8875167bd5b3a3881` is the valid Constitution Section 2.1
+entry plan, but R6-A1 implementation preflight found a material scope omission. Constitution 1.9.0
+classifies `.claude/agents/*.md` as seeded `dependent` mirrors. The generator, 15 generated files,
+Copilot adapter, both Studio quickstarts, WORKSPACE_STRUCTURE and runtime contract instead call
+that directory source/runtime authority. Contract invariants actively preserve the contradiction.
+
+R-H03 is README-specific and cannot absorb this cross-surface generator failure. Owner authorized
+new High R-H20 on 2026-07-22. It begins `OPEN` and joins the direct-repair set. Historical notes are
+not rewritten, R-D04 deterministic parity remains completed, and consumer repositories remain out
+of scope.
+
+| Destination after future evidence | IDs | Count |
+|---|---|---:|
+| Direct repair from OPEN | R-A21, R-B18, R-B25, R-B26, R-C04, R-C06, R-E02, R-E08, R-E11, R-G01, R-G03, R-G04, R-H03, R-H04, R-H06, R-H09, R-H20 | 17 |
+| Implement DECIDED item | R-D07 | 1 |
+| Wave-4 disposition from OPEN | R-A13, R-B23, R-D08, R-D09, R-D10, R-D11, R-E01, R-E03, R-E04, R-E06, R-E12, R-F01, R-F02, R-F03, R-F05, R-G02, R-G05, R-G07, R-G08, R-G09, R-G11, R-G12, R-H07, R-H14, R-H18, R-I01, R-I02, R-I04, R-I05, R-I09 | 30 |
+| Wave-4 disposition from DECIDED | R-D06, R-D12, R-F04, R-H15, R-I03 | 5 |
+| Terminal blockers | R-E09, R-J03 | 2 |
+
+The corrected inventory is 131 findings with severity 8 Critical / 32 High / 52 Medium / 39 Low
+and current fold 76 `COMPLETED` / 48 `OPEN` / 6 `DECIDED` / 1 `IN_PROGRESS`. All 55
+non-completed IDs appear once. The prospective pre-merge fold becomes 94 `COMPLETED` / 35
+`DISPOSITIONED` / 1 `OPEN` / 1 `IN_PROGRESS`; actual merge and post-merge evidence are required
+before any 96 / 35 terminal fold.
+
+R6-A1 now implements R-E11, R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20. R-H20 must follow
+authority order: reconcile Constitution semantics, generator and runtime contract source-of-truth
+surfaces first; reseed all 15 mirrors and synchronize dependent adapters second; update current
+informational guidance last. Machine tests must fail when authority wording is restored in the generator,
+when source/dependent direction is reversed, when any current guidance reintroduces authority
+wording, or when a generated mirror loses its dependent header. A positive control must retain
+Claude runtime consumption and unchanged workflow denial.
+
+R-E11 revision 1 uses the corrected 131-ID snapshot. This amendment remains plan-only: no status
+other than registering R-H20 as `OPEN` changes, and the dedicated note remains Draft/Open/TBD.
+Implementation and accounting commits remain separate. Final exact-tree gates, non-promotion,
+consumer exclusions and R-E09/R-J03 terminal boundaries remain exactly as Section 24 defines.

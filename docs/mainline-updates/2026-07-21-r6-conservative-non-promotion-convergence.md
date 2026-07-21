@@ -12,8 +12,8 @@
 ## Summary
 
 - Record the owner-selected conservative R6 convergence plan before implementation begins.
-- Register R-B25 and R-B26 as new independent `OPEN` workflow findings.
-- Directly repair 17 bounded safety and truthfulness findings, then conditionally disposition 35
+- Register R-B25, R-B26 and R-H20 as new independent `OPEN` findings.
+- Directly repair 18 bounded safety and truthfulness findings, then conditionally disposition 35
   non-critical findings to Wave-4 with exact re-entry triggers.
 - Keep `sdd-pipeline` experimental, default-disabled and execution-denied.
 
@@ -30,6 +30,12 @@ workflow compatibility field. R-B26 covers deprecated workflow enablement plus u
 provenance. They are separate from R-C04/R-C06 because workflow validation, state and authorization
 are distinct execution surfaces. Both enter the ledger as `OPEN`; this Draft note does not claim
 their implementation.
+
+R6-A1 preflight on 2026-07-22 then found a separate authority contradiction: the Constitution
+classifies `.claude/agents/*.md` as seeded dependent mirrors, while the generator, all generated
+mirrors, current adapter/guides and runtime contract call the same directory source/runtime
+authority. R-H03 is README-specific, so the owner authorized new High OPEN R-H20 instead of
+silently expanding R-H03.
 
 ## Scope
 
@@ -63,7 +69,7 @@ Out of scope:
 ## Impact
 
 - The branch receives a committed Constitution Section 2.1 entry plan before implementation.
-- The known inventory becomes 130 findings with current fold 76 `COMPLETED`, 47 `OPEN`,
+- The known inventory becomes 131 findings with current fold 76 `COMPLETED`, 48 `OPEN`,
   6 `DECIDED`, 1 `IN_PROGRESS` and 0 `DISPOSITIONED`.
 - No existing finding becomes `COMPLETED` or `DISPOSITIONED` in this plan-only change.
 - R-E09 and R-J03 remain terminal blockers; PR #3 remains `NOT READY TO MERGE`.
@@ -72,9 +78,9 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.26.0 records the owner authorization, two new OPEN findings, exhaustive matrix and gates. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.18.0 records the prospective R6 sequence before implementation. |
-| `docs/README.md` | `must_update` | `updated` | Index reports 130 findings and the current plan-only fold. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.27.0 records the owner authorization, three new OPEN findings, corrected exhaustive matrix and gates. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.19.0 records the corrected prospective R6 sequence before implementation. |
+| `docs/README.md` | `must_update` | `updated` | Index reports 131 findings and the current plan-only fold. |
 | `docs/mainline-updates/README.md` | `must_update` | `updated` | Index state matches this Draft note. |
 | `studio/constitution/constitution.md` | `must_update` | `pending` | R-E11/R-D07/R-E08 implementation has not started. |
 | `studio/runtime/shared-runtime-contract.json` | `must_update` | `pending` | Direct-repair contract anchors have not been implemented. |
@@ -85,8 +91,8 @@ Plan-entry validation:
 
 - `git diff --check`
 - Mainline-note structural validation without a Ready requirement.
-- Independent matrix review: every non-completed ID appears once, R-B25/R-B26 remain OPEN, and
-  the current 130-item fold is unchanged except for their registration.
+- Independent matrix review: every non-completed ID appears once, R-B25/R-B26/R-H20 remain OPEN,
+  and the current 131-item fold is unchanged except for their registration.
 
 Required before this note may become `Ready`:
 
@@ -107,6 +113,16 @@ Required before this note may become `Ready`:
 - Choice A keeps explicit Batch/Aggregate validation; the obsolete no-scope invocation has no
   acceptance authority.
 - This plan does not authorize workflow promotion, push or merge.
+
+## 2026-07-22 Scope Reconciliation
+
+- Entry-plan commit `f669e3dcd116ed8ff612b9a8875167bd5b3a3881` remains the committed
+  pre-implementation base, but its 130-item matrix is superseded by the owner-authorized R-H20
+  correction.
+- R-H20 is High and `OPEN`. It covers generator, all generated Claude mirrors, Copilot adapter,
+  both Studio quickstarts, WORKSPACE_STRUCTURE and runtime contract. README remains under R-H03.
+- The corrected matrix has 131 findings, 18 direct repairs, 35 Wave-4 dispositions and two
+  terminal blockers. No implementation or closure is claimed by this reconciliation.
 
 ## Follow-ups
 

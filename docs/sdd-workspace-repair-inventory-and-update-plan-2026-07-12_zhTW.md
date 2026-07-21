@@ -1,15 +1,15 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.26.0"
+version: "1.27.0"
 date: "2026-07-12"
-last_updated: "2026-07-21"
+last_updated: "2026-07-22"
 language: "zh-TW"
 owner: "元熙"
 status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "e24d958421b4dc90ed04d507f008d7ec2bc3bec3"
+head_commit: "f669e3dcd116ed8ff612b9a8875167bd5b3a3881"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -23,7 +23,7 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22；2026-07-21 R6 residual audit 再新增 R-B25 與 R-B26。因此目前為 130 條，編為 R-A01 至 R-A22、R-B01 至 R-B26、其餘區域至 R-J03。現況分佈：Critical 8、High 31、Medium 52、Low 39。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22；2026-07-21 R6 residual audit 再新增 R-B25 與 R-B26；2026-07-22 R6-A1 preflight 再新增 R-H20。因此目前為 131 條，編為 R-A01 至 R-A22、R-B01 至 R-B26、其餘區域至 R-H20 與 R-J03。現況分佈：Critical 8、High 32、Medium 52、Low 39。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
@@ -125,7 +125,7 @@ canonical feature-ID 分裂與其餘 R2 findings 仍待處理，因此 R-B06 與
 resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復（見第 14 節），R-B18
 保持 open。
 
-建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 130 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan；R-B23、R-A21、R-B25 與 R-B26 另依日期化增補處理）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；RB-4、RB-5、R6 與其他未完成 findings 在實作時仍須依當下證據調整。
+建議按第 5 節的 7 個風險優先批次執行。完整執行前四批 R0 至 R3 粗估 11 至 18 人天；目前 131 條完整收斂粗估仍為 21 至 35 人天（此為原 backlog 估算；2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加工時見 remediation plan；R-B23、R-A21、R-B25、R-B26 與 R-H20 另依日期化增補處理）。每批以 `check-speckit-runtime.ps1 -Json` ERROR_COUNT=0、Pester 全綠、該批新增 negative tests 與批次專屬驗收條件收尾，並依憲法補 mainline note。工期是重新估算區間，不是承諾值；RB-4、RB-5、R6 與其他未完成 findings 在實作時仍須依當下證據調整。
 
 ## 1. 範圍與排除
 
@@ -367,7 +367,7 @@ resolved；驗證發現的 R-A15、R-B17、R-A16 已由 commit `df31106` 修復�
 4. R-B16 的 gitignore 必須跟隨 R-B06 的最終 relocation，不在舊路徑先做永久政策。
 5. R-G06 與 R-E05 必須原子處理：移除 manifest presence 面時，同批建立 mainline-note reconciliation 與 merge CI。
 6. R-D12 在 R3 只可建立安全遷移前提；若 Copilot overlay 尚未完成，temporary allowlist 必須保留到 R5，不能先刪 shared agent。
-7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 130 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan；R-B23、R-A21、R-B25 與 R-B26 依日期化增補另行排程）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
+7. 前四批 R0 至 R3 的完整工作量粗估 11 至 18 人天；目前 131 條全量收斂粗估仍為 21 至 35 人天（未含 2026-07-14 RVR 新增 9 條與 RB-1 至 RB-5+R6 的追加約 14 至 22.5 人天，見 remediation plan；R-B23、R-A21、R-B25、R-B26 與 R-H20 依日期化增補另行排程）。若只挑 Critical/High 子集，必須另做 scope cut，不得把各批完整工期直接相加後仍沿用較小數字。
 8. R-E09 在 R5 處理既有 Ready/Draft notes 的歷史帳務與失真修復；R6 只做本輪 final commit/PR/merge hash 回填與合併後驗證。兩批不得把同一工作重複計為完成。
 
 ## 6. Owner 已裁定的 18 項決策
@@ -459,6 +459,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.24.0 | 2026-07-21 | After committed owner-authorized plan `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`, this accounting-only implementation appends the authoritative R-F04 latest-status clarification: DECIDED means retirement is authorized but unimplemented. It supersedes only the later RB-4 OPEN label, preserves R-H15 as DECIDED and every other finding disposition, and reconciles the existing 128-item fold as 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS. Final committed-accounting gates remain pending; see Section 34. |
 | 1.25.0 | 2026-07-21 | Final accounting for implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726`. After a drift-stop proved the obsolete no-scope command incompatible with R-A20, the owner selected the current explicit-scope contract: Batch must be green and Aggregate may retain only the canonical umbrella blocker. The exact accounting tree passes the 747-test suite, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 5 paths from `6b749a1`, and diff hygiene; Aggregate has exactly the expected umbrella blocker. R-F04/R-H15 remain DECIDED but unimplemented, the five umbrella coverage obligations remain under R-E09, and the fold stays 76/45/6/1. See Section 35. |
 | 1.26.0 | 2026-07-21 | Owner Choice A authorizes a prospective conservative R6 convergence plan: keep `sdd-pipeline` non-promoted and denied, directly repair 17 bounded safety and truthfulness findings, and later disposition 35 non-critical items to Wave-4 with explicit re-entry triggers. Residual audit adds OPEN R-B25 and R-B26, raising the ledger to 130 findings with severity 8/31/52/39 and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. This version is plan-only: no existing finding is completed or dispositioned, R-E09/R-J03 remain terminal blockers, and implementation may start only after this plan is committed. See Section 36. |
+| 1.27.0 | 2026-07-22 | R6-A1 preflight found a material scope drift after plan commit `f669e3d`: the Constitution classifies `.claude/agents/*.md` as seeded dependent mirrors, while the generator, 15 generated mirrors, Copilot adapter, both quickstarts, WORKSPACE_STRUCTURE and runtime contract still call them source/runtime authority. Owner authorizes new High OPEN R-H20 and direct repair before implementation. Ledger becomes 131 findings with severity 8/32/52/39 and current fold 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS; the direct set becomes 18 including R-D07. No prior status changes. See Section 37. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1603,3 +1604,83 @@ acceptance gate and must not be relabeled green. This plan itself changes no fin
 R-B25/R-B26 as `OPEN`; the dedicated note remains `Draft`, `TBD` and reconciliation `Open`.
 PR #3 remains `NOT READY TO MERGE`, and `sdd-pipeline` remains experimental, default-disabled
 and execution-denied.
+
+## 37. 2026-07-22 R6-A1 Claude mirror authority drift-stop 與 owner-authorized plan correction
+
+Entry-plan commit `f669e3dcd116ed8ff612b9a8875167bd5b3a3881` passed staged audit and
+post-commit runtime with 0 errors and 0 warnings. Before implementation, read-only R6-A1 preflight
+found that the planned R-H03 repair is too narrow for the actual Claude authority drift:
+
+| Evidence surface | Current contradictory claim |
+|---|---|
+| `studio/constitution/constitution.md` | `.claude/agents/*.md` are seeded `dependent` mirrors of `.github/agents/` |
+| `studio/scripts/powershell/seed-claude-agents.ps1` and all 15 generated mirrors | Generated header calls `.claude/agents/` the Claude shared runtime authority after generation |
+| `.github/copilot-instructions.md` | Canonical-source table and manual guidance call `.claude/agents/` runtime source/authority |
+| `WORKSPACE_STRUCTURE.md`, both Studio quickstarts | Current guidance repeats source-of-truth or authority wording |
+| `studio/runtime/shared-runtime-contract.json` | Multiple invariants actively require the contradictory authority wording |
+
+R-H03 explicitly covers three README defects. Expanding it to generator, generated mirrors,
+adapter, quickstarts, structure documentation and contract would silently absorb an independently
+enforced failure mode. Owner therefore authorized the following new finding on 2026-07-22:
+
+| ID | Severity | 2026-07-22 finding | Required disposition | Current status |
+|---|---|---|---|---|
+| R-H20 | High | Constitution 1.9.0 classifies `.claude/agents/*.md` as seeded dependent mirrors, but current generator, all generated mirrors, Copilot adapter, quickstarts, WORKSPACE_STRUCTURE and runtime contract describe the same directory as source/runtime authority and lock the contradiction with machine invariants | Preserve `.github/agents/` as canonical agent source; describe `.claude/agents/` consistently as the deterministic Claude-consumable seeded dependent mirror; repair generator, reseed all mirrors, update current guidance/contract and add direction-sensitive mutation tests | OPEN |
+
+Historical mainline notes remain historical evidence and are not rewritten. README wording remains
+part of R-H03 so both IDs retain independently testable boundaries. R-H20 does not change
+R-D04's completed deterministic parity implementation; it corrects the authority semantics emitted
+by that generator. No `projects/` or `learning/` consumer is changed.
+
+### 37.1 Superseding counts and exhaustive matrix
+
+R-H20 raises the inventory to 131 and severity to Critical 8, High 32, Medium 52 and Low 39.
+Because it enters `OPEN`, current status becomes 76 `COMPLETED`, 48 `OPEN`, 6 `DECIDED`,
+1 `IN_PROGRESS` and 0 `DISPOSITIONED`. This section supersedes only the prospective counts and
+matrix in Section 36; all Section 36.2 Wave-4 triggers remain unchanged.
+
+| Prospective disposition | Finding IDs | Count | Closure boundary |
+|---|---|---:|---|
+| Direct repair from `OPEN` | R-A21, R-B18, R-B25, R-B26, R-C04, R-C06, R-E02, R-E08, R-E11, R-G01, R-G03, R-G04, R-H03, R-H04, R-H06, R-H09, R-H20 | 17 | May become `COMPLETED` only after implementation, old-fails/new-passes evidence, contract anchors and exact-tree gates |
+| Implement existing owner decision | R-D07 | 1 | May move from `DECIDED` to `COMPLETED` only after path/type scope is machine-anchored and governed documents remain Section 10.1 compliant |
+| Wave-4 disposition from `OPEN` | R-A13, R-B23, R-D08, R-D09, R-D10, R-D11, R-E01, R-E03, R-E04, R-E06, R-E12, R-F01, R-F02, R-F03, R-F05, R-G02, R-G05, R-G07, R-G08, R-G09, R-G11, R-G12, R-H07, R-H14, R-H18, R-I01, R-I02, R-I04, R-I05, R-I09 | 30 | May become `DISPOSITIONED` only in a later accounting record that preserves its Section 36.2 trigger |
+| Wave-4 disposition from `DECIDED` | R-D06, R-D12, R-F04, R-H15, R-I03 | 5 | Owner direction remains valid, but implementation is deferred and must not be called complete |
+| Terminal blocker | R-E09, R-J03 | 2 | Both retain their current status until real umbrella, merge and post-merge evidence exist |
+
+All 55 non-completed findings appear exactly once. If the 18 authorized direct repairs and 35
+Wave-4 dispositions later pass, the only permitted pre-merge fold is 94 `COMPLETED`, 1 `OPEN`,
+1 `IN_PROGRESS`, 35 `DISPOSITIONED` and 0 `DECIDED`. Only actual merge and post-merge
+validation may produce 96 `COMPLETED` / 35 `DISPOSITIONED`. This plan correction asserts
+neither future fold.
+
+### 37.2 Corrected R6-A1 implementation boundary
+
+R6-A1 now contains R-E11, R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20. R-H20 implementation
+must follow Constitution Section 12 authority order: first reconcile all affected source-of-truth
+surfaces, including Constitution semantics, the generator and runtime contract; then regenerate all
+15 dependent mirrors and synchronize dependent adapters; finally update informational quickstarts
+and structure documentation. The wording must preserve both facts: `.github/agents/` is the
+canonical agent source, while `.claude/agents/` is the deterministic seeded dependent mirror used
+by Claude at runtime and is not edited as an authority source.
+
+Required R-H20 discrimination includes:
+
+- Restoring `Claude shared runtime authority after generation` in the generator and reseeding must
+  fail the contract/parity suite.
+- Reversing `.github/agents/` source and `.claude/agents/` dependent direction must fail.
+- Restoring authority wording in the Copilot adapter, either quickstart or WORKSPACE_STRUCTURE
+  must fail a path-specific invariant.
+- Removing the dependent-mirror header from any generated Claude agent must fail deterministic
+  parity or a closed-set header invariant.
+- The positive control must prove Claude still consumes the generated runtime mirror and that
+  workflow promotion state is unchanged.
+
+R-E11 revision 1 must now contain the complete 131-ID snapshot with R-H20 and R-E11 both `OPEN`.
+R-H20 may become `COMPLETED` only in a later accounting record after the implementation commit
+and exact-tree gates exist. The dedicated R6 note remains `Draft`, Related Commits `TBD`,
+reconciliation `Open` and scope `Batch`.
+
+This correction is still pre-implementation. It does not complete or disposition any existing
+finding, change R-E09/R-J03, promote a workflow, push, merge, record post-merge success or resolve
+PR threads. PR #3 remains `NOT READY TO MERGE`; `sdd-pipeline` remains experimental,
+default-disabled and execution-denied.
