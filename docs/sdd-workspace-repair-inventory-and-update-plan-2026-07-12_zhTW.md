@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.30.0"
+version: "1.31.0"
 date: "2026-07-12"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "105a09cd02f7d8b4765e49859390908e55bd97d1"
+head_commit: "8f0dd46b3002626892d02bdf1808e68f21828005"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -468,6 +468,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.28.0 | 2026-07-22 | R6-A1 implementation preflight found that treating the whole `.github/agents/` directory as canonical would contradict its dependent `copilot-instructions.md` adapter and omit the non-`.agent.md` generator input `async-python-reviewer.md`. Owner Choice A refines R-H20 to an exact current partition: 14 `*.agent.md` files plus `async-python-reviewer.md` are canonical inputs, `copilot-instructions.md` remains dependent, and all 15 generated Claude files remain dependent mirrors. Counts and statuses do not change. See Section 38. |
 | 1.29.0 | 2026-07-22 | Bootstraps the R-E11 machine-bounded `finding_status` authority after exact-partition plan `9b83f7a`. Revision 1 records all 131 IDs without changing any status: 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED; R-E11 and R-H20 remain OPEN. The document as a whole remains informational, the R6 note remains Draft/Open/TBD, and closure requires a later accounting revision after committed implementation and exact-tree gates. See Section 39. |
 | 1.30.0 | 2026-07-22 | Appends revision 2 after implementation `105a09c` and accounting-sequence plan `3e64e4e`. Only R-D07/R-E02/R-E08/R-E11/R-H03/R-H04/R-H20 become COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across the unchanged 131 findings. The dedicated R6-A1 note remains Draft/Open until a later note-only finalization and exact-tree gates; R6-A2 through R6-A6 remain pending. See Section 40. |
+| 1.31.0 | 2026-07-22 | Appends revision 3 after finalization head `8f0dd46` exposed a no-op hard-coded finding-status index mutation and stale note-state prose in `docs/README.md`. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated R6-A1 note returns to Draft/Open. See Section 41. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1812,6 +1813,58 @@ PR #3 remains `NOT READY TO MERGE`.
     "OPEN": 42,
     "DECIDED": 5,
     "IN_PROGRESS": 1,
+    "DISPOSITIONED": 0
+  }
+}
+```
+
+## 41. 2026-07-22 R6-A1 finalization failure and R-E11 re-entry
+
+The exact-tree governance suite at finalization head
+`8f0dd46b3002626892d02bdf1808e68f21828005` discovered 878 tests but failed the
+`promotes finding-status index tampering into a runtime audit failure` case. The fixture still
+replaced revision-1 counts `COMPLETED:76,OPEN:48`; revision 2 contains
+`COMPLETED:83,OPEN:42`, so the replacement was a no-op and the runtime audit correctly returned
+success for unchanged bytes. The same inspection found that `docs/README.md` still described the
+dedicated A1 note as Draft/Open after the note-only finalization commit changed it to Ready/Closed.
+
+This evidence refutes the R-E11 discriminating-test closure and the dedicated Batch Ready claim.
+It does not refute the implementation or tests for R-D07, R-E02, R-E08, R-H03, R-H04 or R-H20;
+those six remain `COMPLETED`. Revision 3 therefore returns only R-E11 to `IN_PROGRESS`, and the
+dedicated note returns to Draft with reconciliation Open. R-E09 remains `IN_PROGRESS`, R-J03
+remains `OPEN`, and the broad R6 and canonical Wave-3 notes remain Draft and non-authorizing.
+
+R-E11 may re-enter completion only after the negative fixture derives and visibly changes the
+current machine index marker, includes an assertion that the mutation occurred, and the dependent
+docs index matches the current note state. The repaired exact tree must then pass at least 878
+governance tests with 0 failures, runtime and Batch validation with 0 errors and 0 warnings,
+two-sided append-only history, the single expected Aggregate umbrella blocker, diff hygiene and a
+clean worktree. This correction does not authorize R6-A2 through R6-A6, consumer edits, workflow
+promotion, push, merge or PR-thread resolution. `sdd-pipeline` remains experimental,
+default-disabled and execution-denied; PR #3 remains `NOT READY TO MERGE`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 3,
+  "recordType": "delta",
+  "recordedDate": "2026-07-22",
+  "ledgerVersion": "1.31.0",
+  "statuses": [
+    {"id":"R-E11","status":"IN_PROGRESS"}
+  ],
+  "inventoryCount": 131,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 52,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 82,
+    "OPEN": 42,
+    "DECIDED": 5,
+    "IN_PROGRESS": 2,
     "DISPOSITIONED": 0
   }
 }

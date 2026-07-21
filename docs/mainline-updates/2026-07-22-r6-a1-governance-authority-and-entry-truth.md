@@ -3,18 +3,33 @@
 **Date**: 2026-07-22
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 **Validation Scope**: Batch
+
+## Revalidation (2026-07-22, Finalization-Tree Failure)
+
+The complete governance suite at committed finalization head
+`8f0dd46b3002626892d02bdf1808e68f21828005` refuted this note's Ready/Closed status. Its
+`promotes finding-status index tampering into a runtime audit failure` case expected a nonzero
+runtime result but received zero because the fixture still replaced revision-1 counts `76/48`;
+the revision-2 index contains `83/42`, so no mutation occurred. Inspection also found that
+`docs/README.md` still described this note as Draft/Open after finalization made it Ready/Closed.
+
+This failure reopens only R-E11 as `IN_PROGRESS`. The evidence for R-D07, R-E02, R-E08, R-H03,
+R-H04 and R-H20 remains valid, so those six stay `COMPLETED`. Re-entry requires a dynamic
+current-marker mutation with an explicit mutation-occurrence assertion, synchronized index prose,
+and the complete exact-tree gate contract below. Until then this note is Draft with reconciliation
+Open; R6-A2 through R6-A6 remain pending and the branch remains `NOT READY TO MERGE`.
 
 ## Summary
 
 - Establish a machine-bounded, append-only finding-status authority without making the full repair
   ledger authoritative.
-- Complete R-D07, R-E02, R-E08, R-E11, R-H03, R-H04 and R-H20 from implementation
-  `105a09cd02f7d8b4765e49859390908e55bd97d1`.
+- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20 while
+  R-E11 re-enters verification after the finalization-tree failure.
 - Keep consumer repositories, workflow promotion, Aggregate acceptance and the remaining R6
   batches outside this checkpoint.
 
@@ -81,7 +96,7 @@ Out of scope:
 | `AGENTS.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `CLAUDE.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `.github/copilot-instructions.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes bootstrap, phase and dependent-adapter truth. |
-| `docs/README.md` | `must_update` | `updated` | Revision 2 index matches 131 findings and the 83/42/5/1/0 fold. |
+| `docs/README.md` | `must_update` | `updated` | Revision 3 matches 131 findings, fold 82/42/5/2/0 and this note's Draft/Open state. |
 
 ## Validation
 
@@ -97,12 +112,14 @@ Observed implementation and accounting evidence:
 - Claude verification reports 15 generated mirrors, 1 skipped dependent adapter and 0 errors.
 - Impact-registry comparison reports fresh generated output.
 
-The committed Ready tree is subject to this immediate fail-and-demote contract:
+Any future committed Ready tree is subject to this immediate fail-and-demote contract:
 
 - The complete governance suite must report at least 878 passed and 0 failed.
 - Runtime must report `VALID=true`, 0 errors and 0 warnings.
-- Finding-status history must retain exactly two valid revisions, 131 findings and fold
-  83/42/5/1/0.
+- On the R-E11 re-entry accounting and finalization tree, finding-status history must preserve
+  revision 3 and contain exactly four consecutive valid revisions, 131 findings and fold
+  83/42/5/1/0. Later trees must preserve those four plus every subsequent consecutive valid
+  revision with current fold and index parity.
 - Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` must report
   `VALID=true`, 0 errors and 0 warnings.
 - Explicit Aggregate readiness must fail only with the canonical `aggregate-note-not-ready`
@@ -112,14 +129,14 @@ The committed Ready tree is subject to this immediate fail-and-demote contract:
 
 ## Merge Notes
 
-- This dedicated Batch note is `Ready` with reconciliation `Closed` for only the seven R6-A1 IDs.
-- The exact-tree gate contract above remains mandatory; any refuting result requires immediate
-  demotion rather than preserving this status.
+- This dedicated Batch note is `Draft` with reconciliation `Open` until R-E11 re-entry evidence and
+  every exact-tree gate exist.
 - Even after bounded A1 readiness, the branch remains `NOT READY TO MERGE` because R6-A2 through
   R6-A6, Aggregate acceptance, merge and post-merge evidence remain incomplete.
 - This batch does not authorize workflow promotion, push, merge or PR-thread resolution.
 
 ## Follow-ups
 
-- Preserve the exact-tree evidence and demote this note immediately if later evidence refutes it.
+- Repair the R-E11 mutation fixture without weakening the runtime validator, then rerun every
+  exact-tree gate before restoring Ready/Closed.
 - Continue R6-A2 without absorbing any A3 through A6 finding or Wave-4 disposition.
