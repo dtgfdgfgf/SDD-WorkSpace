@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.27.0"
+version: "1.28.0"
 date: "2026-07-12"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -9,7 +9,7 @@ status: "repair-in-progress"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f669e3dcd116ed8ff612b9a8875167bd5b3a3881"
+head_commit: "997757efec1208023b9ada76e5a32de62b31fc4a"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -460,6 +460,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.25.0 | 2026-07-21 | Final accounting for implementation `180abc05b8eaaa6fb32a753e81931f14e10ef726`. After a drift-stop proved the obsolete no-scope command incompatible with R-A20, the owner selected the current explicit-scope contract: Batch must be green and Aggregate may retain only the canonical umbrella blocker. The exact accounting tree passes the 747-test suite, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 5 paths from `6b749a1`, and diff hygiene; Aggregate has exactly the expected umbrella blocker. R-F04/R-H15 remain DECIDED but unimplemented, the five umbrella coverage obligations remain under R-E09, and the fold stays 76/45/6/1. See Section 35. |
 | 1.26.0 | 2026-07-21 | Owner Choice A authorizes a prospective conservative R6 convergence plan: keep `sdd-pipeline` non-promoted and denied, directly repair 17 bounded safety and truthfulness findings, and later disposition 35 non-critical items to Wave-4 with explicit re-entry triggers. Residual audit adds OPEN R-B25 and R-B26, raising the ledger to 130 findings with severity 8/31/52/39 and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. This version is plan-only: no existing finding is completed or dispositioned, R-E09/R-J03 remain terminal blockers, and implementation may start only after this plan is committed. See Section 36. |
 | 1.27.0 | 2026-07-22 | R6-A1 preflight found a material scope drift after plan commit `f669e3d`: the Constitution classifies `.claude/agents/*.md` as seeded dependent mirrors, while the generator, 15 generated mirrors, Copilot adapter, both quickstarts, WORKSPACE_STRUCTURE and runtime contract still call them source/runtime authority. Owner authorizes new High OPEN R-H20 and direct repair before implementation. Ledger becomes 131 findings with severity 8/32/52/39 and current fold 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS; the direct set becomes 18 including R-D07. No prior status changes. See Section 37. |
+| 1.28.0 | 2026-07-22 | R6-A1 implementation preflight found that treating the whole `.github/agents/` directory as canonical would contradict its dependent `copilot-instructions.md` adapter and omit the non-`.agent.md` generator input `async-python-reviewer.md`. Owner Choice A refines R-H20 to an exact current partition: 14 `*.agent.md` files plus `async-python-reviewer.md` are canonical inputs, `copilot-instructions.md` remains dependent, and all 15 generated Claude files remain dependent mirrors. Counts and statuses do not change. See Section 38. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1684,3 +1685,35 @@ This correction is still pre-implementation. It does not complete or disposition
 finding, change R-E09/R-J03, promote a workflow, push, merge, record post-merge success or resolve
 PR threads. PR #3 remains `NOT READY TO MERGE`; `sdd-pipeline` remains experimental,
 default-disabled and execution-denied.
+
+## 38. 2026-07-22 R6-A1 canonical agent input partition correction
+
+After committed R-H20 scope correction `997757efec1208023b9ada76e5a32de62b31fc4a`, a
+read-only implementation preflight found that the phrase "`.github/agents/` is the canonical agent
+source" is still too broad. The current directory contains 16 Markdown files. The generator reads
+all `*.md` files and skips only `copilot-instructions.md`, producing 15 Claude mirrors.
+
+| Current source class | Files | Authority |
+|---|---:|---|
+| Command and agent definitions | 14 `*.agent.md` files | `source_of_truth` generator inputs |
+| Shared reviewer definition | `async-python-reviewer.md` | `source_of_truth` generator input while R-D12 remains unimplemented |
+| Agent-scoped Copilot adapter | `copilot-instructions.md` | `dependent`; excluded by the generator |
+| Generated Claude files | 15 `.claude/agents/*.md` files | deterministic `dependent` mirrors |
+
+Owner selected Choice A: refine R-H20 rather than register another finding because this is the
+same source/dependent direction failure and leaves no independent residual after the partition is
+enforced. R-H20 implementation MUST name the exact canonical input set instead of assigning one
+authority to the whole directory. Constitution and impact-registry generation MUST classify
+`async-python-reviewer.md` explicitly while retaining `copilot-instructions.md` as dependent.
+R-D12 remains `DECIDED`; this correction neither relocates the reviewer nor changes any consumer.
+R-E04 remains independent and is not absorbed.
+
+Discriminating tests MUST fail if the generator consumes the dependent adapter, omits a declared
+canonical input, reverses the GitHub-source and Claude-mirror direction, or permits any generated
+mirror to lose its dependent header. The positive control MUST retain 15 current source-to-mirror
+mappings and preserve `sdd-pipeline` as experimental, default-disabled and execution-denied.
+
+This amendment is plan-only. The inventory remains 131 with severity 8 Critical / 32 High / 52
+Medium / 39 Low and fold 76 `COMPLETED` / 48 `OPEN` / 6 `DECIDED` / 1 `IN_PROGRESS`.
+R-H20 and R-E11 remain `OPEN`; the dedicated R6 note remains `Draft`, Related Commits `TBD`,
+reconciliation `Open` and validation scope `Batch`.

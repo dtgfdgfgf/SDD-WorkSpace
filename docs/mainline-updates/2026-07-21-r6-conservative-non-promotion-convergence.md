@@ -78,8 +78,8 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.27.0 records the owner authorization, three new OPEN findings, corrected exhaustive matrix and gates. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.19.0 records the corrected prospective R6 sequence before implementation. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.28.0 records the exact R-H20 authority partition without changing the 131-item fold. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.20.0 records the exact 15-source/1-dependent correction before implementation resumes. |
 | `docs/README.md` | `must_update` | `updated` | Index reports 131 findings and the current plan-only fold. |
 | `docs/mainline-updates/README.md` | `must_update` | `updated` | Index state matches this Draft note. |
 | `studio/constitution/constitution.md` | `must_update` | `pending` | R-E11/R-D07/R-E08 implementation has not started. |
@@ -123,6 +123,17 @@ Required before this note may become `Ready`:
   both Studio quickstarts, WORKSPACE_STRUCTURE and runtime contract. README remains under R-H03.
 - The corrected matrix has 131 findings, 18 direct repairs, 35 Wave-4 dispositions and two
   terminal blockers. No implementation or closure is claimed by this reconciliation.
+
+## 2026-07-22 Canonical Input Partition Reconciliation
+
+- A second preflight found 16 Markdown files under `.github/agents/`: 14 `*.agent.md` canonical
+  inputs, canonical `async-python-reviewer.md`, and dependent `copilot-instructions.md`.
+- Owner Choice A refines R-H20 instead of adding a new finding. The generator must consume the 15
+  canonical inputs, exclude the dependent adapter, and produce 15 dependent Claude mirrors.
+- R-D12 remains `DECIDED`; R-E04 remains independent. Counts, statuses, consumer files and
+  workflow promotion state do not change.
+- This note remains `Draft`, Related Commits `TBD`, reconciliation `Open` and validation scope
+  `Batch`; no implementation or closure is claimed by this plan correction.
 
 ## Follow-ups
 

@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.19.0"
+version: "1.20.0"
 date: "2026-07-14"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f669e3dcd116ed8ff612b9a8875167bd5b3a3881"
+head_commit: "997757efec1208023b9ada76e5a32de62b31fc4a"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -218,6 +218,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.17.0 | 2026-07-21 | Final accounting records owner Choice A after no-scope gate drift-stop: R-A20's explicit Batch/Aggregate contract is authoritative. Exact-tree results are full suite 747/0/0/0, runtime VALID 0/0 with 18/18 historical evidence, Batch VALID 0/0 across 5 paths from `6b749a1`, and exactly the expected Aggregate umbrella blocker. Implementation `180abc0` is cited by the Ready/Closed Batch note; R-F04/R-H15 remain DECIDED but unimplemented, R-E09 retains the five umbrella coverage obligations, and R6 remains IN_PROGRESS. See Section 23. |
 | 1.18.0 | 2026-07-21 | Owner Choice A establishes the prospective conservative R6 convergence plan. Residual audit adds OPEN R-B25/R-B26, producing 130 findings and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. Seventeen bounded safety/truthfulness findings are authorized for direct repair; 35 non-critical findings may later become DISPOSITIONED only with exact Wave-4 re-entry triggers; R-E09/R-J03 remain terminal blockers. `sdd-pipeline` stays experimental, default-disabled and execution-denied. This version is plan-only and must be committed before implementation; see Section 24. |
 | 1.19.0 | 2026-07-22 | R6-A1 preflight after committed plan `f669e3d` finds that R-H03 cannot absorb the cross-surface contradiction between constitutional dependent-mirror classification and generator/contract/current-doc claims that `.claude/agents/` is runtime authority. Owner authorizes new High OPEN R-H20 and direct repair. Ledger becomes 131 with severity 8/32/52/39 and fold 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS; direct repairs become 18 including R-D07. This is still pre-implementation; see Section 25. |
+| 1.20.0 | 2026-07-22 | A second R6-A1 drift-stop refines R-H20 after the source directory proves mixed-authority: 14 `*.agent.md` files and `async-python-reviewer.md` are the 15 canonical generator inputs, while `copilot-instructions.md` is a dependent adapter and all 15 Claude outputs are dependent mirrors. Owner Choice A keeps this within R-H20, changes no counts or statuses, and requires exact partition tests before implementation continues; see Section 26. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -973,3 +974,20 @@ R-E11 revision 1 uses the corrected 131-ID snapshot. This amendment remains plan
 other than registering R-H20 as `OPEN` changes, and the dedicated note remains Draft/Open/TBD.
 Implementation and accounting commits remain separate. Final exact-tree gates, non-promotion,
 consumer exclusions and R-E09/R-J03 terminal boundaries remain exactly as Section 24 defines.
+
+## 26. 2026-07-22 R6-A1 canonical agent input partition correction
+
+Read-only implementation preflight found 16 Markdown files under `.github/agents/`. The generator
+consumes 14 `*.agent.md` files plus `async-python-reviewer.md`, skips the dependent
+`copilot-instructions.md` adapter, and produces 15 `.claude/agents/*.md` mirrors. Therefore R-H20
+MUST NOT describe the whole source directory with one authority classification.
+
+Owner selected Choice A. R-H20 now requires the exact 15-source/1-dependent partition in the
+Constitution, impact-registry generator and generated registry, runtime contract, current guidance
+and mutation tests. The generator MUST continue excluding the adapter; every output MUST retain a
+dependent-mirror header. R-D12 remains `DECIDED` and R-E04 remains independent. No consumer file,
+workflow promotion state, finding count or finding status changes.
+
+This correction is plan-only and must be committed before R6-A1 implementation resumes. The
+inventory remains 131 with fold 76 `COMPLETED` / 48 `OPEN` / 6 `DECIDED` / 1 `IN_PROGRESS`.
+The R6 note remains Draft/Open/TBD, and PR #3 remains `NOT READY TO MERGE`.
