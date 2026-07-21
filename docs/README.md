@@ -5,8 +5,10 @@
 
 ## Authority
 
-本檔與本節所列分析文件的 authority 為 `informational`。它們提供可追溯的證據、判斷與
-建議，但不取代以下正式來源：
+本檔與本節所列分析文件的 authority 預設為 `informational`。唯一的 scoped exception
+是 repair ledger 內 visible、exact `finding-status-record-v1` fenced JSON blocks；它們只對
+`finding_status` 具有 `source_of_truth` authority。歷史 prose、Markdown tables 與其他
+code blocks 仍是 informational，不取代以下正式來源：
 
 - `studio/constitution/constitution.md`
 - `.specify/memory/constitution.md`（存在時）
@@ -37,7 +39,7 @@
 | 2026-07-14 | [`sdd-workspace-wave-3-plan-context-and-progress-2026-07-14_zhTW.md`](./sdd-workspace-wave-3-plan-context-and-progress-2026-07-14_zhTW.md) | Context record | Wave-3 戰役完整脈絡快照（head `50ce886`）：原始目的、07-08 至 07-14 時間線、已完成批次 commit 對照（R0/R1/R2 部分/驗證加固/R2 主批/R2.1）、被推翻重開的宣稱、未完成批次 RB-1 至 R6 與估算、目前狀態與決策點；informational，單一真相仍是 ledger 與 remediation plan |
 | 2026-07-14 | [`sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`](./sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md) | Plan | 依 2026-07-14 re-review 的 12 條 RVR findings 制定的分批修復計畫；三聯表對映 ledger、標出被推翻的 R-B02/R-B05 closure，排定 R2.1 誠實性還原 + RB-1 至 RB-5 + R6 合併 main |
 | 2026-07-14 | [`sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md`](./sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md) | Review record; not ready to merge | `feature/wave-3-security-and-workflows` 相對 `main` 的 26 commits 治理導向 re-review；記錄 workflow completion/authorization、mandatory gates、mainline evidence、ECI、extension trust、consumer isolation 與 upgrade atomicity findings |
-| 2026-07-12 | [`sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md`](./sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md) | R6-A1 authority partition corrected plan; implementation pending | 共享層 131 條修復總清單（v1.28.0）；Owner Choice A 將 R-H20 精確化為 15 個 canonical generator inputs、1 個 dependent Copilot adapter 與 15 個 dependent Claude mirrors，不新增 finding 或改變狀態。現況仍為 Critical 8 / High 32 / Medium 52 / Low 39，以及 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS；R-E09/R-J03 保留為 terminal blockers，分支仍 NOT READY TO MERGE，`sdd-pipeline` 維持 experimental、default-disabled 與 execution-denied |
+| 2026-07-12 | [`sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md`](./sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md) | R-E11 scoped status bootstrap; no closure | `finding-status-index-v1; revision=1; ledgerVersion=1.29.0; inventoryCount=131; severityCounts=Critical:8,High:32,Medium:52,Low:39; statusCounts=COMPLETED:76,OPEN:48,DECIDED:6,IN_PROGRESS:1,DISPOSITIONED:0`。Revision 1 套用已提交的 15-source/1-dependent R-H20 分區，但不改變任何 finding status；R-E11/R-H20 仍 OPEN，R-E09/R-J03 仍為 terminal blockers，分支仍 NOT READY TO MERGE，`sdd-pipeline` 維持 experimental、default-disabled 與 execution-denied |
 | 2026-07-12 | [`sdd-workspace-deep-analysis-and-career-value-2026-07-12_zhTW.md`](./sdd-workspace-deep-analysis-and-career-value-2026-07-12_zhTW.md) | Analysis | 整體環境深度分析、上游同步策略、面試方視角與求職價值評估、優先序改善路線圖 |
 | 2026-07-12 | [`sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md`](./sdd-workspace-wave-3-governance-review-2026-07-12_zhTW.md) | Review record | `feature/wave-3-security-and-workflows` 相對 `main` 的 13 commits 治理導向 review |
 | 2026-07-11 | [`sdd-workspace-purpose-governance-maintenance-usage-analysis-2026-07-11_zhTW.md`](./sdd-workspace-purpose-governance-maintenance-usage-analysis-2026-07-11_zhTW.md) | Analysis | Workspace 目的、治理、維護與使用理念 |

@@ -43,11 +43,13 @@ pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope Cu
 共享能力集中在 workspace 根層與 `studio/`：
 
 - `studio/constitution/constitution.md` 是最高權限治理文件
-- `.github/agents/` 與 `.github/prompts/` 是 Copilot runtime source of truth
-- `.claude/agents/` 是 Claude shared runtime source of truth
+- `.github/agents/*.agent.md`、`.github/agents/async-python-reviewer.md` 與 `.github/prompts/` 是共享 runtime 的 canonical inputs
+- `.github/agents/copilot-instructions.md` 是 dependent adapter，不是 Claude generator input
+- `.claude/agents/` 是由上述 canonical agent inputs 確定性產生、供 Claude runtime 使用的 dependent mirror，不是獨立權威來源
 - `studio/templates/` 提供專案初始化與 SDD 文件模板
 - `studio/scripts/powershell/` 提供初始化、同步、匯出與維護腳本
 - `studio/extensions/` 是共享 extension registry
+- `studio/workflows/` 是共享 workflow runtime；內建 `sdd-pipeline` 目前維持 experimental、預設停用且禁止執行
 
 ### 2. Dual-layer constitutions
 
@@ -81,12 +83,13 @@ pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope Cu
 | Path | Purpose |
 |------|---------|
 | `.github/agents/` | 共享 SDD runtime agents |
-| `.claude/agents/` | 共享 Claude runtime agents |
+| `.claude/agents/` | 從 `.github/agents/` 產生、供 Claude runtime 使用的 dependent mirrors |
 | `.github/prompts/` | 共享 prompt 資產 |
 | `studio/constitution/` | studio 級治理與方法論 |
 | `studio/templates/` | 專案初始化與 SDD 文件模板 |
 | `studio/scripts/powershell/` | 初始化、同步與維護腳本 |
 | `studio/extensions/` | workspace 級 extension registry |
+| `studio/workflows/` | workspace 級 workflow schemas、catalog、state、policy 與 workflow definitions |
 | `learning/` | Practice projects |
 | `projects/` | Internal / Client / sample projects |
 | `docs/project-governance-status.md` | 專案治理相容性中央台帳 |
@@ -188,13 +191,16 @@ code projects/studio-automation/studio-automation.code-workspace
 
 以下是這個 workspace 內比較重要的 authority 邊界：
 
-- Runtime source of truth: `.github/agents/`、`.github/prompts/`
-- `.claude/agents/` 是 Claude shared runtime source of truth
+- Runtime source of truth: `.github/agents/*.agent.md`、`.github/agents/async-python-reviewer.md`、`.github/prompts/`
+- Dependent agent adapter: `.github/agents/copilot-instructions.md`
+- `.claude/agents/` 是由宣告的 canonical agent inputs 產生的 deterministic dependent mirror，供 Claude runtime 與 project junction 直接使用
 - Canonical governance source: `studio/constitution/constitution.md`
 - Canonical extension registry: `studio/extensions/`
 - Generated skill pack exports: `resources/agent-skill-packs/`
 
-Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源。
+Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer；它們和 `/.claude/agents/`
+都不取代上述 canonical agent inputs。`/.claude/agents/` 應由 generator
+重新產生，不應視為可手動維護的權威來源。
 
 ## Shared-Layer Convergence
 
@@ -215,8 +221,12 @@ Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer�
 | `studio/scripts/powershell/create-new-feature.ps1` | 建立新 feature 工作區與文件骨架 |
 | `studio/scripts/powershell/new-project-worktree.ps1` | 建立 consumer project derived worktree 並補齊 shared agent junction parity |
 | `studio/scripts/powershell/check-speckit-runtime.ps1` | 驗證 shared runtime contract、mirror parity、templates、hooks 與 canonical docs |
-| `studio/scripts/powershell/seed-claude-agents.ps1` | 從現有 Copilot shared agent surface seed workspace Claude shared agents |
+| `studio/scripts/powershell/seed-claude-agents.ps1` | 從宣告的 canonical GitHub agent inputs 產生 workspace Claude dependent mirrors |
 | `studio/scripts/powershell/update-agent-context.ps1` | 更新 agent context / runtime 對齊 |
+| `studio/scripts/powershell/list-workflows.ps1` | 讀取 catalog/state，列出登錄項目、有效 enabled state、execution authorization 與 validation errors |
+| `studio/scripts/powershell/validate-workflow.ps1` | 解析 `workflow.yml`、依 workflow schema 驗證，並確認 manifest entry points 存在 |
+| `studio/scripts/powershell/set-workflow-state.ps1` | 更新已登錄 workflow 的 state；非 approved/deprecated 項目不得啟用，execution 仍另做完整授權檢查 |
+| `studio/scripts/powershell/run-workflow.ps1` | 經 catalog/state/manifest/digest fail-closed 授權後執行；目前 `sdd-pipeline` 仍被拒絕，等待 R6 promotion gates |
 
 ## 這個 workspace 期待的專案結構
 
@@ -260,8 +270,8 @@ Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer�
 - `studio/QUICKSTART.md`
 - `studio/SDD-QUICKSTART-GUIDE.md`
 - `studio/constitution/constitution.md`
-- `spec-kit-upstream-wave2-transition-guide.md`
-- `spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`
+- `docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md`
+- `docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`
 
 ## 授權 / License
 

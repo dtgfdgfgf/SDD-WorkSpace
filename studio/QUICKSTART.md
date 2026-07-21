@@ -54,9 +54,11 @@ code projects/studio-automation/studio-automation.code-workspace
 | `claude agents (read-only)` | 唯讀 | workspace Claude runtime agents |
 
 每個專案也會建立 `.github/agents/` junction，來源是 workspace 根目錄的
-`.github/agents/`。這是 runtime source。
+`.github/agents/`。其中 `*.agent.md` 與 `async-python-reviewer.md` 是 canonical inputs，
+`copilot-instructions.md` 是 dependent adapter。
 每個專案也會建立 `.claude/agents/` junction，來源是 workspace 根目錄的 `.claude/agents/`。
-`/.claude/agents/` 是 Claude shared runtime source of truth。Claude skills 與 shared agents runtime 是不同層。
+`/.claude/agents/` 是從宣告的 canonical agent inputs 確定性產生、供 Claude runtime 使用的
+dependent mirror，不是獨立 authority。Claude skills 與 shared agents runtime 是不同層。
 
 ### 專案類型
 

@@ -26,9 +26,27 @@ if (-not $resolvedWorkspaceRoot) {
 
 $sourceDir = Join-Path $resolvedWorkspaceRoot '.github/agents'
 $outputDir = Join-Path $resolvedWorkspaceRoot '.claude/agents'
+$script:ClaudeExplicitCanonicalSourceNames = @('async-python-reviewer.md')
+$script:ClaudeDependentAdapterNames = @('copilot-instructions.md')
 
 if (-not (Test-Path -LiteralPath $sourceDir -PathType Container)) {
     throw "Shared Copilot agents source not found: $sourceDir"
+}
+
+function Get-ClaudeAgentSourceAuthority {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FileName
+    )
+
+    if ($FileName -cin $script:ClaudeDependentAdapterNames) {
+        return 'dependent'
+    }
+    if ($FileName -clike '*.agent.md' -or
+        $FileName -cin $script:ClaudeExplicitCanonicalSourceNames) {
+        return 'source_of_truth'
+    }
+    return 'unclassified'
 }
 
 function Get-FrontMatterAndBody {
@@ -412,8 +430,8 @@ function New-ClaudeAgentRecord {
     }
     $lines.Add('---')
     $lines.Add('')
-    $lines.Add(("<!-- Seeded from .github/agents/{0} via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->" -f $sourceFileName))
-    $lines.Add(("<!-- WARNING: This file is a seeded copy from .github/agents/{0}. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->" -f $sourceFileName))
+    $lines.Add(("<!-- Seeded from canonical source .github/agents/{0} via studio/scripts/powershell/seed-claude-agents.ps1. This file is a deterministic Claude-consumable dependent mirror. -->" -f $sourceFileName))
+    $lines.Add(("<!-- WARNING: Direct edits to this dependent mirror will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit canonical source .github/agents/{0} and re-seed. -->" -f $sourceFileName))
     if ($parsed.Body.Count -gt 0) {
         foreach ($bodyLine in $parsed.Body) {
             $lines.Add([string]$bodyLine)
@@ -508,13 +526,13 @@ function Test-ClaudeAgentParity {
     }
 
     foreach ($actualDirectory in $actualDirectories) {
-        Add-SeedError -Errors $Errors -Id 'claude-agent-mirror-unexpected-directory' -Message 'Unexpected directory exists in the flat generated Claude agent authority.' -Path $actualDirectory.FullName
+        Add-SeedError -Errors $Errors -Id 'claude-agent-mirror-unexpected-directory' -Message 'Unexpected directory exists in the flat generated Claude agent mirror set.' -Path $actualDirectory.FullName
     }
 
     foreach ($actualFile in $actualFiles) {
         $relativePath = [System.IO.Path]::GetRelativePath($OutputDir, $actualFile.FullName) -replace '\\', '/'
         if (-not $expectedByRelativePath.ContainsKey($relativePath)) {
-            Add-SeedError -Errors $Errors -Id 'claude-agent-mirror-unexpected' -Message 'Unexpected file exists in the generated Claude agent authority.' -Path $actualFile.FullName
+            Add-SeedError -Errors $Errors -Id 'claude-agent-mirror-unexpected' -Message 'Unexpected file exists in the generated Claude agent mirror set.' -Path $actualFile.FullName
         }
     }
 }
@@ -526,11 +544,25 @@ $errors = [System.Collections.Generic.List[object]]::new()
 
 try {
     foreach ($sourceFile in @(Get-ChildItem -LiteralPath $sourceDir -File -Filter '*.md' | Sort-Object Name)) {
-        if ($sourceFile.Name -eq 'copilot-instructions.md') {
-            $skipped += $sourceFile.Name
-            continue
+        $sourceAuthority = Get-ClaudeAgentSourceAuthority -FileName $sourceFile.Name
+        switch ($sourceAuthority) {
+            'dependent' {
+                $skipped += $sourceFile.Name
+                continue
+            }
+            'source_of_truth' {
+                $records += New-ClaudeAgentRecord -SourcePath $sourceFile.FullName -OutputDir $outputDir
+                continue
+            }
+            default {
+                $exception = [System.InvalidOperationException]::new(
+                    "Markdown file '$($sourceFile.Name)' has no declared Claude mirror authority classification."
+                )
+                $exception.Data['SeedErrorId'] = 'source-authority-unclassified'
+                $exception.Data['SeedErrorPath'] = $sourceFile.FullName
+                throw $exception
+            }
         }
-        $records += New-ClaudeAgentRecord -SourcePath $sourceFile.FullName -OutputDir $outputDir
     }
 
     $duplicateNames = @(

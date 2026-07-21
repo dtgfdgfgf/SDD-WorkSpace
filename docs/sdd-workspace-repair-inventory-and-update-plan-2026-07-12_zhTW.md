@@ -1,15 +1,20 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.28.0"
+version: "1.29.0"
 date: "2026-07-12"
 last_updated: "2026-07-22"
 language: "zh-TW"
 owner: "元熙"
 status: "repair-in-progress"
 authority: "informational"
+finding_status_authority: "source_of_truth"
+finding_status_selector: "finding-status-record-v1"
+finding_status_schema: "studio/runtime/finding-status-record.schema.json"
+finding_status_validator: "studio/scripts/powershell/validate-finding-status-ledger.ps1"
+finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "997757efec1208023b9ada76e5a32de62b31fc4a"
+head_commit: "9b83f7a5d2e8630955efdb458f0e0e9a1c367839"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -461,6 +466,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.26.0 | 2026-07-21 | Owner Choice A authorizes a prospective conservative R6 convergence plan: keep `sdd-pipeline` non-promoted and denied, directly repair 17 bounded safety and truthfulness findings, and later disposition 35 non-critical items to Wave-4 with explicit re-entry triggers. Residual audit adds OPEN R-B25 and R-B26, raising the ledger to 130 findings with severity 8/31/52/39 and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. This version is plan-only: no existing finding is completed or dispositioned, R-E09/R-J03 remain terminal blockers, and implementation may start only after this plan is committed. See Section 36. |
 | 1.27.0 | 2026-07-22 | R6-A1 preflight found a material scope drift after plan commit `f669e3d`: the Constitution classifies `.claude/agents/*.md` as seeded dependent mirrors, while the generator, 15 generated mirrors, Copilot adapter, both quickstarts, WORKSPACE_STRUCTURE and runtime contract still call them source/runtime authority. Owner authorizes new High OPEN R-H20 and direct repair before implementation. Ledger becomes 131 findings with severity 8/32/52/39 and current fold 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS; the direct set becomes 18 including R-D07. No prior status changes. See Section 37. |
 | 1.28.0 | 2026-07-22 | R6-A1 implementation preflight found that treating the whole `.github/agents/` directory as canonical would contradict its dependent `copilot-instructions.md` adapter and omit the non-`.agent.md` generator input `async-python-reviewer.md`. Owner Choice A refines R-H20 to an exact current partition: 14 `*.agent.md` files plus `async-python-reviewer.md` are canonical inputs, `copilot-instructions.md` remains dependent, and all 15 generated Claude files remain dependent mirrors. Counts and statuses do not change. See Section 38. |
+| 1.29.0 | 2026-07-22 | Bootstraps the R-E11 machine-bounded `finding_status` authority after exact-partition plan `9b83f7a`. Revision 1 records all 131 IDs without changing any status: 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED; R-E11 and R-H20 remain OPEN. The document as a whole remains informational, the R6 note remains Draft/Open/TBD, and closure requires a later accounting revision after committed implementation and exact-tree gates. See Section 39. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1717,3 +1723,42 @@ This amendment is plan-only. The inventory remains 131 with severity 8 Critical 
 Medium / 39 Low and fold 76 `COMPLETED` / 48 `OPEN` / 6 `DECIDED` / 1 `IN_PROGRESS`.
 R-H20 and R-E11 remain `OPEN`; the dedicated R6 note remains `Draft`, Related Commits `TBD`,
 reconciliation `Open` and validation scope `Batch`.
+
+## 39. 2026-07-22 R-E11 scoped finding-status authority bootstrap
+
+The ledger document remains `informational`. Only the visible fenced JSON record below, opened by
+exactly three backticks followed immediately by the exact `finding-status-record-v1` info string,
+is authoritative for `finding_status`. A visible longer-backtick or tilde fence using that selector
+is an invalid authority envelope and fails closed; the same text inside a hidden Markdown surface
+has no authority. Historical prose, Markdown status tables and differently selected code blocks are
+not status sources. Revision 1 is a complete snapshot; later revisions must be append-only deltas
+with unique, strictly consecutive revision numbers and committed BaseRef history preservation.
+
+This bootstrap changes no finding status. In particular, R-E11 and R-H20 remain `OPEN`, R-E09
+remains `IN_PROGRESS`, and R-J03 remains `OPEN`. The dedicated R6 note remains `Draft`, Related
+Commits `TBD`, reconciliation `Open` and validation scope `Batch`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "recordType": "snapshot",
+  "recordedDate": "2026-07-22",
+  "ledgerVersion": "1.29.0",
+  "statuses": [{"id":"R-A01","status":"COMPLETED"},{"id":"R-A02","status":"COMPLETED"},{"id":"R-A03","status":"COMPLETED"},{"id":"R-A04","status":"COMPLETED"},{"id":"R-A05","status":"COMPLETED"},{"id":"R-A06","status":"COMPLETED"},{"id":"R-A07","status":"COMPLETED"},{"id":"R-A08","status":"COMPLETED"},{"id":"R-A09","status":"COMPLETED"},{"id":"R-A10","status":"COMPLETED"},{"id":"R-A11","status":"COMPLETED"},{"id":"R-A12","status":"COMPLETED"},{"id":"R-A13","status":"OPEN"},{"id":"R-A14","status":"COMPLETED"},{"id":"R-A15","status":"COMPLETED"},{"id":"R-A16","status":"COMPLETED"},{"id":"R-A17","status":"COMPLETED"},{"id":"R-A18","status":"COMPLETED"},{"id":"R-A19","status":"COMPLETED"},{"id":"R-A20","status":"COMPLETED"},{"id":"R-A21","status":"OPEN"},{"id":"R-A22","status":"COMPLETED"},{"id":"R-B01","status":"COMPLETED"},{"id":"R-B02","status":"COMPLETED"},{"id":"R-B03","status":"COMPLETED"},{"id":"R-B04","status":"COMPLETED"},{"id":"R-B05","status":"COMPLETED"},{"id":"R-B06","status":"COMPLETED"},{"id":"R-B07","status":"COMPLETED"},{"id":"R-B08","status":"COMPLETED"},{"id":"R-B09","status":"COMPLETED"},{"id":"R-B10","status":"COMPLETED"},{"id":"R-B11","status":"COMPLETED"},{"id":"R-B12","status":"COMPLETED"},{"id":"R-B13","status":"COMPLETED"},{"id":"R-B14","status":"COMPLETED"},{"id":"R-B15","status":"COMPLETED"},{"id":"R-B16","status":"COMPLETED"},{"id":"R-B17","status":"COMPLETED"},{"id":"R-B18","status":"OPEN"},{"id":"R-B19","status":"COMPLETED"},{"id":"R-B20","status":"COMPLETED"},{"id":"R-B21","status":"COMPLETED"},{"id":"R-B22","status":"COMPLETED"},{"id":"R-B23","status":"OPEN"},{"id":"R-B24","status":"COMPLETED"},{"id":"R-B25","status":"OPEN"},{"id":"R-B26","status":"OPEN"},{"id":"R-C01","status":"COMPLETED"},{"id":"R-C02","status":"COMPLETED"},{"id":"R-C03","status":"COMPLETED"},{"id":"R-C04","status":"OPEN"},{"id":"R-C05","status":"COMPLETED"},{"id":"R-C06","status":"OPEN"},{"id":"R-C07","status":"COMPLETED"},{"id":"R-C08","status":"COMPLETED"},{"id":"R-D01","status":"COMPLETED"},{"id":"R-D02","status":"COMPLETED"},{"id":"R-D03","status":"COMPLETED"},{"id":"R-D04","status":"COMPLETED"},{"id":"R-D05","status":"COMPLETED"},{"id":"R-D06","status":"DECIDED"},{"id":"R-D07","status":"DECIDED"},{"id":"R-D08","status":"OPEN"},{"id":"R-D09","status":"OPEN"},{"id":"R-D10","status":"OPEN"},{"id":"R-D11","status":"OPEN"},{"id":"R-D12","status":"DECIDED"},{"id":"R-E01","status":"OPEN"},{"id":"R-E02","status":"OPEN"},{"id":"R-E03","status":"OPEN"},{"id":"R-E04","status":"OPEN"},{"id":"R-E05","status":"COMPLETED"},{"id":"R-E06","status":"OPEN"},{"id":"R-E07","status":"COMPLETED"},{"id":"R-E08","status":"OPEN"},{"id":"R-E09","status":"IN_PROGRESS"},{"id":"R-E10","status":"COMPLETED"},{"id":"R-E11","status":"OPEN"},{"id":"R-E12","status":"OPEN"},{"id":"R-F01","status":"OPEN"},{"id":"R-F02","status":"OPEN"},{"id":"R-F03","status":"OPEN"},{"id":"R-F04","status":"DECIDED"},{"id":"R-F05","status":"OPEN"},{"id":"R-F06","status":"COMPLETED"},{"id":"R-G01","status":"OPEN"},{"id":"R-G02","status":"OPEN"},{"id":"R-G03","status":"OPEN"},{"id":"R-G04","status":"OPEN"},{"id":"R-G05","status":"OPEN"},{"id":"R-G06","status":"COMPLETED"},{"id":"R-G07","status":"OPEN"},{"id":"R-G08","status":"OPEN"},{"id":"R-G09","status":"OPEN"},{"id":"R-G10","status":"COMPLETED"},{"id":"R-G11","status":"OPEN"},{"id":"R-G12","status":"OPEN"},{"id":"R-G13","status":"COMPLETED"},{"id":"R-H01","status":"COMPLETED"},{"id":"R-H02","status":"COMPLETED"},{"id":"R-H03","status":"OPEN"},{"id":"R-H04","status":"OPEN"},{"id":"R-H05","status":"COMPLETED"},{"id":"R-H06","status":"OPEN"},{"id":"R-H07","status":"OPEN"},{"id":"R-H08","status":"COMPLETED"},{"id":"R-H09","status":"OPEN"},{"id":"R-H10","status":"COMPLETED"},{"id":"R-H11","status":"COMPLETED"},{"id":"R-H12","status":"COMPLETED"},{"id":"R-H13","status":"COMPLETED"},{"id":"R-H14","status":"OPEN"},{"id":"R-H15","status":"DECIDED"},{"id":"R-H16","status":"COMPLETED"},{"id":"R-H17","status":"COMPLETED"},{"id":"R-H18","status":"OPEN"},{"id":"R-H19","status":"COMPLETED"},{"id":"R-H20","status":"OPEN"},{"id":"R-I01","status":"OPEN"},{"id":"R-I02","status":"OPEN"},{"id":"R-I03","status":"DECIDED"},{"id":"R-I04","status":"OPEN"},{"id":"R-I05","status":"OPEN"},{"id":"R-I06","status":"COMPLETED"},{"id":"R-I07","status":"COMPLETED"},{"id":"R-I08","status":"COMPLETED"},{"id":"R-I09","status":"OPEN"},{"id":"R-J01","status":"COMPLETED"},{"id":"R-J02","status":"COMPLETED"},{"id":"R-J03","status":"OPEN"}],
+  "inventoryCount": 131,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 52,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 76,
+    "OPEN": 48,
+    "DECIDED": 6,
+    "IN_PROGRESS": 1,
+    "DISPOSITIONED": 0
+  }
+}
+```

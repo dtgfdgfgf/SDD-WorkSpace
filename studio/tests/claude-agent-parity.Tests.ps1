@@ -183,6 +183,103 @@ Describe 'Canonical Claude tool mappings' {
 }
 
 Describe 'seed-claude-agents deterministic parity and tool safety' {
+    It 'locks the repository to fourteen command sources, one explicit source, one dependent adapter, and fifteen mirrors' {
+        $githubMarkdown = @(
+            Get-ChildItem -LiteralPath (Join-Path $WorkspaceRoot '.github/agents') -File -Filter '*.md' |
+                Sort-Object Name
+        )
+        $commandSources = @($githubMarkdown | Where-Object Name -CLike '*.agent.md')
+        $explicitSources = @($githubMarkdown | Where-Object Name -CEQ 'async-python-reviewer.md')
+        $dependentAdapters = @($githubMarkdown | Where-Object Name -CEQ 'copilot-instructions.md')
+        $unclassified = @($githubMarkdown | Where-Object {
+            $_.Name -cnotlike '*.agent.md' -and
+            $_.Name -cne 'async-python-reviewer.md' -and
+            $_.Name -cne 'copilot-instructions.md'
+        })
+        $mirrors = @(
+            Get-ChildItem -LiteralPath (Join-Path $WorkspaceRoot '.claude/agents') -File -Filter '*.md' |
+                Sort-Object Name
+        )
+
+        $githubMarkdown.Count | Should -Be 16
+        $commandSources.Count | Should -Be 14
+        $explicitSources.Count | Should -Be 1
+        $dependentAdapters.Count | Should -Be 1
+        $unclassified.Count | Should -Be 0
+        $mirrors.Count | Should -Be 15
+
+        $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
+        $verifyJson = & $pwshPath -NoProfile -File $script:seedScriptSource `
+            -WorkspaceRoot $WorkspaceRoot -Verify -Json
+        $LASTEXITCODE | Should -Be 0 -Because ($verifyJson -join "`n")
+        $verify = $verifyJson | ConvertFrom-Json
+        $verify.VALID | Should -BeTrue
+        $verify.count | Should -Be 15
+        @($verify.skipped) | Should -Be @('copilot-instructions.md')
+
+        foreach ($mirror in $mirrors) {
+            $content = Get-Content -LiteralPath $mirror.FullName -Raw
+            $content | Should -Match 'Seeded from canonical source'
+            $content | Should -Match 'deterministic Claude-consumable dependent mirror'
+            $content | Should -Not -Match 'Claude shared runtime authority after generation'
+        }
+    }
+
+    It 'seeds only declared canonical inputs and skips the dependent Copilot adapter' {
+        $fixtureRoot = New-ClaudeSeedFixture
+        Add-BasicAgentSource -FixtureRoot $fixtureRoot
+        Write-AgentFixtureFile -Path (Join-Path $fixtureRoot '.github/agents/async-python-reviewer.md') -Content @'
+---
+name: async-python-reviewer
+description: Explicit canonical input without the agent suffix
+tools: ['read']
+---
+
+Review asynchronous Python code.
+'@
+        Write-AgentFixtureFile -Path (Join-Path $fixtureRoot '.github/agents/copilot-instructions.md') -Content @'
+This dependent adapter intentionally has no agent frontmatter and must not be seeded.
+'@
+
+        $seed = Invoke-ClaudeSeedFixture -FixtureRoot $fixtureRoot
+        $seed.ExitCode | Should -Be 0 -Because ($seed.Stdout + $seed.Stderr)
+        $seed.Result.VALID | Should -BeTrue
+        $seed.Result.count | Should -Be 2
+        @($seed.Result.skipped) | Should -Be @('copilot-instructions.md')
+        $seed.Result.skippedCount | Should -Be 1
+        Join-Path $fixtureRoot '.claude/agents/fixture.md' | Should -Exist
+        Join-Path $fixtureRoot '.claude/agents/async-python-reviewer.md' | Should -Exist
+        Join-Path $fixtureRoot '.claude/agents/copilot-instructions.md' | Should -Not -Exist
+
+        foreach ($mirrorName in @('fixture.md', 'async-python-reviewer.md')) {
+            $content = Get-Content -LiteralPath (Join-Path $fixtureRoot ".claude/agents/$mirrorName") -Raw
+            $content | Should -Match 'Seeded from canonical source'
+            $content | Should -Match 'deterministic Claude-consumable dependent mirror'
+            $content | Should -Not -Match 'Claude shared runtime authority after generation'
+        }
+    }
+
+    It 'fails closed when an unclassified Markdown source appears' {
+        $fixtureRoot = New-ClaudeSeedFixture
+        Add-BasicAgentSource -FixtureRoot $fixtureRoot
+        Write-AgentFixtureFile -Path (Join-Path $fixtureRoot '.github/agents/rogue.md') -Content @'
+---
+name: rogue
+description: Undeclared Markdown source
+tools: ['read']
+---
+
+This file is neither a declared canonical input nor a dependent adapter.
+'@
+
+        $seed = Invoke-ClaudeSeedFixture -FixtureRoot $fixtureRoot
+        $seed.ExitCode | Should -Not -Be 0
+        $seed.Result.VALID | Should -BeFalse
+        @($seed.Result.ERRORS.id) | Should -Contain 'source-authority-unclassified'
+        Join-Path $fixtureRoot '.claude/agents/fixture.md' | Should -Not -Exist
+        Join-Path $fixtureRoot '.claude/agents/rogue.md' | Should -Not -Exist
+    }
+
     It 'accepts line-ending-only differences in a deterministically seeded mirror' {
         $fixtureRoot = New-ClaudeSeedFixture
         Add-BasicAgentSource -FixtureRoot $fixtureRoot
@@ -261,7 +358,7 @@ Describe 'seed-claude-agents deterministic parity and tool safety' {
         @($verify.Result.ERRORS.id) | Should -Contain 'claude-agent-mirror-unexpected'
     }
 
-    It 'rejects nested files and directories in the flat generated authority' {
+    It 'rejects nested files and directories in the flat generated mirror set' {
         $fixtureRoot = New-ClaudeSeedFixture
         Add-BasicAgentSource -FixtureRoot $fixtureRoot
         (Invoke-ClaudeSeedFixture -FixtureRoot $fixtureRoot).ExitCode | Should -Be 0

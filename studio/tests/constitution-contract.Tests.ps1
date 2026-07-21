@@ -81,6 +81,106 @@ Describe 'documentAuthority consistency' {
     }
 }
 
+Describe 'agent authority partition contract' {
+    It 'binds fourteen pattern inputs plus async and excludes the dependent adapter' {
+        $partition = $contract.agentAuthorityPartition
+
+        ($partition.canonicalAgentPattern -is [string]) | Should -BeTrue
+        $partition.canonicalAgentPattern | Should -BeExactly '.github/agents/*.agent.md'
+        $partition.expectedPatternInputCount | Should -BeOfType ([long])
+        $partition.expectedPatternInputCount | Should -Be 14
+        ($partition.canonicalAdditionalFiles -is [array]) | Should -BeTrue
+        @($partition.canonicalAdditionalFiles | Where-Object { $_ -isnot [string] }).Count | Should -Be 0
+        @($partition.canonicalAdditionalFiles) | Should -Be @('.github/agents/async-python-reviewer.md')
+        ($partition.dependentExcludedFiles -is [array]) | Should -BeTrue
+        @($partition.dependentExcludedFiles | Where-Object { $_ -isnot [string] }).Count | Should -Be 0
+        @($partition.dependentExcludedFiles) | Should -Be @('.github/agents/copilot-instructions.md')
+        ($partition.dependentMirrorPattern -is [string]) | Should -BeTrue
+        $partition.dependentMirrorPattern | Should -BeExactly '.claude/agents/*.md'
+        $partition.expectedCanonicalInputCount | Should -Be 15
+        $partition.expectedDependentMirrorCount | Should -Be 15
+
+        @(Get-ChildItem -LiteralPath (Join-Path $WorkspaceRoot '.github/agents') -File -Filter '*.agent.md').Count |
+            Should -Be 14
+        @(Get-ChildItem -LiteralPath (Join-Path $WorkspaceRoot '.claude/agents') -File -Filter '*.md').Count |
+            Should -Be 15
+    }
+
+    It 'keeps the same exact partition in the generated registry' {
+        $entries = @($registry.documentAuthority)
+        ($entries | Where-Object path -EQ '.github/agents/*.agent.md').authority | Should -BeExactly 'source_of_truth'
+        ($entries | Where-Object path -EQ '.github/agents/async-python-reviewer.md').authority | Should -BeExactly 'source_of_truth'
+        ($entries | Where-Object path -EQ '.github/agents/copilot-instructions.md').authority | Should -BeExactly 'dependent'
+        ($entries | Where-Object path -EQ '.claude/agents/*.md').authority | Should -BeExactly 'dependent'
+
+        $route = @($registry.impactRouting | Where-Object changeType -EQ 'agent_change')
+        $route.Count | Should -Be 1
+        $route[0].trigger | Should -BeExactly '.github/agents/*.agent.md|.github/agents/async-python-reviewer.md'
+    }
+}
+
+Describe 'artifact-scoped Markdown formatting policy' {
+    It 'declares the exact strict current surfaces without absorbing R-G04 history' {
+        $expected = @(
+            'studio/constitution/constitution.md',
+            'AGENTS.md',
+            'CLAUDE.md',
+            '.github/copilot-instructions.md',
+            '.github/agents/copilot-instructions.md',
+            'specs/**/*.md',
+            'studio/templates/sdd-docs/**/*.md',
+            'docs/README.md',
+            'docs/project-governance-status.md',
+            'docs/project-worktree-parity-governance.md',
+            'docs/sdd-workspace-*.md',
+            'docs/mainline-updates/*.md',
+            'studio/workflows/POLICY.md',
+            'studio/extensions/POLICY.md',
+            'WORKSPACE_STRUCTURE.md'
+        )
+
+        $contract.artifactMarkdownPolicy.schemaVersion | Should -BeOfType ([long])
+        $contract.artifactMarkdownPolicy.schemaVersion | Should -Be 1
+        ($contract.artifactMarkdownPolicy.defaultClassification -is [string]) | Should -BeTrue
+        $contract.artifactMarkdownPolicy.defaultClassification | Should -BeExactly 'out_of_scope'
+        ($contract.artifactMarkdownPolicy.strictPathPatterns -is [array]) | Should -BeTrue
+        @($contract.artifactMarkdownPolicy.strictPathPatterns | Where-Object { $_ -isnot [string] }).Count | Should -Be 0
+        (@($contract.artifactMarkdownPolicy.strictPathPatterns) -join "`n") |
+            Should -BeExactly ($expected -join "`n")
+        @($contract.artifactMarkdownPolicy.strictPathPatterns) |
+            Should -Not -Contain 'docs/**'
+        @($contract.artifactMarkdownPolicy.strictPathPatterns) |
+            Should -Not -Contain 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
+    }
+
+    It 'bounds semantic exceptions to declared agents prompts and mirrors while keeping the adapter strict' {
+        $exceptions = $contract.artifactMarkdownPolicy.semanticExceptionSources
+
+        @($exceptions.Keys | Sort-Object) | Should -Be @(
+            'agentPartitionRef',
+            'claudeMirrorFilesRef',
+            'claudeMirrorPartitionRef',
+            'claudeMirrorRoot',
+            'promptFilesRef',
+            'promptRoot'
+        )
+        @($exceptions.Values | Where-Object { $_ -isnot [string] }).Count | Should -Be 0
+        $exceptions.agentPartitionRef | Should -BeExactly 'agentAuthorityPartition'
+        $exceptions.promptRoot | Should -BeExactly '.github/prompts'
+        $exceptions.promptFilesRef | Should -BeExactly 'requiredPromptStubs'
+        $exceptions.claudeMirrorPartitionRef | Should -BeExactly 'agentAuthorityPartition'
+        $exceptions.claudeMirrorRoot | Should -BeExactly '.claude/agents'
+        $exceptions.claudeMirrorFilesRef | Should -BeExactly 'requiredClaudeAgents'
+        @($contract.artifactMarkdownPolicy.strictlyExcludedFromException) |
+            Should -Be @('.github/agents/copilot-instructions.md')
+        @($contract.artifactMarkdownPolicy.semanticSymbolAllowlist).Count | Should -Be 7
+        @($contract.artifactMarkdownPolicy.legacyNonGrowthAllowances).Count | Should -Be 2
+        $contract.artifactMarkdownPolicy.limits.maxAllowedSymbolOccurrencesPerFile | Should -BeOfType ([long])
+        $contract.artifactMarkdownPolicy.limits.maxAllowedSymbolOccurrencesPerFile | Should -Be 27
+        $contract.artifactMarkdownPolicy.limits.maxDistinctAllowedSymbolsPerFile | Should -Be 3
+    }
+}
+
 Describe 'constitution heading level consistency' {
     It 'all X.Y subsections use the same heading level' {
         $headings = [regex]::Matches($constitution, '(?m)^(#{2,6})\s+\d+\.\d+')
@@ -90,6 +190,14 @@ Describe 'constitution heading level consistency' {
 }
 
 Describe 'constitution phase accuracy' {
+    It 'pins the reviewed July 2026 phase in the Constitution and Copilot adapter' {
+        $constitution | Should -Match '(?m)^\*\*Current Phase:\*\* Practice \+ Internal \(as of 2026-07\)$'
+        $constitution | Should -Not -Match '(?m)^\*\*Current Phase:\*\* Practice \+ Internal \(as of 2026-04\)$'
+        $copilotAdapter = Get-Content -Raw -LiteralPath (Join-Path $WorkspaceRoot '.github/copilot-instructions.md')
+        $copilotAdapter | Should -Match '(?m)^- \*\*Current Phase:\*\* Practice \+ Internal \(as of 2026-07\)$'
+        $copilotAdapter | Should -Not -Match '(?m)^- \*\*Current Phase:\*\* Practice \(as of 2025-12\)$'
+    }
+
     It 'Current Phase date is within last quarter (4 months grace period)' {
         $constitution | Should -Match 'Current Phase.*\(as of (\d{4}-\d{2})\)'
         $dateMatch = [regex]::Match($constitution, 'as of (\d{4}-\d{2})')
@@ -99,6 +207,44 @@ Describe 'constitution phase accuracy' {
         # When this fails: review the Current Phase declaration in studio/constitution/constitution.md §1.1
         # and bump the "(as of YYYY-MM)" stamp once project mix has been reassessed.
         $monthsAgo | Should -BeLessThan 4 -Because 'phase declaration should be reviewed at least quarterly (run a phase reassessment and update the as-of stamp)'
+    }
+}
+
+Describe 'current README workflow and upstream path truthfulness' {
+    BeforeAll {
+        $script:rootReadme = Get-Content -Raw -LiteralPath (Join-Path $WorkspaceRoot 'README.md')
+    }
+
+    It 'pins workflow denial in the core model and the workflow runtime in the directory table' {
+        $rootReadme | Should -Match '(?m)^- `studio/workflows/` 是共享 workflow runtime；內建 `sdd-pipeline` 目前維持 experimental、預設停用且禁止執行$'
+        $rootReadme | Should -Match '(?m)^\| `studio/workflows/` \| workspace 級 workflow schemas、catalog、state、policy 與 workflow definitions \|$'
+    }
+
+    It 'pins both corrected upstream guide paths' {
+        $rootReadme | Should -Match ([regex]::Escape('`docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md`'))
+        $rootReadme | Should -Match ([regex]::Escape('`docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`'))
+        $rootReadme | Should -Not -Match '(?m)^- `spec-kit-upstream-wave2-transition-guide\.md`$'
+        $rootReadme | Should -Not -Match '(?m)^- `spec-kit-studio-first-upstream-usage-guide-2026-03-08\.md`$'
+    }
+}
+
+Describe 'workspace structure current metadata and root rows' {
+    BeforeAll {
+        $script:workspaceStructure = Get-Content -Raw -LiteralPath (Join-Path $WorkspaceRoot 'WORKSPACE_STRUCTURE.md')
+    }
+
+    It 'pins version date and root hook/editor rows' {
+        $workspaceStructure | Should -Match '(?m)^\*\*Version:\*\* 1\.10\.0$'
+        $workspaceStructure | Should -Match '(?m)^\*\*Updated:\*\* 2026-07-22$'
+        $workspaceStructure | Should -Not -Match '(?m)^\*\*Version:\*\* 1\.9\.0$'
+        $workspaceStructure | Should -Not -Match '(?m)^\*\*Updated:\*\* 2026-07-20$'
+        $workspaceStructure | Should -Match '(?m)^\| `\.githooks/` \| Shared machine-enforced Git hooks used by the workspace and consumer repositories \|$'
+        $workspaceStructure | Should -Match '(?m)^\| `\.vscode/` \| Workspace-level editor tasks and settings \|$'
+    }
+
+    It 'pins the fixed Wave 2 guide path and matching changelog row' {
+        $workspaceStructure | Should -Match ([regex]::Escape('| `docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |'))
+        $workspaceStructure | Should -Match ([regex]::Escape('| 1.10.0 | 2026-07-22 | Reconcile canonical agent sources with generated Claude mirrors, document root hooks and editor configuration, and repair the Wave 2 guide path |'))
     }
 }
 
@@ -159,17 +305,17 @@ Describe 'canonical workspace governance self-application route' {
         $selfApplicationSection | Should -Match 'fresh-fixture seven-stage evidence'
     }
 
-    It 'keeps the constitution version and newest changelog row aligned at 1.9.0' {
-        $constitution | Should -Match '(?m)^\*\*Version:\*\* 1\.9\.0$'
+    It 'keeps the constitution version and newest changelog row aligned at 1.10.0' {
+        $constitution | Should -Match '(?m)^\*\*Version:\*\* 1\.10\.0$'
         $changelogRows = @(
             [regex]::Matches($constitution, '(?m)^\| (1\.\d+\.\d+) \| \d{4}-\d{2}-\d{2} \|') |
                 ForEach-Object { $_.Groups[1].Value }
         )
         $changelogRows.Count | Should -BeGreaterThan 0
-        $changelogRows[0] | Should -Be '1.9.0'
+        $changelogRows[0] | Should -Be '1.10.0'
     }
 
-    It 'propagates the scoped route and 1.9.0 version through root adapters and templates' {
+    It 'propagates the scoped route and 1.10.0 version through root adapters and templates' {
         $paths = @(
             'AGENTS.md',
             'CLAUDE.md',
@@ -183,7 +329,7 @@ Describe 'canonical workspace governance self-application route' {
             $content | Should -Match 'Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement\.'
             $content | Should -Match 'canonical workspace governance repository may enter Constitution Section 2\.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven\.'
             if ($relativePath -notmatch 'template\.md$') {
-                $content | Should -Match '\*\*Studio Constitution Version:\*\* 1\.9\.0'
+                $content | Should -Match '\*\*Studio Constitution Version:\*\* 1\.10\.0'
             }
         }
     }

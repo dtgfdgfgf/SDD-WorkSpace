@@ -12,7 +12,7 @@ This file is the Claude Code runtime adapter for Workspace.
 
 **Bootstrap Version:** 1
 **Studio Constitution:** `studio/constitution/constitution.md`
-**Studio Constitution Version:** 1.9.0
+**Studio Constitution Version:** 1.10.0
 **Project Constitution:** `N/A (workspace root)`
 
 This runtime adapter participates in dual-layer constitution governance.

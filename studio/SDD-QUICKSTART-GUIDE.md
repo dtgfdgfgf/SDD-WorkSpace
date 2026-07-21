@@ -152,7 +152,11 @@ promotion gate 或 R6 fresh-fixture E2E。
 pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
 ```
 
-另外，`.claude/agents/` 是 shared Claude runtime authority，`<project>/.claude/agents` 是 direct junction consumption path。Claude skills install root 與 workspace shared agents runtime 是不同層。
+另外，`.claude/agents/` 是從 `.github/agents/*.agent.md` 與
+`.github/agents/async-python-reviewer.md` 確定性產生的 dependent mirror，
+`<project>/.claude/agents` 是 Claude runtime 的 direct junction consumption path，而不是另一個
+authority source。dependent `.github/agents/copilot-instructions.md` 不會進入 generator。
+Claude skills install root 與 workspace shared agents runtime 是不同層。
 
 **為何這麼做**：Constitution 定義了「什麼可以做、什麼不能做」。不了解規則就開始，會導致後續大量返工。
 
@@ -207,7 +211,7 @@ pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
 |------|------|------|
 | Studio Constitution | `studio/constitution/constitution.md` | 所有專案都必須遵守的最高權限規則 |
 | Project Constitution | `<project>/.specify/memory/constitution.md` | 專案層級補充規則，只能加嚴不能放寬 |
-| Shared Claude Runtime | `.claude/agents/` | workspace 級 Claude shared runtime authority |
+| Shared Claude Runtime | `.claude/agents/` | 從宣告的 canonical GitHub agent inputs 產生、供 workspace Claude runtime 使用的 dependent mirror |
 | Runtime Agent Adapters | `<project>/AGENTS.md`、`<project>/CLAUDE.md`、`<project>/.github/copilot-instructions.md` | AI 啟動 adapter，共用 generated governance bootstrap，不是 constitution |
 
 **合併邏輯**：

@@ -7,7 +7,7 @@ This file is the GitHub Copilot runtime adapter for this project.
 
 **Bootstrap Version:** 1
 **Studio Constitution:** `studio/constitution/constitution.md`
-**Studio Constitution Version:** 1.9.0
+**Studio Constitution Version:** 1.10.0
 **Project Constitution:** `N/A (workspace root)`
 
 This runtime adapter participates in dual-layer constitution governance.
@@ -46,18 +46,20 @@ This workspace is a studio-first Specification-Driven Development (SDD) environm
 engineering practice.
 
 - **Owner:** Solo AI engineer
-- **Current Phase:** Practice (as of 2025-12)
+- **Current Phase:** Practice + Internal (as of 2026-07)
 - **Project Types:** Practice, Internal, Client
 - **Governance Model:** Dual-layer constitutions with centralized studio governance
 
-## Canonical Sources
+## Authority Map
 
 | Path | Role |
 |------|------|
 | `studio/constitution/constitution.md` | Studio-level governance and highest authority |
 | `<project>/.specify/memory/constitution.md` | Project-level canonical constitution when project rules exist |
-| `.github/agents/` | Runtime source for shared SDD agents |
-| `.claude/agents/` | Runtime source for shared Claude agents |
+| `.github/agents/*.agent.md` | Canonical runtime agent definitions |
+| `.github/agents/async-python-reviewer.md` | Explicit canonical non-command agent definition while R-D12 remains unimplemented |
+| `.github/agents/copilot-instructions.md` | Dependent agent-scoped Copilot adapter; excluded from Claude generation |
+| `.claude/agents/` | Deterministic Claude-consumable dependent mirrors generated from the declared canonical GitHub agent inputs above |
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `studio/extensions/` | Canonical shared extension registry and workspace-level extension state |
 | `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
@@ -251,7 +253,7 @@ Always:
 - Flag document drift and missing updates
 - Preserve the studio-first centralized runtime model
 - Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources
-- Treat workspace `/.claude/agents/` as the Claude shared runtime authority; Claude skills installs are a separate layer
+- Treat workspace `/.claude/agents/` as deterministic dependent mirrors generated from `.github/agents/*.agent.md` plus `.github/agents/async-python-reviewer.md`; exclude the dependent `.github/agents/copilot-instructions.md` adapter, and make permanent changes only in the declared canonical inputs
 - Treat `studio/extensions/` as the only shared extension registry authority
 - Treat `docs/project-worktree-parity-governance.md` as the canonical rule when evaluating
   consumer-project derived worktree completeness

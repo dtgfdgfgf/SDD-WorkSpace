@@ -22,7 +22,13 @@
       "path": ".github/agents/*.agent.md",
       "authority": "source_of_truth",
       "domain": "agent_runtime",
-      "description": "Copilot agent definitions, canonical source for agent behavior"
+      "description": "Fourteen canonical shared agent inputs selected by the .agent.md suffix"
+    },
+    {
+      "path": ".github/agents/async-python-reviewer.md",
+      "authority": "source_of_truth",
+      "domain": "agent_runtime",
+      "description": "Canonical non-command shared agent input included by the Claude generator"
     },
     {
       "path": "studio/templates/sdd-docs/*.md",
@@ -61,10 +67,16 @@
       "description": "Worktree parity obligations for derived worktrees"
     },
     {
+      "path": ".github/agents/copilot-instructions.md",
+      "authority": "dependent",
+      "domain": "agent_context",
+      "description": "Agent-scoped dependent adapter excluded from Claude generation inputs"
+    },
+    {
       "path": ".claude/agents/*.md",
       "authority": "dependent",
       "domain": "agent_runtime",
-      "description": "Claude agent definitions, seeded from .github/agents/"
+      "description": "Fifteen deterministic Claude-consumable mirrors generated from canonical agent inputs"
     },
     {
       "path": "AGENTS.md",
@@ -125,6 +137,21 @@
       "authority": "informational",
       "domain": "onboarding",
       "description": "Comprehensive SDD methodology guide"
+    },
+    {
+      "path": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
+      "authority": "informational",
+      "domain": "finding_inventory",
+      "description": "Repair inventory and narrative history; only the declared finding_status scope is authoritative",
+      "authorityScopes": [
+        {
+          "name": "finding_status",
+          "selector": "finding-status-record-v1",
+          "authority": "source_of_truth",
+          "schemaPath": "studio/runtime/finding-status-record.schema.json",
+          "validatorPath": "studio/scripts/powershell/validate-finding-status-ledger.ps1"
+        }
+      ]
     },
     {
       "path": "docs/mainline-updates/*.md",
@@ -230,8 +257,8 @@
     },
     {
       "changeType": "agent_change",
-      "trigger": ".github/agents/*.agent.md",
-      "description": "Any change to Copilot runtime agent definitions",
+      "trigger": ".github/agents/*.agent.md|.github/agents/async-python-reviewer.md",
+      "description": "Any change to one of the fifteen canonical shared agent inputs",
       "rules": [
         {
           "target": "studio/runtime/shared-runtime-contract.json",
@@ -515,6 +542,23 @@
         {
           "target": "studio/scripts/powershell/check-agent-bootstrap.ps1",
           "impact": "reference"
+        }
+      ]
+    },
+    {
+      "changeType": "finding_status_ledger_change",
+      "trigger": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
+      "description": "Changes to the repair ledger status authority or its informational narrative",
+      "rules": [
+        {
+          "target": "docs/README.md",
+          "impact": "must_update",
+          "reason": "The dependent finding-status index must match the latest authoritative fold"
+        },
+        {
+          "target": "studio/runtime/shared-runtime-contract.json",
+          "impact": "must_review",
+          "reason": "Scoped authority structure and validator routing must remain contract-bound"
         }
       ]
     },

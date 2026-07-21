@@ -2276,6 +2276,180 @@ function Get-GitChangedPaths {
     }
 }
 
+function Invoke-FindingStatusLedgerGate {
+    param(
+        [Parameter(Mandatory)] [string]$Root,
+        [Parameter(Mandatory)] [string]$ContractPath,
+        [string]$BaseReference,
+        [string]$HeadReference = 'HEAD'
+    )
+
+    $ledgerRelativePath = 'docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md'
+    $schemaRelativePath = 'studio/runtime/finding-status-record.schema.json'
+    $ledgerExists = Test-Path -LiteralPath (Join-Path $Root $ledgerRelativePath) -PathType Leaf
+    $schemaExists = Test-Path -LiteralPath (Join-Path $Root $schemaRelativePath) -PathType Leaf
+    $contract = $null
+    try {
+        $contract = Get-Content -LiteralPath $ContractPath -Raw -ErrorAction Stop |
+            ConvertFrom-Json -AsHashtable -ErrorAction Stop
+    } catch {
+        return $null
+    }
+
+    $policyExists = (
+        $contract.ContainsKey('findingStatusLedger') -and
+        $contract.findingStatusLedger -is [System.Collections.IDictionary]
+    )
+    if (-not $policyExists -and -not $ledgerExists -and -not $schemaExists) {
+        # Legacy minimal test fixtures predate the production status surface.
+        return $null
+    }
+    if (-not $policyExists) {
+        Add-ValidationIssue -Severity error -Category 'finding-status-ledger-policy' `
+            -Path 'studio/runtime/shared-runtime-contract.json' `
+            -Message 'The finding-status authority surface exists without findingStatusLedger contract policy.'
+        return $null
+    }
+
+    $policy = $contract.findingStatusLedger
+    $requiredPolicyValues = [ordered]@{
+        path = $ledgerRelativePath
+        documentAuthority = 'informational'
+        scope = 'finding_status'
+        scopeAuthority = 'source_of_truth'
+        selector = 'finding-status-record-v1'
+        fenceMarker = '```'
+        schemaPath = $schemaRelativePath
+        validatorPath = 'studio/scripts/powershell/validate-finding-status-ledger.ps1'
+        indexPath = 'docs/README.md'
+    }
+    $requiredPolicyKeys = @($requiredPolicyValues.Keys) + 'allowedStatuses'
+    $requiredStatuses = @('COMPLETED', 'OPEN', 'DECIDED', 'IN_PROGRESS', 'DISPOSITIONED')
+    $policyValid = (
+        @($policy.Keys).Count -eq $requiredPolicyKeys.Count -and
+        @($requiredPolicyKeys | Where-Object { -not $policy.ContainsKey($_) }).Count -eq 0
+    )
+    if ($policyValid) {
+        foreach ($policyKey in $requiredPolicyValues.Keys) {
+            if ($policy[$policyKey] -isnot [string] -or $policy[$policyKey] -cne $requiredPolicyValues[$policyKey]) {
+                $policyValid = $false
+                break
+            }
+        }
+    }
+    if ($policyValid) {
+        $policyValid = $policy.allowedStatuses -is [array] -and @($policy.allowedStatuses).Count -eq $requiredStatuses.Count
+        if ($policyValid) {
+            for ($index = 0; $index -lt $requiredStatuses.Count; $index++) {
+                if ($policy.allowedStatuses[$index] -isnot [string] -or
+                    $policy.allowedStatuses[$index] -cne $requiredStatuses[$index]) {
+                    $policyValid = $false
+                    break
+                }
+            }
+        }
+    }
+    if (-not $policyValid) {
+        Add-ValidationIssue -Severity error -Category 'finding-status-ledger-policy' `
+            -Path 'studio/runtime/shared-runtime-contract.json' `
+            -Message 'findingStatusLedger contract policy does not bind the exact production authority surface.'
+        return $null
+    }
+
+    $validatorPath = Join-Path $PSScriptRoot 'validate-finding-status-ledger.ps1'
+    if (-not (Test-Path -LiteralPath $validatorPath -PathType Leaf)) {
+        Add-ValidationIssue -Severity error -Category 'finding-status-ledger-validator-missing' `
+            -Path 'studio/scripts/powershell/validate-finding-status-ledger.ps1' `
+            -Message 'Finding-status ledger validator is missing.'
+        return $null
+    }
+
+    $arguments = @('-NoLogo', '-NoProfile', '-File', $validatorPath, '-WorkspaceRoot', $Root, '-Json')
+    if (-not [string]::IsNullOrWhiteSpace($BaseReference)) {
+        $arguments += @('-BaseRef', $BaseReference, '-HeadRef', $HeadReference)
+    }
+    $output = @(& pwsh @arguments 2>&1)
+    $exitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 1 }
+    $raw = $output -join "`n"
+    $result = $null
+    try {
+        $result = $raw | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+    } catch {
+        Add-ValidationIssue -Severity error -Category 'finding-status-ledger-output-invalid' `
+            -Path 'studio/scripts/powershell/validate-finding-status-ledger.ps1' `
+            -Message 'Finding-status ledger validator did not return structured JSON.'
+        return $null
+    }
+
+    $requiredResultKeys = @(
+        'VALID',
+        'ERROR_COUNT',
+        'ERRORS',
+        'WARNING_COUNT',
+        'WARNINGS',
+        'FINDING_COUNT',
+        'LATEST_REVISION',
+        'HISTORY_CHECKED',
+        'HISTORY_VALID'
+    )
+    $shapeKeysPresent = (
+        $result -is [System.Collections.IDictionary] -and
+        @($requiredResultKeys | Where-Object { -not $result.ContainsKey($_) }).Count -eq 0
+    )
+    $shapeValid = $shapeKeysPresent
+    if ($shapeValid) {
+        $shapeValid = (
+            $result.VALID -is [bool] -and
+            $result.ERROR_COUNT -is [long] -and
+            $result.ERRORS -is [array] -and
+            $result.WARNING_COUNT -is [long] -and
+            $result.WARNINGS -is [array] -and
+            $result.FINDING_COUNT -is [long] -and
+            $result.FINDING_COUNT -gt 0 -and
+            $result.LATEST_REVISION -is [long] -and
+            $result.LATEST_REVISION -gt 0 -and
+            $result.HISTORY_CHECKED -is [bool] -and
+            $result.HISTORY_VALID -is [bool]
+        )
+    }
+    if ($shapeValid) {
+        $shapeValid = (
+            [long]$result.ERROR_COUNT -eq @($result.ERRORS).Count -and
+            [long]$result.WARNING_COUNT -eq @($result.WARNINGS).Count
+        )
+    }
+    if ($shapeValid -and -not [string]::IsNullOrWhiteSpace($BaseReference)) {
+        $shapeValid = $result.HISTORY_CHECKED -eq $true
+    }
+    if (-not $shapeValid) {
+        Add-ValidationIssue -Severity error -Category 'finding-status-ledger-output-invalid' `
+            -Path 'studio/scripts/powershell/validate-finding-status-ledger.ps1' `
+            -Message 'Finding-status ledger validator output has null or wrong-type verdict fields.'
+        return $null
+    }
+
+    if ($exitCode -ne 0 -or $result.VALID -ne $true -or $result.ERROR_COUNT -ne 0 -or
+        @($result.ERRORS).Count -ne 0 -or $result.HISTORY_VALID -ne $true) {
+        if (@($result.ERRORS).Count -eq 0) {
+            Add-ValidationIssue -Severity error -Category 'finding-status-ledger-validation' `
+                -Path $ledgerRelativePath `
+                -Message 'Finding-status ledger validation failed without a structured child error.'
+        } else {
+            foreach ($childError in @($result.ERRORS)) {
+                $childCategory = [string]$childError.category
+                if ([string]::IsNullOrWhiteSpace($childCategory)) { $childCategory = 'validation' }
+                Add-ValidationIssue -Severity error -Category "finding-status-ledger-$childCategory" `
+                    -Path ([string]$childError.path) -Message ([string]$childError.message)
+            }
+        }
+    }
+    foreach ($childWarning in @($result.WARNINGS)) {
+        Add-ValidationIssue -Severity warning -Category 'finding-status-ledger-warning' `
+            -Path ([string]$childWarning.path) -Message ([string]$childWarning.message)
+    }
+    return $result
+}
+
 if (-not $WorkspaceRoot) {
     $WorkspaceRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../..'))
 }
@@ -2411,6 +2585,10 @@ if ($RequireReady -and -not $baseRefMode) {
     Add-ValidationIssue -Severity error -Category 'arguments' `
         -Message '-RequireReady requires -BaseRef so commit-range membership and last-touch path coverage can be verified.'
 }
+
+$findingStatusLedgerResult = Invoke-FindingStatusLedgerGate -Root $WorkspaceRoot `
+    -ContractPath $contractPath -BaseReference $(if ($baseRefMode) { $BaseRef } else { $null }) `
+    -HeadReference $HeadRef
 
 $requiredTargets = [System.Collections.Generic.List[object]]::new()
 $matchedRouteNames = [System.Collections.Generic.List[string]]::new()
@@ -2959,6 +3137,10 @@ $result = [pscustomobject][ordered]@{
     CHANGED_NOTE_PATHS        = @($changedNotePaths)
     MATCHED_IMPACT_ROUTES     = @($matchedRouteNames)
     REQUIRED_RECONCILIATIONS  = @($requiredTargets)
+    FINDING_STATUS_LEDGER_VALID = if ($findingStatusLedgerResult) { [bool]$findingStatusLedgerResult.VALID } else { $null }
+    FINDING_STATUS_LEDGER_COUNT = if ($findingStatusLedgerResult) { [long]$findingStatusLedgerResult.FINDING_COUNT } else { 0 }
+    FINDING_STATUS_LEDGER_REVISION = if ($findingStatusLedgerResult) { [long]$findingStatusLedgerResult.LATEST_REVISION } else { 0 }
+    FINDING_STATUS_HISTORY_VALID = if ($findingStatusLedgerResult) { [bool]$findingStatusLedgerResult.HISTORY_VALID } else { $null }
 }
 
 if ($Json) {

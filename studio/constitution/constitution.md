@@ -40,7 +40,7 @@ impact_on_change:
 # Studio Constitution
 
 **File name:** constitution.md  
-**Version:** 1.9.0
+**Version:** 1.10.0
 **Scope:** Studio-level governance for a single-person AI engineering practice  
 **Applies to:** All projects and SDD workflows
 
@@ -65,7 +65,7 @@ Projects are classified into three types with different levels of rigor:
 | **Internal** | Studio tools, automation, personal projects | Full SDD flow | `retrospective.md` required |
 | **Client** | Paid client work (future) | Full SDD flow + client review gates | `retrospective.md` required |
 
-**Current Phase:** Practice + Internal (as of 2026-04)
+**Current Phase:** Practice + Internal (as of 2026-07)
 
 Classification MUST be declared in the project's `README.md` or `.specify/memory/constitution.md`.
 
@@ -373,7 +373,27 @@ adapter from which they derive.
 
 ## 10.1 LLM-Friendly Document Formatting
 
-All AI-generated `.md` files MUST follow these formatting rules:
+Formatting scope MUST be determined from the artifact path and type, not from whether a human or
+an AI authored the text. The following governed Markdown surfaces MUST NOT contain emoji, Unicode
+arrow glyphs, tree-drawing glyphs, ASCII art, or box diagrams:
+
+- Studio and project constitutions.
+- Root and agent-scoped runtime adapters, including `AGENTS.md`, `CLAUDE.md`,
+  `.github/copilot-instructions.md`, and `.github/agents/copilot-instructions.md`.
+- SDD outputs under `specs/`, including specification, intent-ledger, readiness, ECI, plan, tasks,
+  and analysis-result artifacts.
+- SDD document templates under `studio/templates/sdd-docs/`.
+- Workspace governance policies, plans, ledgers, reviews, and mainline update notes under `docs/`,
+  including `docs/sdd-workspace-*.md` and `docs/mainline-updates/*.md`.
+- Current workspace governance and structure policies outside `docs/`, including
+  `studio/workflows/POLICY.md`, `studio/extensions/POLICY.md`, and `WORKSPACE_STRUCTURE.md`.
+
+Contract-declared runtime prompt sources under `.github/agents/` and `.github/prompts/`, together
+with deterministic Claude mirrors under `.claude/agents/`, MAY use a limited number of semantic
+symbols when the symbol communicates operational state, risk, or flow more precisely than plain
+text. This narrow exception does not apply to adapter or instruction documents in those
+directories, and it does not permit decorative symbols. Existing decorative symbols SHOULD be
+removed when the affected prompt is materially revised.
 
 **MUST Use:**
 
@@ -389,18 +409,18 @@ All AI-generated `.md` files MUST follow these formatting rules:
 | Format | Problem | Alternative |
 |--------|---------|------------|
 | ASCII art / box diagrams | Low information density, wastes tokens | Tables or text |
-| Tree structures (`├──`, `└──`) | Ambiguous LLM parsing | Path tables |
-| Arrow symbols (`→`, `←`, `⇒`) | Inconsistent encoding | "to", "from", or dashes |
-| Emoji in SDD documents | Unpredictable tokenization | Text markers `[OK]`, `[WARN]` |
+| Tree-drawing glyphs | Ambiguous LLM parsing | Path tables |
+| Unicode arrow glyphs | Inconsistent encoding | "to", "from", or dashes |
+| Emoji in strict governed artifacts | Unpredictable tokenization | Text markers `[OK]`, `[WARN]` |
 
-**Emoji Policy by File Type:**
+**Symbol Policy by Artifact Type:**
 
-| File Type | Emoji Allowed |
-|-----------|---------------|
-| `constitution.md`, `copilot-instructions.md` | NO |
-| `spec.md`, `readiness/**/*.md`, `plan.md`, `tasks.md` | NO |
-| `README.md`, human-facing docs | YES |
-| `learnings.md`, `retrospective.md` | YES |
+| Artifact Type | Policy |
+|---------------|--------|
+| Constitutions, adapters, governed SDD outputs, templates, and governance records | No emoji, arrow glyphs, tree-drawing glyphs, ASCII art, or box diagrams |
+| Contract-declared runtime prompt sources and deterministic Claude mirrors | Limited semantic symbols allowed; decorative symbols prohibited |
+| Human-facing `README.md` files that are not governance records | Emoji allowed sparingly; tables and plain text remain preferred |
+| `learnings.md` and `retrospective.md` | Emoji allowed sparingly |
 
 <!-- governance-anchor: constitution-section-11-required-project-structure -->
 ## 11. Required Project Structure
@@ -505,6 +525,7 @@ constitution.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.10.0 | 2026-07-22 | Defined artifact path/type formatting scope, retained a bounded semantic-symbol exception for contract-declared runtime prompts and deterministic Claude mirrors, refreshed the Current Phase review to 2026-07, established scoped append-only finding-status authority, and fixed the canonical GitHub-agent input partition. |
 | 1.9.0 | 2026-07-20 | Defined the evidence-equivalent self-application route for canonical workspace shared-layer governance while preserving seven-stage project delivery and Aggregate acceptance. |
 | 1.8.0 | 2026-04-27 | Added runtime agent bootstrap governance for AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md synchronization. |
 | 1.7.0 | 2026-04-10 | Shared-layer consistency update and document authority classification. |
@@ -536,6 +557,7 @@ not a stale version.
 - `studio/runtime/shared-runtime-contract.json` (runtime verification)
 - `studio/runtime/impact-registry.json` (change-to-document impact routing)
 - `.github/agents/*.agent.md` (agent runtime definitions)
+- `.github/agents/async-python-reviewer.md` (explicit non-command agent definition while R-D12 remains unimplemented)
 - `studio/templates/sdd-docs/*.md` (document templates)
 - `.githooks/pre-commit.ps1` (commit-time validation)
 - `studio/scripts/powershell/*.ps1` (studio automation)
@@ -561,6 +583,24 @@ not a stale version.
 - `studio/QUICKSTART.md` (onboarding guide)
 - `studio/SDD-QUICKSTART-GUIDE.md` (methodology guide)
 - `docs/mainline-updates/*.md` (merge explanation notes)
+- `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` (finding context and historical ledger narrative, except for the scoped records below)
+
+For deterministic Claude seeding, the current canonical input classes are
+`.github/agents/*.agent.md` and the explicit `.github/agents/async-python-reviewer.md` file.
+`.github/agents/copilot-instructions.md` is a dependent adapter and MUST be excluded from that
+input set. The corresponding `.claude/agents/*.md` files are dependent runtime mirrors, not a new
+authority source.
+
+The repair inventory and update plan remains an `informational` document by default. Only visible
+fenced JSON blocks whose canonical opening envelope is exactly three backticks followed immediately
+by the exact selector `finding-status-record-v1` have `source_of_truth` authority for the
+`finding_status` scope. A visible longer-backtick or tilde fence using that selector is an
+invalid authority envelope and MUST fail closed; the same text inside a hidden Markdown surface
+has no authority. Narrative prose, Markdown tables, historical summaries, and any other fenced
+blocks are not finding-status sources. Authoritative status records MUST be append-only, use
+unique strictly consecutive revisions, and pass
+`studio/scripts/powershell/validate-finding-status-ledger.ps1` against the dedicated schema and the
+committed BaseRef history.
 
 ### Shared-Layer Verification
 

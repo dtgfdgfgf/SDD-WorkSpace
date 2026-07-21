@@ -78,12 +78,12 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.28.0 records the exact R-H20 authority partition without changing the 131-item fold. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.29.0 bootstraps the scoped status authority without changing the 131-item fold or closing R6-A1. |
 | `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.20.0 records the exact 15-source/1-dependent correction before implementation resumes. |
-| `docs/README.md` | `must_update` | `updated` | Index reports 131 findings and the current plan-only fold. |
+| `docs/README.md` | `must_update` | `updated` | Index reports 131 findings, revision 1 and the unchanged candidate fold. |
 | `docs/mainline-updates/README.md` | `must_update` | `updated` | Index state matches this Draft note. |
-| `studio/constitution/constitution.md` | `must_update` | `pending` | R-E11/R-D07/R-E08 implementation has not started. |
-| `studio/runtime/shared-runtime-contract.json` | `must_update` | `pending` | Direct-repair contract anchors have not been implemented. |
+| `studio/constitution/constitution.md` | `must_update` | `updated` | The implementation candidate defines the scoped authority, artifact policy and July 2026 phase review; no closure is claimed. |
+| `studio/runtime/shared-runtime-contract.json` | `must_update` | `updated` | The implementation candidate contains direct-repair policy and revert anchors; committed evidence and exact-tree gates remain pending. |
 
 ## Validation
 
@@ -134,6 +134,21 @@ Required before this note may become `Ready`:
   workflow promotion state do not change.
 - This note remains `Draft`, Related Commits `TBD`, reconciliation `Open` and validation scope
   `Batch`; no implementation or closure is claimed by this plan correction.
+
+## 2026-07-22 R6-A1 Implementation Candidate
+
+- The implementation candidate adds the scoped R-E11 status schema, append-only validator,
+  dependent index and runtime audit integration while keeping revision 1 at the unchanged 131-ID
+  fold. R-E11 remains `OPEN` in that bootstrap record.
+- Constitution 1.10.0 and current entry surfaces define the R-D07 path/type formatting policy,
+  refresh the phase review, repair README and workspace-structure truth, and use the exact R-H20
+  partition of 15 canonical inputs, one excluded dependent adapter and 15 dependent mirrors.
+- The generator now fails closed on unclassified Markdown and the 15 Claude mirrors are reseeded
+  with dependent-mirror headers. `sdd-pipeline` remains experimental, default-disabled and
+  execution-denied; R-D12 remains unimplemented.
+- This section records an implementation candidate only. The seven R6-A1 finding statuses do not
+  change until a committed implementation hash, discriminating tests and exact-tree gates exist.
+  The note therefore remains `Draft`, Related Commits `TBD` and reconciliation `Open`.
 
 ## Follow-ups
 

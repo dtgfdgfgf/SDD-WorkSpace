@@ -56,6 +56,84 @@
     "speckit-taskstoissues.md",
     "speckit-version.md"
   ],
+  "agentAuthorityPartition": {
+    "canonicalAgentPattern": ".github/agents/*.agent.md",
+    "expectedPatternInputCount": 14,
+    "canonicalAdditionalFiles": [
+      ".github/agents/async-python-reviewer.md"
+    ],
+    "dependentExcludedFiles": [
+      ".github/agents/copilot-instructions.md"
+    ],
+    "dependentMirrorPattern": ".claude/agents/*.md",
+    "expectedCanonicalInputCount": 15,
+    "expectedDependentMirrorCount": 15
+  },
+  "artifactMarkdownPolicy": {
+    "schemaVersion": 1,
+    "defaultClassification": "out_of_scope",
+    "strictPathPatterns": [
+      "studio/constitution/constitution.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      ".github/agents/copilot-instructions.md",
+      "specs/**/*.md",
+      "studio/templates/sdd-docs/**/*.md",
+      "docs/README.md",
+      "docs/project-governance-status.md",
+      "docs/project-worktree-parity-governance.md",
+      "docs/sdd-workspace-*.md",
+      "docs/mainline-updates/*.md",
+      "studio/workflows/POLICY.md",
+      "studio/extensions/POLICY.md",
+      "WORKSPACE_STRUCTURE.md"
+    ],
+    "semanticExceptionSources": {
+      "agentPartitionRef": "agentAuthorityPartition",
+      "promptRoot": ".github/prompts",
+      "promptFilesRef": "requiredPromptStubs",
+      "claudeMirrorPartitionRef": "agentAuthorityPartition",
+      "claudeMirrorRoot": ".claude/agents",
+      "claudeMirrorFilesRef": "requiredClaudeAgents"
+    },
+    "strictlyExcludedFromException": [
+      ".github/agents/copilot-instructions.md"
+    ],
+    "semanticSymbolAllowlist": [
+      { "codePoint": "U+2192", "meaning": "flow" },
+      { "codePoint": "U+26A0", "meaning": "risk" },
+      { "codePoint": "U+2705", "meaning": "accepted" },
+      { "codePoint": "U+2713", "meaning": "pass" },
+      { "codePoint": "U+2717", "meaning": "fail" },
+      { "codePoint": "U+274C", "meaning": "invalid" },
+      { "codePoint": "U+1F6AB", "meaning": "prohibited" }
+    ],
+    "legacyNonGrowthAllowances": [
+      {
+        "path": ".github/agents/async-python-reviewer.md",
+        "codePoint": "U+1F50D",
+        "maxOccurrences": 1
+      },
+      {
+        "path": ".claude/agents/async-python-reviewer.md",
+        "codePoint": "U+1F50D",
+        "maxOccurrences": 1
+      }
+    ],
+    "limits": {
+      "maxAllowedSymbolOccurrencesPerFile": 27,
+      "maxDistinctAllowedSymbolsPerFile": 3
+    },
+    "forbiddenTokenClasses": [
+      "emoji-code-point",
+      "unicode-arrow-code-point",
+      "tree-or-box-drawing-code-point",
+      "ascii-box-border-line",
+      "ascii-tree-branch-line",
+      "ascii-flow-diagram-line"
+    ]
+  },
   "requiredPromptStubs": [
     "speckit.analyze.prompt.md",
     "speckit.checklist.prompt.md",
@@ -381,9 +459,15 @@
       "id": "readme-claude-shared-runtime",
       "path": "README.md",
       "mustContainAll": [
+        "`.github/agents/*.agent.md`、`.github/agents/async-python-reviewer.md` 與 `.github/prompts/` 是共享 runtime 的 canonical inputs",
+        "`.github/agents/copilot-instructions.md` 是 dependent adapter，不是 Claude generator input",
+        "`.claude/agents/` 是由上述 canonical agent inputs 確定性產生、供 Claude runtime 使用的 dependent mirror，不是獨立權威來源",
+        "都不取代上述 canonical agent inputs"
+      ],
+      "mustNotContainAny": [
+        "`.github/agents/` 與 `.github/prompts/` 是 Copilot runtime source of truth",
         "`.claude/agents/` 是 Claude shared runtime source of truth",
-        "`<project>/.claude/agents` junction",
-        "Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源"
+        "Runtime source of truth: `.github/agents/`、`.github/prompts/`"
       ]
     },
     {
@@ -424,9 +508,20 @@
       "id": "workspace-structure-claude-runtime",
       "path": "WORKSPACE_STRUCTURE.md",
       "mustContainAll": [
-        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "| `.github/agents/` | Mixed-authority agent surface: declared canonical definitions plus one dependent Copilot adapter |",
+        "| `.claude/agents/` | Deterministic dependent mirrors generated from `.github/agents/` for Claude runtime consumption |",
         "| `.claude/agents/` | Junction to workspace `.claude/agents/` |",
-        "Project-local Claude agents are not supported in this workspace model."
+        "The canonical runtime sources are:",
+        "- `.github/agents/*.agent.md`",
+        "- `.github/agents/async-python-reviewer.md`",
+        "`.github/agents/copilot-instructions.md` is a dependent adapter and is excluded from Claude",
+        "dependent mirrors used directly"
+      ],
+      "mustNotContainAny": [
+        "| `.github/agents/` | Runtime source for shared SDD agents |",
+        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "The runtime source of truth is:",
+        "Agent definitions live in `.github/agents/` (source of truth) and `.claude/agents/` (seeded copy with Claude-specific format)."
       ]
     },
     {
@@ -608,6 +703,137 @@
       ]
     },
     {
+      "id": "constitution-finding-status-scoped-authority",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "finding-status-record-v1",
+        "finding_status",
+        "source_of_truth",
+        "remains an `informational` document by default",
+        "canonical opening envelope is exactly three backticks",
+        "invalid authority envelope and MUST fail closed",
+        "strictly consecutive",
+        "BaseRef"
+      ]
+    },
+    {
+      "id": "constitution-agent-authority-partition",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "`.github/agents/*.agent.md` and the explicit `.github/agents/async-python-reviewer.md` file",
+        "`.github/agents/copilot-instructions.md` is a dependent adapter and MUST be excluded",
+        "`.claude/agents/*.md` files are dependent runtime mirrors, not a new",
+        "authority source"
+      ]
+    },
+    {
+      "id": "constitution-current-phase-review",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "**Current Phase:** Practice + Internal (as of 2026-07)"
+      ],
+      "mustNotContainAny": [
+        "**Current Phase:** Practice + Internal (as of 2026-04)"
+      ]
+    },
+    {
+      "id": "copilot-adapter-current-phase-review",
+      "path": ".github/copilot-instructions.md",
+      "mustContainAll": [
+        "- **Current Phase:** Practice + Internal (as of 2026-07)"
+      ],
+      "mustNotContainAny": [
+        "- **Current Phase:** Practice (as of 2025-12)"
+      ]
+    },
+    {
+      "id": "constitution-artifact-markdown-formatting",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "Formatting scope MUST be determined from the artifact path and type",
+        "MUST NOT contain emoji, Unicode",
+        "arrow glyphs, tree-drawing glyphs, ASCII art, or box diagrams",
+        "Contract-declared runtime prompt sources under `.github/agents/` and `.github/prompts/`",
+        "deterministic Claude mirrors under `.claude/agents/`",
+        "This narrow exception does not apply to adapter or instruction documents"
+      ],
+      "mustNotContainAny": [
+        "All AI-generated `.md` files MUST follow these formatting rules:"
+      ]
+    },
+    {
+      "id": "finding-status-ledger-authority-surface",
+      "path": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
+      "mustContainAll": [
+        "authority: \"informational\"",
+        "finding_status_authority: \"source_of_truth\"",
+        "finding_status_selector: \"finding-status-record-v1\"",
+        "finding_status_schema: \"studio/runtime/finding-status-record.schema.json\"",
+        "finding_status_validator: \"studio/scripts/powershell/validate-finding-status-ledger.ps1\"",
+        "finding_status_index: \"docs/README.md\"",
+        "exactly three backticks followed immediately by the exact `finding-status-record-v1` info string",
+        "invalid authority envelope and fails closed",
+        "```finding-status-record-v1"
+      ]
+    },
+    {
+      "id": "finding-status-dependent-index",
+      "path": "docs/README.md",
+      "mustContainAll": [
+        "finding-status-index-v1",
+        "finding-status-record-v1",
+        "finding_status",
+        "source_of_truth"
+      ]
+    },
+    {
+      "id": "readme-workflow-runtime-truthfulness",
+      "path": "README.md",
+      "mustContainAll": [
+        "讀取 catalog/state，列出登錄項目、有效 enabled state、execution authorization 與 validation errors",
+        "解析 `workflow.yml`、依 workflow schema 驗證，並確認 manifest entry points 存在",
+        "更新已登錄 workflow 的 state；非 approved/deprecated 項目不得啟用，execution 仍另做完整授權檢查",
+        "經 catalog/state/manifest/digest fail-closed 授權後執行；目前 `sdd-pipeline` 仍被拒絕，等待 R6 promotion gates"
+      ]
+    },
+    {
+      "id": "readme-workflow-runtime-surfaces",
+      "path": "README.md",
+      "mustContainAll": [
+        "- `studio/workflows/` 是共享 workflow runtime；內建 `sdd-pipeline` 目前維持 experimental、預設停用且禁止執行",
+        "| `studio/workflows/` | workspace 級 workflow schemas、catalog、state、policy 與 workflow definitions |"
+      ]
+    },
+    {
+      "id": "readme-upstream-guide-paths",
+      "path": "README.md",
+      "mustContainAll": [
+        "`docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md`",
+        "`docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`"
+      ],
+      "mustNotContainAny": [
+        "`spec-kit-upstream-wave2-transition-guide.md`",
+        "`spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`"
+      ]
+    },
+    {
+      "id": "workspace-structure-current-surface",
+      "path": "WORKSPACE_STRUCTURE.md",
+      "mustContainAll": [
+        "**Version:** 1.10.0",
+        "**Updated:** 2026-07-22",
+        "| `.githooks/` | Shared machine-enforced Git hooks used by the workspace and consumer repositories |",
+        "| `.vscode/` | Workspace-level editor tasks and settings |",
+        "| `docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |",
+        "| 1.10.0 | 2026-07-22 | Reconcile canonical agent sources with generated Claude mirrors, document root hooks and editor configuration, and repair the Wave 2 guide path |"
+      ],
+      "mustNotContainAny": [
+        "**Version:** 1.9.0",
+        "**Updated:** 2026-07-20",
+        "| `spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |"
+      ]
+    },
+    {
       "id": "mainline-update-index",
       "path": "docs/mainline-updates/README.md",
       "mustContainAll": [
@@ -621,7 +847,14 @@
       "path": ".github/copilot-instructions.md",
       "mustContainAll": [
         "For shared-layer convergence work, use `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the primary audit entrypoint.",
-        "Treat `projects/` and `learning/` as consumer spaces, not as the default acceptance surface for shared runtime convergence."
+        "Treat `projects/` and `learning/` as consumer spaces, not as the default acceptance surface for shared runtime convergence.",
+        "Deterministic Claude-consumable dependent mirrors generated from the declared canonical GitHub agent inputs above",
+        "permanent changes only in the declared canonical inputs"
+      ],
+      "mustNotContainAny": [
+        "| `.github/agents/` | Runtime source for shared SDD agents |",
+        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "Treat workspace `/.claude/agents/` as the Claude shared runtime authority"
       ]
     },
     {
@@ -636,9 +869,16 @@
       "id": "quickstart-claude-runtime",
       "path": "studio/QUICKSTART.md",
       "mustContainAll": [
+        "其中 `*.agent.md` 與 `async-python-reviewer.md` 是 canonical inputs",
+        "`copilot-instructions.md` 是 dependent adapter",
         "每個專案也會建立 `.claude/agents/` junction，來源是 workspace 根目錄的 `.claude/agents/`。",
-        "`/.claude/agents/` 是 Claude shared runtime source of truth",
+        "`/.claude/agents/` 是從宣告的 canonical agent inputs 確定性產生、供 Claude runtime 使用的",
+        "mirror，不是獨立 authority",
         "Claude skills 與 shared agents runtime 是不同層"
+      ],
+      "mustNotContainAny": [
+        "`.github/agents/`。這是 runtime source。",
+        "`/.claude/agents/` 是 Claude shared runtime source of truth"
       ]
     },
     {
@@ -663,9 +903,17 @@
       "id": "sdd-guide-claude-runtime-boundary",
       "path": "studio/SDD-QUICKSTART-GUIDE.md",
       "mustContainAll": [
-        "`.claude/agents/` 是 shared Claude runtime authority",
-        "`<project>/.claude/agents` 是 direct junction consumption path",
+        "`.claude/agents/` 是從 `.github/agents/*.agent.md` 與",
+        "`.github/agents/async-python-reviewer.md` 確定性產生的 dependent mirror",
+        "`<project>/.claude/agents` 是 Claude runtime 的 direct junction consumption path",
+        "而不是另一個",
+        "authority source",
+        "dependent `.github/agents/copilot-instructions.md` 不會進入 generator",
         "Claude skills install root 與 workspace shared agents runtime 是不同層"
+      ],
+      "mustNotContainAny": [
+        "`.claude/agents/` 是 shared Claude runtime authority",
+        "| Shared Claude Runtime | `.claude/agents/` | workspace 級 Claude shared runtime authority |"
       ]
     },
     {
@@ -1060,10 +1308,74 @@
       ]
     },
     {
+      "id": "finding-status-record-schema",
+      "path": "studio/runtime/finding-status-record.schema.json",
+      "mustContainAll": [
+        "\"additionalProperties\": false",
+        "\"pattern\": \"^R-[A-Z][0-9]{2,}$\"",
+        "\"IN_PROGRESS\"",
+        "\"DISPOSITIONED\""
+      ]
+    },
+    {
+      "id": "validate-finding-status-ledger",
+      "path": "studio/scripts/powershell/validate-finding-status-ledger.ps1",
+      "mustContainAll": [
+        "finding-status-record-v1",
+        "Test-Json",
+        "Test-GovernedFrontmatterKeys",
+        "Test-FindingStatusSchemaContract",
+        "$schemaKeys.Count -ne $contractKeys.Count",
+        "Test-FindingStatusRecordContract",
+        "inventory-severity-conflict",
+        "status-revision-sequence",
+        "status-snapshot-incomplete",
+        "status-record-date-invalid",
+        "status-record-envelope-invalid",
+        "$rawInfo -ceq $selector",
+        "Get-InventoryDefinitionEvents",
+        "definitions visible before that record",
+        "inventory-status-set-mismatch",
+        "status-index-mismatch",
+        "status-history-rewritten",
+        "merge-base --is-ancestor",
+        "HISTORY_VALID"
+      ]
+    },
+    {
+      "id": "impact-registry-agent-authority-partition",
+      "path": "studio/scripts/powershell/generate-impact-registry.ps1",
+      "mustContainAll": [
+        ".github/agents/*.agent.md",
+        "Fourteen canonical shared agent inputs selected by the .agent.md suffix",
+        ".github/agents/async-python-reviewer.md",
+        "Canonical non-command shared agent input included by the Claude generator",
+        ".github/agents/copilot-instructions.md",
+        "Agent-scoped dependent adapter excluded from Claude generation inputs",
+        ".claude/agents/*.md",
+        "Fifteen deterministic Claude-consumable mirrors generated from canonical agent inputs"
+      ]
+    },
+    {
       "id": "validate-mainline-notes-gate",
       "path": "studio/scripts/powershell/validate-mainline-notes.ps1",
       "mustContainAll": [
         "mainline-note-validation-baseline.json",
+        "validate-finding-status-ledger.ps1",
+        "finding-status-ledger",
+        "BaseReference",
+        "HeadReference",
+        "finding-status-ledger-output-invalid",
+        "finding-status-ledger-policy",
+        "$result.FINDING_COUNT -is [long]",
+        "$result.LATEST_REVISION -is [long]",
+        "$result.HISTORY_CHECKED -is [bool]",
+        "$result.HISTORY_CHECKED -eq $true",
+        "$policy[$policyKey] -isnot [string]",
+        "$policy.allowedStatuses[$index] -isnot [string]",
+        "$result.WARNING_COUNT -eq @($result.WARNINGS).Count",
+        "requiredResultKeys",
+        "shapeKeysPresent",
         "Reconciliation Status: Closed",
         "--name-status",
         "--find-renames",
@@ -1125,6 +1437,33 @@
       "path": "studio/scripts/powershell/check-speckit-runtime.ps1",
       "mustContainAll": [
         "powershell-yaml-missing",
+        "validate-finding-status-ledger.ps1",
+        "finding-status-ledger",
+        "FINDING_STATUS_LEDGER_VALID",
+        "Invoke-JsonScriptDetailed -ScriptPath $findingStatusLedgerScript",
+        "$findingStatusResult.VALID -eq $true",
+        "$findingStatusResult.FINDING_COUNT -is [long]",
+        "$findingStatusResult.LATEST_REVISION -is [long]",
+        "findingStatusResultIsObject",
+        "Contains('VALID')",
+        "Test-ExactDictionaryKeys",
+        "Test-ExactStringArray",
+        "MustNotContainAny",
+        "errorCountMatchesArray",
+        "warningCountMatchesArray",
+        "artifactMarkdownPolicy",
+        "artifact-markdown-policy-invalid",
+        "artifact-markdown-path-unresolved",
+        "artifact-markdown-prohibited-content",
+        "semantic-symbol-occurrence-limit",
+        "semantic-symbol-distinct-limit",
+        "legacy-symbol-growth",
+        "ARTIFACT_MARKDOWN_POLICY_VALID",
+        "ARTIFACT_MARKDOWN_CHECKS",
+        "agent-authority-partition-invalid",
+        "agent-authority-source-set-mismatch",
+        "dependent-mirror-set-mismatch",
+        "AGENT_AUTHORITY_PARTITION_VALID",
         "workflow-registry-invalid",
         "required-command-layering-mismatch",
         "required-shared-gate-path-missing",
@@ -1640,7 +1979,9 @@
       "mustContainAll": [
         ".claude/agents",
         "copilot-instructions.md",
-        "Claude shared runtime authority after generation",
+        "Seeded from canonical source",
+        "deterministic Claude-consumable dependent mirror",
+        "edit canonical source",
         "UTF8Encoding]::new($false, $true)",
         "WriteAllText",
         "-join \"`n\"",
@@ -2294,6 +2635,24 @@
       ]
     }
   ],
+  "findingStatusLedger": {
+    "path": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
+    "documentAuthority": "informational",
+    "scope": "finding_status",
+    "scopeAuthority": "source_of_truth",
+    "selector": "finding-status-record-v1",
+    "fenceMarker": "```",
+    "schemaPath": "studio/runtime/finding-status-record.schema.json",
+    "validatorPath": "studio/scripts/powershell/validate-finding-status-ledger.ps1",
+    "indexPath": "docs/README.md",
+    "allowedStatuses": [
+      "COMPLETED",
+      "OPEN",
+      "DECIDED",
+      "IN_PROGRESS",
+      "DISPOSITIONED"
+    ]
+  },
   "mainlineReadiness": {
     "repositorySlug": "dtgfdgfgf/sdd-workspace",
     "aggregateNotePaths": [
@@ -2327,6 +2686,7 @@
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
     "studio/runtime/analysis-result.schema.json",
+    "studio/runtime/finding-status-record.schema.json",
     "studio/runtime/mainline-note-historical-evidence.json",
     "studio/runtime/mainline-note-historical-evidence.schema.json",
     "studio/runtime/mainline-note-validation-baseline.json",
@@ -2340,6 +2700,8 @@
     "studio/SDD-QUICKSTART-GUIDE.md",
     "WORKSPACE_STRUCTURE.md",
     "README.md",
+    "docs/README.md",
+    "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
     "docs/mainline-updates/",
     "studio/scripts/powershell/**",
     "studio/runtime/impact-registry.json",

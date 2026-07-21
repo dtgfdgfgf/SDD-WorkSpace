@@ -4,8 +4,8 @@ description: "Execute the implementation plan by processing and executing all ta
 model: claude-opus-4-7
 ---
 
-<!-- Seeded from .github/agents/speckit.implement.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
-<!-- WARNING: This file is a seeded copy from .github/agents/speckit.implement.agent.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
+<!-- Seeded from canonical source .github/agents/speckit.implement.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. This file is a deterministic Claude-consumable dependent mirror. -->
+<!-- WARNING: Direct edits to this dependent mirror will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit canonical source .github/agents/speckit.implement.agent.md and re-seed. -->
 
 ## Output Language
 

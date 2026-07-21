@@ -188,9 +188,30 @@ BeforeAll {
         return $root
     }
 
+    function Enable-FindingStatusLedgerSurface {
+        param([Parameter(Mandatory)] [string]$Root)
+
+        foreach ($relativePath in @(
+            'docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md',
+            'docs/README.md',
+            'studio/runtime/finding-status-record.schema.json'
+        )) {
+            $source = Join-Path $script:workspaceRoot $relativePath
+            $destination = Join-Path $Root $relativePath
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination -Force
+        }
+
+        $contractPath = Join-Path $Root 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -Raw -LiteralPath $contractPath | ConvertFrom-Json -AsHashtable
+        $contract['findingStatusLedger'] = $script:productionContract.findingStatusLedger
+        Write-TestJson -Path $contractPath -Value $contract
+    }
+
     function Invoke-MainlineValidator {
         param(
             [string]$Root,
+            [string]$ValidatorPath = $script:validator,
             [string[]]$ChangedPaths = @(),
             [string]$BaseRef,
             [string]$HeadRef = 'HEAD',
@@ -199,7 +220,7 @@ BeforeAll {
             [ValidateSet('Aggregate', 'Batch')]
             [string]$ReadinessScope = 'Batch'
         )
-        $commandArguments = @('-NoLogo', '-NoProfile', '-File', $script:validator, '-WorkspaceRoot', $Root, '-Json')
+        $commandArguments = @('-NoLogo', '-NoProfile', '-File', $ValidatorPath, '-WorkspaceRoot', $Root, '-Json')
         if ($BaseRef) {
             $commandArguments += @('-BaseRef', $BaseRef, '-HeadRef', $HeadRef)
         } elseif ($ChangedPaths.Count -gt 0) {
@@ -543,6 +564,158 @@ Describe 'validate-mainline-notes state and branch reconciliation' {
         $result.Data.ERROR_COUNT | Should -Be 0
     }
 
+    It 'accepts the machine-bounded finding-status surface and reports its fold' {
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot
+
+        $result.ExitCode | Should -Be 0 -Because $result.Raw
+        $result.Data.FINDING_STATUS_LEDGER_VALID | Should -BeTrue
+        $result.Data.FINDING_STATUS_HISTORY_VALID | Should -BeTrue
+        $result.Data.FINDING_STATUS_LEDGER_COUNT | Should -Be 131
+        $result.Data.FINDING_STATUS_LEDGER_REVISION | Should -Be 1
+    }
+
+    It 'promotes a finding-status index mismatch into the mainline gate' {
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $indexPath = Join-Path $script:fixtureRoot 'docs/README.md'
+        $content = [System.IO.File]::ReadAllText($indexPath)
+        $content = $content.Replace('COMPLETED:76,OPEN:48', 'COMPLETED:75,OPEN:49', [System.StringComparison]::Ordinal)
+        [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.UTF8Encoding]::new($false))
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.FINDING_STATUS_LEDGER_VALID | Should -BeFalse
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-status-index-mismatch'
+    }
+
+    It 'fails when a status surface exists without the exact contract policy' {
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $contractPath = Join-Path $script:fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -Raw -LiteralPath $contractPath | ConvertFrom-Json -AsHashtable
+        $contract.Remove('findingStatusLedger')
+        Write-TestJson -Path $contractPath -Value $contract
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot
+
+        $result.ExitCode | Should -Be 1
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-policy'
+    }
+
+    It 'rejects a single-element array in a finding-status scalar policy field' {
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $contractPath = Join-Path $script:fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $content = [System.IO.File]::ReadAllText($contractPath)
+        $tampered = $content.Replace(
+            '"path": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"',
+            '"path": ["docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"]',
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText($contractPath, $tampered, [System.Text.UTF8Encoding]::new($false))
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot
+
+        $result.ExitCode | Should -Be 1
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-policy'
+    }
+
+    It 'rejects a non-canonical finding-status fence marker policy: <Label>' -TestCases @(
+        @{ Label = 'missing'; Mutation = { param($policy) $policy.Remove('fenceMarker') | Out-Null } }
+        @{ Label = 'null'; Mutation = { param($policy) $policy['fenceMarker'] = $null } }
+        @{ Label = 'array'; Mutation = { param($policy) $policy['fenceMarker'] = @('```') } }
+        @{ Label = 'wrong marker'; Mutation = { param($policy) $policy['fenceMarker'] = '~~~~' } }
+    ) {
+        param($Label, $Mutation)
+
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $contractPath = Join-Path $script:fixtureRoot 'studio/runtime/shared-runtime-contract.json'
+        $contract = Get-Content -Raw -LiteralPath $contractPath | ConvertFrom-Json -AsHashtable
+        & $Mutation $contract.findingStatusLedger
+        Write-TestJson -Path $contractPath -Value $contract
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot
+
+        $result.ExitCode | Should -Be 1
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-policy'
+    }
+
+    It 'rejects string or null finding metadata from the child validator' {
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $toolRoot = Join-Path $script:fixtureRoot 'fixture-tools'
+        New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+        $mainlineCopy = Join-Path $toolRoot 'validate-mainline-notes.ps1'
+        Copy-Item -LiteralPath $script:validator -Destination $mainlineCopy -Force
+        $stub = @'
+param(
+    [string]$WorkspaceRoot,
+    [string]$BaseRef,
+    [string]$HeadRef = 'HEAD',
+    [switch]$Json
+)
+[pscustomobject][ordered]@{
+    VALID = $true
+    ERROR_COUNT = 0
+    ERRORS = @()
+    WARNING_COUNT = 0
+    WARNINGS = @()
+    FINDING_COUNT = '131'
+    LATEST_REVISION = $null
+    HISTORY_VALID = $true
+} | ConvertTo-Json -Depth 4
+exit 0
+'@
+        [System.IO.File]::WriteAllText(
+            (Join-Path $toolRoot 'validate-finding-status-ledger.ps1'),
+            $stub,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot -ValidatorPath $mainlineCopy
+
+        $result.ExitCode | Should -Be 1
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-output-invalid'
+    }
+
+    It 'rejects a child warning count that does not match the structured warning array' {
+        Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $toolRoot = Join-Path $script:fixtureRoot 'fixture-tools-warning-shape'
+        New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+        $mainlineCopy = Join-Path $toolRoot 'validate-mainline-notes.ps1'
+        Copy-Item -LiteralPath $script:validator -Destination $mainlineCopy -Force
+        $stub = @'
+param(
+    [string]$WorkspaceRoot,
+    [string]$BaseRef,
+    [string]$HeadRef = 'HEAD',
+    [switch]$Json
+)
+[pscustomobject][ordered]@{
+    VALID = $true
+    ERROR_COUNT = 0
+    ERRORS = @()
+    WARNING_COUNT = 1
+    WARNINGS = @()
+    FINDING_COUNT = 131
+    LATEST_REVISION = 1
+    HISTORY_CHECKED = $false
+    HISTORY_VALID = $true
+} | ConvertTo-Json -Depth 4
+exit 0
+'@
+        [System.IO.File]::WriteAllText(
+            (Join-Path $toolRoot 'validate-finding-status-ledger.ps1'),
+            $stub,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-MainlineValidator -Root $script:fixtureRoot -ValidatorPath $mainlineCopy
+
+        $result.ExitCode | Should -Be 1
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-output-invalid'
+    }
+
     It 'rejects a Ready note whose commit and PR evidence are both unresolved' {
         Write-TestNote -Root $script:fixtureRoot -Commits 'TBD' | Out-Null
         $result = Invoke-MainlineValidator -Root $script:fixtureRoot
@@ -832,6 +1005,45 @@ Describe 'validate-mainline-notes Git-backed evidence integrity' {
 
         $result.ExitCode | Should -Be 0 -Because $result.Raw
         $result.Data.VALID | Should -BeTrue
+    }
+
+    It 'rejects a child that claims history was not checked when BaseRef is supplied' {
+        Enable-FindingStatusLedgerSurface -Root $script:gitFixture.Root
+        $toolRoot = Join-Path $script:gitFixture.Root 'fixture-tools-history-shape'
+        New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+        $mainlineCopy = Join-Path $toolRoot 'validate-mainline-notes.ps1'
+        Copy-Item -LiteralPath $script:validator -Destination $mainlineCopy -Force
+        $stub = @'
+param(
+    [string]$WorkspaceRoot,
+    [string]$BaseRef,
+    [string]$HeadRef = 'HEAD',
+    [switch]$Json
+)
+[pscustomobject][ordered]@{
+    VALID = $true
+    ERROR_COUNT = 0
+    ERRORS = @()
+    WARNING_COUNT = 0
+    WARNINGS = @()
+    FINDING_COUNT = 131
+    LATEST_REVISION = 1
+    HISTORY_CHECKED = $false
+    HISTORY_VALID = $true
+} | ConvertTo-Json -Depth 4
+exit 0
+'@
+        [System.IO.File]::WriteAllText(
+            (Join-Path $toolRoot 'validate-finding-status-ledger.ps1'),
+            $stub,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-MainlineValidator -Root $script:gitFixture.Root `
+            -ValidatorPath $mainlineCopy -BaseRef $script:gitFixture.Base
+
+        $result.ExitCode | Should -Be 1
+        @($result.Data.ERRORS.category) | Should -Contain 'finding-status-ledger-output-invalid'
     }
 
     It 'requires an explicit readiness scope at a blocking gate' {
