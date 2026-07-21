@@ -3,10 +3,10 @@
 **Date**: 2026-07-22
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `TBD`
+**Status**: Ready
+**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -85,34 +85,41 @@ Out of scope:
 
 ## Validation
 
-Observed implementation evidence:
+Observed implementation and accounting evidence:
 
 - The complete governance suite reports 878 passed, 0 failed, 0 skipped and 0 not run.
 - The staged-snapshot pre-commit gate passes shared runtime, adapter and impact-route checks.
-- Committed runtime and mainline validation report `VALID=true`, 0 errors and 0 warnings.
-- Committed revision-1 history validation reports one record, 131 findings and `HISTORY_VALID=true`.
+- Runtime and branch-mode mainline validation at accounting commit
+  `bafe90467c326bf7d4b69988ebbf93c321cb4a91` report `VALID=true`, 0 errors and 0 warnings.
+- BaseRef history validation from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` through accounting
+  commit `bafe90467c326bf7d4b69988ebbf93c321cb4a91` reports exactly two valid records,
+  revision 2, 131 findings, fold 83/42/5/1/0 and `HISTORY_VALID=true`.
 - Claude verification reports 15 generated mirrors, 1 skipped dependent adapter and 0 errors.
 - Impact-registry comparison reports fresh generated output.
 
-Pending before this note may become Ready:
+The committed Ready tree is subject to this immediate fail-and-demote contract:
 
-- Record the accounting commit hash and replace `Related Commits: TBD`.
-- Validate revision 2 as an exact append-only prefix with 131 findings and fold 83/42/5/1/0.
-- Run the complete governance suite and runtime audit on the final note tree.
-- Run explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` and require
+- The complete governance suite must report at least 878 passed and 0 failed.
+- Runtime must report `VALID=true`, 0 errors and 0 warnings.
+- Finding-status history must retain exactly two valid revisions, 131 findings and fold
+  83/42/5/1/0.
+- Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` must report
   `VALID=true`, 0 errors and 0 warnings.
-- Run explicit Aggregate readiness and require exactly the canonical Draft-umbrella blocker.
-- Pass `git diff --check` and clean-worktree verification.
+- Explicit Aggregate readiness must fail only with the canonical `aggregate-note-not-ready`
+  blocker for `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md`.
+- `git diff --check` and clean-worktree verification must pass.
+- Any deviation requires this note to be demoted to Draft immediately under the Reopened rule.
 
 ## Merge Notes
 
-- This note remains `Draft` with reconciliation `Open` until the pending accounting identity and
-  exact-tree gates exist.
+- This dedicated Batch note is `Ready` with reconciliation `Closed` for only the seven R6-A1 IDs.
+- The exact-tree gate contract above remains mandatory; any refuting result requires immediate
+  demotion rather than preserving this status.
 - Even after bounded A1 readiness, the branch remains `NOT READY TO MERGE` because R6-A2 through
   R6-A6, Aggregate acceptance, merge and post-merge evidence remain incomplete.
 - This batch does not authorize workflow promotion, push, merge or PR-thread resolution.
 
 ## Follow-ups
 
-- Finalize this note only after the accounting commit is immutable and the exact-tree gates pass.
+- Preserve the exact-tree evidence and demote this note immediately if later evidence refutes it.
 - Continue R6-A2 without absorbing any A3 through A6 finding or Wave-4 disposition.
