@@ -841,6 +841,32 @@
       ]
     },
     {
+      "id": "implement-agent-task-parallelism-semantics",
+      "path": ".github/agents/speckit.implement.agent.md",
+      "mustContainAll": [
+        "Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines",
+        "Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.",
+        "only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together",
+        "For tasks explicitly declared parallel by `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata, continue with successful tasks and report failed ones"
+      ],
+      "mustMatchAll": [
+        "(?s)\\A(?!.*parallel markers \\[P\\])(?!.*parallel tasks \\[P\\] can run together)(?!.*For parallel tasks \\[P\\])(?!.*any non-parallel task fails).*\\z"
+      ]
+    },
+    {
+      "id": "implement-claude-task-parallelism-semantics",
+      "path": ".claude/agents/speckit-implement.md",
+      "mustContainAll": [
+        "Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines",
+        "Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.",
+        "only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together",
+        "For tasks explicitly declared parallel by `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata, continue with successful tasks and report failed ones"
+      ],
+      "mustMatchAll": [
+        "(?s)\\A(?!.*parallel markers \\[P\\])(?!.*parallel tasks \\[P\\] can run together)(?!.*For parallel tasks \\[P\\])(?!.*any non-parallel task fails).*\\z"
+      ]
+    },
+    {
       "id": "analyze-claude-machine-result",
       "path": ".claude/agents/speckit-analyze.md",
       "mustContainAll": [
