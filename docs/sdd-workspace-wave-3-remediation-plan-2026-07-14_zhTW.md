@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.20.0"
+version: "1.21.0"
 date: "2026-07-14"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "997757efec1208023b9ada76e5a32de62b31fc4a"
+head_commit: "105a09cd02f7d8b4765e49859390908e55bd97d1"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -219,6 +219,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.18.0 | 2026-07-21 | Owner Choice A establishes the prospective conservative R6 convergence plan. Residual audit adds OPEN R-B25/R-B26, producing 130 findings and current fold 76 COMPLETED / 47 OPEN / 6 DECIDED / 1 IN_PROGRESS. Seventeen bounded safety/truthfulness findings are authorized for direct repair; 35 non-critical findings may later become DISPOSITIONED only with exact Wave-4 re-entry triggers; R-E09/R-J03 remain terminal blockers. `sdd-pipeline` stays experimental, default-disabled and execution-denied. This version is plan-only and must be committed before implementation; see Section 24. |
 | 1.19.0 | 2026-07-22 | R6-A1 preflight after committed plan `f669e3d` finds that R-H03 cannot absorb the cross-surface contradiction between constitutional dependent-mirror classification and generator/contract/current-doc claims that `.claude/agents/` is runtime authority. Owner authorizes new High OPEN R-H20 and direct repair. Ledger becomes 131 with severity 8/32/52/39 and fold 76 COMPLETED / 48 OPEN / 6 DECIDED / 1 IN_PROGRESS; direct repairs become 18 including R-D07. This is still pre-implementation; see Section 25. |
 | 1.20.0 | 2026-07-22 | A second R6-A1 drift-stop refines R-H20 after the source directory proves mixed-authority: 14 `*.agent.md` files and `async-python-reviewer.md` are the 15 canonical generator inputs, while `copilot-instructions.md` is a dependent adapter and all 15 Claude outputs are dependent mirrors. Owner Choice A keeps this within R-H20, changes no counts or statuses, and requires exact partition tests before implementation continues; see Section 26. |
+| 1.21.0 | 2026-07-22 | Corrects the accounting sequence after implementation `105a09cd02f7d8b4765e49859390908e55bd97d1`: R6-A1 may receive its own evidence-backed revision-2 status delta and dedicated Batch note before A2 through A4, while R6-A5 remains the later Wave-4 and multi-batch accounting point. This timing correction changes no status by itself and preserves non-promotion, consumer exclusions, R-E09/R-J03 terminal boundaries and PR #3 NOT READY state; see Section 27. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -991,3 +992,41 @@ workflow promotion state, finding count or finding status changes.
 This correction is plan-only and must be committed before R6-A1 implementation resumes. The
 inventory remains 131 with fold 76 `COMPLETED` / 48 `OPEN` / 6 `DECIDED` / 1 `IN_PROGRESS`.
 The R6 note remains Draft/Open/TBD, and PR #3 remains `NOT READY TO MERGE`.
+
+## 27. 2026-07-22 R6-A1 scoped accounting sequence correction
+
+Implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` now exists after the committed
+R6 entry plan and both R6-A1 scope corrections. Its exact candidate tree passed 878 governance
+tests with 0 failures, the staged-snapshot hook, and the committed runtime, mainline, ledger-history,
+bootstrap, Claude parity and impact-registry checks with 0 errors and 0 warnings.
+
+A sequencing drift remains in Section 24 batch A5 and the ledger narrative Section 36.3 item 5:
+both defer all status accounting until A1 through A4 implementations exist. That broad final
+accounting point remains correct for Wave-4 dispositions and cross-batch convergence, but it would
+leave the completed R6-A1 repair and its dependent current surfaces knowingly stale while A2 through
+A4 proceed. Owner Choice A authorizes a narrower A1-only accounting checkpoint now. This section
+supersedes only the timing of evidence-backed R6-A1 closure; it does not weaken or pre-execute A5.
+
+The authorized sequence is:
+
+1. Commit this plan correction without changing a finding status.
+2. In a separate accounting commit, append revision 2 to the machine finding-status ledger. Only
+   R-D07, R-E02, R-E08, R-E11, R-H03, R-H04 and R-H20 may change to `COMPLETED`. The resulting
+   131-item fold must be 83 `COMPLETED`, 42 `OPEN`, 5 `DECIDED`, 1 `IN_PROGRESS` and
+   0 `DISPOSITIONED`; severity remains 8 Critical, 32 High, 52 Medium and 39 Low.
+3. The same accounting commit must update the dependent docs index and create
+   `docs/mainline-updates/2026-07-22-r6-a1-governance-authority-and-entry-truth.md` as a dedicated
+   `Draft`, reconciliation `Open`, validation-scope `Batch` note. The broad R6 convergence note and
+   canonical Wave-3 umbrella note remain `Draft`, `Open` and non-authorizing.
+4. In a later note-only finalization commit, set only the dedicated R6-A1 note to `Ready` and
+   reconciliation `Closed`, citing the real implementation, plan-correction and accounting commits.
+5. Validate the final tree from base `9b83f7a5d2e8630955efdb458f0e0e9a1c367839`: runtime must be
+   `VALID=true` with 0 errors and 0 warnings; the governance suite must not fall below 878 passes;
+   finding-status history must contain exactly two valid revisions and the 131-item fold above;
+   explicit Batch readiness must be valid with 0 errors and 0 warnings; explicit Aggregate
+   readiness must fail only with the canonical `aggregate-note-not-ready` umbrella blocker; and
+   diff/worktree hygiene must pass.
+
+This correction does not account for A2 through A4, append any Wave-4 disposition, complete R-E09
+or R-J03, promote `sdd-pipeline`, edit a consumer, push, merge or resolve PR threads. R6-A2 through
+R6-A6 remain pending, and PR #3 remains `NOT READY TO MERGE`.
