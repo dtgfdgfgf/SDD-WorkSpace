@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.15.0"
+version: "1.16.0"
 date: "2026-07-14"
 last_updated: "2026-07-21"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "6b749a1f153dc88412714db0ed6d8708170c5936"
+head_commit: "bab1ce93aec28819a0c68a3ed7f6e85d3de53442"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -214,6 +214,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.13.0 | 2026-07-21 | Clean re-entry implementation `2f941002009b1e05b33d790e7c6c8fc06e8daf3c` follows committed reset and authorization parent `687625af6a9df299c1037e1ba3ec29ef154dc6d3`, completes the remaining R-D03 task-priority and parallelism semantics, and leaves the refuted `8101f9a` attempt non-closing. Focused old/new evidence is 18/2 and 20/0, coordinated mutation is 1/0, full suite is 747/0/0/0, and runtime is VALID 0/0. Accounting-head Batch and Aggregate gates remain pending; see Section 19. |
 | 1.14.0 | 2026-07-21 | Accounting head `7ad8bb76eccccf91a7b87954ce19f97c3ff12951` completes the pending R-D03 final gates: exact-tree full suite 747/0/0/0, runtime VALID 0/0 with historical evidence 18/18, Batch VALID 0/0 across 10 paths, exactly one expected Aggregate umbrella blocker, and clean hygiene. R-D03 remains COMPLETED, while R6 overall and all other residuals retain their prior states; see Section 20. |
 | 1.15.0 | 2026-07-21 | Records the owner-authorized prospective plan for the R-F04 status/count truth restoration. The owner preserves R-F04 as DECIDED, meaning the retirement direction remains authorized but unimplemented. This entry does not yet supersede the later RB-4 OPEN record, change folded counts, or resume the R6 residual audit; implementation must begin only after this plan commit. See Section 21. |
+| 1.16.0 | 2026-07-21 | Implements the append-only R-F04 status clarification after entry-plan commit `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`. R-F04 is authoritatively DECIDED, meaning retirement is authorized but unimplemented; R-H15 remains DECIDED, every other finding is unchanged, and the 128-item fold remains 76/45/6/1. The dedicated Batch note remains Draft/Open/TBD until a later accounting commit and exact-tree gates; see Section 22. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -790,3 +791,32 @@ Owner 於 2026-07-21 裁定保留 R-F04 `DECIDED`。其精確語意是「退役�
 本 entry plan 不執行 skills 退役、不 promotion、不 push、不 merge，也不恢復 residual audit。
 `sdd-pipeline` 與 canonical umbrella note 的狀態保持不變，PR #3 仍
 `NOT READY TO MERGE`。
+
+## 22. 2026-07-21 R-F04 status clarification implementation
+
+Entry-plan commit `bab1ce93aec28819a0c68a3ed7f6e85d3de53442` 先保存 owner authorization
+與 Section 2.1 chronology，本節才開始 accounting-only implementation。Ledger 以新的
+日期化 latest-status row 將 R-F04 明定為 `DECIDED`，並只 supersede 第 11 節 RB-4 表中的
+`OPEN` label；歷史內容本身不改寫。
+
+`DECIDED` 的精確語意仍是「退役方向已裁定、實作尚未完成」。因此 R-F04 與 R-H15 都不
+是 `COMPLETED` 或 `DISPOSITIONED`，也沒有被 defer 或接受風險。R-H15 與其他 126 條
+finding disposition 均不變；ledger 維持 128 條、Critical 8 / High 31 / Medium 51 /
+Low 38，以及 76 COMPLETED / 45 OPEN / 6 DECIDED / 1 IN_PROGRESS。
+
+Focused discrimination 已以 section-bounded inventory、結構化 latest-record-wins 與晚出
+direct-status ambiguity scan 比較 pre-implementation parent 與 proposed tree。舊樹為
+`VALID=false`：R-F04 structured status 是 `DECIDED`，但後續 direct records 又宣稱
+`OPEN`；新樹為 `VALID=true`、0 ambiguities，且只有一個較新的 authoritative R-F04
+`DECIDED` row 與一個 R-H15 `DECIDED` row。兩樹都解析為 128 條以及 8 / 31 / 51 / 38，
+inventory 完全相同，第 22 節完全相同，deleted finding rows 為 0；新樹 fold 為
+76 / 45 / 6 / 1。此檢查只校正帳務真相，不替代日後 R-F04 retirement 所需的 runtime
+contract 與 negative tests。
+
+本 implementation commit 不預填自我 hash。Dedicated note 維持 `Draft`、`TBD`、`Open`、
+`Batch`，直到後續 accounting commit 引用真實 implementation hash，並使 exact accounting
+tree 通過完整 governance suite、runtime、Batch、預期 Aggregate blocker 與 diff/worktree
+hygiene。只有完成該 accounting sequence 後才恢復 R6 residual audit。Canonical
+`sdd-pipeline` 仍 experimental、default-disabled、execution-denied；PR #3 仍
+`NOT READY TO MERGE`，且本批不 retirement、不 promotion、不 push、不 merge、不 resolve
+PR threads。

@@ -11,11 +11,12 @@
 
 ## Summary
 
-- Record the owner-authorized prospective plan for resolving the R-F04 status/count contradiction.
+- Apply the append-only R-F04 status clarification after owner-authorized entry-plan commit
+  `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`.
 - Preserve R-F04 as unimplemented while distinguishing `DECIDED` from `COMPLETED` and
   `DISPOSITIONED`.
-- Keep the R6 residual audit paused until a post-plan implementation and accounting sequence
-  restores one authoritative ledger fold.
+- Keep the R6 residual audit paused until the implementation commit identity and exact-tree
+  accounting gates are recorded.
 
 ## Why This Update Exists
 
@@ -28,8 +29,10 @@ R-F04 to remain `DECIDED`.
 The two readings produce different folds. Treating R-F04 as `DECIDED` yields 76 COMPLETED,
 45 OPEN, 6 DECIDED, and 1 IN_PROGRESS. Treating the later `OPEN` row as authoritative yields
 76 COMPLETED, 46 OPEN, 5 DECIDED, and 1 IN_PROGRESS. The owner selected the first semantic result
-on 2026-07-21. This Draft note records only the plan; it does not claim that the later row has
-already been superseded.
+on 2026-07-21. Entry-plan commit `bab1ce93aec28819a0c68a3ed7f6e85d3de53442`
+precedes the new authoritative latest-status row that supersedes only the later RB-4 `OPEN` label.
+This note remains Draft because the implementation commit identity and final accounting gates do
+not yet exist.
 
 ## Scope
 
@@ -50,16 +53,15 @@ Out of scope:
 
 | Path | Change |
 |------|--------|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Record entry plan, then append the authoritative R-F04 status clarification after the plan commit |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record owner decision, required sequence, and validation boundary |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Append the authoritative R-F04 DECIDED clarification after the committed entry plan |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Record the post-plan implementation chronology and remaining accounting boundary |
 | `docs/README.md` | Keep the ledger index truthful during plan, implementation, and accounting states |
 | `docs/mainline-updates/README.md` | Index this dedicated note with matching state |
 | `docs/mainline-updates/2026-07-21-r6-residual-ledger-truth-restoration.md` | Preserve the drift chronology and Batch evidence |
 
 ## Impact
 
-- The prospective target is one unambiguous R-F04 status without rewriting the historical RB-4
-  record.
+- The authoritative R-F04 status is unambiguous without rewriting the historical RB-4 record.
 - R-F04 and R-H15 remain unimplemented, and all other finding dispositions remain unchanged.
 - R6 remains `IN_PROGRESS`; the branch remains `NOT READY TO MERGE`.
 
@@ -67,23 +69,29 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `pending` | Requires a post-plan implementation commit that appends the R-F04 latest-status clarification. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `pending` | Requires the implementation and final validation result after this committed entry plan. |
-| `docs/README.md` | `must_update` | `pending` | Requires final ledger version and folded-state summary after implementation. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `pending` | The latest-status clarification is applied; implementation identity and final accounting evidence remain pending. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `pending` | The post-plan implementation is recorded; final exact-tree validation remains pending. |
+| `docs/README.md` | `must_update` | `pending` | The implementation index now reflects v1.24.0 and the 76/45/6/1 fold; final Ready/Closed accounting remains pending. |
 | `docs/mainline-updates/README.md` | `must_update` | `pending` | Must match this note when it can truthfully become Ready. |
 | `studio/constitution/constitution.md` | `must_review` | `reviewed-no-change` | Section 2.1 requires this committed owner-authorized plan before implementation. |
 | `studio/runtime/shared-runtime-contract.json` | `must_review` | `reviewed-no-change` | No finding closure or runtime invariant changes in this accounting-only truth restoration. |
 
 ## Validation
 
-Planned evidence:
+Observed focused evidence:
 
-- A section-bounded parser rejects the pre-implementation tree as ambiguous because the R-F04
-  later status and final fold disagree.
-- The proposed implementation tree uniquely folds 128 findings to 76 COMPLETED, 45 OPEN,
-  6 DECIDED, and 1 IN_PROGRESS.
-- R-F04 and R-H15 remain neither `COMPLETED` nor `DISPOSITIONED`; every other finding retains its
-  previous disposition.
+- The hardened section-bounded fold reports parent `bab1ce9` as `VALID=false`: R-F04 has structured
+  status `DECIDED` followed by direct-status records claiming `OPEN`.
+- The proposed implementation tree reports `VALID=true` with 0 ambiguities and uniquely records
+  R-F04 and R-H15 as `DECIDED`; it folds 128 findings to 76 COMPLETED, 45 OPEN, 6 DECIDED, and
+  1 IN_PROGRESS.
+- Both trees parse to 128 findings and severity counts 8/31/51/38. Inventory parity and historical
+  Section 22 parity are exact, and the implementation deletes 0 finding rows.
+- R-F04 and R-H15 remain neither `COMPLETED` nor `DISPOSITIONED`; the other 126 findings retain
+  their previous dispositions.
+
+Pending final evidence:
+
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` reports `VALID=true`,
   0 errors, and 0 warnings.
 - The complete governance suite passes without reducing the 747-test baseline.
@@ -93,13 +101,13 @@ Planned evidence:
 
 ## Merge Notes
 
-- This note remains `Draft`, `TBD`, and reconciliation `Open` until the post-plan implementation,
-  accounting commit, and exact-tree gates exist.
+- This note remains `Draft`, `TBD`, and reconciliation `Open` until the implementation commit is
+  identifiable and a later accounting commit passes the exact-tree gates.
 - The batch does not authorize R-F04 retirement, workflow promotion, push, or merge.
 - `sdd-pipeline` remains experimental, default-disabled, and execution-denied.
 
 ## Follow-ups
 
-- Apply the bounded truth-restoration implementation only after this plan is committed.
+- Record the real implementation hash and final gate results in a separate accounting commit.
 - Resume the read-only R6 residual disposition audit only after the ledger has one authoritative
   fold and the truth-restoration Batch is fully validated.
