@@ -8,6 +8,7 @@ BeforeAll {
     $script:schemaRelativePath = 'studio/runtime/finding-status-record.schema.json'
     $script:indexRelativePath = 'docs/README.md'
     $script:statusBlockPattern = '(?ms)^```finding-status-record-v1\r?\n(?<payload>\{.*?\})\r?\n```'
+    $script:indexMarkerPattern = 'finding-status-index-v1; revision=(?<revision>\d+); ledgerVersion=(?<ledgerVersion>[^;\r\n]+); inventoryCount=(?<inventoryCount>\d+); severityCounts=Critical:(?<critical>\d+),High:(?<high>\d+),Medium:(?<medium>\d+),Low:(?<low>\d+); statusCounts=COMPLETED:(?<completed>\d+),OPEN:(?<open>\d+),DECIDED:(?<decided>\d+),IN_PROGRESS:(?<inProgress>\d+),DISPOSITIONED:(?<dispositioned>\d+)'
 
     function Write-FixtureText {
         param(
@@ -39,6 +40,7 @@ BeforeAll {
             New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
             Copy-Item -LiteralPath $sourcePath -Destination $targetPath
         }
+        Reset-FindingStatusFixtureToRevisionOne -Root $root
         return $root
     }
 
@@ -84,6 +86,99 @@ BeforeAll {
     function Get-IndexPath {
         param([Parameter(Mandatory)] [string]$Root)
         return Join-Path $Root $script:indexRelativePath
+    }
+
+    function Get-FindingStatusIndexMarker {
+        param([Parameter(Mandatory)] [string]$Root)
+
+        $indexText = Get-Content -LiteralPath (Get-IndexPath -Root $Root) -Raw
+        $matches = @([regex]::Matches(
+            $indexText,
+            $script:indexMarkerPattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        ))
+        if ($matches.Count -ne 1) {
+            throw "Expected one finding-status index marker; found $($matches.Count)."
+        }
+        $match = $matches[0]
+        return [pscustomobject]@{
+            Value = $match.Value
+            Revision = [int]$match.Groups['revision'].Value
+            LedgerVersion = $match.Groups['ledgerVersion'].Value
+            InventoryCount = [int]$match.Groups['inventoryCount'].Value
+            Critical = [int]$match.Groups['critical'].Value
+            High = [int]$match.Groups['high'].Value
+            Medium = [int]$match.Groups['medium'].Value
+            Low = [int]$match.Groups['low'].Value
+            Completed = [int]$match.Groups['completed'].Value
+            Open = [int]$match.Groups['open'].Value
+            Decided = [int]$match.Groups['decided'].Value
+            InProgress = [int]$match.Groups['inProgress'].Value
+            Dispositioned = [int]$match.Groups['dispositioned'].Value
+        }
+    }
+
+    function ConvertTo-FindingStatusIndexMarker {
+        param([Parameter(Mandatory)] [System.Collections.IDictionary]$Record)
+
+        return (
+            'finding-status-index-v1; revision={0}; ledgerVersion={1}; inventoryCount={2}; ' +
+            'severityCounts=Critical:{3},High:{4},Medium:{5},Low:{6}; ' +
+            'statusCounts=COMPLETED:{7},OPEN:{8},DECIDED:{9},IN_PROGRESS:{10},DISPOSITIONED:{11}'
+        ) -f @(
+            $Record.revision,
+            $Record.ledgerVersion,
+            $Record.inventoryCount,
+            $Record.severityCounts.Critical,
+            $Record.severityCounts.High,
+            $Record.severityCounts.Medium,
+            $Record.severityCounts.Low,
+            $Record.statusCounts.COMPLETED,
+            $Record.statusCounts.OPEN,
+            $Record.statusCounts.DECIDED,
+            $Record.statusCounts.IN_PROGRESS,
+            $Record.statusCounts.DISPOSITIONED
+        )
+    }
+
+    function Reset-FindingStatusFixtureToRevisionOne {
+        param([Parameter(Mandatory)] [string]$Root)
+
+        $ledgerPath = Get-LedgerPath -Root $Root
+        $ledgerText = Get-Content -LiteralPath $ledgerPath -Raw
+        $matches = @([regex]::Matches($ledgerText, $script:statusBlockPattern))
+        if ($matches.Count -lt 1) {
+            throw 'Production ledger does not contain a revision-1 status block.'
+        }
+        $record = $matches[0].Groups['payload'].Value | ConvertFrom-Json -AsHashtable
+        if ($record.revision -ne 1 -or $record.recordType -cne 'snapshot') {
+            throw 'First production status record is not the canonical revision-1 snapshot.'
+        }
+
+        for ($i = $matches.Count - 1; $i -ge 1; $i--) {
+            $ledgerText = $ledgerText.Remove($matches[$i].Index, $matches[$i].Length)
+        }
+        $versionMatches = @([regex]::Matches($ledgerText, '(?m)^version: "[^"\r\n]+"$'))
+        if ($versionMatches.Count -ne 1) {
+            throw "Expected one leading ledger version field; found $($versionMatches.Count)."
+        }
+        $versionLine = 'version: "{0}"' -f $record.ledgerVersion
+        $ledgerText = $ledgerText.Remove(
+            $versionMatches[0].Index,
+            $versionMatches[0].Length
+        ).Insert($versionMatches[0].Index, $versionLine)
+        Write-FixtureText -Path $ledgerPath -Content $ledgerText
+
+        $indexPath = Get-IndexPath -Root $Root
+        $indexText = Get-Content -LiteralPath $indexPath -Raw
+        $currentMarker = Get-FindingStatusIndexMarker -Root $Root
+        $revisionOneMarker = ConvertTo-FindingStatusIndexMarker -Record $record
+        $updatedIndex = $indexText.Replace(
+            $currentMarker.Value,
+            $revisionOneMarker,
+            [System.StringComparison]::Ordinal
+        )
+        Write-FixtureText -Path $indexPath -Content $updatedIndex
     }
 
     function Get-SchemaPath {
@@ -338,25 +433,26 @@ BeforeAll {
 }
 
 Describe 'validate-finding-status-ledger production snapshot' {
-    It 'accepts the canonical 131-finding revision-1 fold' {
+    It 'accepts the canonical production fold and matches the machine index' {
+        $expected = Get-FindingStatusIndexMarker -Root $script:workspaceRoot
         $result = Invoke-FindingStatusValidator -Root $script:workspaceRoot
 
         $result.ExitCode | Should -Be 0
         $result.Data.VALID | Should -BeTrue
         $result.Data.ERROR_COUNT | Should -Be 0
         $result.Data.WARNING_COUNT | Should -Be 0
-        $result.Data.RECORD_COUNT | Should -Be 1
-        $result.Data.LATEST_REVISION | Should -Be 1
-        $result.Data.FINDING_COUNT | Should -Be 131
-        $result.Data.SEVERITY_COUNTS.Critical | Should -Be 8
-        $result.Data.SEVERITY_COUNTS.High | Should -Be 32
-        $result.Data.SEVERITY_COUNTS.Medium | Should -Be 52
-        $result.Data.SEVERITY_COUNTS.Low | Should -Be 39
-        $result.Data.STATUS_COUNTS.COMPLETED | Should -Be 76
-        $result.Data.STATUS_COUNTS.OPEN | Should -Be 48
-        $result.Data.STATUS_COUNTS.DECIDED | Should -Be 6
-        $result.Data.STATUS_COUNTS.IN_PROGRESS | Should -Be 1
-        $result.Data.STATUS_COUNTS.DISPOSITIONED | Should -Be 0
+        $result.Data.RECORD_COUNT | Should -Be $expected.Revision
+        $result.Data.LATEST_REVISION | Should -Be $expected.Revision
+        $result.Data.FINDING_COUNT | Should -Be $expected.InventoryCount
+        $result.Data.SEVERITY_COUNTS.Critical | Should -Be $expected.Critical
+        $result.Data.SEVERITY_COUNTS.High | Should -Be $expected.High
+        $result.Data.SEVERITY_COUNTS.Medium | Should -Be $expected.Medium
+        $result.Data.SEVERITY_COUNTS.Low | Should -Be $expected.Low
+        $result.Data.STATUS_COUNTS.COMPLETED | Should -Be $expected.Completed
+        $result.Data.STATUS_COUNTS.OPEN | Should -Be $expected.Open
+        $result.Data.STATUS_COUNTS.DECIDED | Should -Be $expected.Decided
+        $result.Data.STATUS_COUNTS.IN_PROGRESS | Should -Be $expected.InProgress
+        $result.Data.STATUS_COUNTS.DISPOSITIONED | Should -Be $expected.Dispositioned
     }
 }
 
@@ -678,6 +774,7 @@ Describe 'validate-finding-status-ledger authority and fold tampering' {
         $indexPath = Get-IndexPath -Root $root
         $indexText = Get-Content -LiteralPath $indexPath -Raw
         $tampered = $indexText.Replace('inventoryCount=131;', 'inventoryCount=130;')
+        $tampered | Should -Not -BeExactly $indexText
         Write-FixtureText -Path $indexPath -Content $tampered
 
         $result = Invoke-FindingStatusValidator -Root $root

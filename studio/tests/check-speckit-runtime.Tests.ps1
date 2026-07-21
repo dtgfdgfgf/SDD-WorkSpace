@@ -392,8 +392,24 @@ Invoke-JsonScriptDetailed -ScriptPath $findingStatusLedgerScript `
         $fixtureRoot = New-RuntimeAuditFixture
         $indexPath = Join-Path $fixtureRoot 'docs/README.md'
         $content = [System.IO.File]::ReadAllText($indexPath)
-        $content = $content.Replace('COMPLETED:76,OPEN:48', 'COMPLETED:75,OPEN:49', [System.StringComparison]::Ordinal)
-        [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.UTF8Encoding]::new($false))
+        $statusPattern = 'statusCounts=COMPLETED:(?<completed>\d+),OPEN:(?<open>\d+)'
+        $statusMatches = [regex]::Matches(
+            $content,
+            $statusPattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )
+        $statusMatches.Count | Should -Be 1
+        $statusMatch = $statusMatches[0]
+        $tamperedCounts = 'statusCounts=COMPLETED:{0},OPEN:{1}' -f (
+            [int]$statusMatch.Groups['completed'].Value + 1
+        ), $statusMatch.Groups['open'].Value
+        $tampered = $content.Replace(
+            $statusMatch.Value,
+            $tamperedCounts,
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText($indexPath, $tampered, [System.Text.UTF8Encoding]::new($false))
 
         $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
 

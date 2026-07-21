@@ -566,22 +566,47 @@ Describe 'validate-mainline-notes state and branch reconciliation' {
 
     It 'accepts the machine-bounded finding-status surface and reports its fold' {
         Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
+        $indexText = [System.IO.File]::ReadAllText((Join-Path $script:fixtureRoot 'docs/README.md'))
+        $markerMatches = @([regex]::Matches(
+            $indexText,
+            'finding-status-index-v1; revision=(?<revision>\d+); ledgerVersion=[^;\r\n]+; inventoryCount=(?<inventoryCount>\d+);',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        ))
+        $markerMatches.Count | Should -Be 1
+        $expectedRevision = [int]$markerMatches[0].Groups['revision'].Value
+        $expectedFindingCount = [int]$markerMatches[0].Groups['inventoryCount'].Value
 
         $result = Invoke-MainlineValidator -Root $script:fixtureRoot
 
         $result.ExitCode | Should -Be 0 -Because $result.Raw
         $result.Data.FINDING_STATUS_LEDGER_VALID | Should -BeTrue
         $result.Data.FINDING_STATUS_HISTORY_VALID | Should -BeTrue
-        $result.Data.FINDING_STATUS_LEDGER_COUNT | Should -Be 131
-        $result.Data.FINDING_STATUS_LEDGER_REVISION | Should -Be 1
+        $result.Data.FINDING_STATUS_LEDGER_COUNT | Should -Be $expectedFindingCount
+        $result.Data.FINDING_STATUS_LEDGER_REVISION | Should -Be $expectedRevision
     }
 
     It 'promotes a finding-status index mismatch into the mainline gate' {
         Enable-FindingStatusLedgerSurface -Root $script:fixtureRoot
         $indexPath = Join-Path $script:fixtureRoot 'docs/README.md'
         $content = [System.IO.File]::ReadAllText($indexPath)
-        $content = $content.Replace('COMPLETED:76,OPEN:48', 'COMPLETED:75,OPEN:49', [System.StringComparison]::Ordinal)
-        [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.UTF8Encoding]::new($false))
+        $statusPattern = 'statusCounts=COMPLETED:(?<completed>\d+),OPEN:(?<open>\d+)'
+        $statusMatches = [regex]::Matches(
+            $content,
+            $statusPattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )
+        $statusMatches.Count | Should -Be 1
+        $statusMatch = $statusMatches[0]
+        $tamperedCounts = 'statusCounts=COMPLETED:{0},OPEN:{1}' -f (
+            [int]$statusMatch.Groups['completed'].Value + 1
+        ), $statusMatch.Groups['open'].Value
+        $tampered = $content.Replace(
+            $statusMatch.Value,
+            $tamperedCounts,
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText($indexPath, $tampered, [System.Text.UTF8Encoding]::new($false))
 
         $result = Invoke-MainlineValidator -Root $script:fixtureRoot
 
