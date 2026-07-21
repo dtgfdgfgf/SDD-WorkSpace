@@ -17,21 +17,32 @@ Those results do not authorize R-D03 closure because the attempt began before a 
 dated, owner-authorized R-D03 remediation plan existed. Constitution Section 2.1 makes that an
 entry prerequisite, not a post-implementation accounting field.
 
-This truth-restoration batch returns the five implementation surfaces to the pre-R-D03 semantics
-and keeps this note `Draft`, `TBD`, and `Open`. On 2026-07-21, after the defect was reported,
-the owner explicitly authorized a clean R-D03-only re-entry. The dated remediation plan is
-committed with this reset so that any later implementation begins from a parent commit containing
-both the plan and the restored baseline.
+Truth-restoration commit `687625af6a9df299c1037e1ba3ec29ef154dc6d3` returned the five
+implementation surfaces to the pre-R-D03 semantics and kept this note `Draft`, `TBD`, and
+`Open`. On 2026-07-21, after the defect was reported, the owner explicitly authorized a clean
+R-D03-only re-entry. The dated remediation plan was committed with that reset so that the new
+implementation begins from a parent commit containing both the plan and the restored baseline.
 
 Re-entry requires a new implementation commit after this reset, the discriminating old-fails and
 new-passes evidence, canonical runtime and complete governance gates, a committed Batch gate, and
 append-only accounting. The refuted attempt remains in Git history as evidence and must not be
 cited as the closing implementation.
 
+## Clean Re-entry Implementation (2026-07-21)
+
+This candidate implementation begins after truth-restoration and plan commit
+`687625af6a9df299c1037e1ba3ec29ef154dc6d3`. With only the new focused assertions applied
+to that committed old-semantic baseline, the focused file reported 18 passed and 2 failed.
+
+The candidate now reapplies the bounded R-D03 source, mirror, contract, and test changes. Related
+commit evidence remains `TBD` until this candidate is committed; this note remains `Draft` and
+reconciliation remains `Open` until the new implementation and all closure gates exist.
+
 ## Summary
 
 - Restore truthful `Draft` and `Open` accounting after the missing pre-implementation plan was found.
 - Establish an owner-authorized R-D03-only clean re-entry plan before any new implementation.
+- Reapply the R-D03 repair only after the reset and plan commit exist in the parent history.
 - Preserve R-G03 and every other residual as separate, unchanged work.
 
 ## Why This Update Exists
@@ -65,11 +76,11 @@ Out of scope:
 
 | Path | Change |
 |------|--------|
-| `.github/agents/speckit.implement.agent.md` | Restore the pre-R-D03 semantics before clean re-entry |
-| `.claude/agents/speckit-implement.md` | Restore the matching dependent mirror baseline |
-| `studio/runtime/shared-runtime-contract.json` | Remove the premature R-D03 closure invariants before re-entry |
-| `studio/tests/claude-agent-parity.Tests.ps1` | Remove the premature closure assertions before re-entry |
-| `studio/tests/check-speckit-runtime.Tests.ps1` | Remove the premature coordinated mutation before re-entry |
+| `.github/agents/speckit.implement.agent.md` | Reset in `687625a`, then reapply canonical priority and parallelism semantics |
+| `.claude/agents/speckit-implement.md` | Reset in `687625a`, then regenerate the matching dependent mirror |
+| `studio/runtime/shared-runtime-contract.json` | Reset in `687625a`, then restore the two R-D03 invariants |
+| `studio/tests/claude-agent-parity.Tests.ps1` | Reset in `687625a`, then restore the two focused assertions |
+| `studio/tests/check-speckit-runtime.Tests.ps1` | Reset in `687625a`, then restore the coordinated revert mutation |
 | `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Keep R-D03 OPEN and record the reset chronology |
 | `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Commit the owner-authorized R-D03-only re-entry plan |
 | `docs/README.md` | Align the ledger index with the reset status |
@@ -104,9 +115,18 @@ Out of scope:
   1 passed and 0 failed.
 - Attempt `8101f9a` also reported 747 passed, 0 failed, 0 skipped, and 0 not run in the full suite,
   plus runtime `VALID=true` with 0 errors and 0 warnings. These are explicitly non-closing results.
-- The truth-restoration commit must verify the restored baseline, canonical audit, complete
-  governance suite, staged hook, and diff hygiene before commit.
-- Clean re-entry validation remains pending while this note is Draft.
+- Truth-restoration commit `687625af6a9df299c1037e1ba3ec29ef154dc6d3` reports focused
+  parity 18 passed and 0 failed, full suite 744 passed and 0 failed, committed runtime
+  `VALID=true` with 0 errors and 0 warnings, staged hook pass, and clean diff hygiene.
+- After the plan commit, applying only the new R-D03 focused assertions to the restored old
+  semantics reports 18 passed and 2 failed.
+- The clean re-entry candidate reports focused parity 20 passed and 0 failed. The coordinated
+  source-and-mirror legacy mutation reports 1 passed and 0 failed with 40 not run; Claude parity
+  remains valid while both R-D03 contract invariants fail.
+- `pwsh ./studio/scripts/powershell/seed-claude-agents.ps1 -Verify -Json` reports
+  `VALID=true` and 0 errors for the candidate mirror.
+- Candidate full-suite, committed runtime, Batch, Aggregate, and accounting evidence remain
+  pending while this note is Draft.
 
 ## Merge Notes
 
