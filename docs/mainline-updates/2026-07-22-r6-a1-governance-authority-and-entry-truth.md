@@ -3,10 +3,10 @@
 **Date**: 2026-07-22
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`, `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`, `4d8bbe23a2e0bca39bc1e786780866af06227d7c`, `f0f325b41563dea5cfa5d53582fbc0c316938f02`
+**Status**: Ready
+**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`, `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`, `4d8bbe23a2e0bca39bc1e786780866af06227d7c`, `f0f325b41563dea5cfa5d53582fbc0c316938f02`, `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a`, `f4ca59d274fffe8f1e49950d8bf796b95eda05d6`, `be938ab07d68a229eb8b8b150e65f6971768ae8c`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Revalidation (2026-07-22, Non-Self-Referential Revision 6 Accounting)
@@ -23,11 +23,13 @@ consecutive valid revisions, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=t
 therefore restores only R-E11 to `COMPLETED`, producing fold 83/42/5/1/0. The other six A1 findings
 remain `COMPLETED`, and every other finding status remains unchanged.
 
-This accounting tree intentionally keeps this note Draft with reconciliation Open and validation
-scope Batch, and keeps its index row Draft. Its commit hash does not exist while these bytes are
-being authored. A separate finalization must later modify exactly this note and its matching index
-row, add the real accounting hash plus the plan and demotion hashes to `Related Commits`, and then
-pass every exact-tree gate. Any deviation requires immediate append-only demotion.
+Accounting commit `be938ab07d68a229eb8b8b150e65f6971768ae8c` changed exactly the four
+authorized accounting paths, preserved revisions 1 through 5 as an immutable prefix and passed
+its staged-snapshot audit, committed history validation, structural mainline validation and
+runtime audit. This separate finalization changes exactly this note and its matching index row,
+adds the real accounting, plan and demotion hashes together, and records the bounded Ready/Closed
+transition. Every exact-tree gate below governs whether that state may remain; any deviation
+requires immediate append-only demotion.
 
 ## Revalidation (2026-07-22, Evidence-Coverage Failure)
 
@@ -187,11 +189,12 @@ Observed evidence is separated by tree:
   complete governance suite reports 878 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run;
   runtime reports `VALID=true`, 0 errors and 0 warnings; and history reports exactly five valid
   revisions, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=true`.
-- This accounting tree appends only revision 6, restores only R-E11 to `COMPLETED`, updates the
-  index marker to fold 83/42/5/1/0, and keeps this note Draft/Open/Batch. Its real commit hash must
-  be captured by the later two-file finalization rather than self-referenced here.
+- Accounting commit `be938ab07d68a229eb8b8b150e65f6971768ae8c` appends only revision 6,
+  restores only R-E11 to `COMPLETED`, updates the index marker to fold 83/42/5/1/0, and keeps this
+  note Draft/Open/Batch in that accounting tree. This later two-file finalization captures its
+  real hash together with the plan and demotion hashes without self-reference.
 
-Any future committed Ready tree is subject to this immediate fail-and-demote contract:
+This committed Ready tree is subject to this immediate fail-and-demote contract:
 
 - The complete governance suite must report at least 878 passed and 0 failed.
 - Runtime must report `VALID=true`, 0 errors and 0 warnings.
@@ -206,16 +209,15 @@ Any future committed Ready tree is subject to this immediate fail-and-demote con
 
 ## Merge Notes
 
-- This dedicated Batch note remains `Draft` with reconciliation `Open` during revision-6
-  accounting; only the separately committed two-file finalization may transition it.
+- This dedicated Batch note is `Ready` with reconciliation `Closed` only for bounded R6-A1; the
+  exact-tree gates determine whether that state may remain.
 - Even after bounded A1 readiness, the branch remains `NOT READY TO MERGE` because R6-A2 through
   R6-A6, Aggregate acceptance, merge and post-merge evidence remain incomplete.
 - This batch does not authorize workflow promotion, push, merge or PR-thread resolution.
 
 ## Follow-ups
 
-- After the revision-6 accounting commit exists, modify exactly this note and its mainline index
-  row, add all three full hashes required by plan `f4ca59d274fffe8f1e49950d8bf796b95eda05d6`,
-  and run every exact-tree gate on the committed finalization head.
+- Run every exact-tree gate on this committed two-file finalization. Any failure requires immediate
+  Draft/Open demotion and a new append-only revision before other work continues.
 - Continue R6-A2 only after R6-A1 is truthfully revalidated, without absorbing any A3 through A6
   finding or Wave-4 disposition.
