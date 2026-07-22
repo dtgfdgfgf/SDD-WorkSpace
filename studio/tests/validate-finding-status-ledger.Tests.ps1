@@ -9,6 +9,75 @@ BeforeAll {
     $script:indexRelativePath = 'docs/README.md'
     $script:statusBlockPattern = '(?ms)^```finding-status-record-v1\r?\n(?<payload>\{.*?\})\r?\n```'
     $script:indexMarkerPattern = 'finding-status-index-v1; revision=(?<revision>\d+); ledgerVersion=(?<ledgerVersion>[^;\r\n]+); inventoryCount=(?<inventoryCount>\d+); severityCounts=Critical:(?<critical>\d+),High:(?<high>\d+),Medium:(?<medium>\d+),Low:(?<low>\d+); statusCounts=COMPLETED:(?<completed>\d+),OPEN:(?<open>\d+),DECIDED:(?<decided>\d+),IN_PROGRESS:(?<inProgress>\d+),DISPOSITIONED:(?<dispositioned>\d+)'
+    $script:authorizedDispositionTriggers = [System.Collections.Generic.Dictionary[string,string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    foreach ($triggerGroup in @(
+        [pscustomobject]@{
+            ids = @('R-A13')
+            trigger = 'Before adding or materially expanding `mustContainAll` literal assertions, or before the next contract-invariant refactor'
+        }
+        [pscustomobject]@{
+            ids = @('R-B23')
+            trigger = 'Before any workflow promotion, execution authorization, or use of RunState/sidecar data as trusted evidence; deferral is valid only while `sdd-pipeline` stays experimental, default-disabled and execution-denied'
+        }
+        [pscustomobject]@{
+            ids = @('R-F01', 'R-F02', 'R-F03', 'R-F05', 'R-G02')
+            trigger = 'Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time'
+        }
+        [pscustomobject]@{
+            ids = @('R-D08', 'R-D09', 'R-D10', 'R-D11')
+            trigger = 'Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors'
+        }
+        [pscustomobject]@{
+            ids = @('R-E01', 'R-E03', 'R-E04', 'R-E06', 'R-E12')
+            trigger = 'Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again'
+        }
+        [pscustomobject]@{
+            ids = @('R-G05', 'R-G07', 'R-G08', 'R-G09', 'R-G11', 'R-G12')
+            trigger = 'Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised'
+        }
+        [pscustomobject]@{
+            ids = @('R-H07', 'R-H14', 'R-H18')
+            trigger = 'Before the affected root asset, reserved directory or language policy is presented as a current supported surface'
+        }
+        [pscustomobject]@{
+            ids = @('R-I01')
+            trigger = 'Before the shared-runtime upgrade scope is expanded or changed'
+        }
+        [pscustomobject]@{
+            ids = @('R-I02')
+            trigger = 'Before adapter templates or the bootstrap generator are changed'
+        }
+        [pscustomobject]@{
+            ids = @('R-I04', 'R-I05')
+            trigger = 'Before a project claims complete prompt or knowledge-capture closure'
+        }
+        [pscustomobject]@{
+            ids = @('R-I09')
+            trigger = 'Before the extension operator surface is documented or used externally'
+        }
+        [pscustomobject]@{
+            ids = @('R-D06')
+            trigger = 'Before agent reseed or a model lifecycle, availability, cost or policy change'
+        }
+        [pscustomobject]@{
+            ids = @('R-D12')
+            trigger = 'Only after a separate owner-authorized consumer exception and a decision between project-local Copilot overlay and Claude-only support; current `projects/` and `learning/` exclusion prevents implementation'
+        }
+        [pscustomobject]@{
+            ids = @('R-F04', 'R-H15')
+            trigger = 'Before agent-skill export/install is reused, advertised or repopulated'
+        }
+        [pscustomobject]@{
+            ids = @('R-I03')
+            trigger = 'Before route-aware auto-scaffold work or workflow promotion'
+        }
+    )) {
+        foreach ($findingId in @($triggerGroup.ids)) {
+            $script:authorizedDispositionTriggers.Add([string]$findingId, [string]$triggerGroup.trigger)
+        }
+    }
 
     function Write-FixtureText {
         param(
@@ -155,9 +224,11 @@ BeforeAll {
             throw 'First production status record is not the canonical revision-1 snapshot.'
         }
 
-        for ($i = $matches.Count - 1; $i -ge 1; $i--) {
-            $ledgerText = $ledgerText.Remove($matches[$i].Index, $matches[$i].Length)
-        }
+        # Keep the fixture at the exact revision-1 authority boundary. Later prose may add
+        # finding definitions immediately before later deltas, so removing only the later
+        # machine blocks would leave an impossible definition/status fold behind.
+        $revisionOneEnd = $matches[0].Index + $matches[0].Length
+        $ledgerText = $ledgerText.Substring(0, $revisionOneEnd) + "`n"
         $versionMatches = @([regex]::Matches($ledgerText, '(?m)^version: "[^"\r\n]+"$'))
         if ($versionMatches.Count -ne 1) {
             throw "Expected one leading ledger version field; found $($versionMatches.Count)."
@@ -321,6 +392,64 @@ BeforeAll {
         Write-FixtureText -Path $indexPath -Content $updatedIndex
     }
 
+    function Add-TriggerDispositionRevision {
+        param(
+            [Parameter(Mandatory)] [string]$Root,
+            [Parameter(Mandatory)] [AllowEmptyCollection()] [object[]]$Statuses,
+            [Parameter(Mandatory)] [System.Collections.IDictionary]$StatusCounts
+        )
+
+        $record = [ordered]@{
+            schemaVersion = 1
+            revision = 2
+            recordType = 'delta'
+            recordedDate = '2026-07-23'
+            ledgerVersion = '1.30.0'
+            statuses = @($Statuses)
+            inventoryCount = 131
+            severityCounts = [ordered]@{ Critical = 8; High = 32; Medium = 52; Low = 39 }
+            statusCounts = [ordered]@{
+                COMPLETED = [int]$StatusCounts.COMPLETED
+                OPEN = [int]$StatusCounts.OPEN
+                DECIDED = [int]$StatusCounts.DECIDED
+                IN_PROGRESS = [int]$StatusCounts.IN_PROGRESS
+                DISPOSITIONED = [int]$StatusCounts.DISPOSITIONED
+            }
+        }
+
+        $ledgerPath = Get-LedgerPath -Root $Root
+        $ledgerText = Get-Content -Raw -LiteralPath $ledgerPath
+        $matches = Get-StatusBlockMatches -LedgerText $ledgerText
+        if ($matches.Count -ne 1) {
+            throw "Expected one status block before appending trigger revision; found $($matches.Count)."
+        }
+        $updatedLedger = $ledgerText.Replace(
+            'version: "1.29.0"',
+            'version: "1.30.0"',
+            [System.StringComparison]::Ordinal
+        )
+        if ($updatedLedger -ceq $ledgerText) {
+            throw 'Fixture ledger did not contain the revision-1 version.'
+        }
+        $insertAt = $matches[0].Index + $matches[0].Length
+        $updatedLedger = $updatedLedger.Insert($insertAt, "`n" + (ConvertTo-StatusBlock -Record $record))
+        Write-FixtureText -Path $ledgerPath -Content $updatedLedger
+
+        $indexPath = Get-IndexPath -Root $Root
+        $indexText = Get-Content -Raw -LiteralPath $indexPath
+        $oldMarker = Get-FindingStatusIndexMarker -Root $Root
+        $newMarker = ConvertTo-FindingStatusIndexMarker -Record $record
+        $updatedIndex = $indexText.Replace(
+            $oldMarker.Value,
+            $newMarker,
+            [System.StringComparison]::Ordinal
+        )
+        if ($updatedIndex -ceq $indexText) {
+            throw 'Fixture status index did not contain the revision-1 marker.'
+        }
+        Write-FixtureText -Path $indexPath -Content $updatedIndex
+    }
+
     function Add-NoOpDeltaRecord {
         param(
             [Parameter(Mandatory)] [string]$Root,
@@ -453,6 +582,262 @@ Describe 'validate-finding-status-ledger production snapshot' {
         $result.Data.STATUS_COUNTS.DECIDED | Should -Be $expected.Decided
         $result.Data.STATUS_COUNTS.IN_PROGRESS | Should -Be $expected.InProgress
         $result.Data.STATUS_COUNTS.DISPOSITIONED | Should -Be $expected.Dispositioned
+    }
+}
+
+Describe 'validate-finding-status-ledger conditional disposition triggers' {
+    It 'accepts all 35 exact ID-to-trigger mappings and preserves triggerless revision-1 history' {
+        $root = New-FindingStatusFixture
+        $baseCommit = Initialize-FixtureGit -Root $root
+        $ids = [string[]]@($script:authorizedDispositionTriggers.Keys)
+        [System.Array]::Sort($ids, [System.StringComparer]::Ordinal)
+        $statuses = @(
+            $ids | ForEach-Object {
+                [ordered]@{
+                    id = $_
+                    status = 'DISPOSITIONED'
+                    reentryTrigger = $script:authorizedDispositionTriggers[$_]
+                }
+            }
+        )
+        Add-TriggerDispositionRevision -Root $root -Statuses $statuses -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 18; DECIDED = 1; IN_PROGRESS = 1; DISPOSITIONED = 35
+        })
+        Complete-FixtureCommit -Root $root -Message 'append exact trigger-bearing dispositions' | Out-Null
+
+        $result = Invoke-FindingStatusValidator -Root $root -BaseRef $baseCommit
+
+        $script:authorizedDispositionTriggers.Count | Should -Be 35
+        $result.ExitCode | Should -Be 0 -Because $result.Raw
+        $result.Data.VALID | Should -BeTrue
+        $result.Data.HISTORY_VALID | Should -BeTrue
+        $result.Data.RECORD_COUNT | Should -Be 2
+        $result.Data.STATUS_COUNTS.DISPOSITIONED | Should -Be 35
+    }
+
+    It 'rejects a triggerless disposition that the legacy two-key contract accepted' {
+        $root = New-FindingStatusFixture
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{ id = 'R-A13'; status = 'DISPOSITIONED' }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 47; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 1
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-disposition-trigger-missing'
+    }
+
+    It 'rejects a non-string disposition trigger: <Label>' -TestCases @(
+        @{ Label = 'null'; Value = $null }
+        @{ Label = 'Boolean'; Value = $false }
+        @{ Label = 'number'; Value = 17 }
+        @{ Label = 'array'; Value = [object]@('later') }
+        @{ Label = 'object'; Value = [ordered]@{ when = 'later' } }
+    ) {
+        param($Label, $Value)
+
+        $root = New-FindingStatusFixture
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A13'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $Value
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 47; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 1
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-disposition-trigger-type'
+    }
+
+    It 'rejects an empty or whitespace-only disposition trigger: <Label>' -TestCases @(
+        @{ Label = 'empty'; Value = '' }
+        @{ Label = 'spaces'; Value = '   ' }
+        @{ Label = 'mixed whitespace'; Value = "`t `n" }
+    ) {
+        param($Label, $Value)
+
+        $root = New-FindingStatusFixture
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A13'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $Value
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 47; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 1
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-disposition-trigger-blank'
+    }
+
+    It 'rejects a generic or near-exact disposition trigger: <Label>' -TestCases @(
+        @{ Label = 'generic'; Mutation = 'generic' }
+        @{ Label = 'trailing space'; Mutation = 'trailing-space' }
+        @{ Label = 'case change'; Mutation = 'case-change' }
+        @{ Label = 'punctuation change'; Mutation = 'punctuation-change' }
+    ) {
+        param($Label, $Mutation)
+
+        $root = New-FindingStatusFixture
+        $exactTrigger = $script:authorizedDispositionTriggers['R-A13']
+        $value = switch ($Mutation) {
+            'generic' { 'Wave-4 backlog' }
+            'trailing-space' { $exactTrigger + ' ' }
+            'case-change' { $exactTrigger.Replace('Before', 'before') }
+            'punctuation-change' { $exactTrigger.Replace(',', ';') }
+            default { throw "Unknown trigger mutation '$Mutation'." }
+        }
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A13'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $Value
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 47; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 1
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-disposition-trigger-mismatch'
+    }
+
+    It 'rejects two authorized triggers swapped between their finding IDs' {
+        $root = New-FindingStatusFixture
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A13'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $script:authorizedDispositionTriggers['R-B23']
+            }
+            [ordered]@{
+                id = 'R-B23'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $script:authorizedDispositionTriggers['R-A13']
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 46; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 2
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        @(Get-ErrorCategories -Result $result | Where-Object {
+            $_ -ceq 'status-disposition-trigger-mismatch'
+        }).Count | Should -Be 2
+    }
+
+    It 'rejects an unapproved finding ID carrying an authorized trigger' {
+        $root = New-FindingStatusFixture
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A01'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $script:authorizedDispositionTriggers['R-A13']
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 75; OPEN = 48; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 1
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-disposition-id-unapproved'
+    }
+
+    It 'rejects reentryTrigger on a non-disposition status: <Status>' -TestCases @(
+        @{ Status = 'COMPLETED' }
+        @{ Status = 'OPEN' }
+        @{ Status = 'DECIDED' }
+        @{ Status = 'IN_PROGRESS' }
+    ) {
+        param($Status)
+
+        $root = New-FindingStatusFixture
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A13'
+                status = $Status
+                reentryTrigger = $script:authorizedDispositionTriggers['R-A13']
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 48; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 0
+        })
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-reentry-trigger-forbidden'
+    }
+
+    It 'rejects duplicate reentryTrigger JSON properties instead of accepting the last value' {
+        $root = New-FindingStatusFixture
+        $trigger = $script:authorizedDispositionTriggers['R-A13']
+        Add-TriggerDispositionRevision -Root $root -Statuses @(
+            [ordered]@{
+                id = 'R-A13'
+                status = 'DISPOSITIONED'
+                reentryTrigger = $trigger
+            }
+        ) -StatusCounts ([ordered]@{
+            COMPLETED = 76; OPEN = 47; DECIDED = 6; IN_PROGRESS = 1; DISPOSITIONED = 1
+        })
+        $ledgerPath = Get-LedgerPath -Root $root
+        $ledgerText = Get-Content -Raw -LiteralPath $ledgerPath
+        $needle = '"reentryTrigger": "' + $trigger + '"'
+        $replacement = $needle + ",`n      " + $needle
+        $tampered = $ledgerText.Replace($needle, $replacement, [System.StringComparison]::Ordinal)
+        $tampered | Should -Not -BeExactly $ledgerText
+        Write-FixtureText -Path $ledgerPath -Content $tampered
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-disposition-trigger-duplicate'
+    }
+
+    It 'rejects removal of the conditional trigger schema contract' {
+        $root = New-FindingStatusFixture
+        Update-FindingStatusSchema -Root $root -Mutation {
+            param($schema)
+            $null = $schema.properties.statuses.items.Remove('allOf')
+        }
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        Get-ErrorCategories -Result $result | Should -Contain 'status-schema-contract'
+    }
+
+    It 'returns structured denial for malformed status entries without strict-mode crashes: <Label>' -TestCases @(
+        @{ Label = 'missing id'; Entry = [ordered]@{ status = 'DISPOSITIONED'; reentryTrigger = 'x' } }
+        @{ Label = 'missing status'; Entry = [ordered]@{ id = 'R-A13'; reentryTrigger = 'x' } }
+        @{ Label = 'null entry'; Entry = $null }
+        @{ Label = 'scalar entry'; Entry = 17 }
+    ) {
+        param($Label, $Entry)
+
+        $root = New-FindingStatusFixture
+        Update-RevisionOne -Root $root -Mutation {
+            param($record)
+            $record.statuses = @($Entry) + @($record.statuses | Select-Object -Skip 1)
+        }
+
+        $result = Invoke-FindingStatusValidator -Root $root
+
+        $result.ExitCode | Should -Be 1
+        $result.Data.VALID | Should -BeFalse
+        Get-ErrorCategories -Result $result | Should -Contain 'status-record-schema'
     }
 }
 

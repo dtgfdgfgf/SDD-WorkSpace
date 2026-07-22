@@ -37,6 +37,80 @@ $indexRelativePath = 'docs/README.md'
 $selector = 'finding-status-record-v1'
 $statusOrder = @('COMPLETED', 'OPEN', 'DECIDED', 'IN_PROGRESS', 'DISPOSITIONED')
 $severityOrder = @('Critical', 'High', 'Medium', 'Low')
+$authorizedDispositionTriggerGroups = @(
+    [pscustomobject][ordered]@{
+        ids = @('R-A13')
+        trigger = 'Before adding or materially expanding `mustContainAll` literal assertions, or before the next contract-invariant refactor'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-B23')
+        trigger = 'Before any workflow promotion, execution authorization, or use of RunState/sidecar data as trusted evidence; deferral is valid only while `sdd-pipeline` stays experimental, default-disabled and execution-denied'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-F01', 'R-F02', 'R-F03', 'R-F05', 'R-G02')
+        trigger = 'Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-D08', 'R-D09', 'R-D10', 'R-D11')
+        trigger = 'Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-E01', 'R-E03', 'R-E04', 'R-E06', 'R-E12')
+        trigger = 'Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-G05', 'R-G07', 'R-G08', 'R-G09', 'R-G11', 'R-G12')
+        trigger = 'Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-H07', 'R-H14', 'R-H18')
+        trigger = 'Before the affected root asset, reserved directory or language policy is presented as a current supported surface'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-I01')
+        trigger = 'Before the shared-runtime upgrade scope is expanded or changed'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-I02')
+        trigger = 'Before adapter templates or the bootstrap generator are changed'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-I04', 'R-I05')
+        trigger = 'Before a project claims complete prompt or knowledge-capture closure'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-I09')
+        trigger = 'Before the extension operator surface is documented or used externally'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-D06')
+        trigger = 'Before agent reseed or a model lifecycle, availability, cost or policy change'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-D12')
+        trigger = 'Only after a separate owner-authorized consumer exception and a decision between project-local Copilot overlay and Claude-only support; current `projects/` and `learning/` exclusion prevents implementation'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-F04', 'R-H15')
+        trigger = 'Before agent-skill export/install is reused, advertised or repopulated'
+    }
+    [pscustomobject][ordered]@{
+        ids = @('R-I03')
+        trigger = 'Before route-aware auto-scaffold work or workflow promotion'
+    }
+)
+$authorizedDispositionTriggers = [System.Collections.Generic.Dictionary[string,string]]::new(
+    [System.StringComparer]::Ordinal
+)
+$dispositionTriggerPolicyHasDuplicateIds = $false
+foreach ($triggerGroup in $authorizedDispositionTriggerGroups) {
+    foreach ($findingId in @($triggerGroup.ids)) {
+        if (-not $authorizedDispositionTriggers.TryAdd([string]$findingId, [string]$triggerGroup.trigger)) {
+            $dispositionTriggerPolicyHasDuplicateIds = $true
+        }
+    }
+}
+$authorizedDispositionTriggerSha256 = '6c1e442d4d9b6f5be5360cffb537dbe1fa6ccaa33783f701376409ca5e007262'
 $script:errors = [System.Collections.Generic.List[object]]::new()
 $script:warnings = [System.Collections.Generic.List[object]]::new()
 
@@ -58,6 +132,170 @@ function Add-FindingStatusIssue {
     } else {
         $script:warnings.Add($issue)
     }
+}
+
+function Get-DispositionTriggerPolicySha256 {
+    param(
+        [Parameter(Mandatory)]
+        [System.Collections.Generic.Dictionary[string,string]]$Map
+    )
+
+    $ids = [string[]]@($Map.Keys)
+    [System.Array]::Sort($ids, [System.StringComparer]::Ordinal)
+    $canonical = @(
+        $ids | ForEach-Object { "$_`t$($Map[$_])" }
+    ) -join "`n"
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($canonical)
+    return [System.Convert]::ToHexString(
+        [System.Security.Cryptography.SHA256]::HashData($bytes)
+    ).ToLowerInvariant()
+}
+
+function Get-DuplicateReentryTriggerEntryIndexes {
+    param([Parameter(Mandatory)] [string]$Payload)
+
+    $duplicates = [System.Collections.Generic.List[int]]::new()
+    $document = [System.Text.Json.JsonDocument]::Parse($Payload)
+    try {
+        $root = $document.RootElement
+        if ($root.ValueKind -ne [System.Text.Json.JsonValueKind]::Object) {
+            return @()
+        }
+        try {
+            $statuses = $root.GetProperty('statuses')
+        } catch {
+            return @()
+        }
+        if ($statuses.ValueKind -ne [System.Text.Json.JsonValueKind]::Array) {
+            return @()
+        }
+
+        $entryIndex = 0
+        foreach ($entry in $statuses.EnumerateArray()) {
+            $entryIndex++
+            if ($entry.ValueKind -ne [System.Text.Json.JsonValueKind]::Object) {
+                continue
+            }
+            $triggerPropertyCount = 0
+            foreach ($property in $entry.EnumerateObject()) {
+                if ([string]::Equals(
+                    [string]$property.Name,
+                    'reentryTrigger',
+                    [System.StringComparison]::Ordinal
+                )) {
+                    $triggerPropertyCount++
+                }
+            }
+            if ($triggerPropertyCount -gt 1) {
+                $duplicates.Add($entryIndex)
+            }
+        }
+    } finally {
+        $document.Dispose()
+    }
+    return @($duplicates)
+}
+
+function Test-FindingStatusTriggerContract {
+    param(
+        [AllowNull()] [object]$Record,
+        [Parameter(Mandatory)] [int]$Position,
+        [int[]]$DuplicateTriggerEntryIndexes = @()
+    )
+
+    if ($Record -isnot [System.Collections.IDictionary]) {
+        return $true
+    }
+    $recordKeys = @($Record.Keys | ForEach-Object { [string]$_ })
+    if (
+        -not ($recordKeys -ccontains 'statuses') -or
+        $Record.statuses -isnot [System.Collections.IList]
+    ) {
+        return $true
+    }
+
+    $valid = $true
+    $duplicateIndexSet = [System.Collections.Generic.HashSet[int]]::new()
+    foreach ($duplicateIndex in @($DuplicateTriggerEntryIndexes)) {
+        $null = $duplicateIndexSet.Add([int]$duplicateIndex)
+    }
+
+    $entryIndex = 0
+    foreach ($entry in @($Record.statuses)) {
+        $entryIndex++
+        if ($entry -isnot [System.Collections.IDictionary]) {
+            continue
+        }
+        $entryKeys = @($entry.Keys | ForEach-Object { [string]$_ })
+        $hasTrigger = $entryKeys -ccontains 'reentryTrigger'
+        $isDispositioned = (
+            $entryKeys -ccontains 'status' -and
+            $entry.status -is [string] -and
+            [string]$entry.status -ceq 'DISPOSITIONED'
+        )
+        $id = if (
+            $entryKeys -ccontains 'id' -and
+            $entry.id -is [string]
+        ) { [string]$entry.id } else { '<invalid>' }
+
+        if ($duplicateIndexSet.Contains($entryIndex)) {
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-trigger-duplicate' `
+                -Path $ledgerRelativePath `
+                -Message "Finding-status record at position $Position entry $entryIndex contains duplicate reentryTrigger properties."
+            $valid = $false
+            continue
+        }
+
+        if (-not $isDispositioned) {
+            if ($hasTrigger) {
+                Add-FindingStatusIssue -Severity error -Category 'status-reentry-trigger-forbidden' `
+                    -Path $ledgerRelativePath `
+                    -Message "Finding-status record at position $Position entry $entryIndex carries reentryTrigger for non-DISPOSITIONED status."
+                $valid = $false
+            }
+            continue
+        }
+
+        if (-not $hasTrigger) {
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-trigger-missing' `
+                -Path $ledgerRelativePath `
+                -Message "DISPOSITIONED finding '$id' at record position $Position requires reentryTrigger."
+            $valid = $false
+            continue
+        }
+        if ($entry.reentryTrigger -isnot [string]) {
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-trigger-type' `
+                -Path $ledgerRelativePath `
+                -Message "DISPOSITIONED finding '$id' at record position $Position has a non-string reentryTrigger."
+            $valid = $false
+            continue
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$entry.reentryTrigger)) {
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-trigger-blank' `
+                -Path $ledgerRelativePath `
+                -Message "DISPOSITIONED finding '$id' at record position $Position has a blank reentryTrigger."
+            $valid = $false
+            continue
+        }
+        if (-not $authorizedDispositionTriggers.ContainsKey($id)) {
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-id-unapproved' `
+                -Path $ledgerRelativePath `
+                -Message "Finding '$id' is not authorized for a trigger-bearing DISPOSITIONED transition."
+            $valid = $false
+            continue
+        }
+        if (-not [string]::Equals(
+            [string]$entry.reentryTrigger,
+            [string]$authorizedDispositionTriggers[$id],
+            [System.StringComparison]::Ordinal
+        )) {
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-trigger-mismatch' `
+                -Path $ledgerRelativePath `
+                -Message "DISPOSITIONED finding '$id' at record position $Position does not carry its exact authorized re-entry trigger."
+            $valid = $false
+        }
+    }
+    return $valid
 }
 
 function Resolve-ValidationRoot {
@@ -453,7 +691,26 @@ function Test-FindingStatusSchemaContract {
                     properties = [ordered]@{
                         id = [ordered]@{ type = 'string'; pattern = '^R-[A-Z][0-9]{2,}$' }
                         status = [ordered]@{ type = 'string'; enum = @($statusOrder) }
+                        reentryTrigger = [ordered]@{
+                            type = 'string'
+                            minLength = 1
+                            pattern = '\S'
+                        }
                     }
+                    allOf = @(
+                        [ordered]@{
+                            'if' = [ordered]@{
+                                properties = [ordered]@{
+                                    status = [ordered]@{ const = 'DISPOSITIONED' }
+                                }
+                                required = @('status')
+                            }
+                            'then' = [ordered]@{ required = @('reentryTrigger') }
+                            'else' = [ordered]@{
+                                'not' = [ordered]@{ required = @('reentryTrigger') }
+                            }
+                        }
+                    )
                 }
             }
             inventoryCount = [ordered]@{ type = 'integer'; minimum = 1 }
@@ -541,13 +798,25 @@ function Test-FindingStatusRecordContract {
     foreach ($entry in $Record.statuses) {
         if ($entry -isnot [System.Collections.IDictionary]) { return $false }
         $entryKeys = @($entry.Keys | ForEach-Object { [string]$_ })
-        if ($entryKeys.Count -ne 2 -or -not ($entryKeys -ccontains 'id') -or -not ($entryKeys -ccontains 'status')) {
+        if (-not ($entryKeys -ccontains 'id') -or -not ($entryKeys -ccontains 'status')) {
             return $false
         }
         if (
             $entry.id -isnot [string] -or [string]$entry.id -notmatch '^R-[A-Z][0-9]{2,}$' -or
             $entry.status -isnot [string] -or -not ($statusOrder -ccontains [string]$entry.status)
         ) {
+            return $false
+        }
+        if ([string]$entry.status -ceq 'DISPOSITIONED') {
+            if (
+                $entryKeys.Count -ne 3 -or
+                -not ($entryKeys -ccontains 'reentryTrigger') -or
+                $entry.reentryTrigger -isnot [string] -or
+                [string]::IsNullOrWhiteSpace([string]$entry.reentryTrigger)
+            ) {
+                return $false
+            }
+        } elseif ($entryKeys.Count -ne 2) {
             return $false
         }
     }
@@ -705,6 +974,18 @@ $latestLedgerVersion = $null
 $latestSeverityCounts = New-ZeroCountMap -Keys $severityOrder
 $latestStatusCounts = New-ZeroCountMap -Keys $statusOrder
 
+if (
+    $authorizedDispositionTriggerGroups.Count -ne 15 -or
+    $authorizedDispositionTriggers.Count -ne 35 -or
+    $dispositionTriggerPolicyHasDuplicateIds -or
+    (Get-DispositionTriggerPolicySha256 -Map $authorizedDispositionTriggers) -cne
+        $authorizedDispositionTriggerSha256
+) {
+    Add-FindingStatusIssue -Severity error -Category 'status-disposition-policy-invalid' `
+        -Path 'studio/scripts/powershell/validate-finding-status-ledger.ps1' `
+        -Message 'Disposition policy must expand fifteen owner-authorized groups into exactly 35 unique finding IDs.'
+}
+
 if ($ledgerContent -and $schemaContent) {
     $frontmatterMatch = [regex]::Match($ledgerContent, '\A---\r?\n(?<body>.*?)\r?\n---\r?\n', 'Singleline')
     $frontmatter = if ($frontmatterMatch.Success) { $frontmatterMatch.Groups['body'].Value } else { '' }
@@ -776,6 +1057,23 @@ if ($ledgerContent -and $schemaContent) {
                 -Message "Finding-status record at position $position is invalid JSON."
             continue
         }
+        $duplicateTriggerInspectionValid = $true
+        $duplicateTriggerEntryIndexes = @()
+        try {
+            $duplicateTriggerEntryIndexes = @(
+                Get-DuplicateReentryTriggerEntryIndexes -Payload $block.payload
+            )
+        } catch {
+            $duplicateTriggerInspectionValid = $false
+            Add-FindingStatusIssue -Severity error -Category 'status-disposition-trigger-inspection' `
+                -Path $ledgerRelativePath `
+                -Message "Finding-status record at position $position could not be inspected for duplicate reentryTrigger properties."
+        }
+        $triggerContractValid = $false
+        if ($duplicateTriggerInspectionValid) {
+            $triggerContractValid = Test-FindingStatusTriggerContract -Record $record `
+                -Position $position -DuplicateTriggerEntryIndexes $duplicateTriggerEntryIndexes
+        }
         $recordContractValid = Test-FindingStatusRecordContract -Record $record
         $schemaDiagnostics = @()
         try {
@@ -804,6 +1102,9 @@ if ($ledgerContent -and $schemaContent) {
                         -Message "Finding-status record at position $position has an impossible recordedDate."
                 }
             }
+            continue
+        }
+        if (-not $triggerContractValid) {
             continue
         }
         $records += [pscustomobject][ordered]@{

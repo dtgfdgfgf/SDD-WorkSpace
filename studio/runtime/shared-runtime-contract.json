@@ -1518,7 +1518,12 @@
         "\"additionalProperties\": false",
         "\"pattern\": \"^R-[A-Z][0-9]{2,}$\"",
         "\"IN_PROGRESS\"",
-        "\"DISPOSITIONED\""
+        "\"DISPOSITIONED\"",
+        "\"reentryTrigger\"",
+        "\"const\": \"DISPOSITIONED\"",
+        "\"pattern\": \"\\\\S\"",
+        "\"allOf\"",
+        "\"else\""
       ]
     },
     {
@@ -1543,7 +1548,47 @@
         "status-index-mismatch",
         "status-history-rewritten",
         "merge-base --is-ancestor",
-        "HISTORY_VALID"
+        "HISTORY_VALID",
+        "$authorizedDispositionTriggerGroups",
+        "$authorizedDispositionTriggers.Count -ne 35",
+        "Get-DispositionTriggerPolicySha256",
+        "6c1e442d4d9b6f5be5360cffb537dbe1fa6ccaa33783f701376409ca5e007262",
+        "[System.StringComparison]::Ordinal",
+        "status-disposition-policy-invalid",
+        "status-disposition-trigger-missing",
+        "status-disposition-trigger-type",
+        "status-disposition-trigger-blank",
+        "status-disposition-trigger-duplicate",
+        "status-disposition-trigger-mismatch",
+        "status-disposition-id-unapproved",
+        "status-reentry-trigger-forbidden"
+      ]
+    },
+    {
+      "id": "finding-status-disposition-trigger-tests",
+      "path": "studio/tests/validate-finding-status-ledger.Tests.ps1",
+      "mustContainAll": [
+        "accepts all 35 exact ID-to-trigger mappings and preserves triggerless revision-1 history",
+        "rejects a triggerless disposition that the legacy two-key contract accepted",
+        "rejects a non-string disposition trigger",
+        "rejects an empty or whitespace-only disposition trigger",
+        "rejects a generic or near-exact disposition trigger",
+        "rejects two authorized triggers swapped between their finding IDs",
+        "rejects an unapproved finding ID carrying an authorized trigger",
+        "rejects reentryTrigger on a non-disposition status",
+        "rejects duplicate reentryTrigger JSON properties instead of accepting the last value",
+        "returns structured denial for malformed status entries without strict-mode crashes"
+      ]
+    },
+    {
+      "id": "finding-status-disposition-runtime-reversion-tests",
+      "path": "studio/tests/check-speckit-runtime.Tests.ps1",
+      "mustContainAll": [
+        "rejects an ordinal disposition trigger mapping swap even when all literals remain present",
+        "rejects removal of the conditional disposition trigger schema through runtime invariants",
+        "status-disposition-policy-invalid",
+        "finding-status-record-schema",
+        "status-schema-contract"
       ]
     },
     {

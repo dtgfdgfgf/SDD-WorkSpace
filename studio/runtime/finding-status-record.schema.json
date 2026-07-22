@@ -63,8 +63,39 @@
               "IN_PROGRESS",
               "DISPOSITIONED"
             ]
+          },
+          "reentryTrigger": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "DISPOSITIONED"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "required": [
+                "reentryTrigger"
+              ]
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "reentryTrigger"
+                ]
+              }
+            }
+          }
+        ]
       }
     },
     "inventoryCount": {

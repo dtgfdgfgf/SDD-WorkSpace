@@ -608,6 +608,66 @@ Invoke-JsonScriptDetailed -ScriptPath $findingStatusLedgerScript `
         @($audit.Result.FAILURES.id) | Should -Contain 'status-index-mismatch'
     }
 
+    It 'rejects an ordinal disposition trigger mapping swap even when all literals remain present' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $validatorPath = Join-Path $fixtureRoot 'studio/scripts/powershell/validate-finding-status-ledger.ps1'
+        $content = [System.IO.File]::ReadAllText($validatorPath)
+        $firstTrigger = 'Before adding or materially expanding `mustContainAll` literal assertions, or before the next contract-invariant refactor'
+        $secondTrigger = 'Before any workflow promotion, execution authorization, or use of RunState/sidecar data as trusted evidence; deferral is valid only while `sdd-pipeline` stays experimental, default-disabled and execution-denied'
+        $placeholder = '__R_E13_DIRECTIONAL_TRIGGER_SWAP__'
+        $content.Contains($firstTrigger, [System.StringComparison]::Ordinal) | Should -BeTrue
+        $content.Contains($secondTrigger, [System.StringComparison]::Ordinal) | Should -BeTrue
+        $tampered = $content.Replace(
+            $firstTrigger,
+            $placeholder,
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            $secondTrigger,
+            $firstTrigger,
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            $placeholder,
+            $secondTrigger,
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText(
+            $validatorPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.FINDING_STATUS_LEDGER_VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'status-disposition-policy-invalid'
+    }
+
+    It 'rejects removal of the conditional disposition trigger schema through runtime invariants' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $schemaPath = Join-Path $fixtureRoot 'studio/runtime/finding-status-record.schema.json'
+        $content = [System.IO.File]::ReadAllText($schemaPath)
+        $tampered = $content.Replace(
+            '"allOf": [',
+            '"allOfLegacy": [',
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText(
+            $schemaPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        $audit.Result.FINDING_STATUS_LEDGER_VALID | Should -BeFalse
+        @($audit.Result.FAILURES.id) | Should -Contain 'finding-status-record-schema'
+        @($audit.Result.FAILURES.id) | Should -Contain 'status-schema-contract'
+    }
+
     It 'rejects a wrong-type exact agent authority partition' {
         $fixtureRoot = New-RuntimeAuditFixture
         $contractPath = Join-Path $fixtureRoot 'studio/runtime/shared-runtime-contract.json'
