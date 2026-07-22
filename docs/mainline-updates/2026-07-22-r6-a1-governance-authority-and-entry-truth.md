@@ -9,6 +9,26 @@
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
 
+## Revalidation (2026-07-22, Non-Self-Referential Revision 6 Accounting)
+
+Honesty demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` preserved the Batch failure as
+revision 5 and returned only R-E11 to `IN_PROGRESS`. Plan
+`f4ca59d274fffe8f1e49950d8bf796b95eda05d6` then committed a non-self-referential re-entry
+sequence without weakening the validator or exempting `docs/README.md` from branch evidence
+coverage.
+
+On the clean demotion-and-plan tree, the complete governance suite reports 878 passed and 0 failed,
+runtime reports `VALID=true` with 0 errors and 0 warnings, and BaseRef history reports exactly five
+consecutive valid revisions, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=true`. Revision 6
+therefore restores only R-E11 to `COMPLETED`, producing fold 83/42/5/1/0. The other six A1 findings
+remain `COMPLETED`, and every other finding status remains unchanged.
+
+This accounting tree intentionally keeps this note Draft with reconciliation Open and validation
+scope Batch, and keeps its index row Draft. Its commit hash does not exist while these bytes are
+being authored. A separate finalization must later modify exactly this note and its matching index
+row, add the real accounting hash plus the plan and demotion hashes to `Related Commits`, and then
+pass every exact-tree gate. Any deviation requires immediate append-only demotion.
+
 ## Revalidation (2026-07-22, Evidence-Coverage Failure)
 
 Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` through finalization head
@@ -53,8 +73,8 @@ branch remains `NOT READY TO MERGE`.
 
 - Establish a machine-bounded, append-only finding-status authority without making the full repair
   ledger authoritative.
-- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20 while R-E11
-  re-enters verification after the evidence-coverage failure.
+- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20 while
+  revision 6 restores only R-E11 after the non-self-referential pre-accounting gates pass.
 - Keep consumer repositories, workflow promotion, Aggregate acceptance and the remaining R6
   batches outside this checkpoint.
 
@@ -74,14 +94,18 @@ After the first failed finalization, amendment `483947a19cc4790785ae710bd7cf5e9a
 preserved the honesty-demotion record and authorized the revision-4 re-entry sequence. Surface-set
 correction `4d8bbe23a2e0bca39bc1e786780866af06227d7c` addressed dependent prose, but finalization
 `f0f325b41563dea5cfa5d53582fbc0c316938f02` exposed a separate last-touch evidence-sequencing
-failure. The later R6-A5 boundary for Wave-4 dispositions and cross-batch convergence is unchanged.
+failure. Demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` and plan
+`f4ca59d274fffe8f1e49950d8bf796b95eda05d6` preserve that failure and authorize only the bounded
+revision-6 accounting and later two-file finalization sequence. The later R6-A5 boundary for
+Wave-4 dispositions and cross-batch convergence is unchanged.
 
 ## Scope
 
 In scope:
 
 - R-E11 scoped finding-status schema, validator, runtime integration and append-only revisions 1
-  through 5, including both honesty demotions and the refuted revision-4 re-entry.
+  through 6, including both honesty demotions, the refuted revision-4 re-entry and the bounded
+  revision-6 re-accounting.
 - R-D07 artifact path/type formatting enforcement with bounded semantic exceptions.
 - R-E02 and R-E08 adapter phase and current-phase truth.
 - R-H03 and R-H04 README and workspace-structure truth.
@@ -110,8 +134,8 @@ Out of scope:
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Derive the current finding-status index marker and require a real tampering mutation |
 | `studio/tests/mainline-note-validation.Tests.ps1` | Derive the current marker for runtime-propagation tampering evidence |
 | `studio/tests/validate-finding-status-ledger.Tests.ps1` | Keep the isolated unit fixture explicitly revision-aware |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve revisions 1 through 4 and append revision 5 for only R-E11 demotion |
-| `docs/README.md` | Match the revision-5 fold and dependent Draft/Open state |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve revisions 1 through 5 and append revision 6 for only R-E11 completion |
+| `docs/README.md` | Match revision 6 and fold 83/42/5/1/0 with state-neutral readiness prose |
 
 ## Impact
 
@@ -129,7 +153,7 @@ Out of scope:
 | `AGENTS.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `CLAUDE.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `.github/copilot-instructions.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes bootstrap, phase and dependent-adapter truth. |
-| `docs/README.md` | `must_update` | `updated` | Revision 5 matches 131 findings, fold 82/42/5/2/0 and this note's Draft/Open state. |
+| `docs/README.md` | `must_update` | `updated` | Revision 6 matches 131 findings and fold 83/42/5/1/0; readiness prose defers to this note and its index row. |
 
 ## Validation
 
@@ -158,14 +182,21 @@ Observed evidence is separated by tree:
 - The concurrently started runtime and complete governance suite were intentionally stopped after
   the Batch failure and are not finalization-tree evidence. Revision 5 records the required
   demotion to fold 82/42/5/2/0.
+- Demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` and committed plan
+  `f4ca59d274fffe8f1e49950d8bf796b95eda05d6` produce a clean pre-accounting tree where the
+  complete governance suite reports 878 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run;
+  runtime reports `VALID=true`, 0 errors and 0 warnings; and history reports exactly five valid
+  revisions, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=true`.
+- This accounting tree appends only revision 6, restores only R-E11 to `COMPLETED`, updates the
+  index marker to fold 83/42/5/1/0, and keeps this note Draft/Open/Batch. Its real commit hash must
+  be captured by the later two-file finalization rather than self-referenced here.
 
 Any future committed Ready tree is subject to this immediate fail-and-demote contract:
 
 - The complete governance suite must report at least 878 passed and 0 failed.
 - Runtime must report `VALID=true`, 0 errors and 0 warnings.
-- Finding-status history must preserve revisions 1 through 5 plus every later authorized,
-  consecutive valid revision, with 131 findings and current fold/index parity. A new committed
-  re-entry plan must define the exact terminal revision and fold before another Ready transition.
+- Finding-status history must contain exactly six consecutive valid revisions, preserve revisions
+  1 through 5 as an immutable prefix, report 131 findings and match fold 83/42/5/1/0 in the index.
 - Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` must report
   `VALID=true`, 0 errors and 0 warnings.
 - Explicit Aggregate readiness must fail only with the canonical `aggregate-note-not-ready`
@@ -175,14 +206,16 @@ Any future committed Ready tree is subject to this immediate fail-and-demote con
 
 ## Merge Notes
 
-- This dedicated Batch note is `Draft` with reconciliation `Open` after the failed Batch gate.
+- This dedicated Batch note remains `Draft` with reconciliation `Open` during revision-6
+  accounting; only the separately committed two-file finalization may transition it.
 - Even after bounded A1 readiness, the branch remains `NOT READY TO MERGE` because R6-A2 through
   R6-A6, Aggregate acceptance, merge and post-merge evidence remain incomplete.
 - This batch does not authorize workflow promotion, push, merge or PR-thread resolution.
 
 ## Follow-ups
 
-- Commit an explicit non-self-referential R-E11 re-entry sequence before any later completion or
-  Ready claim, then run every exact-tree gate on the resulting committed head.
+- After the revision-6 accounting commit exists, modify exactly this note and its mainline index
+  row, add all three full hashes required by plan `f4ca59d274fffe8f1e49950d8bf796b95eda05d6`,
+  and run every exact-tree gate on the committed finalization head.
 - Continue R6-A2 only after R6-A1 is truthfully revalidated, without absorbing any A3 through A6
   finding or Wave-4 disposition.

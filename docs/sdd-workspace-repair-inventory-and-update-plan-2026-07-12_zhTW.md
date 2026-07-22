@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.33.0"
+version: "1.34.0"
 date: "2026-07-12"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f0f325b41563dea5cfa5d53582fbc0c316938f02"
+head_commit: "f4ca59d274fffe8f1e49950d8bf796b95eda05d6"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -471,6 +471,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.31.0 | 2026-07-22 | Appends revision 3 after finalization head `8f0dd46` exposed a no-op hard-coded finding-status index mutation and stale note-state prose in `docs/README.md`. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated R6-A1 note returns to Draft/Open. See Section 41. |
 | 1.32.0 | 2026-07-22 | After fixture repair `ea78b64` and committed re-entry correction `483947a`, the clean repair-and-plan tree passes 878 governance tests with 0 failures, runtime `VALID=true` with 0 errors and 0 warnings, and valid three-revision history. Revision 4 changes only R-E11 from IN_PROGRESS to COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across the unchanged 131 findings. The dedicated R6-A1 note remains Draft/Open pending final exact-tree gates and note-only finalization. See Section 42. |
 | 1.33.0 | 2026-07-22 | Appends revision 5 after finalization head `f0f325b` failed explicit Batch readiness with `branch-evidence-coverage-missing` for `docs/README.md`: the Ready note could not cite that same commit's previously unknown hash as the path's last-touch evidence. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated note returns to Draft/Open. The interrupted exact-tree suite is not closure evidence. See Section 43. |
+| 1.34.0 | 2026-07-22 | After honesty demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` and committed non-self-referential plan `f4ca59d274fffe8f1e49950d8bf796b95eda05d6`, the clean five-revision tree passes 878 governance tests with 0 failures, runtime `VALID=true` with 0 errors and 0 warnings, and valid history at fold 82/42/5/2/0. Revision 6 changes only R-E11 from IN_PROGRESS to COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across 131 findings. The dedicated note remains Draft/Open/Batch until a later two-file finalization can cite this accounting commit's real hash. See Section 44. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1975,6 +1976,60 @@ merge and post-merge evidence remain unchanged. This demotion does not authorize
     "OPEN": 42,
     "DECIDED": 5,
     "IN_PROGRESS": 2,
+    "DISPOSITIONED": 0
+  }
+}
+```
+
+## 44. 2026-07-22 R6-A1 non-self-referential R-E11 revision 6 accounting
+
+Honesty demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` preserved the failed
+evidence-coverage attempt as revision 5 and returned only R-E11 to `IN_PROGRESS`. Committed plan
+`f4ca59d274fffe8f1e49950d8bf796b95eda05d6` then defined a non-self-referential sequence without
+weakening the mainline validator or exempting `docs/README.md` from branch evidence coverage.
+
+On the clean demotion-and-plan tree, the complete governance suite reports 878 passed and 0 failed,
+runtime reports `VALID=true` with 0 errors and 0 warnings, and BaseRef validation reports exactly
+five consecutive valid revisions, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=true`. These
+results satisfy the pre-accounting gate in the committed plan. Revision 6 therefore changes only
+R-E11 from `IN_PROGRESS` to `COMPLETED`; R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20 remain
+`COMPLETED`, and every other finding status remains unchanged.
+
+This accounting commit keeps the dedicated R6-A1 note Draft with reconciliation Open and validation
+scope Batch, and keeps its mainline index row Draft. The `docs/README.md` marker records revision 6
+and fold 83/42/5/1/0 while its prose remains state-neutral. A later finalization may modify only the
+dedicated note and its matching index row after this accounting commit's real hash exists. Every
+exact-tree gate remains mandatory; any failure requires an immediate append-only demotion before
+other work continues.
+
+R6-A2 through R6-A6, Wave-4 dispositions, R-E09, R-J03, workflow promotion, Aggregate acceptance,
+merge and post-merge evidence remain unchanged. This accounting does not authorize edits under
+`projects/`, `learning/` or `studio/workflows/`, push, merge or PR-thread resolution.
+`sdd-pipeline` remains experimental, default-disabled and execution-denied; PR #3 remains
+`NOT READY TO MERGE`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 6,
+  "recordType": "delta",
+  "recordedDate": "2026-07-22",
+  "ledgerVersion": "1.34.0",
+  "statuses": [
+    {"id":"R-E11","status":"COMPLETED"}
+  ],
+  "inventoryCount": 131,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 52,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 83,
+    "OPEN": 42,
+    "DECIDED": 5,
+    "IN_PROGRESS": 1,
     "DISPOSITIONED": 0
   }
 }
