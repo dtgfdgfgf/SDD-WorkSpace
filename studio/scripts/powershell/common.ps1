@@ -269,22 +269,34 @@ function Get-RepoRoot {
 }
 
 function Get-CurrentBranch {
+    param([string]$ProjectRoot)
+
     # First check if SPECIFY_FEATURE environment variable is set
     if ($env:SPECIFY_FEATURE) {
         return $env:SPECIFY_FEATURE
     }
 
-    $projectRoot = Find-ProjectRoot -StartDir (Get-Location)
+    $resolvedProjectRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+        $detectedProjectRoot = Find-ProjectRoot -StartDir (Get-Location)
+        if ($detectedProjectRoot) {
+            [System.IO.Path]::GetFullPath($detectedProjectRoot)
+        } else {
+            $null
+        }
+    } else {
+        [System.IO.Path]::GetFullPath($ProjectRoot)
+    }
+    $gitStart = if ($resolvedProjectRoot) { $resolvedProjectRoot } else { (Get-Location).Path }
 
-    # Only trust git branch information when the current project root matches the git root.
+    # Only trust git branch information when the selected project root matches the git root.
     try {
-        $gitRoot = git rev-parse --show-toplevel 2>$null
+        $gitRoot = git -C $gitStart rev-parse --show-toplevel 2>$null
         if ($LASTEXITCODE -eq 0 -and $gitRoot) {
-            $gitBranch = git rev-parse --abbrev-ref HEAD 2>$null
+            $gitBranch = git -C $gitStart rev-parse --abbrev-ref HEAD 2>$null
             if ($LASTEXITCODE -eq 0 -and $gitBranch) {
-                $resolvedGitRoot = (Resolve-Path $gitRoot).Path
-                $resolvedProjectRoot = if ($projectRoot) { (Resolve-Path $projectRoot).Path } else { $null }
-                if (-not $resolvedProjectRoot -or $resolvedProjectRoot -eq $resolvedGitRoot) {
+                $resolvedGitRoot = [System.IO.Path]::GetFullPath([string]$gitRoot)
+                if (-not $resolvedProjectRoot -or
+                    $resolvedProjectRoot.Equals($resolvedGitRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
                     return $gitBranch
                 }
             }
@@ -294,7 +306,7 @@ function Get-CurrentBranch {
     }
     
     # For non-git repos, try to find the latest feature directory
-    $repoRoot = if ($projectRoot) { $projectRoot } else { Get-RepoRoot }
+    $repoRoot = if ($resolvedProjectRoot) { $resolvedProjectRoot } else { Get-RepoRoot }
     $specsDir = Join-Path $repoRoot "specs"
     
     if (Test-Path $specsDir) {
@@ -321,16 +333,30 @@ function Get-CurrentBranch {
 }
 
 function Test-HasGit {
-    $projectRoot = Find-ProjectRoot -StartDir (Get-Location)
+    param([string]$ProjectRoot)
+
+    $resolvedProjectRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+        $detectedProjectRoot = Find-ProjectRoot -StartDir (Get-Location)
+        if ($detectedProjectRoot) {
+            [System.IO.Path]::GetFullPath($detectedProjectRoot)
+        } else {
+            $null
+        }
+    } else {
+        [System.IO.Path]::GetFullPath($ProjectRoot)
+    }
+    $gitStart = if ($resolvedProjectRoot) { $resolvedProjectRoot } else { (Get-Location).Path }
+
     try {
-        $gitRoot = git rev-parse --show-toplevel 2>$null
+        $gitRoot = git -C $gitStart rev-parse --show-toplevel 2>$null
         if ($LASTEXITCODE -ne 0 -or -not $gitRoot) {
             return $false
         }
-        if (-not $projectRoot) {
+        if (-not $resolvedProjectRoot) {
             return $true
         }
-        return ((Resolve-Path $gitRoot).Path -eq (Resolve-Path $projectRoot).Path)
+        $resolvedGitRoot = [System.IO.Path]::GetFullPath([string]$gitRoot)
+        return $resolvedProjectRoot.Equals($resolvedGitRoot, [System.StringComparison]::OrdinalIgnoreCase)
     } catch {
         return $false
     }
@@ -361,31 +387,152 @@ function Get-FeatureDir {
     Join-Path $RepoRoot "specs/$Branch"
 }
 
-function Get-FeaturePathsEnv {
-    $repoRoot = Get-RepoRoot
-    $currentBranch = Get-CurrentBranch
-    $hasGit = Test-HasGit
-    $featureDir = Get-FeatureDir -RepoRoot $repoRoot -Branch $currentBranch
-    $readinessDir = Join-Path $featureDir 'readiness'
+function Assert-NoReparsePointInTree {
+    <#
+    .SYNOPSIS
+    Reject reparse points in an existing feature tree before artifact access.
+
+    .DESCRIPTION
+    Feature identity and artifact paths must retain their lexical repository
+    ownership. Rejecting every existing junction or symbolic link in the
+    selected tree rejects root aliases and descendant artifact redirects that
+    exist while the resolver scans the tree.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Root,
+        [string]$MessagePrefix = 'Feature tree contains a reparse point'
+    )
+
+    $resolvedRoot = [System.IO.Path]::GetFullPath($Root)
+    if (-not (Test-Path -LiteralPath $resolvedRoot)) {
+        return
+    }
+
+    $pending = [System.Collections.Generic.Stack[string]]::new()
+    $pending.Push($resolvedRoot)
+    while ($pending.Count -gt 0) {
+        $currentPath = $pending.Pop()
+        $currentItem = Get-Item -LiteralPath $currentPath -Force -ErrorAction Stop
+        if (($currentItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "${MessagePrefix}: $($currentItem.FullName)"
+        }
+        if (-not $currentItem.PSIsContainer) {
+            continue
+        }
+
+        foreach ($child in @(Get-ChildItem -LiteralPath $currentItem.FullName -Force -ErrorAction Stop)) {
+            if (($child.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "${MessagePrefix}: $($child.FullName)"
+            }
+            if ($child.PSIsContainer) {
+                $pending.Push($child.FullName)
+            }
+        }
+    }
+}
+
+function Resolve-FeatureContext {
+    <#
+    .SYNOPSIS
+    Resolve one feature identity against a trusted repository root.
+
+    .DESCRIPTION
+    Explicit feature paths are resolved from the repository root, never the
+    caller working directory. The normalized feature directory must be a
+    direct child of <repository>/specs. When FeatureDir is omitted, the same
+    boundary is applied to the branch or SPECIFY_FEATURE-derived identity.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$FeatureDir,
+        [string]$ProjectRoot
+    )
+
+    $repoRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+        [System.IO.Path]::GetFullPath((Get-RepoRoot))
+    } else {
+        Resolve-AbsolutePath -Path $ProjectRoot
+    }
+    if (-not (Test-Path -LiteralPath $repoRoot -PathType Container)) {
+        throw "Repository root not found: $repoRoot"
+    }
+
+    # Validate the canonical specs authority before branch fallback can enumerate
+    # it. A lexical specs path may itself be a junction or symbolic link.
+    $specsRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'specs'))
+    if (Test-Path -LiteralPath $specsRoot) {
+        $null = Resolve-ExistingPathInsideRoot -Root $repoRoot -Candidate $specsRoot `
+            -MessagePrefix 'FEATURE_DIR escapes project root through a reparse point'
+    }
+
+    $currentBranch = Get-CurrentBranch -ProjectRoot $repoRoot
+    $hasGit = Test-HasGit -ProjectRoot $repoRoot
+    $candidate = if ([string]::IsNullOrWhiteSpace($FeatureDir)) {
+        if ([string]::IsNullOrWhiteSpace($currentBranch)) {
+            throw 'Unable to resolve a feature identity from the current branch or SPECIFY_FEATURE.'
+        }
+        Join-Path 'specs' $currentBranch
+    } else {
+        $FeatureDir
+    }
+
+    $resolvedFeatureDir = Resolve-AbsolutePath -Path $candidate -BaseDir $repoRoot
+    $featureParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $resolvedFeatureDir))
+    if (-not $featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "FEATURE_DIR escapes project root: $resolvedFeatureDir must be a direct child of $specsRoot"
+    }
+
+    # Lexical equality is insufficient when specs/ or its selected feature is a
+    # junction or symbolic link. Resolve every existing component physically so
+    # an apparently local direct child cannot redirect artifact access elsewhere.
+    if (Test-Path -LiteralPath $resolvedFeatureDir) {
+        $null = Resolve-ExistingPathInsideRoot -Root $specsRoot -Candidate $resolvedFeatureDir `
+            -MessagePrefix 'FEATURE_DIR escapes project specs through a reparse point'
+        Assert-NoReparsePointInTree -Root $resolvedFeatureDir `
+            -MessagePrefix 'FEATURE_DIR contains a reparse point'
+    }
+
+    $featureId = Split-Path -Leaf $resolvedFeatureDir
+    if ([string]::IsNullOrWhiteSpace($featureId) -or $featureId -in @('.', '..')) {
+        throw "FEATURE_DIR has an invalid feature identity: $resolvedFeatureDir"
+    }
+
+    $readinessDir = Join-Path $resolvedFeatureDir 'readiness'
     $eciDir = Join-Path $readinessDir 'eci'
-    
-    [PSCustomObject]@{
+    $runDir = Join-Path (Join-Path (Join-Path $repoRoot '.workflow') 'runs') $featureId
+
+    return [PSCustomObject][ordered]@{
         REPO_ROOT            = $repoRoot
+        PROJECT_ROOT         = $repoRoot
         CURRENT_BRANCH       = $currentBranch
         HAS_GIT              = $hasGit
-        FEATURE_DIR          = $featureDir
-        FEATURE_SPEC         = Join-Path $featureDir 'spec.md'
-        INTENT_LEDGER        = Join-Path $featureDir 'intent-ledger.md'
+        FEATURE              = $featureId
+        FEATURE_ID           = $featureId
+        FEATURE_DIR          = $resolvedFeatureDir
+        FEATURE_PATH         = $resolvedFeatureDir
+        FEATURE_RELATIVE_PATH = "specs/$featureId"
+        FEATURE_SPEC         = Join-Path $resolvedFeatureDir 'spec.md'
+        INTENT_LEDGER        = Join-Path $resolvedFeatureDir 'intent-ledger.md'
         READINESS_DIR        = $readinessDir
         READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
         ECI_DIR              = $eciDir
-        IMPL_PLAN            = Join-Path $featureDir 'plan.md'
-        TASKS                = Join-Path $featureDir 'tasks.md'
-        RESEARCH             = Join-Path $featureDir 'research.md'
-        DATA_MODEL           = Join-Path $featureDir 'data-model.md'
-        QUICKSTART           = Join-Path $featureDir 'quickstart.md'
-        CONTRACTS_DIR        = Join-Path $featureDir 'contracts'
+        ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
+        ECI_REQUIREMENT_PATH = Join-Path $runDir 'eci-requirement.json'
+        IMPL_PLAN            = Join-Path $resolvedFeatureDir 'plan.md'
+        TASKS                = Join-Path $resolvedFeatureDir 'tasks.md'
+        RESEARCH             = Join-Path $resolvedFeatureDir 'research.md'
+        DATA_MODEL           = Join-Path $resolvedFeatureDir 'data-model.md'
+        QUICKSTART           = Join-Path $resolvedFeatureDir 'quickstart.md'
+        CONTRACTS_DIR        = Join-Path $resolvedFeatureDir 'contracts'
+        ANALYSIS_RESULT      = Join-Path $resolvedFeatureDir 'analysis-result.json'
+        ANALYSIS_CHECKLIST   = Join-Path $resolvedFeatureDir 'analysis-checklist.md'
     }
+}
+
+function Get-FeaturePathsEnv {
+    return Resolve-FeatureContext
 }
 
 function Test-FileExists {
@@ -431,31 +578,31 @@ function Get-FeaturePathsEnvExtended {
         $StudioRoot = Find-StudioRoot -StartDir $ProjectRoot
     }
     
-    $currentBranch = Get-CurrentBranch
-    $hasGit = Test-HasGit
-    $featureDir = Get-FeatureDir -RepoRoot $ProjectRoot -Branch $currentBranch
-    $readinessDir = Join-Path $featureDir 'readiness'
-    $eciDir = Join-Path $readinessDir 'eci'
+    $featurePaths = Resolve-FeatureContext -ProjectRoot $ProjectRoot
     $studioPaths = Get-StudioPaths -StudioRoot $StudioRoot
     $constitutions = Get-ConstitutionPaths -StudioRoot $StudioRoot -ProjectRoot $ProjectRoot
     
     [PSCustomObject]@{
         # Project paths
-        PROJECT_ROOT        = $ProjectRoot
-        CURRENT_BRANCH      = $currentBranch
-        HAS_GIT             = $hasGit
-        FEATURE_DIR         = $featureDir
-        FEATURE_SPEC        = Join-Path $featureDir 'spec.md'
-        INTENT_LEDGER       = Join-Path $featureDir 'intent-ledger.md'
-        READINESS_DIR       = $readinessDir
-        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-        ECI_DIR             = $eciDir
-        IMPL_PLAN           = Join-Path $featureDir 'plan.md'
-        TASKS               = Join-Path $featureDir 'tasks.md'
-        RESEARCH            = Join-Path $featureDir 'research.md'
-        DATA_MODEL          = Join-Path $featureDir 'data-model.md'
-        QUICKSTART          = Join-Path $featureDir 'quickstart.md'
-        CONTRACTS_DIR       = Join-Path $featureDir 'contracts'
+        PROJECT_ROOT        = $featurePaths.REPO_ROOT
+        CURRENT_BRANCH      = $featurePaths.CURRENT_BRANCH
+        HAS_GIT             = $featurePaths.HAS_GIT
+        FEATURE_ID          = $featurePaths.FEATURE_ID
+        FEATURE_DIR         = $featurePaths.FEATURE_DIR
+        FEATURE_SPEC        = $featurePaths.FEATURE_SPEC
+        INTENT_LEDGER       = $featurePaths.INTENT_LEDGER
+        READINESS_DIR       = $featurePaths.READINESS_DIR
+        READINESS_ASSESSMENT = $featurePaths.READINESS_ASSESSMENT
+        ECI_DIR             = $featurePaths.ECI_DIR
+        ECI_TRIGGER         = $featurePaths.ECI_TRIGGER
+        IMPL_PLAN           = $featurePaths.IMPL_PLAN
+        TASKS               = $featurePaths.TASKS
+        RESEARCH            = $featurePaths.RESEARCH
+        DATA_MODEL          = $featurePaths.DATA_MODEL
+        QUICKSTART          = $featurePaths.QUICKSTART
+        CONTRACTS_DIR       = $featurePaths.CONTRACTS_DIR
+        ANALYSIS_RESULT     = $featurePaths.ANALYSIS_RESULT
+        ANALYSIS_CHECKLIST  = $featurePaths.ANALYSIS_CHECKLIST
         # Studio paths
         STUDIO_ROOT         = $StudioRoot
         STUDIO_PATHS        = $studioPaths
@@ -529,33 +676,13 @@ function Get-EciRequirementMarkerContext {
         [string]$ProjectRoot
     )
 
-    $resolvedFeatureDir = [System.IO.Path]::GetFullPath($FeatureDir)
-    $specsRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $resolvedFeatureDir))
-    if ((Split-Path -Leaf $specsRoot) -cne 'specs') {
-        throw "FEATURE_DIR must be located at <project>/specs/<feature>: $resolvedFeatureDir"
-    }
-
-    $resolvedProjectRoot = if ($ProjectRoot) {
-        [System.IO.Path]::GetFullPath($ProjectRoot)
-    } else {
-        [System.IO.Path]::GetFullPath((Split-Path -Parent $specsRoot))
-    }
-    $expectedSpecsRoot = [System.IO.Path]::GetFullPath((Join-Path $resolvedProjectRoot 'specs'))
-    if (-not $specsRoot.Equals($expectedSpecsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "FEATURE_DIR escapes project root: $resolvedFeatureDir must be a direct child of $expectedSpecsRoot"
-    }
-
-    $feature = Split-Path -Leaf $resolvedFeatureDir
-    if ([string]::IsNullOrWhiteSpace($feature) -or $feature -in @('.', '..')) {
-        throw "FEATURE_DIR has an invalid feature identity: $resolvedFeatureDir"
-    }
-
-    $runDir = Join-Path (Join-Path (Join-Path $resolvedProjectRoot '.workflow') 'runs') $feature
+    $featureContext = Resolve-FeatureContext -FeatureDir $FeatureDir -ProjectRoot $ProjectRoot
+    $runDir = Join-Path (Join-Path (Join-Path $featureContext.REPO_ROOT '.workflow') 'runs') $featureContext.FEATURE_ID
     return [PSCustomObject][ordered]@{
-        PROJECT_ROOT         = $resolvedProjectRoot
-        FEATURE              = $feature
-        FEATURE_PATH         = $resolvedFeatureDir
-        FEATURE_RELATIVE_PATH = "specs/$feature"
+        PROJECT_ROOT         = $featureContext.REPO_ROOT
+        FEATURE              = $featureContext.FEATURE_ID
+        FEATURE_PATH         = $featureContext.FEATURE_DIR
+        FEATURE_RELATIVE_PATH = $featureContext.FEATURE_RELATIVE_PATH
         RUN_DIR              = [System.IO.Path]::GetFullPath($runDir)
         MARKER_PATH          = [System.IO.Path]::GetFullPath((Join-Path $runDir 'eci-requirement.json'))
     }

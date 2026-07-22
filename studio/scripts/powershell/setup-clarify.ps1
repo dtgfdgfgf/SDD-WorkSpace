@@ -53,18 +53,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        return [PSCustomObject]@{
-            FEATURE_DIR  = $resolved
-            FEATURE_SPEC = Join-Path $resolved 'spec.md'
-        }
-    }
-    return Get-FeaturePathsEnv
-}
-
 function Get-NeedsClarificationMarkers {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return @() }
@@ -74,7 +62,9 @@ function Get-NeedsClarificationMarkers {
     return @($rxMatches | ForEach-Object { $_.Value })
 }
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_SPEC -MessagePrefix 'FEATURE_SPEC escapes project root'
 $messages = New-Object System.Collections.Generic.List[string]
 $blockers = New-Object System.Collections.Generic.List[string]
 

@@ -56,36 +56,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        $readinessDir = Join-Path $resolved 'readiness'
-        return [PSCustomObject]@{
-            FEATURE_DIR          = $resolved
-            FEATURE_SPEC         = Join-Path $resolved 'spec.md'
-            READINESS_DIR        = $readinessDir
-            READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-            ECI_DIR              = Join-Path $readinessDir 'eci'
-            ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
-            IMPL_PLAN            = Join-Path $resolved 'plan.md'
-            TASKS                = Join-Path $resolved 'tasks.md'
-        }
-    }
-    $base = Get-FeaturePathsEnv
-    $readinessDir = Join-Path $base.FEATURE_DIR 'readiness'
-    return [PSCustomObject]@{
-        FEATURE_DIR          = $base.FEATURE_DIR
-        FEATURE_SPEC         = $base.FEATURE_SPEC
-        READINESS_DIR        = $readinessDir
-        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-        ECI_DIR              = Join-Path $readinessDir 'eci'
-        ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
-        IMPL_PLAN            = $base.IMPL_PLAN
-        TASKS                = $base.TASKS
-    }
-}
-
 function Invoke-FeatureStructureValidation {
     param([string]$FeatureDir)
     $script = Join-Path $PSScriptRoot 'validate-feature-structure.ps1'
@@ -95,7 +65,7 @@ function Invoke-FeatureStructureValidation {
     try { return ($raw | ConvertFrom-Json) } catch { return $null }
 }
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
 $eciArtifactPaths = [ordered]@{
     'readiness/eci-trigger.md'                    = $paths.ECI_TRIGGER
     'readiness/eci/eci-assessment.md'             = Join-Path $paths.ECI_DIR 'eci-assessment.md'
@@ -113,18 +83,7 @@ $eciRequired = (
     @($eciArtifactPaths.Values | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }).Count -gt 0
 )
 
-# Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
-$projectRootForBoundary = if ($FeatureDir) {
-    $specsParent = Split-Path -Parent $paths.FEATURE_DIR
-    if ((Split-Path -Leaf $specsParent) -ne 'specs') {
-        throw "FEATURE_DIR escapes project root: $($paths.FEATURE_DIR) must be located at <project>/specs/<feature>"
-    }
-    Split-Path -Parent $specsParent
-} else {
-    Get-RepoRoot
-}
-if (-not $projectRootForBoundary) { throw 'Unable to resolve project root for path boundary check.' }
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
 
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]

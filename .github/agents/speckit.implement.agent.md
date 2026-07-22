@@ -16,9 +16,14 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context and pass it to the non-bypassable entry gate. Preserve the returned absolute
+`FEATURE_DIR` for the entire implementation run. Do not rebind from the branch, environment, or
+free-form user text.
+
 ## Outline
 
-1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.** From the repo root, run `pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json` (pass `-FeatureDir <path>` only when the user supplied an explicit feature context). Parse `FEATURE_DIR`, `IMPL_PLAN`, `TASKS`, `READINESS_STATUS`, `ECI_REQUIRED`, `ANALYSIS_RESULT`, `ANALYZE_STATE`, and `BLOCKERS`. If the process exits non-zero, `READY` is not exactly `true`, output is missing/invalid, or any blocker is present, STOP and report the blocker verbatim. Do not continue on operator confirmation: this gate has no `-Force` bypass. All returned paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.** From the repo root, run `pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json`, or `pwsh ./studio/scripts/powershell/setup-implement.ps1 -FeatureDir <path> -Json` when the named option is present. Parse `FEATURE_DIR`, `IMPL_PLAN`, `TASKS`, `READINESS_STATUS`, `ECI_REQUIRED`, `ANALYSIS_RESULT`, `ANALYZE_STATE`, and `BLOCKERS`. If the process exits non-zero, `READY` is not exactly `true`, output is missing/invalid, or any blocker is present, STOP and report the blocker verbatim. Do not continue on operator confirmation: this gate has no `-Force` bypass. All returned paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
    - Scan all checklist files in the checklists/ directory
@@ -139,4 +144,4 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
 
-Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks -FeatureDir "<FEATURE_DIR>"` first to regenerate the task list.

@@ -16,6 +16,11 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the first feature-context script, then preserve the returned absolute
+`FEATURE_DIR` in every recommended remediation or implementation command. Do not rebind from the
+branch, environment, or free-form user text.
+
 ## Goal
 
 Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, intent drift, and document drift across the core execution artifacts (`spec.md`, `intent-ledger.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`) and any available supporting design artifacts (`data-model.md`, `contracts/`, `research.md`, `quickstart.md`, `README.md`) before implementation. This command MUST run only after `/speckit.tasks` has successfully produced a complete `tasks.md`.
@@ -35,7 +40,7 @@ Constitution conflicts are automatically CRITICAL and require adjustment of the 
 
 ### 1. Initialize Analysis Context
 
-Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` once from repo root and parse JSON for REPO_ROOT, FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. Derive absolute paths:
+Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` once from repo root, or `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json -RequireTasks -IncludeTasks` when the named option is present, and parse JSON for REPO_ROOT, FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. Derive absolute paths:
 
 - SPEC = FEATURE_DIR/spec.md
 - INTENT_LEDGER = FEATURE_DIR/intent-ledger.md
@@ -396,11 +401,11 @@ must contain actual values, never the angle-bracket placeholders shown above.
 
 At end of report, output a concise Next Actions block:
 
-- If CRITICAL issues exist: Recommend resolving before `/speckit.implement`
-- If readiness gate issues exist: Recommend re-running `/speckit.readiness` or completing the required remediation packet before touching plan/tasks/implementation
-- If intent drift issues exist: Recommend reconciling `intent-ledger.md`, `plan.md`, README / quickstart disclosure, and then rerun `/speckit.analyze`
+- If CRITICAL issues exist: Recommend resolving before `/speckit.implement -FeatureDir "<FEATURE_DIR>"`
+- If readiness gate issues exist: Recommend re-running `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` or completing the required remediation packet before touching plan/tasks/implementation
+- If intent drift issues exist: Recommend reconciling `intent-ledger.md`, `plan.md`, README / quickstart disclosure, and then rerun `/speckit.analyze -FeatureDir "<FEATURE_DIR>"`
 - If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
-- Provide explicit command suggestions: e.g., "Run /speckit.specify with refinement", "Run /speckit.eci to complete external capability governance", "Run /speckit.readiness to refresh gate status", "Run /speckit.plan to adjust architecture after gate clearance", "Manually edit tasks.md to add coverage for 'performance-metrics'", "Align data-model.md / contracts/ with task assumptions"
+- Provide explicit command suggestions that retain `-FeatureDir "<FEATURE_DIR>"` for every feature-bound command, including `/speckit.eci`, `/speckit.readiness`, `/speckit.plan`, and `/speckit.implement`
 
 ### 8. Offer Remediation
 

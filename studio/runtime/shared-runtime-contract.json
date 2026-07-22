@@ -986,7 +986,7 @@
         "If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.",
         "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope.",
         "write exactly one `ECI Re-entry Status` and exactly one `ECI Evidence SHA-256`",
-        "validate-feature-structure.ps1 -FeatureDir specs/<feature> -RequireEciReentry -Json",
+        "validate-feature-structure.ps1 -FeatureDir \"<FEATURE_DIR>\" -RequireEciReentry -Json",
         "ECI_ACTUAL_EVIDENCE_SHA256",
         "4-byte big-endian length",
         "8-byte big-endian length",
@@ -999,7 +999,7 @@
       "mustContainAll": [
         "### Non-bypassable first action",
         "Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any",
-        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -Json",
+        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -FeatureDir \"<path>\" -Json",
         "`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`",
         "There is no operator-confirmation or force bypass.",
         "Parse `READY`, `FEATURE_DIR`, `FEATURE_SPEC`, `READINESS_ASSESSMENT`,",
@@ -1011,7 +1011,7 @@
         "`authorization-record.md`",
         "### ECI Level",
         "### Authorization Outcome",
-        "Always recommend `/speckit.readiness` as the next command.",
+        "Always recommend `/speckit.readiness -FeatureDir \"<FEATURE_DIR>\"` as the next command.",
         "Never recommend `/speckit.plan` directly from `/speckit.eci`."
       ]
     },
@@ -1021,7 +1021,7 @@
       "mustContainAll": [
         "### Non-bypassable first action",
         "Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any",
-        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -Json",
+        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -FeatureDir \"<path>\" -Json",
         "`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`",
         "There is no operator-confirmation or force bypass."
       ]
@@ -1030,12 +1030,12 @@
       "id": "plan-agent-readiness-gate",
       "path": ".github/agents/speckit.plan.agent.md",
       "mustContainAll": [
-        "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`",
+        "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness -FeatureDir \"<FEATURE_DIR>\"`",
         "If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR",
         "If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR",
-        "When a workflow supplies `-FeatureDir <path>`",
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
         "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
-        "setup-plan.ps1 -FeatureDir <path> -Json",
+        "setup-plan.ps1 -FeatureDir \"<FEATURE_DIR>\" -Json",
         "Confirm that `SPECS_DIR` equals the `FEATURE_DIR` selected in step 1",
         "ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`",
         "Load `Planability Resolved`, `Intent Ledger Requirement`, and `Intent Ledger Path`",
@@ -1125,6 +1125,100 @@
         "five ECI hash properties MUST be JSON `null`.",
         "For `tasks.md`, hash task definitions rather than progress",
         "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)"
+      ]
+    },
+    {
+      "id": "specify-agent-named-feature-handoff",
+      "path": ".github/agents/speckit.specify.agent.md",
+      "mustContainAll": [
+        "/speckit.clarify -FeatureDir \"<FEATURE_DIR>\"",
+        "where `FEATURE_DIR` is the directory containing `SPEC_FILE`"
+      ]
+    },
+    {
+      "id": "clarify-agent-named-feature-context",
+      "path": ".github/agents/speckit.clarify.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
+        "/speckit.clarify -FeatureDir \"<FEATURE_DIR>\"` again later",
+        "/speckit.readiness -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "readiness-agent-named-feature-context",
+      "path": ".github/agents/speckit.readiness.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
+        "/speckit.clarify -FeatureDir \"<FEATURE_DIR>\"` first",
+        "/speckit.eci -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "eci-agent-named-feature-context",
+      "path": ".github/agents/speckit.eci.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "setup-eci.ps1 -FeatureDir \"<path>\" -Json",
+        "setup-eci.ps1 -FeatureDir \"<path>\" -Json` entry gate described above as the first action, applying the explicit-input rule above",
+        "direct the operator back to `/speckit.readiness -FeatureDir \"<FEATURE_DIR>\"`",
+        "/speckit.readiness -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "plan-agent-named-feature-context",
+      "path": ".github/agents/speckit.plan.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "setup-plan.ps1 -FeatureDir \"<FEATURE_DIR>\" -Json",
+        "update-agent-context.ps1 -FeatureDir \"<FEATURE_DIR>\" -AgentType copilot",
+        "Create a checklist for the following domain with -FeatureDir <FEATURE_DIR>.",
+        "/speckit.tasks -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "tasks-agent-named-feature-context",
+      "path": ".github/agents/speckit.tasks.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json",
+        "/speckit.analyze -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "analyze-agent-named-feature-context",
+      "path": ".github/agents/speckit.analyze.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -RequireTasks -IncludeTasks",
+        "/speckit.analyze -FeatureDir \"<FEATURE_DIR>\"",
+        "/speckit.implement -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "implement-agent-named-feature-context",
+      "path": ".github/agents/speckit.implement.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "setup-implement.ps1 -FeatureDir <path> -Json",
+        "/speckit.tasks -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "checklist-agent-named-feature-context",
+      "path": ".github/agents/speckit.checklist.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json"
+      ]
+    },
+    {
+      "id": "taskstoissues-agent-named-feature-context",
+      "path": ".github/agents/speckit.taskstoissues.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -RequireTasks -IncludeTasks"
       ]
     }
   ],
@@ -1411,6 +1505,7 @@
         "Get-HistoricalEvidenceFrameworkOrigin",
         "Get-GitPathAdditionCommits",
         "Read-ExactLegacyBaselineAtCommit",
+        "$regexBody = $regexBody -replace '/\\\\\\*\\\\\\*/', '/(?:[^/]+/)*'",
         "exact production legacy metadata shape",
         "$document.Count -eq 5",
         "$document.purpose -is [string]",
@@ -1562,8 +1657,7 @@
         "READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT",
         "REPO_ROOT            = $paths.REPO_ROOT",
         "[string]$FeatureDir",
-        "Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT",
-        "$featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "if (-not $FeatureDir -and -not (Test-FeatureBranch"
       ]
     },
@@ -1571,11 +1665,27 @@
       "id": "common-feature-paths-intent-ledger-awareness",
       "path": "studio/scripts/powershell/common.ps1",
       "mustContainAll": [
-        "INTENT_LEDGER        = Join-Path $featureDir 'intent-ledger.md'",
+        "function Resolve-FeatureContext",
+        "Get-CurrentBranch -ProjectRoot $repoRoot",
+        "Test-HasGit -ProjectRoot $repoRoot",
+        "Resolve-AbsolutePath -Path $candidate -BaseDir $repoRoot",
+        "$specsRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'specs'))",
+        "if (Test-Path -LiteralPath $specsRoot)",
+        "$featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)",
+        "Resolve-ExistingPathInsideRoot -Root $repoRoot -Candidate $specsRoot",
+        "Resolve-ExistingPathInsideRoot -Root $specsRoot -Candidate $resolvedFeatureDir",
+        "function Assert-NoReparsePointInTree",
+        "Assert-NoReparsePointInTree -Root $resolvedFeatureDir",
+        "FEATURE_ID           = $featureId",
+        "INTENT_LEDGER        = Join-Path $resolvedFeatureDir 'intent-ledger.md'",
         "READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'",
         "ECI_DIR              = $eciDir",
+        "ANALYSIS_RESULT      = Join-Path $resolvedFeatureDir 'analysis-result.json'",
         "Initialize-ProjectGitRepository",
         "core.hooksPath"
+      ],
+      "mustMatchAll": [
+        "(?s)\\$specsRoot = .*?Resolve-ExistingPathInsideRoot -Root \\$repoRoot -Candidate \\$specsRoot.*?\\$currentBranch = Get-CurrentBranch -ProjectRoot \\$repoRoot"
       ]
     },
     {
@@ -1631,7 +1741,7 @@
         "$workflowPath = Resolve-ExistingPathInsideRoot",
         "$manifestPath = Resolve-ExistingPathInsideRoot",
         "function Get-EciRequirementMarkerContext",
-        "FEATURE_RELATIVE_PATH = \"specs/$feature\"",
+        "FEATURE_RELATIVE_PATH = $featureContext.FEATURE_RELATIVE_PATH",
         "function Read-EciRequirementMarker",
         "[System.Text.Json.JsonDocument]::Parse($rawJson)",
         "feature_path identity must exactly match",
@@ -1946,6 +2056,7 @@
       "path": "studio/scripts/powershell/setup-eci.ps1",
       "mustContainAll": [
         "#Requires -Version 7.0",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "Invoke-EciIntakeValidation",
         "validate-feature-structure.ps1",
         "-DeferEciDossier",
@@ -1965,9 +2076,7 @@
       "path": "studio/scripts/powershell/setup-plan.ps1",
       "mustContainAll": [
         "[string]$FeatureDir",
-        "Resolve-FeatureContext",
-        "Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT",
-        "$featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "if (-not $FeatureDir -and -not (Test-FeatureBranch",
         "$paths.REPO_ROOT",
         "$paths.FEATURE_DIR"
@@ -2026,6 +2135,9 @@
         "RequireEciDossier",
         "RequireEciReentry",
         "DeferEciDossier",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "-ProjectRoot $featureContext.REPO_ROOT",
+        "feature-context-invalid",
         "function Get-ExactlyOneMarkdownEnum",
         "function Get-ExactlyOneMarkdownField",
         "$matches.Count -ne 1",
@@ -2100,6 +2212,7 @@
       "id": "setup-clarify-spec-gate",
       "path": "studio/scripts/powershell/setup-clarify.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "Get-NeedsClarificationMarkers",
         "spec.md is required",
         "STAGE",
@@ -2111,6 +2224,7 @@
       "id": "setup-readiness-clarify-gate",
       "path": "studio/scripts/powershell/setup-readiness.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "readiness-assessment-template.md",
         "[NEEDS CLARIFICATION]",
         "ECI_DIR",
@@ -2122,6 +2236,7 @@
       "id": "setup-tasks-plan-gate",
       "path": "studio/scripts/powershell/setup-tasks.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "tasks-template.md",
         "plan.md is required",
         "no Version field",
@@ -2133,6 +2248,7 @@
       "id": "setup-analyze-prerequisites",
       "path": "studio/scripts/powershell/setup-analyze.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "checklist-template.md",
         "validate-feature-structure.ps1",
         "analysis-result.json",
@@ -2150,6 +2266,7 @@
       "id": "setup-implement-non-bypassable-gate",
       "path": "studio/scripts/powershell/setup-implement.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "Get-PendingTasks",
         "Get-UnresolvedCriticalFindings",
         "validate-feature-structure.ps1",
@@ -2225,7 +2342,8 @@
       "path": "studio/scripts/powershell/setup-readiness.ps1",
       "mustContainAll": [
         "Assert-PathInsideRoot",
-        "$projectRootForBoundary",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
         "$paths.READINESS_DIR"
       ]
     },
@@ -2234,7 +2352,8 @@
       "path": "studio/scripts/powershell/setup-tasks.ps1",
       "mustContainAll": [
         "Assert-PathInsideRoot",
-        "$projectRootForBoundary",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
         "$paths.TASKS"
       ]
     },
@@ -2243,7 +2362,8 @@
       "path": "studio/scripts/powershell/setup-analyze.ps1",
       "mustContainAll": [
         "Assert-PathInsideRoot",
-        "$projectRootForBoundary",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
         "$paths.FEATURE_DIR"
       ]
     },
@@ -2252,7 +2372,8 @@
       "path": "studio/scripts/powershell/setup-implement.ps1",
       "mustContainAll": [
         "Assert-PathInsideRoot",
-        "$projectRootForBoundary",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
         "$paths.ANALYSIS_CHECKLIST"
       ]
     },
@@ -2260,6 +2381,9 @@
       "id": "update-agent-context-path-boundary",
       "path": "studio/scripts/powershell/update-agent-context.ps1",
       "mustContainAll": [
+        "[string]$FeatureDir",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$CURRENT_BRANCH = $envData.FEATURE_ID",
         "Assert-PathInsideRoot",
         "$REPO_ROOT",
         "$envData.FEATURE_DIR"
@@ -2594,11 +2718,18 @@
       ]
     },
     {
-      "id": "sdd-pipeline-plan-feature-context",
+      "id": "sdd-pipeline-named-feature-context",
       "path": "studio/workflows/sdd-pipeline/workflow.yml",
       "mustContainAll": [
         "  - id: stage-plan-prep\n    type: command\n    dispatch: script\n    script: studio/scripts/powershell/setup-plan.ps1\n    args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-Json\"]",
-        "operator_message: \"Run /speckit.plan -FeatureDir specs/{{ inputs.feature }}"
+        "operator_message: \"Run /speckit.clarify -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.readiness -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.eci -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Re-run /speckit.readiness -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.plan -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.tasks -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.analyze -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.implement -FeatureDir specs/{{ inputs.feature }}"
       ]
     },
     {

@@ -5,7 +5,7 @@ infer: true
 handoffs: 
   - label: Clarify Spec Requirements
     agent: speckit.clarify
-    prompt: Clarify specification requirements
+    prompt: Clarify specification requirements with -FeatureDir <FEATURE_DIR>, where FEATURE_DIR is the directory containing SPEC_FILE.
     send: true
 ---
 
@@ -195,7 +195,7 @@ Given that feature description, do this:
 
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and the `/speckit.clarify` handoff. `/speckit.clarify` is the only next-phase handoff from Specify; do not route directly to `/speckit.readiness`.
+7. Report completion with branch name, spec file path, checklist results, and the exact `/speckit.clarify -FeatureDir "<FEATURE_DIR>"` handoff, where `FEATURE_DIR` is the directory containing `SPEC_FILE`. `/speckit.clarify` is the only next-phase handoff from Specify; do not route directly to `/speckit.readiness`.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

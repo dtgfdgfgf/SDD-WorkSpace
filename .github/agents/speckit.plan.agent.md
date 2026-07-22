@@ -5,11 +5,11 @@ infer: true
 handoffs: 
   - label: Create Tasks
     agent: speckit.tasks
-    prompt: Break the plan into tasks
+    prompt: Break the plan into tasks with -FeatureDir <FEATURE_DIR>.
     send: true
   - label: Create Checklist
     agent: speckit.checklist
-    prompt: Create a checklist for the following domain...
+    prompt: Create a checklist for the following domain with -FeatureDir <FEATURE_DIR>.
 ---
 
 ## Output Language
@@ -24,8 +24,10 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
-When a workflow supplies `-FeatureDir <path>` in the user input, treat that named option as the
-authoritative feature context. Do not infer a feature path from other free-form user text.
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to every feature-context script in this command, then preserve the
+returned absolute `FEATURE_DIR` in every next-stage command and handoff. Do not rebind from the
+branch, environment, or free-form user text.
 
 ## Outline
 
@@ -39,19 +41,19 @@ authoritative feature context. Do not infer a feature path from other free-form 
    - Derive `ECI_AUTHORIZATION = ECI_DIR/authorization-record.md`
    - Derive `ECI_ADOPTION = ECI_DIR/adoption-record.md`
    - Derive `ECI_SOURCE_MANIFEST = ECI_DIR/source-manifest.md`
-   - If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`
+   - If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`
    - Load `READINESS_ASSESSMENT` and locate the declared `Primary Status`
    - Load `Planability Resolved`, `Intent Ledger Requirement`, and `Intent Ledger Path`
-   - If `Primary Status` is absent or ambiguous: ERROR and instruct the user to re-run `/speckit.readiness`
-   - If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR, report the status, and instruct the user to complete the remediation identified by readiness before attempting `/speckit.plan` again
-   - If `Intent Ledger Requirement` is `Create \`intent-ledger.md\`` or `Update \`intent-ledger.md\``, and `INTENT_LEDGER` does not exist: ERROR and instruct the user to re-run `/speckit.readiness` or reconcile the missing ledger before planning
-   - If `Intent Ledger Path` is present and disagrees with `INTENT_LEDGER`: ERROR and instruct the user to re-run `/speckit.readiness` so the handoff is coherent
+   - If `Primary Status` is absent or ambiguous: ERROR and instruct the user to re-run `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`
+   - If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR, report the status, and instruct the user to complete the remediation identified by readiness before attempting `/speckit.plan -FeatureDir "<FEATURE_DIR>"` again
+   - If `Intent Ledger Requirement` is `Create \`intent-ledger.md\`` or `Update \`intent-ledger.md\``, and `INTENT_LEDGER` does not exist: ERROR and instruct the user to re-run `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` or reconcile the missing ledger before planning
+   - If `Intent Ledger Path` is present and disagrees with `INTENT_LEDGER`: ERROR and instruct the user to re-run `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` so the handoff is coherent
    - If `ECI_AUTHORIZATION` exists:
      - Load `Authorization Outcome`
-     - If it is absent or ambiguous: ERROR and instruct the user to reconcile `/speckit.eci` outputs before planning
-     - If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR, report the authorization outcome, and instruct the user to re-run `/speckit.readiness` after reconciling the ECI boundary
+     - If it is absent or ambiguous: ERROR and instruct the user to reconcile `/speckit.eci -FeatureDir "<FEATURE_DIR>"` outputs before planning
+     - If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR, report the authorization outcome, and instruct the user to re-run `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` after reconciling the ECI boundary
 
-3. **Setup plan workspace**: Run `studio/scripts/powershell/setup-plan.ps1 -Json` from repo root, or `studio/scripts/powershell/setup-plan.ps1 -FeatureDir <path> -Json` when the named user option is present, and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH`, `STUDIO_ROOT`, and `CONSTITUTIONS`. Confirm that `SPECS_DIR` equals the `FEATURE_DIR` selected in step 1 before writing planning artifacts.
+3. **Setup plan workspace**: Always preserve the absolute feature context returned by step 1. Run `studio/scripts/powershell/setup-plan.ps1 -FeatureDir "<FEATURE_DIR>" -Json` from repo root and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH`, `STUDIO_ROOT`, and `CONSTITUTIONS`. Confirm that `SPECS_DIR` equals the `FEATURE_DIR` selected in step 1 before writing planning artifacts.
 
 4. **Load context (Dual-Layer Constitution)**:
    - Read `REPO_ROOT/README.md` if present for umbrella-feature naming and existing coverage disclosure
@@ -76,7 +78,7 @@ authoritative feature context. Do not infer a feature path from other free-form 
    - Phase 1: Update agent context by running the agent script
    - Re-evaluate Constitution Check post-design
 
-6. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, generated artifacts, and the readiness assessment path used to authorize planning.
+6. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, generated artifacts, the readiness assessment path used to authorize planning, and the exact `/speckit.tasks -FeatureDir "<FEATURE_DIR>"` handoff.
 
 ## Phases
 
@@ -118,7 +120,7 @@ authoritative feature context. Do not infer a feature path from other free-form 
    - Use OpenAPI or GraphQL schema only when external APIs or machine validation require it.
 
 3. **Agent context update**:
-   - Run `studio/scripts/powershell/update-agent-context.ps1 -AgentType copilot`
+   - Always run `studio/scripts/powershell/update-agent-context.ps1 -FeatureDir "<FEATURE_DIR>" -AgentType copilot` with the absolute feature context returned by step 1
    - These scripts detect which AI agent is in use
    - Update the appropriate agent-specific context file
    - Add only new technology from current plan
@@ -137,4 +139,3 @@ authoritative feature context. Do not infer a feature path from other free-form 
 - Require concrete re-entry triggers; do **not** accept generic placeholders such as `v1+`
 - If feature naming exceeds current coverage, require explicit README / quickstart disclosure rather than letting the representative subset masquerade as the full umbrella capability
 - ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`
-

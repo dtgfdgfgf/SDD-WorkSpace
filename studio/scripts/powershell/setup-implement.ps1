@@ -65,44 +65,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        $readinessDir = Join-Path $resolved 'readiness'
-        return [PSCustomObject]@{
-            FEATURE_DIR          = $resolved
-            FEATURE_SPEC         = Join-Path $resolved 'spec.md'
-            READINESS_DIR        = $readinessDir
-            READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-            ECI_DIR              = Join-Path $readinessDir 'eci'
-            ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
-            IMPL_PLAN            = Join-Path $resolved 'plan.md'
-            TASKS                = Join-Path $resolved 'tasks.md'
-            INTENT_LEDGER        = Join-Path $resolved 'intent-ledger.md'
-            ANALYSIS_RESULT      = Join-Path $resolved 'analysis-result.json'
-            ANALYSIS_CHECKLIST   = Join-Path $resolved 'analysis-checklist.md'
-        }
-    }
-
-    $base = Get-FeaturePathsEnv
-    $readinessDir = Join-Path $base.FEATURE_DIR 'readiness'
-    return [PSCustomObject]@{
-        FEATURE_DIR          = $base.FEATURE_DIR
-        FEATURE_SPEC         = $base.FEATURE_SPEC
-        READINESS_DIR        = $readinessDir
-        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-        ECI_DIR              = Join-Path $readinessDir 'eci'
-        ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
-        IMPL_PLAN            = $base.IMPL_PLAN
-        TASKS                = $base.TASKS
-        INTENT_LEDGER        = Join-Path $base.FEATURE_DIR 'intent-ledger.md'
-        ANALYSIS_RESULT      = Join-Path $base.FEATURE_DIR 'analysis-result.json'
-        ANALYSIS_CHECKLIST   = Join-Path $base.FEATURE_DIR 'analysis-checklist.md'
-    }
-}
-
 function Invoke-FeatureStructureValidation {
     param([string]$FeatureDir)
 
@@ -440,24 +402,12 @@ function Get-IntentLedgerEntries {
     return [PSCustomObject]@{ Entries = $entries.ToArray(); Errors = $errors.ToArray() }
 }
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
-
-# Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
-$projectRootForBoundary = if ($FeatureDir) {
-    $specsParent = Split-Path -Parent $paths.FEATURE_DIR
-    if ((Split-Path -Leaf $specsParent) -ne 'specs') {
-        throw "FEATURE_DIR escapes project root: $($paths.FEATURE_DIR) must be located at <project>/specs/<feature>"
-    }
-    Split-Path -Parent $specsParent
-} else {
-    Get-RepoRoot
-}
-if (-not $projectRootForBoundary) { throw 'Unable to resolve project root for path boundary check.' }
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.READINESS_ASSESSMENT -MessagePrefix 'READINESS_ASSESSMENT escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.ANALYSIS_RESULT -MessagePrefix 'ANALYSIS_RESULT escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.ANALYSIS_CHECKLIST -MessagePrefix 'ANALYSIS_CHECKLIST escapes project root'
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.READINESS_ASSESSMENT -MessagePrefix 'READINESS_ASSESSMENT escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.ANALYSIS_RESULT -MessagePrefix 'ANALYSIS_RESULT escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.ANALYSIS_CHECKLIST -MessagePrefix 'ANALYSIS_CHECKLIST escapes project root'
 
 $trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $analysisResultSchema = Join-Path $trustedStudioRoot 'runtime/analysis-result.schema.json'

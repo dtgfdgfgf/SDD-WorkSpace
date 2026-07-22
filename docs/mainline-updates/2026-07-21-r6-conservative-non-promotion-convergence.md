@@ -150,6 +150,38 @@ Required before this note may become `Ready`:
   change until a committed implementation hash, discriminating tests and exact-tree gates exist.
   The note therefore remains `Draft`, Related Commits `TBD` and reconciliation `Open`.
 
+## 2026-07-22 R6-A2 Implementation Candidate
+
+- The R-A21 candidate corrects the governed middle-recursive path matcher so
+  `specs/<feature>/readiness/**/*.md` covers zero, one or multiple middle directories while
+  rejecting near-prefix, sibling-stage and doubled-separator counterexamples. Production-function
+  tests and a runtime mutation test distinguish the corrected expression from the prior one.
+- The R-B18 candidate adds one repository-root feature-context resolver in `common.ps1`. Explicit
+  absolute or normalized relative feature paths must resolve to a direct child of the configured
+  repository `specs` directory. Branch and Git discovery are evaluated against that same resolved
+  root, including off-directory invocation, and the physical `specs` authority is checked before
+  any non-Git branch fallback can enumerate it. Foreign repositories, sibling `specs` directories,
+  nested feature directories, traversal, near-prefix roots and `-Force` bypass attempts are
+  rejected. Existing selected feature trees containing any junction or symbolic link are also
+  rejected during the resolver scan before subsequent artifact-content access. This evidence
+  covers static path tampering; concurrent filesystem replacement after the scan is outside the
+  R-B18 closure boundary.
+- Clarify, Readiness, ECI, Plan, Tasks, Analyze, Implement, prerequisite discovery,
+  feature-structure validation and agent-context updates now consume the shared resolver. Explicit
+  `-FeatureDir` remains authoritative over branch or `SPECIFY_FEATURE` diagnostics.
+- All feature-bound canonical agents preserve the named option when a feature context already
+  exists, dependent Claude mirrors are regenerated from those sources, and every post-Specify
+  feature-bound `sdd-pipeline` operator handoff names `specs/{{ inputs.feature }}`. After Plan
+  discovers an absolute feature directory, its setup and agent-context update commands reuse that
+  value unconditionally. Contract mutations reject removal of the resolver boundary, a canonical
+  agent handoff or a workflow handoff.
+- The active no-regression baseline entering R6-A2 is 878 passed with 0 failed, superseding the
+  earlier 747-test planning baseline. R-A21 and R-B18 remain `OPEN` until R6-A5 records the committed
+  implementation hash and exact-tree gates. This note remains `Draft`, Related Commits `TBD` and
+  reconciliation `Open`.
+- `sdd-pipeline` remains experimental, default-disabled and execution-denied. This candidate does
+  not authorize promotion, push or merge.
+
 ## Follow-ups
 
 - Implement the four direct-repair sub-batches in the committed plan.

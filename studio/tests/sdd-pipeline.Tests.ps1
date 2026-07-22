@@ -268,7 +268,7 @@ Describe 'sdd-pipeline references every SDD agent slash command' {
         )) {
             $content = Get-Content -LiteralPath $path -Raw
             $content | Should -Match 'Non-bypassable first action'
-            $content | Should -Match 'setup-eci\.ps1 -Json'
+            $content | Should -Match ([regex]::Escape('setup-eci.ps1 -FeatureDir "<path>" -Json'))
             $content | Should -Match 'ECI_REQUIREMENT_LATCHED'
             $content | Should -Match 'There is no operator-confirmation or force bypass'
         }
@@ -300,7 +300,7 @@ Describe 'every agent dispatch step targets specs/<feature>/' -Skip:(-not $scrip
     }
 }
 
-Describe 'plan preparation binds to the workflow feature' -Skip:(-not $script:yamlAvailable) {
+Describe 'workflow stages bind to the named workflow feature' -Skip:(-not $script:yamlAvailable) {
     It 'passes the explicit specs feature directory to setup-plan.ps1' {
         Import-Module -Name 'powershell-yaml' -ErrorAction Stop
         $doc = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath $script:workflowPath -Raw) -Ordered
@@ -313,6 +313,45 @@ Describe 'plan preparation binds to the workflow feature' -Skip:(-not $script:ya
         $agentStep = @($doc.steps | Where-Object { $_.id -eq 'stage-plan' })
         $agentStep.Count | Should -Be 1
         $agentStep[0].operator_message | Should -Match '/speckit\.plan -FeatureDir specs/\{\{ inputs\.feature \}\}'
+    }
+
+    It 'passes the exact named feature option to every feature-bound agent dispatch' {
+        Import-Module -Name 'powershell-yaml' -ErrorAction Stop
+        $doc = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath $script:workflowPath -Raw) -Ordered
+
+        function script:Get-NestedAgentSteps {
+            param($Steps)
+
+            $result = @()
+            foreach ($step in @($Steps)) {
+                if ($step.type -eq 'command' -and $step.dispatch -eq 'agent') {
+                    $result += $step
+                }
+                if ($step.type -eq 'if') {
+                    if ($step.then) { $result += Get-NestedAgentSteps -Steps $step.then }
+                    if ($step.else) { $result += Get-NestedAgentSteps -Steps $step.else }
+                }
+                if ($step.type -eq 'switch') {
+                    foreach ($key in $step.cases.Keys) {
+                        $result += Get-NestedAgentSteps -Steps $step.cases[$key]
+                    }
+                    if ($step.default) { $result += Get-NestedAgentSteps -Steps $step.default }
+                }
+                if ($step.type -eq 'gate' -and $step.on_reject) {
+                    $result += Get-NestedAgentSteps -Steps $step.on_reject
+                }
+            }
+            return $result
+        }
+
+        $featureBoundSteps = @(Get-NestedAgentSteps -Steps $doc.steps | Where-Object {
+            $_.agent_command -ne '/speckit.specify'
+        })
+        $featureBoundSteps.Count | Should -Be 8
+        foreach ($step in $featureBoundSteps) {
+            $expected = "$($step.agent_command) -FeatureDir specs/{{ inputs.feature }}"
+            $step.operator_message | Should -Match ([regex]::Escape($expected)) -Because $step.id
+        }
     }
 }
 

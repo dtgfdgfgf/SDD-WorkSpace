@@ -5,11 +5,11 @@ infer: true
 handoffs:
   - label: Build Technical Plan
     agent: speckit.plan
-    prompt: Create a plan for the spec if readiness assessment is READY_FOR_PLAN.
+    prompt: Create a plan for the spec with -FeatureDir <FEATURE_DIR> if readiness assessment is READY_FOR_PLAN.
     send: true
   - label: Run External Capability Intake
     agent: speckit.eci
-    prompt: Continue the ROUTE_TO_ECI path using readiness/eci-trigger.md as the intake seed.
+    prompt: Continue the ROUTE_TO_ECI path with -FeatureDir <FEATURE_DIR> using readiness/eci-trigger.md as the intake seed.
     send: true
 ---
 
@@ -26,6 +26,11 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 Treat `$ARGUMENTS` as optional context, focus area, or operator note for this readiness run.
+
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the first feature-context script, then preserve the returned absolute
+`FEATURE_DIR` in every validation, next-stage command, and handoff. Do not rebind from the branch,
+environment, or free-form user text.
 
 ---
 
@@ -106,7 +111,7 @@ Assess the current spec against these dimensions:
 ### 1. Spec Preconditions
 - Is a current `spec.md` present?
 - Does the spec still contain unresolved `[NEEDS CLARIFICATION]` markers or equivalent high-impact ambiguity?
-- If the spec is clearly still in ambiguity resolution mode, do **not** force readiness; prefer `NOT_READY` with a recommendation to run `/speckit.clarify` first.
+- If the spec is clearly still in ambiguity resolution mode, do **not** force readiness; prefer `NOT_READY` with a recommendation to run `/speckit.clarify -FeatureDir "<FEATURE_DIR>"` first.
 
 ### 2. External Capability Adoption
 - Does the feature materially depend on a **new** external SDK, external repo, framework, service, protocol, platform, or other capability not yet formally governed in this workspace/project?
@@ -152,7 +157,7 @@ Assess the current spec against these dimensions:
 
 ## Execution Steps
 
-1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once**.
+1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once**, or `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly` when the named option is present.
 2. Parse the minimal JSON payload fields:
    - `REPO_ROOT`
    - `FEATURE_DIR`
@@ -186,7 +191,7 @@ Assess the current spec against these dimensions:
    - If `Authorization Outcome = READY_FOR_MAINLINE_IMPLEMENTATION`, external capability adoption is no longer the primary blocker by default.
    - If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.
    - If `Authorization Outcome = NOT_READY` or `ECI Level = NO_ECI`, re-triage honestly and return to `ROUTE_TO_ECI` only when external capability governance is still the dominant blocker.
-   - Run `pwsh ./studio/scripts/powershell/validate-feature-structure.ps1 -FeatureDir specs/<feature> -RequireEciReentry -Json`.
+   - Run `pwsh ./studio/scripts/powershell/validate-feature-structure.ps1 -FeatureDir "<FEATURE_DIR>" -RequireEciReentry -Json`.
    - Require a valid machine result with `ECI_ACTUAL_EVIDENCE_SHA256`, then copy that exact lowercase value into the COMPLETE assessment. Do not reimplement or estimate the digest manually.
    - The validator frames each canonical UTF-8 path relative to `readiness/` with a 4-byte big-endian length and each raw-byte content with an 8-byte big-endian length in this order: `eci-trigger.md`, `eci/eci-assessment.md`, `eci/source-manifest.md`, `eci/adoption-record.md`, `eci/authorization-record.md`.
    - All five evidence files, including `eci-trigger.md`, must exist and be non-empty before the validator emits the actual evidence digest.
@@ -435,7 +440,7 @@ You MUST:
 - write `readiness-assessment.md`
 - write or update `intent-ledger.md` when the assessment says it is required
 - clearly state why planning can safely proceed
-- recommend `/speckit.plan`
+- recommend `/speckit.plan -FeatureDir "<FEATURE_DIR>"`
 - use `ECI Re-entry Status = NOT_REQUIRED` with digest `N/A` when ECI was not required
 - use `ECI Re-entry Status = COMPLETE` with the current canonical five-file evidence digest when this is a post-ECI assessment
 
@@ -447,7 +452,7 @@ You MUST:
 - recommend the next concrete action
 - explicitly state what should **not** happen yet
 
-If the primary status is `ROUTE_TO_ECI`, the next concrete action MUST be `/speckit.eci`.
+If the primary status is `ROUTE_TO_ECI`, the next concrete action MUST be `/speckit.eci -FeatureDir "<FEATURE_DIR>"`.
 If this run happens after a completed ECI dossier, do **not** regenerate `eci-trigger.md` unless the current external capability scope requires a fresh intake.
 An initial `ROUTE_TO_ECI` assessment MUST use `ECI Re-entry Status = PENDING` and digest `N/A`.
 
@@ -486,10 +491,10 @@ Reason:
 The current spec is reasonably clear, but trustworthy planning depends on a new external capability that has not yet been formally governed.
 
 Recommended next step:
-Run /speckit.eci using readiness/eci-trigger.md, then re-run /speckit.readiness after the ECI dossier is complete.
+Run /speckit.eci -FeatureDir "<FEATURE_DIR>" using readiness/eci-trigger.md, then re-run /speckit.readiness -FeatureDir "<FEATURE_DIR>" after the ECI dossier is complete.
 ```
 
-If the primary status is `ROUTE_TO_ECI`, recommend running `/speckit.eci` with `eci-trigger.md` as the intake seed, then returning to `/speckit.readiness`.
+If the primary status is `ROUTE_TO_ECI`, recommend running `/speckit.eci -FeatureDir "<FEATURE_DIR>"` with `eci-trigger.md` as the intake seed, then returning to `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 
 ---
 

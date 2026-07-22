@@ -40,9 +40,14 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the first feature-context script, then preserve the returned absolute
+`FEATURE_DIR` in every feature-bound action. Do not rebind from the branch, environment, or
+free-form user text.
+
 ## Execution Steps
 
-1. **Setup**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json` from repo root and parse JSON for FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS.
+1. **Setup**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json` from repo root, or `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json` when the named option is present, and parse JSON for FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS.
    - All file paths must be absolute.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
@@ -301,4 +306,3 @@ Sample items:
 - Correct: Validation of requirement quality
 - Wrong: "Does it do X?"
 - Correct: "Is X clearly specified?"
-

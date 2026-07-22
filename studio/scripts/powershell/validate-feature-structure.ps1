@@ -187,8 +187,32 @@ function Get-EciEvidenceSha256 {
     }
 }
 
-$resolvedFeatureDir = Resolve-AbsolutePath -Path $FeatureDir
 $findings = @()
+$resolvedFeatureDir = $FeatureDir
+try {
+    $featureContext = Resolve-FeatureContext -FeatureDir $FeatureDir
+    $resolvedFeatureDir = $featureContext.FEATURE_DIR
+} catch {
+    $findings += New-Finding -Severity 'error' -Id 'feature-context-invalid' `
+        -Message $_.Exception.Message -Path $FeatureDir
+    if ($Json) {
+        [PSCustomObject][ordered]@{
+            VALID                      = $false
+            FEATURE_DIR                = $resolvedFeatureDir
+            READINESS_PRIMARY_STATUS   = $null
+            ECI_REENTRY_STATUS         = $null
+            ECI_EVIDENCE_SHA256        = $null
+            ECI_ACTUAL_EVIDENCE_SHA256 = $null
+            ECI_REQUIREMENT_PATH        = $null
+            ECI_REQUIREMENT_LATCHED     = $false
+            ERRORS                     = @($findings)
+            WARNINGS                   = @()
+        } | ConvertTo-Json -Depth 6
+    } else {
+        Write-Output "[ERROR] $($_.Exception.Message)"
+    }
+    exit 1
+}
 $readinessPrimaryStatus = $null
 $eciReentryStatus = $null
 $eciEvidenceSha256 = $null
@@ -269,7 +293,9 @@ $eciReentryStatuses = @('NOT_REQUIRED', 'PENDING', 'COMPLETE')
 $readinessExists = Test-Path -LiteralPath $readinessDir -PathType Container
 $eciRequirementMarker = $null
 try {
-    $eciRequirementMarker = Read-EciRequirementMarker -FeatureDir $resolvedFeatureDir
+    $eciRequirementMarker = Read-EciRequirementMarker `
+        -FeatureDir $resolvedFeatureDir `
+        -ProjectRoot $featureContext.REPO_ROOT
     $eciRequirementPath = $eciRequirementMarker.PATH
     if ($eciRequirementMarker.EXISTS -and -not $eciRequirementMarker.VALID) {
         $eciRequirementMarkerInvalid = $true

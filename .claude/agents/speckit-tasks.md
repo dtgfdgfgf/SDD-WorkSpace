@@ -19,9 +19,14 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the first feature-context script, then preserve the returned absolute
+`FEATURE_DIR` in every next-stage command and handoff. Do not rebind from the branch, environment,
+or free-form user text.
+
 ## Outline
 
-1. **Setup**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json` from repo root and parse FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Setup**: Run `studio/scripts/powershell/check-prerequisites.ps1 -Json` from repo root, or `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json` when the named option is present, and parse FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Load design documents**: Read from FEATURE_DIR:
    - **Required**: plan.md (tech stack, libraries, structure), spec.md (user stories with priorities)
@@ -52,7 +57,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Parallel execution examples per story
    - Implementation strategy section (MVP first, incremental delivery)
 
-5. **Report**: Output path to generated tasks.md and summary:
+5. **Report**: Output path to generated tasks.md, the exact `/speckit.analyze -FeatureDir "<FEATURE_DIR>"` handoff, and summary:
    - Total task count
    - Task count per user story
    - Parallel opportunities identified

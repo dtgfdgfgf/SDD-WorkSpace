@@ -5,6 +5,7 @@ BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
     $script:setupPlanScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-plan.ps1'
     $script:checkPrerequisitesScript = Join-Path $WorkspaceRoot 'studio/scripts/powershell/check-prerequisites.ps1'
+    $script:planAgentPath = Join-Path $WorkspaceRoot '.github/agents/speckit.plan.agent.md'
 
     function script:Write-ReadinessFixture {
         param(
@@ -214,6 +215,18 @@ Describe 'setup-plan readiness gate' {
         [System.IO.Path]::GetFullPath($result.FEATURE_DIR) | Should -Be ([System.IO.Path]::GetFullPath($script:featureDir))
         [System.IO.Path]::GetFullPath($result.FEATURE_SPEC) | Should -Be ([System.IO.Path]::GetFullPath((Join-Path $script:featureDir 'spec.md')))
         $result.BRANCH | Should -Be '777-other'
+    }
+
+    It 'requires every post-discovery plan command to reuse the returned absolute FeatureDir' {
+        $agent = Get-Content -LiteralPath $script:planAgentPath -Raw
+
+        $agent | Should -Match 'setup-plan\.ps1 -FeatureDir "<FEATURE_DIR>" -Json'
+        $agent | Should -Match 'update-agent-context\.ps1 -FeatureDir "<FEATURE_DIR>" -AgentType copilot'
+        $agent | Should -Match 'Create a checklist for the following domain with -FeatureDir <FEATURE_DIR>\.'
+        $agent | Should -Match '/speckit\.readiness -FeatureDir "<FEATURE_DIR>"'
+        $agent | Should -Not -Match 'setup-plan\.ps1 -Json` from repo root, or'
+        $agent | Should -Not -Match 'update-agent-context\.ps1 -AgentType copilot`, or'
+        $agent | Should -Not -Match 'prompt: Create a checklist for the following domain\.\.\.'
     }
 
     It 'rejects explicit FeatureDir outside configured project specs' {

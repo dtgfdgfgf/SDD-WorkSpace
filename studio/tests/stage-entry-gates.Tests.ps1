@@ -3,6 +3,7 @@
 
 BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
+    $script:oldStageEntryProjectRoot = $env:SDD_PROJECT_ROOT
 
     $script:setupClarify   = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-clarify.ps1'
     $script:setupReadiness = Join-Path $WorkspaceRoot 'studio/scripts/powershell/setup-readiness.ps1'
@@ -20,6 +21,7 @@ BeforeAll {
         $root = Join-Path $TestDrive ("feature-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
         $featureDir = Join-Path $root "specs/$Name"
         New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
+        $env:SDD_PROJECT_ROOT = $root
 
         if ($With.ContainsKey('Spec')) {
             $With.Spec | Set-Content -LiteralPath (Join-Path $featureDir 'spec.md') -NoNewline
@@ -266,6 +268,10 @@ $ValidatorBody
 
 - **Intent Ledger Requirement**: Not Required
 "@
+}
+
+AfterAll {
+    $env:SDD_PROJECT_ROOT = $script:oldStageEntryProjectRoot
 }
 
 Describe 'setup-clarify entry gate' {

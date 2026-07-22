@@ -41,33 +41,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-EciFeatureContext {
-    param([string]$Override)
-
-    $basePaths = Get-FeaturePathsEnv
-    $resolvedFeatureDir = if ($Override) {
-        Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT
-    } else {
-        Resolve-AbsolutePath -Path $basePaths.FEATURE_DIR
-    }
-    $markerContext = Get-EciRequirementMarkerContext `
-        -FeatureDir $resolvedFeatureDir `
-        -ProjectRoot $basePaths.REPO_ROOT
-    $readinessDir = Join-Path $resolvedFeatureDir 'readiness'
-
-    return [PSCustomObject][ordered]@{
-        PROJECT_ROOT         = $markerContext.PROJECT_ROOT
-        FEATURE              = $markerContext.FEATURE
-        FEATURE_DIR          = $markerContext.FEATURE_PATH
-        FEATURE_SPEC         = Join-Path $resolvedFeatureDir 'spec.md'
-        READINESS_DIR        = $readinessDir
-        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-        ECI_TRIGGER          = Join-Path $readinessDir 'eci-trigger.md'
-        ECI_DIR              = Join-Path $readinessDir 'eci'
-        ECI_REQUIREMENT_PATH = $markerContext.MARKER_PATH
-    }
-}
-
 function Invoke-EciIntakeValidation {
     param([Parameter(Mandatory = $true)][string]$ResolvedFeatureDir)
 
@@ -97,7 +70,7 @@ function Invoke-EciIntakeValidation {
     }
 }
 
-$paths = Resolve-EciFeatureContext -Override $FeatureDir
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
 Assert-PathInsideRoot `
     -Root $paths.PROJECT_ROOT `
     -Candidate $paths.FEATURE_DIR `

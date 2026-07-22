@@ -969,6 +969,286 @@ Invoke-JsonScriptDetailed -ScriptPath $findingStatusLedgerScript `
         ($audit.Result.FAILURES.message -join "`n") | Should -Match ([regex]::Escape('studio/extensions/**'))
     }
 
+    It 'fails when the readiness middle-glob matcher is reverted to the pre-R-A21 expression' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $validatorPath = Join-Path $fixtureRoot 'studio/scripts/powershell/validate-mainline-notes.ps1'
+        $content = [System.IO.File]::ReadAllText($validatorPath)
+        $correctedExpression = '$regexBody = $regexBody -replace ''/\\\*\\\*/'', ''/(?:[^/]+/)*'''
+        $legacyExpression = '$regexBody = $regexBody -replace ''/\\\*\\\*/'', ''(?:/.*/)?'''
+
+        $content.Contains($correctedExpression, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $correctedExpression,
+            $legacyExpression,
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText(
+            $validatorPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'validate-mainline-notes-gate'
+    }
+
+    It 'fails when repository feature binding is reverted to candidate-derived specs authority' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'
+        $content = [System.IO.File]::ReadAllText($commonPath)
+        $boundExpression = "$" + "specsRoot = [System.IO.Path]::GetFullPath((Join-Path $" + "repoRoot 'specs'))"
+        $candidateDerivedExpression = "$" + "specsRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $" + "resolvedFeatureDir))"
+
+        $content.Contains($boundExpression, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundExpression,
+            $candidateDerivedExpression,
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText(
+            $commonPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'common-feature-paths-intent-ledger-awareness'
+    }
+
+    It 'fails when feature discovery stops binding branch lookup to the selected repository root' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'
+        $content = [System.IO.File]::ReadAllText($commonPath)
+        $boundCall = 'Get-CurrentBranch -ProjectRoot $repoRoot'
+
+        $content.Contains($boundCall, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundCall,
+            'Get-CurrentBranch',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $commonPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'common-feature-paths-intent-ledger-awareness'
+    }
+
+    It 'fails when the physical feature-path boundary is removed' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'
+        $content = [System.IO.File]::ReadAllText($commonPath)
+        $boundCall = 'Resolve-ExistingPathInsideRoot -Root $specsRoot -Candidate $resolvedFeatureDir'
+
+        $content.Contains($boundCall, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundCall,
+            'Resolve-AbsolutePath -Path $resolvedFeatureDir',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $commonPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'common-feature-paths-intent-ledger-awareness'
+    }
+
+    It 'fails when descendant reparse-point rejection is removed from feature binding' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'
+        $content = [System.IO.File]::ReadAllText($commonPath)
+        $boundCall = 'Assert-NoReparsePointInTree -Root $resolvedFeatureDir'
+
+        $content.Contains($boundCall, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundCall,
+            'Write-Verbose $resolvedFeatureDir',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $commonPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'common-feature-paths-intent-ledger-awareness'
+    }
+
+    It 'fails when Plan stops reusing the discovered absolute FeatureDir' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $agentPath = Join-Path $fixtureRoot '.github/agents/speckit.plan.agent.md'
+        $content = [System.IO.File]::ReadAllText($agentPath)
+        $boundCommand = 'setup-plan.ps1 -FeatureDir "<FEATURE_DIR>" -Json'
+
+        $content.Contains($boundCommand, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundCommand,
+            'setup-plan.ps1 -FeatureDir <path> -Json',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $agentPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'plan-agent-named-feature-context'
+    }
+
+    It 'fails when the Plan checklist handoff drops the resolved FeatureDir' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $agentPath = Join-Path $fixtureRoot '.github/agents/speckit.plan.agent.md'
+        $content = [System.IO.File]::ReadAllText($agentPath)
+        $boundPrompt = 'Create a checklist for the following domain with -FeatureDir <FEATURE_DIR>.'
+
+        $content.Contains($boundPrompt, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundPrompt,
+            'Create a checklist for the following domain...',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $agentPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'plan-agent-named-feature-context'
+    }
+
+    It 'fails when the ECI execution step reintroduces the unnamed gate shorthand' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $agentPath = Join-Path $fixtureRoot '.github/agents/speckit.eci.agent.md'
+        $mirrorPath = Join-Path $fixtureRoot '.claude/agents/speckit-eci.md'
+        $content = [System.IO.File]::ReadAllText($agentPath)
+        $boundStep = 'setup-eci.ps1 -FeatureDir "<path>" -Json` entry gate described above as the first action'
+
+        $content.Contains($boundStep, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundStep,
+            'setup-eci.ps1 -Json` entry gate described above as the first action',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $agentPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $mirrorContent = [System.IO.File]::ReadAllText($mirrorPath)
+        $mirrorContent.Contains($boundStep, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        [System.IO.File]::WriteAllText(
+            $mirrorPath,
+            (($mirrorContent.Replace(
+                $boundStep,
+                'setup-eci.ps1 -Json` entry gate described above as the first action',
+                [System.StringComparison]::Ordinal
+            )) -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'eci-agent-named-feature-context'
+        @($audit.Result.FAILURES.id) |
+            Should -Not -Contain 'claude-agent-mirror-parity'
+    }
+
+    It 'fails when a canonical agent drops the named FeatureDir handoff' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $agentPath = Join-Path $fixtureRoot '.github/agents/speckit.tasks.agent.md'
+        $content = [System.IO.File]::ReadAllText($agentPath)
+        $boundCommand = 'check-prerequisites.ps1 -FeatureDir <path> -Json'
+
+        $content.Contains($boundCommand, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundCommand,
+            'check-prerequisites.ps1 -Json',
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText(
+            $agentPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'tasks-agent-named-feature-context'
+    }
+
+    It 'fails when a workflow operator handoff omits the named FeatureDir' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $workflowPath = Join-Path $fixtureRoot 'studio/workflows/sdd-pipeline/workflow.yml'
+        $content = [System.IO.File]::ReadAllText($workflowPath)
+        $boundCommand = '/speckit.analyze -FeatureDir specs/{{ inputs.feature }}'
+
+        $content.Contains($boundCommand, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $boundCommand,
+            '/speckit.analyze',
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText(
+            $workflowPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'sdd-pipeline-named-feature-context'
+    }
+
     It 'fails when worktree-local hook configuration is reverted to repository-wide config' {
         $fixtureRoot = New-RuntimeAuditFixture
         $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'

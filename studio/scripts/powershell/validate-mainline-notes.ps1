@@ -278,7 +278,7 @@ function Test-PathPattern {
         # A complete-category rule such as "studio/scripts/powershell/**" must
         # cover every descendant, including nested directories. A middle /**
         # segment also permits zero directory levels.
-        $regexBody = $regexBody -replace '/\\\*\\\*/', '(?:/.*/)?'
+        $regexBody = $regexBody -replace '/\\\*\\\*/', '/(?:[^/]+/)*'
         $regexBody = $regexBody -replace '/\\\*\\\*$', '(?:/.*)?'
         $regexBody = $regexBody.Replace('\*\*', '.*').Replace('\*', '[^/]*')
         return [regex]::IsMatch(

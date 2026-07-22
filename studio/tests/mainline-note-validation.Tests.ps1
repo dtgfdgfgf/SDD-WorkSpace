@@ -545,6 +545,62 @@ BeforeAll {
     }
 }
 
+Describe 'Test-PathPattern middle recursive glob semantics' {
+    BeforeAll {
+        . "$PSScriptRoot/governance.config.ps1"
+        . (Get-ScriptFunctionsBlock -ScriptPath $script:validator)
+        $script:readinessRecursivePattern = 'specs/<feature>/readiness/**/*.md'
+    }
+
+    It 'matches <Label>' -ForEach @(
+        @{
+            Label = 'a direct readiness artifact'
+            Path = 'specs/001-demo/readiness/readiness-assessment.md'
+        }
+        @{
+            Label = 'a one-level nested readiness artifact'
+            Path = 'specs/001-demo/readiness/eci/authorization-record.md'
+        }
+        @{
+            Label = 'a multi-level nested readiness artifact'
+            Path = 'specs/001-demo/readiness/eci/sources/source-manifest.md'
+        }
+        @{
+            Label = 'a backslash-normalized readiness artifact'
+            Path = 'specs\001-demo\readiness\readiness-assessment.md'
+        }
+    ) {
+        param($Label, $Path)
+
+        Test-PathPattern -Path $Path -Pattern $script:readinessRecursivePattern |
+            Should -BeTrue
+    }
+
+    It 'rejects <Label>' -ForEach @(
+        @{
+            Label = 'a near-prefix readiness directory'
+            Path = 'specs/001-demo/readiness-copy/readiness-assessment.md'
+        }
+        @{
+            Label = 'a sibling stage directory'
+            Path = 'specs/001-demo/plan/readiness-assessment.md'
+        }
+        @{
+            Label = 'a backslash-normalized near-prefix readiness directory'
+            Path = 'specs\001-demo\readiness-copy\readiness-assessment.md'
+        }
+        @{
+            Label = 'a doubled path separator'
+            Path = 'specs/001-demo/readiness//eci/source-manifest.md'
+        }
+    ) {
+        param($Label, $Path)
+
+        Test-PathPattern -Path $Path -Pattern $script:readinessRecursivePattern |
+            Should -BeFalse
+    }
+}
+
 Describe 'validate-mainline-notes state and branch reconciliation' {
     BeforeEach {
         $script:fixtureRoot = Initialize-MainlineFixture

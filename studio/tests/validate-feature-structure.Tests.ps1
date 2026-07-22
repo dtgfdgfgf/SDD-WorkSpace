@@ -143,8 +143,15 @@ $AuthorizationSuffix
 
 Describe 'validate-feature-structure (M5)' {
     BeforeEach {
+        $script:oldProjectRoot = $env:SDD_PROJECT_ROOT
         $projectRoot = Join-Path $TestDrive ("project-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
+        New-Item -ItemType Directory -Path (Join-Path $projectRoot 'specs') -Force | Out-Null
         $script:featureDir = Join-Path $projectRoot ("specs/feat-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
+        $env:SDD_PROJECT_ROOT = $projectRoot
+    }
+
+    AfterEach {
+        $env:SDD_PROJECT_ROOT = $script:oldProjectRoot
     }
 
     It 'reports VALID for a minimal governed feature with readiness and the ECI container' {
@@ -391,7 +398,7 @@ Describe 'validate-feature-structure (M5)' {
     }
 
     It 'fails when feature directory does not exist' {
-        $missing = Join-Path $TestDrive 'never-created'
+        $missing = Join-Path (Split-Path -Parent $script:featureDir) 'never-created'
         $output = pwsh -NoProfile -File $script:validatorScript -FeatureDir $missing -Json
         $LASTEXITCODE | Should -Not -Be 0
         $result = ($output -join "`n") | ConvertFrom-Json

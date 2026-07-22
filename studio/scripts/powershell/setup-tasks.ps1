@@ -50,35 +50,9 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        return [PSCustomObject]@{
-            FEATURE_DIR  = $resolved
-            FEATURE_SPEC = Join-Path $resolved 'spec.md'
-            IMPL_PLAN    = Join-Path $resolved 'plan.md'
-            TASKS        = Join-Path $resolved 'tasks.md'
-        }
-    }
-    return Get-FeaturePathsEnv
-}
-
-$paths = Resolve-FeatureContext -Override $FeatureDir
-
-# Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
-$projectRootForBoundary = if ($FeatureDir) {
-    $specsParent = Split-Path -Parent $paths.FEATURE_DIR
-    if ((Split-Path -Leaf $specsParent) -ne 'specs') {
-        throw "FEATURE_DIR escapes project root: $($paths.FEATURE_DIR) must be located at <project>/specs/<feature>"
-    }
-    Split-Path -Parent $specsParent
-} else {
-    Get-RepoRoot
-}
-if (-not $projectRootForBoundary) { throw 'Unable to resolve project root for path boundary check.' }
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
 
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]

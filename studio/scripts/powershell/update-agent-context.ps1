@@ -16,6 +16,10 @@ Mirrors the behavior of scripts/bash/update-agent-context.sh:
 .PARAMETER AgentType
 Optional agent key to update a single agent. If omitted, updates all existing agent files (creating a default Claude file if none exist).
 
+.PARAMETER FeatureDir
+Optional explicit feature directory. Relative values are resolved from the
+repository root and remain authoritative over branch or SPECIFY_FEATURE state.
+
 .EXAMPLE
 ./update-agent-context.ps1 -AgentType claude
 
@@ -28,7 +32,8 @@ Relies on common helper functions in common.ps1
 param(
     [Parameter(Position=0)]
     [ValidateSet('claude','gemini','copilot','cursor-agent','qwen','opencode','codex','windsurf','kilocode','auggie','roo','codebuddy','amp','shai','q','qodercli','kiro-cli','kiro','agy','bob','jules')]
-    [string]$AgentType
+    [string]$AgentType,
+    [string]$FeatureDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,9 +43,9 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDir 'common.ps1')
 
 # Acquire environment paths
-$envData = Get-FeaturePathsEnv
+$envData = Resolve-FeatureContext -FeatureDir $FeatureDir
 $REPO_ROOT     = $envData.REPO_ROOT
-$CURRENT_BRANCH = $envData.CURRENT_BRANCH
+$CURRENT_BRANCH = $envData.FEATURE_ID
 $HAS_GIT       = $envData.HAS_GIT
 $IMPL_PLAN     = $envData.IMPL_PLAN
 $NEW_PLAN = $IMPL_PLAN
@@ -451,7 +456,7 @@ function Print-Summary {
     if ($NEW_FRAMEWORK) { Write-Host "  - Added framework: $NEW_FRAMEWORK" }
     if ($NEW_DB -and $NEW_DB -ne 'N/A') { Write-Host "  - Added database: $NEW_DB" }
     Write-Host ''
-    Write-Info 'Usage: ./update-agent-context.ps1 [-AgentType claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|q|qodercli|kiro-cli|kiro|agy|bob|jules]'
+    Write-Info 'Usage: ./update-agent-context.ps1 [-FeatureDir <path>] [-AgentType claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|q|qodercli|kiro-cli|kiro|agy|bob|jules]'
 }
 
 function Main {
@@ -472,4 +477,3 @@ function Main {
 }
 
 Main
-

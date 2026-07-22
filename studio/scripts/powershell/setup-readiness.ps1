@@ -54,22 +54,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        $readinessDir = Join-Path $resolved 'readiness'
-        return [PSCustomObject]@{
-            FEATURE_DIR          = $resolved
-            FEATURE_SPEC         = Join-Path $resolved 'spec.md'
-            READINESS_DIR        = $readinessDir
-            READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-            ECI_DIR              = Join-Path $readinessDir 'eci'
-        }
-    }
-    return Get-FeaturePathsEnv
-}
-
 function Get-NeedsClarificationMarkers {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return @() }
@@ -79,24 +63,11 @@ function Get-NeedsClarificationMarkers {
     return @($rxMatches | ForEach-Object { $_.Value })
 }
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
-
-# Path boundary defense: -FeatureDir override or SPECIFY_FEATURE env var could be tampered to escape the project.
-# SDD requires feature dirs to live at <project>/specs/<feature>; we derive the project root from that structure.
-$projectRootForBoundary = if ($FeatureDir) {
-    $specsParent = Split-Path -Parent $paths.FEATURE_DIR
-    if ((Split-Path -Leaf $specsParent) -ne 'specs') {
-        throw "FEATURE_DIR escapes project root: $($paths.FEATURE_DIR) must be located at <project>/specs/<feature>"
-    }
-    Split-Path -Parent $specsParent
-} else {
-    Get-RepoRoot
-}
-if (-not $projectRootForBoundary) { throw 'Unable to resolve project root for path boundary check.' }
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.READINESS_DIR -MessagePrefix 'READINESS_DIR escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.READINESS_ASSESSMENT -MessagePrefix 'READINESS_ASSESSMENT escapes project root'
-Assert-PathInsideRoot -Root $projectRootForBoundary -Candidate $paths.ECI_DIR -MessagePrefix 'ECI_DIR escapes project root'
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.READINESS_DIR -MessagePrefix 'READINESS_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.READINESS_ASSESSMENT -MessagePrefix 'READINESS_ASSESSMENT escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.ECI_DIR -MessagePrefix 'ECI_DIR escapes project root'
 
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]

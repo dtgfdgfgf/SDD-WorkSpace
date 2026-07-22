@@ -111,39 +111,9 @@ function Assert-ReadyForPlan {
     }
 }
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-
-    $basePaths = Get-FeaturePathsEnv
-    if (-not $Override) {
-        return $basePaths
-    }
-
-    $resolved = Resolve-AbsolutePath -Path $Override -BaseDir $basePaths.REPO_ROOT
-    $specsRoot = [System.IO.Path]::GetFullPath((Join-Path $basePaths.REPO_ROOT 'specs'))
-    $featureParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $resolved))
-    if (-not $featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "FEATURE_DIR escapes project root: $resolved must be located at <project>/specs/<feature>"
-    }
-
-    $readinessDir = Join-Path $resolved 'readiness'
-    return [PSCustomObject]@{
-        REPO_ROOT            = $basePaths.REPO_ROOT
-        CURRENT_BRANCH       = $basePaths.CURRENT_BRANCH
-        HAS_GIT              = $basePaths.HAS_GIT
-        FEATURE_DIR          = $resolved
-        FEATURE_SPEC         = Join-Path $resolved 'spec.md'
-        INTENT_LEDGER        = Join-Path $resolved 'intent-ledger.md'
-        READINESS_DIR        = $readinessDir
-        READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-        ECI_DIR              = Join-Path $readinessDir 'eci'
-        IMPL_PLAN            = Join-Path $resolved 'plan.md'
-    }
-}
-
 # Get all paths and variables from common functions, while allowing a workflow
 # to bind plan preparation to its explicit feature input instead of the branch.
-$paths = Resolve-FeatureContext -Override $FeatureDir
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
 
 # Path boundary defense: SPECIFY_FEATURE env var or git branch could be tampered to escape REPO_ROOT.
 Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes REPO_ROOT'

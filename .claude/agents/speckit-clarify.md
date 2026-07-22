@@ -19,6 +19,11 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the first feature-context script, then preserve the returned absolute
+`FEATURE_DIR` in every next-stage command and handoff. Do not rebind from the branch, environment,
+or free-form user text.
+
 ## Outline
 
 Goal: Detect and reduce ambiguity or missing decision points in the active feature specification and record the clarifications directly in the spec file.
@@ -27,7 +32,7 @@ Note: This clarification workflow is a mandatory SDD stage (Studio Constitution 
 
 Execution steps:
 
-1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once** (combined `--json --paths-only` mode / `-Json -PathsOnly`). Parse minimal JSON payload fields:
+1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once**, or `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly` when the named option is present. Parse minimal JSON payload fields:
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
    - `STUDIO_ROOT` and `CONSTITUTIONS` for dual-layer constitution support
@@ -171,17 +176,17 @@ Execution steps:
    - Path to updated spec.
    - Sections touched (list names).
    - Coverage summary table listing each taxonomy category with Status: Resolved (was Partial/Missing and addressed), Deferred (exceeds question quota or better suited for planning), Clear (already sufficient), Outstanding (still Partial/Missing but low impact).
-   - If any Outstanding or Deferred remain, recommend whether to proceed to `/speckit.readiness` or run `/speckit.clarify` again later before readiness.
-   - Suggested next command.
+   - If any Outstanding or Deferred remain, recommend whether to proceed to `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` or run `/speckit.clarify -FeatureDir "<FEATURE_DIR>"` again later before readiness.
+   - Suggested next command: use `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 
 Behavior rules:
 
-- If no meaningful ambiguities found (or all potential questions would be low-impact), respond: "No critical ambiguities detected worth formal clarification." and suggest proceeding to `/speckit.readiness`.
+- If no meaningful ambiguities found (or all potential questions would be low-impact), respond: "No critical ambiguities detected worth formal clarification." and suggest proceeding to `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 - If spec file missing, instruct user to run `/speckit.specify` first (do not create a new spec here).
 - Never exceed 5 total asked questions (clarification retries for a single question do not count as new questions).
 - Avoid speculative tech stack questions unless the absence blocks functional clarity.
 - Respect user early termination signals ("stop", "done", "proceed").
-- If no questions asked due to full coverage, output a compact coverage summary (all categories Clear) then suggest advancing to `/speckit.readiness`.
+- If no questions asked due to full coverage, output a compact coverage summary (all categories Clear) then suggest advancing to `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 - If quota reached with unresolved high-impact categories remaining, explicitly flag them under Deferred with rationale.
 
 Context for prioritization: $ARGUMENTS
