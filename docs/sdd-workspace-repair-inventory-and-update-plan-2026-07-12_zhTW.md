@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.32.0"
+version: "1.33.0"
 date: "2026-07-12"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "ea78b64fec17ee074018b9dc17abea31404f8f16"
+head_commit: "f0f325b41563dea5cfa5d53582fbc0c316938f02"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -470,6 +470,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.30.0 | 2026-07-22 | Appends revision 2 after implementation `105a09c` and accounting-sequence plan `3e64e4e`. Only R-D07/R-E02/R-E08/R-E11/R-H03/R-H04/R-H20 become COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across the unchanged 131 findings. The dedicated R6-A1 note remains Draft/Open until a later note-only finalization and exact-tree gates; R6-A2 through R6-A6 remain pending. See Section 40. |
 | 1.31.0 | 2026-07-22 | Appends revision 3 after finalization head `8f0dd46` exposed a no-op hard-coded finding-status index mutation and stale note-state prose in `docs/README.md`. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated R6-A1 note returns to Draft/Open. See Section 41. |
 | 1.32.0 | 2026-07-22 | After fixture repair `ea78b64` and committed re-entry correction `483947a`, the clean repair-and-plan tree passes 878 governance tests with 0 failures, runtime `VALID=true` with 0 errors and 0 warnings, and valid three-revision history. Revision 4 changes only R-E11 from IN_PROGRESS to COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across the unchanged 131 findings. The dedicated R6-A1 note remains Draft/Open pending final exact-tree gates and note-only finalization. See Section 42. |
+| 1.33.0 | 2026-07-22 | Appends revision 5 after finalization head `f0f325b` failed explicit Batch readiness with `branch-evidence-coverage-missing` for `docs/README.md`: the Ready note could not cite that same commit's previously unknown hash as the path's last-touch evidence. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated note returns to Draft/Open. The interrupted exact-tree suite is not closure evidence. See Section 43. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -1918,6 +1919,62 @@ authorize edits under `projects/` or `learning/`, push, merge or PR-thread resol
     "OPEN": 42,
     "DECIDED": 5,
     "IN_PROGRESS": 1,
+    "DISPOSITIONED": 0
+  }
+}
+```
+
+## 43. 2026-07-22 R6-A1 finalization evidence-coverage failure and second R-E11 re-entry
+
+Surface-set correction `4d8bbe23a2e0bca39bc1e786780866af06227d7c` truthfully authorized
+finalization head `f0f325b41563dea5cfa5d53582fbc0c316938f02` to synchronize the dedicated
+note, its mainline index row and the dependent note-state prose in `docs/README.md`. The committed
+tree preserved the revision-4 machine marker and passed its staged-snapshot audit.
+
+Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` through `f0f325b` then failed
+with exactly one `branch-evidence-coverage-missing` error for `docs/README.md`. That path's
+last-touch commit was `f0f325b`, but a Ready note inside the same commit cannot cite the commit's
+hash before it exists. Aggregate readiness still returned only the expected
+`aggregate-note-not-ready` blocker, and finding-status history remained valid with four revisions,
+131 findings and fold 83/42/5/1/0. Those passing partial results do not override the failed
+mandatory Batch gate. The concurrently started runtime and complete governance suite were stopped
+after the deterministic Batch failure and provide no finalization-tree result.
+
+This evidence refutes only the R-E11 completion and dedicated Ready/Closed claim. R-D07, R-E02,
+R-E08, R-H03, R-H04 and R-H20 remain `COMPLETED`. Revision 5 therefore returns only R-E11 to
+`IN_PROGRESS`, and the dedicated note returns to Draft with reconciliation Open. The failure is an
+R-E11 evidence-sequencing condition rather than an unrelated residual finding; it remains visible
+under R-E11 and may not be treated as closed until a committed re-entry plan avoids the
+self-referential last-touch requirement and the resulting exact tree passes every gate.
+
+R6-A2 through R6-A6, Wave-4 dispositions, R-E09, R-J03, workflow promotion, Aggregate acceptance,
+merge and post-merge evidence remain unchanged. This demotion does not authorize edits under
+`projects/`, `learning/` or `studio/workflows/`, push, merge or PR-thread resolution.
+`sdd-pipeline` remains experimental, default-disabled and execution-denied; PR #3 remains
+`NOT READY TO MERGE`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 5,
+  "recordType": "delta",
+  "recordedDate": "2026-07-22",
+  "ledgerVersion": "1.33.0",
+  "statuses": [
+    {"id":"R-E11","status":"IN_PROGRESS"}
+  ],
+  "inventoryCount": 131,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 52,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 82,
+    "OPEN": 42,
+    "DECIDED": 5,
+    "IN_PROGRESS": 2,
     "DISPOSITIONED": 0
   }
 }

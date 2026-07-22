@@ -3,11 +3,26 @@
 **Date**: 2026-07-22
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`, `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`, `4d8bbe23a2e0bca39bc1e786780866af06227d7c`
+**Status**: Draft
+**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`, `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`, `4d8bbe23a2e0bca39bc1e786780866af06227d7c`, `f0f325b41563dea5cfa5d53582fbc0c316938f02`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 **Validation Scope**: Batch
+
+## Revalidation (2026-07-22, Evidence-Coverage Failure)
+
+Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` through finalization head
+`f0f325b41563dea5cfa5d53582fbc0c316938f02` failed with exactly one
+`branch-evidence-coverage-missing` error for `docs/README.md`. The same commit changed that path to
+Ready/Closed prose, so its last-touch was `f0f325b`; the Ready note inside that commit could not
+cite the commit hash before it existed. Aggregate returned only the expected umbrella blocker and
+the four-revision ledger remained valid, but those partial passes cannot override mandatory Batch.
+
+The concurrently started runtime and complete governance suite were stopped after this
+deterministic failure and provide no finalization-tree result. Revision 5 therefore returns only
+R-E11 to `IN_PROGRESS`; the other six A1 findings remain `COMPLETED`, and this note returns to Draft
+with reconciliation Open. Re-entry requires a new committed sequence that avoids self-referential
+last-touch evidence and then passes every exact-tree gate.
 
 ## Revalidation (2026-07-22, Finalization-Tree Failure)
 
@@ -28,20 +43,18 @@ revision-aware. On the clean repair-and-plan tree at
 0 failed, runtime reports `VALID=true` with 0 errors and 0 warnings, and the three-revision ledger
 history remains valid at 131 findings and fold 82/42/5/2/0. Revision 4 therefore restores only
 R-E11 to `COMPLETED`. Accounting commit `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`
-preserves exactly four consecutive revisions and passes its staged-snapshot audit. This separate
-documentation-only finalization, authorized by surface-set correction
-`4d8bbe23a2e0bca39bc1e786780866af06227d7c`, now transitions the dedicated Batch note to Ready
-with reconciliation Closed and synchronizes its two dependent index surfaces. The complete
-exact-tree gate contract below will be run immediately against the committed finalization tree;
-any deviation requires immediate demotion. R6-A2 through R6-A6 remain pending and the branch
-remains `NOT READY TO MERGE`.
+preserved exactly four consecutive revisions and passed its staged-snapshot audit. Documentation
+finalization `f0f325b41563dea5cfa5d53582fbc0c316938f02`, authorized by surface-set correction
+`4d8bbe23a2e0bca39bc1e786780866af06227d7c`, then synchronized the three note-state surfaces but
+failed the Batch evidence-coverage gate described above. R6-A2 through R6-A6 remain pending and the
+branch remains `NOT READY TO MERGE`.
 
 ## Summary
 
 - Establish a machine-bounded, append-only finding-status authority without making the full repair
   ledger authoritative.
-- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20, and restore
-  R-E11 only after its repaired negative fixtures and clean pre-accounting gates pass.
+- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20 while R-E11
+  re-enters verification after the evidence-coverage failure.
 - Keep consumer repositories, workflow promotion, Aggregate acceptance and the remaining R6
   batches outside this checkpoint.
 
@@ -57,16 +70,18 @@ The implementation adds exact schema, fold, visibility, index and BaseRef-histor
 finding statuses; path-scoped Markdown formatting; current phase and entry-point truth; and an exact
 source-to-mirror partition. Plan correction
 `3e64e4e785496d604e16975752392d7bc2b6c50e` authorizes the original A1-only accounting checkpoint.
-After the failed finalization, amendment `483947a19cc4790785ae710bd7cf5e9ab9fff335` preserves the
-honesty-demotion record and authorizes the revision-4 re-entry sequence while retaining the later
-R6-A5 accounting boundary for Wave-4 dispositions and cross-batch convergence.
+After the first failed finalization, amendment `483947a19cc4790785ae710bd7cf5e9ab9fff335`
+preserved the honesty-demotion record and authorized the revision-4 re-entry sequence. Surface-set
+correction `4d8bbe23a2e0bca39bc1e786780866af06227d7c` addressed dependent prose, but finalization
+`f0f325b41563dea5cfa5d53582fbc0c316938f02` exposed a separate last-touch evidence-sequencing
+failure. The later R6-A5 boundary for Wave-4 dispositions and cross-batch convergence is unchanged.
 
 ## Scope
 
 In scope:
 
 - R-E11 scoped finding-status schema, validator, runtime integration and append-only revisions 1
-  through 4, including the revision-3 honesty demotion and revision-4 re-entry.
+  through 5, including both honesty demotions and the refuted revision-4 re-entry.
 - R-D07 artifact path/type formatting enforcement with bounded semantic exceptions.
 - R-E02 and R-E08 adapter phase and current-phase truth.
 - R-H03 and R-H04 README and workspace-structure truth.
@@ -95,8 +110,8 @@ Out of scope:
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Derive the current finding-status index marker and require a real tampering mutation |
 | `studio/tests/mainline-note-validation.Tests.ps1` | Derive the current marker for runtime-propagation tampering evidence |
 | `studio/tests/validate-finding-status-ledger.Tests.ps1` | Keep the isolated unit fixture explicitly revision-aware |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve revisions 1 through 3 and append revision 4 for only R-E11 re-entry |
-| `docs/README.md` | Preserve the revision-4 machine marker and synchronize the dependent Ready/Closed prose |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve revisions 1 through 4 and append revision 5 for only R-E11 demotion |
+| `docs/README.md` | Match the revision-5 fold and dependent Draft/Open state |
 
 ## Impact
 
@@ -114,7 +129,7 @@ Out of scope:
 | `AGENTS.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `CLAUDE.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `.github/copilot-instructions.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes bootstrap, phase and dependent-adapter truth. |
-| `docs/README.md` | `must_update` | `updated` | Revision 4 remains 131 findings and fold 83/42/5/1/0 while its dependent prose matches this note's Ready/Closed state. |
+| `docs/README.md` | `must_update` | `updated` | Revision 5 matches 131 findings, fold 82/42/5/2/0 and this note's Draft/Open state. |
 
 ## Validation
 
@@ -136,20 +151,21 @@ Observed evidence is separated by tree:
 - Accounting commit `a74a08a191b8ec1bd67b2f2b9112e2810f10959c` passes its staged-snapshot
   audit and committed BaseRef history validation with exactly four consecutive valid revisions,
   revision 4, 131 findings, fold 83/42/5/1/0 and `HISTORY_VALID=true`.
-- Under surface-set correction `4d8bbe23a2e0bca39bc1e786780866af06227d7c`, this finalization
-  changes exactly this note, its mainline index row and only the dependent note-state prose in
-  `docs/README.md`; the revision-4 machine marker is unchanged. The complete exact-tree gates will
-  now run against its committed head; any failure activates the demotion contract below and cannot
-  be treated as Ready evidence.
+- Under surface-set correction `4d8bbe23a2e0bca39bc1e786780866af06227d7c`, finalization
+  `f0f325b41563dea5cfa5d53582fbc0c316938f02` changed exactly the three authorized note-state
+  surfaces and preserved the revision-4 machine marker, but explicit Batch readiness failed with
+  one `branch-evidence-coverage-missing` error for `docs/README.md`.
+- The concurrently started runtime and complete governance suite were intentionally stopped after
+  the Batch failure and are not finalization-tree evidence. Revision 5 records the required
+  demotion to fold 82/42/5/2/0.
 
 Any future committed Ready tree is subject to this immediate fail-and-demote contract:
 
 - The complete governance suite must report at least 878 passed and 0 failed.
 - Runtime must report `VALID=true`, 0 errors and 0 warnings.
-- On the R-E11 re-entry accounting and finalization tree, finding-status history must preserve
-  revision 3 and contain exactly four consecutive valid revisions, 131 findings and fold
-  83/42/5/1/0. Later trees must preserve those four plus every subsequent consecutive valid
-  revision with current fold and index parity.
+- Finding-status history must preserve revisions 1 through 5 plus every later authorized,
+  consecutive valid revision, with 131 findings and current fold/index parity. A new committed
+  re-entry plan must define the exact terminal revision and fold before another Ready transition.
 - Explicit Batch readiness from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` must report
   `VALID=true`, 0 errors and 0 warnings.
 - Explicit Aggregate readiness must fail only with the canonical `aggregate-note-not-ready`
@@ -159,15 +175,14 @@ Any future committed Ready tree is subject to this immediate fail-and-demote con
 
 ## Merge Notes
 
-- This dedicated Batch note is `Ready` with reconciliation `Closed` under the immediate exact-tree
-  fail-and-demote contract. Any failed gate requires restoring Draft/Open before other work.
+- This dedicated Batch note is `Draft` with reconciliation `Open` after the failed Batch gate.
 - Even after bounded A1 readiness, the branch remains `NOT READY TO MERGE` because R6-A2 through
   R6-A6, Aggregate acceptance, merge and post-merge evidence remain incomplete.
 - This batch does not authorize workflow promotion, push, merge or PR-thread resolution.
 
 ## Follow-ups
 
-- Run every exact-tree gate against the committed note-only finalization head; demote immediately
-  if any result deviates from the contract.
-- After the gates pass, continue R6-A2 without absorbing any A3 through A6 finding or Wave-4
-  disposition.
+- Commit an explicit non-self-referential R-E11 re-entry sequence before any later completion or
+  Ready claim, then run every exact-tree gate on the resulting committed head.
+- Continue R6-A2 only after R6-A1 is truthfully revalidated, without absorbing any A3 through A6
+  finding or Wave-4 disposition.
