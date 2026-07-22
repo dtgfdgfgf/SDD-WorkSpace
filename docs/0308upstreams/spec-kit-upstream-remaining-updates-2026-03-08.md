@@ -36,7 +36,7 @@
 
 - [spec-kit-upstream-alignment-matrix.md](C:/Users/user/Workspace/spec-kit-upstream-alignment-matrix.md)
 - [spec-kit-upstream-wave2-transition-guide.md](C:/Users/user/Workspace/spec-kit-upstream-wave2-transition-guide.md)
-- [learning-project-spec-kit-sdd.md](C:/Users/user/Workspace/learning-project-spec-kit-sdd.md)
+- [learning-project-spec-kit-sdd.md](./learning-project-spec-kit-sdd.md)
 - [get-speckit-version.ps1](C:/Users/user/Workspace/studio/scripts/powershell/get-speckit-version.ps1)
 
 ## 先講結論

@@ -1,3 +1,8 @@
+> **Historical snapshot (2026-03-08).** This file preserves the former six-stage assessment and
+> is not current execution guidance. Current project and consumer delivery uses the seven-stage
+> sequence governed by `studio/constitution/constitution.md`. Do not use this snapshot to bypass
+> Readiness, conditional ECI re-entry, Analyze or the mandatory Implement gate.
+
 # 本工作區 Spec Kit / SDD 流程研究報告（2026-03-08 更新版）
 
 ## 範圍
@@ -300,7 +305,6 @@
 如果用一句話概括目前狀態：
 
 **這個工作區已經完成第一波 studio-first 內部收斂，並落地了第二波的 `AI skills` 與 extension registry foundation；下一階段應聚焦於 catalog 與 lifecycle 的 shared-layer 治理，而不是回頭動既有專案。**
-
 
 
 

@@ -230,7 +230,7 @@ Describe 'artifact Markdown token classification' {
         @($violations.tokenClass) | Should -Contain $ExpectedClass
     }
 
-    It 'keeps unrelated historical informational paths outside the strict selector set' {
+    It 'keeps the repaired strategy strict without absorbing unrelated historical paths' {
         $contract = Get-Content -Raw -LiteralPath (Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json') |
             ConvertFrom-Json
         $selected = @(
@@ -240,9 +240,199 @@ Describe 'artifact Markdown token classification' {
             }
         )
 
-        $selected | Should -Not -Contain 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
+        $selected | Should -Contain 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
         @($selected | Where-Object { $_ -like 'docs/0308upstreams/*' }).Count | Should -Be 0
         @($selected | Where-Object { $_ -like 'docs/readiness_source/*' }).Count | Should -Be 0
+    }
+}
+
+Describe 'R6-A4 document and configuration truthfulness' {
+    It 'rejects an R-G01 governance ledger rollback' {
+        foreach ($relativeNoticePath in @(
+            'learning/codex-smoke-practice-20260307/docs/governance-status.md',
+            'projects/codex-smoke-internal-20260307/docs/governance-status.md',
+            'projects/commercial-line-bot/docs/governance-status.md',
+            'projects/japanese-learning/docs/governance-status.md',
+            'projects/KMS/docs/governance-status.md',
+            'projects/personal_website/yuanxi_personal_site_ready/docs/governance-status.md',
+            'projects/Trading/docs/governance-status.md',
+            'projects/Trading-002-decision-evidence-platform/docs/governance-status.md',
+            'projects/Trading-003-stock-selection-backtest/docs/governance-status.md'
+        )) {
+            Join-Path $WorkspaceRoot $relativeNoticePath | Should -Exist
+        }
+
+        $fixtureRoot = New-RuntimeAuditFixture
+        $path = Join-Path $fixtureRoot 'docs/project-governance-status.md'
+        $content = [System.IO.File]::ReadAllText($path)
+        $tampered = $content.Replace(
+            '**Updated:** 2026-07-22',
+            '**Updated:** 2026-03-23',
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            '| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Mixed` |',
+            '| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Legacy` |',
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            '| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Mixed` |',
+            '| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Legacy` |',
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText($path, $tampered, [System.Text.UTF8Encoding]::new($false))
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-g01-project-governance-current-surface'
+    }
+
+    It 'rejects an R-G03 superseded-review rollback' {
+        $historicalPath = Join-Path $WorkspaceRoot 'docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_zhTW.md'
+        $historicalContent = [System.IO.File]::ReadAllText($historicalPath).Replace("`r`n", "`n").Replace("`r", "`n")
+        $historicalAnchor = '# Yuanxi SDD Pack Implementation Plan：實作障礙檢查'
+        $historicalBody = $historicalContent.Substring(
+            $historicalContent.IndexOf($historicalAnchor, [System.StringComparison]::Ordinal)
+        ).TrimEnd("`n")
+        $historicalHash = [Convert]::ToHexString(
+            [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($historicalBody))
+        ).ToLowerInvariant()
+        $historicalHash | Should -BeExactly '25afa95fee40ae0cac15708620465c0ff9aaf7f93f6a762d7f3a364d94e79e6e'
+
+        $fixtureRoot = New-RuntimeAuditFixture
+        $fixtureHistoricalPath = Join-Path $fixtureRoot 'docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_zhTW.md'
+        $content = [System.IO.File]::ReadAllText($fixtureHistoricalPath)
+        $tampered = $content.Replace(
+            'status: "superseded"',
+            'status: "handoff-draft"',
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            '> **Historical snapshot; superseded for current execution (2026-07-22).**',
+            '> Historical review.',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText($fixtureHistoricalPath, $tampered, [System.Text.UTF8Encoding]::new($false))
+        Remove-Item -LiteralPath (
+            Join-Path $fixtureRoot 'docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md'
+        ) -Force
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-g03-obstacle-review-superseded-quarantine'
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-g03-obstacle-review-bounded-revalidation'
+    }
+
+    It 'rejects an R-G04 compatibility or formatting rollback' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $path = Join-Path $fixtureRoot 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
+        $content = [System.IO.File]::ReadAllText($path)
+        $tampered = $content.Replace(
+            '| 0.1.0 | v0.8.5 | historical-unverified |',
+            '| 0.1.0 | v0.8.5 | tested |',
+            [System.StringComparison]::Ordinal
+        ) + "`n[A] --> [B]`nRestored → stale flow`n"
+        [System.IO.File]::WriteAllText($path, $tampered, [System.Text.UTF8Encoding]::new($false))
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-g04-strategy-baseline-truthfulness'
+        $check = $audit.Result.ARTIFACT_MARKDOWN_CHECKS |
+            Where-Object path -EQ 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
+        @($check.violations.tokenClass) | Should -Contain 'ascii-flow-diagram-line'
+        @($check.violations.tokenClass) | Should -Contain 'unicode-arrow-code-point'
+    }
+
+    It 'rejects an R-H06 relocation or reference rollback' {
+        Test-Path -LiteralPath (Join-Path $WorkspaceRoot 'learning-project-spec-kit-sdd.md') |
+            Should -BeFalse
+
+        $historicalPath = Join-Path $WorkspaceRoot 'docs/0308upstreams/learning-project-spec-kit-sdd.md'
+        $historicalContent = [System.IO.File]::ReadAllText($historicalPath).Replace("`r`n", "`n").Replace("`r", "`n")
+        $historicalAnchor = '# 本工作區 Spec Kit / SDD 流程研究報告（2026-03-08 更新版）'
+        $historicalBody = $historicalContent.Substring(
+            $historicalContent.IndexOf($historicalAnchor, [System.StringComparison]::Ordinal)
+        ).TrimEnd("`n")
+        $historicalHash = [Convert]::ToHexString(
+            [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($historicalBody))
+        ).ToLowerInvariant()
+        $historicalHash | Should -BeExactly 'dcc5f2b29b78cfe1150a3f23a433b1531bce5facbaa0d025cdb1016968293051'
+
+        $fixtureRoot = New-RuntimeAuditFixture
+        $fixtureHistoricalPath = Join-Path $fixtureRoot 'docs/0308upstreams/learning-project-spec-kit-sdd.md'
+        Copy-Item -LiteralPath $fixtureHistoricalPath -Destination (
+            Join-Path $fixtureRoot 'learning-project-spec-kit-sdd.md'
+        ) -Force
+        Remove-Item -LiteralPath $fixtureHistoricalPath -Force
+
+        $transitionPath = Join-Path $fixtureRoot 'docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md'
+        $transition = [System.IO.File]::ReadAllText($transitionPath).Replace(
+            '| `docs/0308upstreams/learning-project-spec-kit-sdd.md` | 2026-03-08 工作區狀態與第二波目標的歷史快照 |',
+            '| `learning-project-spec-kit-sdd.md` | 描述目前工作區狀態與第二波目標定位 |',
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            'Local workspace analysis: `docs/0308upstreams/learning-project-spec-kit-sdd.md`',
+            'Local workspace analysis: `learning-project-spec-kit-sdd.md`',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText($transitionPath, $transition, [System.Text.UTF8Encoding]::new($false))
+
+        $remainingPath = Join-Path $fixtureRoot 'docs/0308upstreams/spec-kit-upstream-remaining-updates-2026-03-08.md'
+        $remaining = [System.IO.File]::ReadAllText($remainingPath).Replace(
+            '[learning-project-spec-kit-sdd.md](./learning-project-spec-kit-sdd.md)',
+            '[learning-project-spec-kit-sdd.md](C:/Users/user/Workspace/learning-project-spec-kit-sdd.md)',
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText($remainingPath, $remaining, [System.Text.UTF8Encoding]::new($false))
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-h06-historical-six-stage-relocation'
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-h06-transition-guide-reference-reconciliation'
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-h06-remaining-updates-reference-reconciliation'
+    }
+
+    It 'rejects an R-H09 VS Code settings rollback' {
+        $contract = Get-Content -Raw -LiteralPath (
+            Join-Path $WorkspaceRoot 'studio/runtime/shared-runtime-contract.json'
+        ) | ConvertFrom-Json
+        $invariant = $contract.docInvariants | Where-Object id -EQ 'r-h09-vscode-settings-truthfulness'
+        $current = [System.IO.File]::ReadAllText((Join-Path $WorkspaceRoot '.vscode/settings.json'))
+        foreach ($staleSetting in @(
+            '"markdownlint.ignore"',
+            '"**/projects/duotify-*/**"',
+            '"chat.tools.terminal.autoApprove"'
+        )) {
+            $variant = "$current`n$staleSetting"
+            @(Test-ContentContract -Content $variant -MustContainAll @($invariant.mustContainAll) `
+                -MustNotContainAny @($invariant.mustNotContainAny)).Count | Should -BeGreaterThan 0
+        }
+
+        $fixtureRoot = New-RuntimeAuditFixture
+        $path = Join-Path $fixtureRoot '.vscode/settings.json'
+        $content = [System.IO.File]::ReadAllText($path)
+        $tampered = $content.Replace(
+            '  // === Code Spell Checker Configuration ===',
+            ('  "markdownlint.ignore": ["**/*.md"],' + "`n`n" + '  // === Code Spell Checker Configuration ==='),
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            '    "**/studio/**",',
+            ('    "**/studio/**",' + "`n" + '    "**/projects/duotify-*/**",'),
+            [System.StringComparison]::Ordinal
+        ).Replace(
+            ('  "chat.useAgentSkills": true' + "`n" + '}'),
+            ('  "chat.useAgentSkills": true,' + "`n" + '  "chat.tools.terminal.autoApprove": {}' + "`n" + '}'),
+            [System.StringComparison]::Ordinal
+        )
+        $tampered | Should -Not -BeExactly $content
+        [System.IO.File]::WriteAllText($path, $tampered, [System.Text.UTF8Encoding]::new($false))
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) | Should -Contain 'r-h09-vscode-settings-truthfulness'
     }
 }
 

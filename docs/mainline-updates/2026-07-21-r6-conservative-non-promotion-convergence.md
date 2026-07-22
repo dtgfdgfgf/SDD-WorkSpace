@@ -209,6 +209,38 @@ Required before this note may become `Ready`:
 - `sdd-pipeline` remains experimental, default-disabled and execution-denied. No consumer tree,
   promotion, push or merge is authorized by this candidate.
 
+## 2026-07-22 R6-A4 Documentation and Configuration Truthfulness Implementation Candidate
+
+- The R-G01 candidate refreshes the central governance ledger to 2026-07-22, adds Trading-002 and
+  Trading-003 as `Mixed`, and records the post-2026-03-18 seven-stage, ECI re-entry and Implement
+  gate effects. All nine local-notice paths exist, but the two new Trading notices still say
+  `Legacy`; this shared-only batch does not call them synchronized and does not edit consumers.
+- The R-G03 candidate quarantines the 2026-05-08 obstacle review without rewriting its historical
+  body. A bounded 2026-07-22 revalidation separates the installed CLI Version 0.0.22 command
+  surface from official Spec Kit v0.13.3: the local executable still exposes `--ai` and lacks
+  extension, preset and workflow groups, while official v0.13.3 uses `--integration` and documents
+  all three groups. R-G02 and the Wave-4 upstream alignment findings remain independent and open.
+- The R-G04 candidate marks the v0.8.5 strategy and compatibility matrix historical-unverified,
+  replaces flow and directory diagrams with lists or tables, and brings the exact strategy path
+  into the strict Constitution Section 10.1 runtime selector. Restoring the stale `tested` row,
+  Unicode arrows or an ASCII flow now fails the contract.
+- The R-H06 candidate relocates the six-stage 2026-03-08 assessment under `docs/0308upstreams/`,
+  adds a visible historical warning and repairs three references across two documents. The plan's
+  phrase “three documents” was a count drift; the owner authorized the repository-observed scope
+  of two files and three occurrences. The historical body remains byte-content equivalent after
+  line-ending and trailing-newline normalization.
+- The R-H09 candidate removes the terminal auto-approval block, obsolete duotify ignore and global
+  Markdown lint ignore while retaining the Markdownlint formatter. Four additional Git and
+  Explorer risk preferences discovered during preflight remain untouched because they are outside
+  R-H09's authorized scope.
+- Five dedicated rollback tests and per-finding contract anchors distinguish the repaired surfaces
+  from the prior date, rows, guidance, matrix, location, references and settings. R-G01, R-G03,
+  R-G04, R-H06 and R-H09 remain `OPEN` until R6-A5 appends their committed implementation hash and
+  exact-tree evidence.
+- This note remains `Draft`, Related Commits `TBD` and reconciliation `Open`. `sdd-pipeline`
+  remains experimental, default-disabled and execution-denied; no promotion, consumer edit, push
+  or merge is authorized by this candidate.
+
 ## Follow-ups
 
 - Implement the four direct-repair sub-batches in the committed plan.

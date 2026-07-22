@@ -567,6 +567,7 @@ if (-not $contract) {
         'docs/README.md',
         'docs/project-governance-status.md',
         'docs/project-worktree-parity-governance.md',
+        'docs/yuanxi_sdd_pack_strategy_zhTW.md',
         'docs/sdd-workspace-*.md',
         'docs/mainline-updates/*.md',
         'studio/workflows/POLICY.md',

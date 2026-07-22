@@ -83,6 +83,7 @@
       "docs/README.md",
       "docs/project-governance-status.md",
       "docs/project-worktree-parity-governance.md",
+      "docs/yuanxi_sdd_pack_strategy_zhTW.md",
       "docs/sdd-workspace-*.md",
       "docs/mainline-updates/*.md",
       "studio/workflows/POLICY.md",
@@ -212,6 +213,103 @@
     }
   ],
   "docInvariants": [
+    {
+      "id": "r-g01-project-governance-current-surface",
+      "path": "docs/project-governance-status.md",
+      "mustContainAll": [
+        "**Updated:** 2026-07-22",
+        "## Post-2026-03-18 Gate Effects",
+        "| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Mixed` |",
+        "| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Mixed` |",
+        "The Constitution Section 2.1 workspace self-application route is limited to the canonical",
+        "All nine listed project-local `docs/governance-status.md` notice paths were confirmed present"
+      ],
+      "mustNotContainAny": [
+        "**Updated:** 2026-03-23",
+        "| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Legacy` |",
+        "| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Legacy` |"
+      ]
+    },
+    {
+      "id": "r-g03-obstacle-review-superseded-quarantine",
+      "path": "docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_zhTW.md",
+      "mustContainAll": [
+        "status: \"superseded\"",
+        "revalidation_status: \"required-before-reuse\"",
+        "Historical snapshot; superseded for current execution (2026-07-22).",
+        "docs/sdd-workspace-deep-review-2026-07-08_zhTW.md` Section 5.5",
+        "docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md"
+      ]
+    },
+    {
+      "id": "r-g03-obstacle-review-bounded-revalidation",
+      "path": "docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md",
+      "mustContainAll": [
+        "scope: \"R-G03 B-001 and B-003 CLI fact revalidation only\"",
+        "CLI Version `0.0.22`; displayed Template Version `0.13.3`",
+        "Official v0.13.3 core reference",
+        "The current official v0.13.3 init interface uses `--integration`",
+        "R-F02、R-F03、R-F05"
+      ]
+    },
+    {
+      "id": "r-g04-strategy-baseline-truthfulness",
+      "path": "docs/yuanxi_sdd_pack_strategy_zhTW.md",
+      "mustContainAll": [
+        "baseline_status: \"historical-unverified\"",
+        "baseline_spec_kit: \"v0.8.5\"",
+        "Its compatibility matrix and command examples are historical design inputs, not current",
+        "| 0.1.0 | v0.8.5 | historical-unverified |"
+      ],
+      "mustNotContainAny": [
+        "| 0.1.0 | v0.8.5 | tested |"
+      ]
+    },
+    {
+      "id": "r-h06-historical-six-stage-relocation",
+      "path": "docs/0308upstreams/learning-project-spec-kit-sdd.md",
+      "mustContainAll": [
+        "Historical snapshot (2026-03-08).",
+        "former six-stage assessment",
+        "Current project and consumer delivery uses the seven-stage",
+        "studio/constitution/constitution.md",
+        "# 本工作區 Spec Kit / SDD 流程研究報告（2026-03-08 更新版）"
+      ]
+    },
+    {
+      "id": "r-h06-transition-guide-reference-reconciliation",
+      "path": "docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md",
+      "mustContainAll": [
+        "| `docs/0308upstreams/learning-project-spec-kit-sdd.md` | 2026-03-08 工作區狀態與第二波目標的歷史快照 |",
+        "Local workspace analysis: `docs/0308upstreams/learning-project-spec-kit-sdd.md`"
+      ],
+      "mustNotContainAny": [
+        "| `learning-project-spec-kit-sdd.md` | 描述目前工作區狀態與第二波目標定位 |",
+        "Local workspace analysis: `learning-project-spec-kit-sdd.md`"
+      ]
+    },
+    {
+      "id": "r-h06-remaining-updates-reference-reconciliation",
+      "path": "docs/0308upstreams/spec-kit-upstream-remaining-updates-2026-03-08.md",
+      "mustContainAll": [
+        "[learning-project-spec-kit-sdd.md](./learning-project-spec-kit-sdd.md)"
+      ],
+      "mustNotContainAny": [
+        "[learning-project-spec-kit-sdd.md](C:/Users/user/Workspace/learning-project-spec-kit-sdd.md)"
+      ]
+    },
+    {
+      "id": "r-h09-vscode-settings-truthfulness",
+      "path": ".vscode/settings.json",
+      "mustContainAll": [
+        "\"editor.defaultFormatter\": \"DavidAnson.vscode-markdownlint\""
+      ],
+      "mustNotContainAny": [
+        "\"markdownlint.ignore\"",
+        "\"**/projects/duotify-*/**\"",
+        "\"chat.tools.terminal.autoApprove\""
+      ]
+    },
     {
       "id": "workspace-personal-data-ignore",
       "path": ".gitignore",
@@ -1369,6 +1467,18 @@
     }
   ],
   "scriptInvariants": [
+    {
+      "id": "r6-a4-document-configuration-reversion-tests",
+      "path": "studio/tests/check-speckit-runtime.Tests.ps1",
+      "mustContainAll": [
+        "Describe 'R6-A4 document and configuration truthfulness'",
+        "rejects an R-G01 governance ledger rollback",
+        "rejects an R-G03 superseded-review rollback",
+        "rejects an R-G04 compatibility or formatting rollback",
+        "rejects an R-H06 relocation or reference rollback",
+        "rejects an R-H09 VS Code settings rollback"
+      ]
+    },
     {
       "id": "sync-agent-bootstrap-script",
       "path": "studio/scripts/powershell/sync-agent-bootstrap.ps1",

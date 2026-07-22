@@ -348,7 +348,7 @@
 
 | 文件 | 用途 |
 |------|------|
-| `learning-project-spec-kit-sdd.md` | 描述目前工作區狀態與第二波目標定位 |
+| `docs/0308upstreams/learning-project-spec-kit-sdd.md` | 2026-03-08 工作區狀態與第二波目標的歷史快照 |
 | `spec-kit-upstream-alignment-matrix.md` | 對齊項目的決策表 |
 | **本文件** | 第二波的詳細過渡與執行指南 |
 | `https-github-com-github-spec-kit-repo-2025-10-01-2.md` | upstream 研究基線 |
@@ -365,8 +365,7 @@
 - Official Upgrade Guide: https://raw.githubusercontent.com/github/spec-kit/main/docs/upgrade.md
 - Official Releases: https://github.com/github/spec-kit/releases
 - Local upstream analysis: `https-github-com-github-spec-kit-repo-2025-10-01-2.md`
-- Local workspace analysis: `learning-project-spec-kit-sdd.md`
+- Local workspace analysis: `docs/0308upstreams/learning-project-spec-kit-sdd.md`
 - Local alignment matrix: `spec-kit-upstream-alignment-matrix.md`
-
 
 

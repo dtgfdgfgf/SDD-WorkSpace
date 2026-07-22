@@ -53,10 +53,6 @@
     }
   },
 
-  // === markdownlint Configuration ===
-  // 停用所有 .md 檔案的 markdownlint 檢查
-  "markdownlint.ignore": ["**/*.md"],
-
   // === Code Spell Checker Configuration ===
   "cSpell.enabled": true,
   "cSpell.words": ["speckit", "SDD", "NFR", "chatagent", "handoffs"],
@@ -69,7 +65,6 @@
   "cSpell.ignorePaths": [
     "**/.github/**",
     "**/studio/**",
-    "**/projects/duotify-*/**",
     "**/archive/**",
     "**/node_modules/**",
     "**/.git/**",
@@ -146,27 +141,5 @@
     "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.js.map",
     "README.md": "README-*.md, CHANGELOG.md, LICENSE*"
   },
-  "chat.useAgentSkills": true,
-  "chat.tools.terminal.autoApprove": {
-    "/^\\.\\\\studio\\\\scripts\\\\powershell\\\\init-project\\.ps1 -Name \"japanese-learning\" -Type Internal -Description \"LINE Bot 日語學習助教 - 手動入庫 \\+ LLM 路由 \\+ 單字文法練習\"$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^\\$projects = @\\(\n    @\\{ name = \"studio-automation\"; path = \"projects/studio-automation\" \\},\n    @\\{ name = \"japanese-learning\"; path = \"projects/japanese-learning\" \\}\n\\)\n\nforeach \\(\\$proj in \\$projects\\) \\{\n    \\$wsFile = Join-Path \\$proj\\.path \"\\$\\(\\$proj\\.name\\)\\.code-workspace\"\n    if \\(Test-Path \\$wsFile\\) \\{\n        \\$content = @\\{\n            folders = @\\(\n                @\\{ name = \\$proj\\.name; path = \"\\.\" \\},\n                @\\{ name = \"studio \\(read-only\\)\"; path = \"\\.\\./\\.\\./studio\" \\},\n                @\\{ name = \"agents \\(read-only\\)\"; path = \"\\.\\./\\.\\./\\.github/agents\" \\}\n            \\)\n            settings = @\\{\n                \"files\\.readonlyInclude\" = @\\{\n                    \"\\*\\*/studio/\\*\\*\" = \\$true\n                    \"\\*\\*/\\.github/agents/\\*\\*\" = \\$true\n                \\}\n            \\}\n        \\} \\| ConvertTo-Json -Depth 4\n        Set-Content -Path \\$wsFile -Value \\$content -Encoding UTF8\n        Write-Host \"Fixed: \\$wsFile\" -ForegroundColor Green\n    \\}\n\\}$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^Get-ChildItem -Path \"projects\", \"learning\" -Recurse -Filter \"\\*\\.code-workspace\" \\| ForEach-Object \\{\n    \\$name = \\$_\\.BaseName\n    \\$content = @\\{\n        folders = @\\(\n            @\\{ name = \\$name; path = \"\\.\" \\},\n            @\\{ name = \"studio \\(read-only\\)\"; path = \"\\.\\./\\.\\./studio\" \\},\n            @\\{ name = \"agents \\(read-only\\)\"; path = \"\\.\\./\\.\\./\\.github/agents\" \\}\n        \\)\n        settings = @\\{\n            \"files\\.readonlyInclude\" = @\\{\n                \"\\*\\*/studio/\\*\\*\" = \\$true\n                \"\\*\\*/\\.github/agents/\\*\\*\" = \\$true\n            \\}\n        \\}\n    \\} \\| ConvertTo-Json -Depth 4\n    Set-Content -Path \\$_\\.FullName -Value \\$content -Encoding UTF8\n    Write-Host \"Fixed: \\$\\(\\$_\\.FullName\\)\" -ForegroundColor Green\n\\}$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^# 驗證 junction 是否建立成功\nGet-ChildItem -Path \"projects/\\*/`\\.github/agents\", \"learning/\\*/`\\.github/agents\" -ErrorAction SilentlyContinue \\| ForEach-Object \\{\n    \\$item = Get-Item \\$_\\.FullName\n    if \\(\\$item\\.Attributes -band \\[IO\\.FileAttributes\\]::ReparsePoint\\) \\{\n        Write-Host \"✓ Junction: \\$\\(\\$_\\.FullName\\)\" -ForegroundColor Green\n    \\} else \\{\n        Write-Host \"✗ Not a junction: \\$\\(\\$_\\.FullName\\)\" -ForegroundColor Red\n    \\}\n\\}$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^Get-ChildItem -Path \"projects\", \"learning\" -Directory \\| ForEach-Object \\{\n    \\$agentsPath = Join-Path \\$_\\.FullName \"\\.github\\\\agents\"\n    if \\(Test-Path \\$agentsPath\\) \\{\n        \\$item = Get-Item \\$agentsPath\n        \\$isJunction = \\$item\\.Attributes -band \\[IO\\.FileAttributes\\]::ReparsePoint\n        if \\(\\$isJunction\\) \\{\n            Write-Host \"OK Junction: \\$\\(\\$_\\.Name\\)/\\.github/agents\" -ForegroundColor Green\n        \\} else \\{\n            Write-Host \"NOT Junction: \\$\\(\\$_\\.Name\\)/\\.github/agents\" -ForegroundColor Yellow\n        \\}\n    \\} else \\{\n        Write-Host \"MISSING: \\$\\(\\$_\\.Name\\)/\\.github/agents\" -ForegroundColor Red\n    \\}\n\\}$/": {
-      "approve": true,
-      "matchCommandLine": true
-    }
-  }
+  "chat.useAgentSkills": true
 }

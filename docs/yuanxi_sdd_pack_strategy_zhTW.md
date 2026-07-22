@@ -1,10 +1,14 @@
 ---
 title: "Yuanxi SDD Pack：官方 Spec Kit 優先的可安裝 Overlay 策略"
-version: "0.1.0"
+version: "0.2.0"
 date: "2026-05-05"
+last_reviewed: "2026-07-22"
 language: "zh-TW"
 owner: "元熙"
-status: "draft"
+status: "historical-unverified"
+historical_status: "draft"
+baseline_status: "historical-unverified"
+baseline_spec_kit: "v0.8.5"
 purpose: "將既有 SDD-WorkSpace 的個人化 SDD 治理、commands、templates、agents 與 workflow，重構為可安裝、可複製、可升級的 spec-kit overlay pack。"
 source_context:
   - "使用者希望使用官方 github/spec-kit 作為 base，並將自己改過的內容以可複製方式接入，避免 upstream drift。"
@@ -12,6 +16,12 @@ source_context:
 ---
 
 # Yuanxi SDD Pack：官方 Spec Kit 優先的可安裝 Overlay 策略
+
+> **Historical baseline notice (reviewed 2026-07-22).** This strategy was drafted against Spec Kit
+> v0.8.5. Its compatibility matrix and command examples are historical design inputs, not current
+> compatibility evidence or implementation authorization. Before reuse, follow
+> `docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md` and resolve the
+> independently open R-G02 and upstream alignment findings.
 
 > Companion handoff：若要把本策略轉成實作，請先閱讀 `docs/yuanxi_sdd_pack_strategy_implementation_review_zhTW.md`。該文件整理 command namespace、v0.1 scope、readiness gate、installer safety、compatibility baseline 與下一個 agent 應先修正的問題。
 
@@ -21,17 +31,12 @@ source_context:
 
 > 每個新專案都先是官方 spec-kit project；你的 SDD-WorkSpace 只提供一包可安裝的 personal SDD pack，把你打磨過的 commands、templates、governance、agent assets 接上去。
 
-換句話說：
+換句話說，預期順序是：
 
-```text
-Official spec-kit project
-  ↓
-specify init <project> --integration <agent>
-  ↓
-install Yuanxi SDD Pack
-  ↓
-得到你的 discover / readiness / ECI / templates / governance rules
-```
+1. 建立 official spec-kit project。
+2. 執行 `specify init <project> --integration <agent>`。
+3. 安裝 Yuanxi SDD Pack。
+4. 取得 discover、readiness、ECI、templates 與 governance rules。
 
 這樣 upstream 更新時，你要維護的是「你的 pack 與官方 spec-kit 的相容性」，而不是每個專案的整套 runtime。
 
@@ -39,25 +44,18 @@ install Yuanxi SDD Pack
 
 ## 2. 新定位：官方 spec-kit 是 base，你的內容是 overlay
 
-舊模型比較像：
+舊模型把 `SDD-WorkSpace` 當成所有專案共享 runtime 的母體。
 
-```text
-SDD-WorkSpace = 所有專案共享 runtime 的母體
-```
+新模型把 `SDD-WorkSpace` 定位成 `yuanxi-sdd-pack` 的 source repo、build repo 與 release
+repo。
 
-新模型應該是：
+真正的使用方式包含三個角色：
 
-```text
-SDD-WorkSpace = yuanxi-sdd-pack 的 source repo / build repo / release repo
-```
-
-真正的使用方式應該變成：
-
-```text
-github/spec-kit = core runtime
-你的 repo = overlay package source
-每個專案 = official spec-kit + installed overlay
-```
+| Role | Responsibility |
+|---|---|
+| `github/spec-kit` | Core runtime |
+| Yuanxi repository | Overlay package source |
+| Consumer project | Official Spec Kit plus installed overlay |
 
 這個模型的優點：
 
@@ -70,68 +68,20 @@ github/spec-kit = core runtime
 
 ## 3. 建議建立的工具包：`yuanxi-sdd-pack`
 
-建議建立一個乾淨的可安裝工具包，例如：
-
-```text
-yuanxi-sdd-pack/
-```
-
-或暫時放在現有 repo 內：
-
-```text
-studio/packages/yuanxi-sdd-pack/
-```
+建議建立乾淨的 `yuanxi-sdd-pack/` 可安裝工具包，或暫時放在現有 repo 的
+`studio/packages/yuanxi-sdd-pack/`。
 
 建議目錄結構：
 
-```text
-yuanxi-sdd-pack/
-  presets/
-    yuanxi-governance/
-      preset.yml
-      templates/
-        spec-template.md
-        plan-template.md
-        tasks-template.md
-        checklist-template.md
-
-  extensions/
-    yuanxi-discover/
-      extension.yml
-      commands/
-        speckit.discover.md
-      templates/
-        discover-template.md
-
-    yuanxi-readiness/
-      extension.yml
-      commands/
-        speckit.readiness.md
-        speckit.eci.md
-      templates/
-        readiness-assessment-template.md
-        eci-dossier-template.md
-        intent-ledger-template.md
-
-    yuanxi-verify/
-      extension.yml
-      commands/
-        speckit.verify.md
-        speckit.drift.md
-
-  installer/
-    install-yuanxi-sdd-pack.ps1
-    install-yuanxi-sdd-pack.sh
-
-  catalog/
-    preset-catalog.json
-    extension-catalog.json
-
-  docs/
-    INSTALL.md
-    COMPATIBILITY.md
-    UPGRADE.md
-```
+| Path | Intended contents |
+|---|---|
+| `presets/yuanxi-governance/` | `preset.yml` and spec, plan, tasks and checklist templates |
+| `extensions/yuanxi-discover/` | Extension manifest, discover command and discover template |
+| `extensions/yuanxi-readiness/` | Extension manifest, readiness and ECI commands, and their evidence templates |
+| `extensions/yuanxi-verify/` | Extension manifest plus verify and drift commands |
+| `installer/` | PowerShell and shell installers |
+| `catalog/` | Preset and extension catalogs |
+| `docs/` | Installation, compatibility and upgrade guidance |
 
 重點：這包東西不再假裝自己是 spec-kit core，也不直接維護官方 core command。
 
@@ -165,67 +115,39 @@ yuanxi-sdd-pack/
 
 官方 core commands 應盡量保留：
 
-```text
-/speckit.constitution
-/speckit.specify
-/speckit.plan
-/speckit.tasks
-/speckit.taskstoissues
-/speckit.implement
-```
+- `/speckit.constitution`
+- `/speckit.specify`
+- `/speckit.plan`
+- `/speckit.tasks`
+- `/speckit.taskstoissues`
+- `/speckit.implement`
 
 官方 optional commands 也建議保留：
 
-```text
-/speckit.clarify
-/speckit.analyze
-/speckit.checklist
-```
+- `/speckit.clarify`
+- `/speckit.analyze`
+- `/speckit.checklist`
 
-不建議一開始覆寫：
-
-```text
-/speckit.specify
-/speckit.plan
-/speckit.tasks
-/speckit.implement
-```
+不建議一開始覆寫 `/speckit.specify`、`/speckit.plan`、`/speckit.tasks` 或
+`/speckit.implement`。
 
 原因是這些 command 最容易隨 upstream 更新而改變。若你覆寫它們，每次 spec-kit 更新都要手工比對。
 
-比較穩定的做法：
+比較穩定的分工如下：
 
-```text
-保留官方：
-/speckit.specify
-/speckit.clarify
-/speckit.plan
-/speckit.tasks
-/speckit.analyze
-/speckit.implement
-
-你新增：
-/speckit.discover
-/speckit.readiness
-/speckit.eci
-/speckit.verify
-/speckit.drift
-```
+| Ownership | Commands |
+|---|---|
+| Retain from official Spec Kit | `/speckit.specify`, `/speckit.clarify`, `/speckit.plan`, `/speckit.tasks`, `/speckit.analyze`, `/speckit.implement` |
+| Add through the Yuanxi pack | `/speckit.discover`, `/speckit.readiness`, `/speckit.eci`, `/speckit.verify`, `/speckit.drift` |
 
 建議流程：
 
-```text
-/speckit.discover        # 你的 pre-spec discovery
-/speckit.specify         # 官方
-/speckit.clarify         # 官方
-/speckit.readiness       # 你的 gate
-/speckit.eci             # 條件式 route
-/speckit.plan            # 官方
-/speckit.tasks           # 官方
-/speckit.analyze         # 官方
-/speckit.implement       # 官方
-/speckit.verify          # 你的 post-implementation gate
-```
+1. `/speckit.discover` performs Yuanxi pre-spec discovery.
+2. `/speckit.specify` and `/speckit.clarify` remain official commands.
+3. `/speckit.readiness` applies the Yuanxi gate; `/speckit.eci` runs only when routed.
+4. `/speckit.plan`, `/speckit.tasks`, `/speckit.analyze` and `/speckit.implement` remain official
+   commands.
+5. `/speckit.verify` applies the Yuanxi post-implementation gate.
 
 這樣 upstream 更新時，官方 command 可以照樣吃新版；你的 extension 只需要確保仍然讀得懂官方產出的 `spec.md`、`plan.md`、`tasks.md`。
 
@@ -243,26 +165,17 @@ Preset 可以覆寫官方 templates，但這也是 drift 風險最高的地方�
 
 只新增你的輔助模板，不覆寫官方 core template。
 
-例如：
+例如，可新增：
 
-```text
-templates/
-  yuanxi-business-risk-section.md
-  yuanxi-readiness-gate-section.md
-  yuanxi-merchant-perspective-checklist.md
-```
+- `templates/yuanxi-business-risk-section.md`
+- `templates/yuanxi-readiness-gate-section.md`
+- `templates/yuanxi-merchant-perspective-checklist.md`
 
 由 extension command 在需要時引用這些 section。
 
 ### 6.2 Opinionated preset：高控制、高 drift
 
-直接覆寫：
-
-```text
-spec-template.md
-plan-template.md
-tasks-template.md
-```
+高控制版本會直接覆寫 `spec-template.md`、`plan-template.md` 與 `tasks-template.md`。
 
 這會更符合你的個人方法論，但每次 upstream 升級都要做 template diff。
 
@@ -307,11 +220,7 @@ specify extension add --dev "../extensions/yuanxi-verify" --priority 5
 
 建議長期拆成兩個 repo。
 
-保留現在的：
-
-```text
-dtgfdgfgf/SDD-WorkSpace
-```
+保留現在的 `dtgfdgfgf/SDD-WorkSpace`。
 
 作為：
 
@@ -321,22 +230,10 @@ dtgfdgfgf/SDD-WorkSpace
 - 個人 studio 文件
 - learning / projects 實驗區
 
-另開一個乾淨 repo：
+另開乾淨的 `dtgfdgfgf/yuanxi-sdd-pack` repo。
 
-```text
-dtgfdgfgf/yuanxi-sdd-pack
-```
-
-只放可安裝內容：
-
-```text
-presets/
-extensions/
-installer/
-catalog/
-docs/
-tests/
-```
+只放 `presets/`、`extensions/`、`installer/`、`catalog/`、`docs/` 與 `tests/` 等可安裝
+內容。
 
 好處：
 
@@ -397,38 +294,17 @@ accepted_sections:
 
 ## 10. Compatibility Matrix
 
-建議新增：
+建議新增 `docs/COMPATIBILITY.md`。
 
-```text
-docs/COMPATIBILITY.md
-```
-
-範例：
-
-```markdown
-# Compatibility Matrix
+下表只保留原始策略的歷史 matrix；它不是 current test evidence：
 
 | yuanxi-sdd-pack | spec-kit version | status | notes |
 |---|---:|---|---|
-| 0.1.0 | v0.8.5 | tested | initial extension/preset split |
-| 0.2.0 | v0.8.x | planned | add ECI + verify |
-```
+| 0.1.0 | v0.8.5 | historical-unverified | Initial extension/preset split proposed in the 2026-05-05 draft |
+| 0.2.0 | v0.8.x | historical-plan | ECI and verify proposal; version range is stale and unverified |
 
-每次 spec-kit 更新，只測這條路徑：
-
-```text
-official init
-install yuanxi-sdd-pack
-run discover
-run specify
-run clarify
-run readiness
-run plan
-run tasks
-run analyze
-run implement on toy project
-run verify
-```
+每次 spec-kit 更新，依序測試 official init、pack installation、discover、specify、clarify、
+readiness、plan、tasks、analyze、toy-project implement 與 verify。
 
 通過後更新 compatibility matrix。
 
@@ -444,18 +320,20 @@ run verify
 
 第一版只放三個東西：
 
-```text
-extensions/yuanxi-discover
-extensions/yuanxi-readiness
-presets/yuanxi-governance-lite
-```
+- `extensions/yuanxi-discover`
+- `extensions/yuanxi-readiness`
+- `presets/yuanxi-governance-lite`
 
 不要一開始搬所有東西。
 
 ### Step 3：安裝流程改成 official-first
 
+下列命令使用明示 placeholder，因為原稿的 v0.8.5 pin 已是歷史基準；R-G02 完成前不得
+把 placeholder 換成未驗證版本並宣稱相容。
+
 ```powershell
-uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git@v0.8.5
+$testedTag = 'vX.Y.Z'
+uv tool install specify-cli --force --from "git+https://github.com/github/spec-kit.git@$testedTag"
 specify version
 specify check
 
@@ -466,14 +344,8 @@ cd my-project
 
 ### Step 4：只新增，不覆寫
 
-第一版只新增：
-
-```text
-/speckit.discover
-/speckit.readiness
-/speckit.eci
-/speckit.verify
-```
+第一版只新增 `/speckit.discover`、`/speckit.readiness`、`/speckit.eci` 與
+`/speckit.verify`。
 
 先不要覆寫官方 `/speckit.specify`、`/speckit.plan`、`/speckit.tasks`。
 
@@ -517,35 +389,22 @@ specify preset list
 
 建議只包含：
 
-```text
-1. yuanxi-discover extension
-2. yuanxi-readiness extension
-3. yuanxi-governance-lite preset
-4. install script
-5. compatibility matrix
-6. smoke test script
-```
+1. yuanxi-discover extension。
+2. yuanxi-readiness extension。
+3. yuanxi-governance-lite preset。
+4. Install script。
+5. Compatibility matrix。
+6. Smoke test script。
 
-暫時不包含：
-
-```text
-1. 大量 community extensions
-2. 全面覆寫官方 templates
-3. 多 agent 完整 adapter
-4. 舊 projects migration
-5. 自動改寫既有專案
-6. 複雜 hooks
-```
+暫時不包含大量 community extensions、全面覆寫官方 templates、多 agent 完整 adapter、
+舊 projects migration、自動改寫既有專案或複雜 hooks。
 
 v0.1 的成功標準：
 
-```text
-任意官方 spec-kit 專案
-  → 安裝 yuanxi-sdd-pack
-  → 多出你的 discover / readiness commands
-  → 不破壞官方 specify / plan / tasks / implement
-  → 可以跑完一個 toy feature
-```
+1. Yuanxi pack 可安裝到任意受測的 official Spec Kit 專案。
+2. 安裝後可使用 discover 與 readiness commands。
+3. 安裝不破壞官方 specify、plan、tasks 與 implement commands。
+4. 一個固定 toy feature 可以完成相容性 smoke test。
 
 ---
 
@@ -553,26 +412,17 @@ v0.1 的成功標準：
 
 ### 14.1 Pack source of truth
 
-```text
-presets/
-extensions/
-installer/
-docs/
-tests/
-```
-
-才是可安裝 package 的 source of truth。
+`presets/`、`extensions/`、`installer/`、`docs/` 與 `tests/` 才是可安裝 package 的 source
+of truth。
 
 ### 14.2 Generated artifacts
 
 以下不應手工維護：
 
-```text
-resources/agent-skill-packs/
-project-local .github/
-project-local .claude/
-project-local generated commands
-```
+- `resources/agent-skill-packs/`
+- Project-local `.github/`
+- Project-local `.claude/`
+- Project-local generated commands
 
 它們應該由 export / install script 產生。
 
@@ -599,16 +449,13 @@ specify preset list
 
 建議採用以下決策：
 
-```text
-Decision:
-  Adopt official spec-kit as the base runtime.
-  Convert SDD-WorkSpace customizations into an installable overlay pack.
-  Do not fork or overwrite official core commands by default.
-  Use extensions for new workflows.
-  Use presets for artifact formatting and governance conventions.
-  Keep old SDD-WorkSpace as development/studio repository.
-  Create a clean yuanxi-sdd-pack package boundary.
-```
+1. Adopt official Spec Kit as the base runtime.
+2. Convert SDD-WorkSpace customizations into an installable overlay pack.
+3. Do not fork or overwrite official core commands by default.
+4. Use extensions for new workflows and presets for artifact formatting and governance
+   conventions.
+5. Keep SDD-WorkSpace as the development and studio repository.
+6. Create a clean yuanxi-sdd-pack package boundary.
 
 這會把你的系統從「容易被 upstream 變動追著跑」變成「可測試、可安裝、可升級的個人 SDD distribution」。
 
@@ -624,11 +471,8 @@ Decision:
 
 ### Primary Goal
 
-將使用者的 SDD 個人化治理、commands、templates、workflow gates 與 agent adapters，整理成：
-
-```text
-yuanxi-sdd-pack = extensions + presets + installer + compatibility tests
-```
+將使用者的 SDD 個人化治理、commands、templates、workflow gates 與 agent adapters，整理成
+由 extensions、presets、installer 與 compatibility tests 組成的 `yuanxi-sdd-pack`。
 
 而不是繼續維護一個會與 upstream spec-kit drift 的 fork-like workspace。
 
@@ -646,43 +490,34 @@ yuanxi-sdd-pack = extensions + presets + installer + compatibility tests
 
 當 agent 協助建立此 pack 時，至少應產生：
 
-```text
-presets/yuanxi-governance-lite/
-extensions/yuanxi-discover/
-extensions/yuanxi-readiness/
-installer/install.ps1
-installer/install.sh
-docs/INSTALL.md
-docs/COMPATIBILITY.md
-docs/UPGRADE.md
-tests/smoke-test.md
-```
+- `presets/yuanxi-governance-lite/`
+- `extensions/yuanxi-discover/`
+- `extensions/yuanxi-readiness/`
+- `installer/install.ps1`
+- `installer/install.sh`
+- `docs/INSTALL.md`
+- `docs/COMPATIBILITY.md`
+- `docs/UPGRADE.md`
+- `tests/smoke-test.md`
 
 ### Validation Checklist
 
 在宣稱完成前，必須確認：
 
-```text
-[ ] 可以在官方 spec-kit 初始化的新專案中安裝
-[ ] 安裝後官方 core commands 仍存在
-[ ] 安裝後新增 commands 可見
-[ ] 不需要手工複製 workspace 檔案
-[ ] 沒有覆寫官方 core command
-[ ] 沒有把 generated artifacts 當 source of truth
-[ ] 有 compatibility matrix
-[ ] 有 smoke test 流程
-```
+- 可以在受測的 official Spec Kit 新專案中安裝。
+- 安裝後官方 core commands 仍存在，且新增 commands 可見。
+- 不需要手工複製 workspace 檔案，也沒有覆寫官方 core command。
+- Generated artifacts 沒有被當成 source of truth。
+- Compatibility matrix 與 smoke test 流程都有可重現證據。
 
 ### Non-goals
 
-```text
-- 不重構所有舊 projects/
-- 不批次 migration learning/
-- 不直接把 SDD-WorkSpace root 變成普通 spec-kit project
-- 不安裝未審查的 community extensions
-- 不先做完整多 agent adapter
-- 不一開始覆寫所有 official templates
-```
+- 不重構所有舊 `projects/`。
+- 不批次 migration `learning/`。
+- 不直接把 SDD-WorkSpace root 變成普通 Spec Kit project。
+- 不安裝未審查的 community extensions。
+- 不先做完整多 agent adapter。
+- 不一開始覆寫所有 official templates。
 
 ---
 

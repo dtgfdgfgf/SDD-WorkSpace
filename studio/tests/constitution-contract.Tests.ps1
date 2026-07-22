@@ -120,7 +120,7 @@ Describe 'agent authority partition contract' {
 }
 
 Describe 'artifact-scoped Markdown formatting policy' {
-    It 'declares the exact strict current surfaces without absorbing R-G04 history' {
+    It 'declares the repaired R-G04 strategy as strict without absorbing unrelated history' {
         $expected = @(
             'studio/constitution/constitution.md',
             'AGENTS.md',
@@ -132,6 +132,7 @@ Describe 'artifact-scoped Markdown formatting policy' {
             'docs/README.md',
             'docs/project-governance-status.md',
             'docs/project-worktree-parity-governance.md',
+            'docs/yuanxi_sdd_pack_strategy_zhTW.md',
             'docs/sdd-workspace-*.md',
             'docs/mainline-updates/*.md',
             'studio/workflows/POLICY.md',
@@ -150,7 +151,7 @@ Describe 'artifact-scoped Markdown formatting policy' {
         @($contract.artifactMarkdownPolicy.strictPathPatterns) |
             Should -Not -Contain 'docs/**'
         @($contract.artifactMarkdownPolicy.strictPathPatterns) |
-            Should -Not -Contain 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
+            Should -Contain 'docs/yuanxi_sdd_pack_strategy_zhTW.md'
     }
 
     It 'bounds semantic exceptions to declared agents prompts and mirrors while keeping the adapter strict' {

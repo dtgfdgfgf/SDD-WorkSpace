@@ -4,7 +4,10 @@ version: "0.1.0"
 date: "2026-05-08"
 language: "zh-TW"
 owner: "元熙"
-status: "handoff-draft"
+status: "superseded"
+historical_status: "handoff-draft"
+superseded_on: "2026-07-22"
+revalidation_status: "required-before-reuse"
 parent_document: "docs/yuanxi_sdd_pack_implementation_plan_zhTW.md"
 purpose: "記錄針對 Yuanxi SDD Pack meta plan 的實作前障礙檢查結果，供下一個 agent 修正 plan 或啟動 Phase 0 前使用。"
 source_basis:
@@ -13,6 +16,13 @@ source_basis:
   - "Local specify CLI output on 2026-05-08 Asia/Taipei"
   - "Official Spec Kit v0.8.7 release metadata verified on 2026-05-08 Asia/Taipei"
 ---
+
+> **Historical snapshot; superseded for current execution (2026-07-22).** This document preserves
+> the 2026-05-08 local observation and must not be used to select a current Spec Kit CLI flag,
+> capability or version. In particular, B-001 and B-003 require current upstream revalidation.
+> See `docs/sdd-workspace-deep-review-2026-07-08_zhTW.md` Section 5.5 and the bounded
+> `docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md` revalidation.
+> The implementation plan itself remains stale under R-G02 and is not authorized for execution.
 
 # Yuanxi SDD Pack Implementation Plan：實作障礙檢查
 
