@@ -12,8 +12,8 @@
 ## Summary
 
 - Record the owner-selected conservative R6 convergence plan before implementation begins.
-- Register R-B25, R-B26 and R-H20 as new independent `OPEN` findings.
-- Directly repair 18 bounded safety and truthfulness findings, then conditionally disposition 35
+- Register R-B25, R-B26, R-H20 and R-E13 as new independent `OPEN` findings.
+- Directly repair 19 bounded safety and truthfulness findings, then conditionally disposition 35
   non-critical findings to Wave-4 with exact re-entry triggers.
 - Keep `sdd-pipeline` experimental, default-disabled and execution-denied.
 
@@ -36,6 +36,11 @@ classifies `.claude/agents/*.md` as seeded dependent mirrors, while the generato
 mirrors, current adapter/guides and runtime contract call the same directory source/runtime
 authority. R-H03 is README-specific, so the owner authorized new High OPEN R-H20 instead of
 silently expanding R-H03.
+
+R6-A5 preflight on 2026-07-23 found that the canonical status-entry schema cannot carry the exact
+re-entry trigger required for a `DISPOSITIONED` finding. The owner authorized Medium OPEN R-E13
+instead of silently expanding completed R-E11. Revisions 1 through 6 contain no disposition and
+remain valid; implementation and accounting remain separate.
 
 ## Scope
 
@@ -69,18 +74,19 @@ Out of scope:
 ## Impact
 
 - The branch receives a committed Constitution Section 2.1 entry plan before implementation.
-- The known inventory becomes 131 findings with current fold 76 `COMPLETED`, 48 `OPEN`,
-  6 `DECIDED`, 1 `IN_PROGRESS` and 0 `DISPOSITIONED`.
-- No existing finding becomes `COMPLETED` or `DISPOSITIONED` in this plan-only change.
+- The known inventory is 132 findings with current fold 83 `COMPLETED`, 43 `OPEN`,
+  5 `DECIDED`, 1 `IN_PROGRESS` and 0 `DISPOSITIONED` after revision 7 registers R-E13.
+- No A2 through A4 finding becomes `COMPLETED` and no Wave-4 finding becomes `DISPOSITIONED`
+  in the R-E13 registration.
 - R-E09 and R-J03 remain terminal blockers; PR #3 remains `NOT READY TO MERGE`.
 
 ## Impact Reconciliation
 
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.29.0 bootstraps the scoped status authority without changing the 131-item fold or closing R6-A1. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.20.0 records the exact 15-source/1-dependent correction before implementation resumes. |
-| `docs/README.md` | `must_update` | `updated` | Index reports 131 findings, revision 1 and the unchanged candidate fold. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.35.0 revision 7 registers only Medium R-E13 as OPEN and preserves revisions 1 through 6. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.25.0 records the trigger-authority repair and accounting sequence before implementation. |
+| `docs/README.md` | `must_update` | `updated` | Index reports revision 7, 132 findings and current fold 83/43/5/1/0. |
 | `docs/mainline-updates/README.md` | `must_update` | `updated` | Index state matches this Draft note. |
 | `studio/constitution/constitution.md` | `must_update` | `updated` | The implementation candidate defines the scoped authority, artifact policy and July 2026 phase review; no closure is claimed. |
 | `studio/runtime/shared-runtime-contract.json` | `must_update` | `updated` | The implementation candidate contains direct-repair policy and revert anchors; committed evidence and exact-tree gates remain pending. |
@@ -91,8 +97,8 @@ Plan-entry validation:
 
 - `git diff --check`
 - Mainline-note structural validation without a Ready requirement.
-- Independent matrix review: every non-completed ID appears once, R-B25/R-B26/R-H20 remain OPEN,
-  and the current 131-item fold is unchanged except for their registration.
+- Independent matrix review: every non-completed ID appears once, R-E13 is registered as OPEN,
+  and revisions 1 through 6 remain an immutable prefix.
 
 Required before this note may become `Ready`:
 
@@ -100,7 +106,7 @@ Required before this note may become `Ready`:
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`, expecting `VALID=true`,
   0 errors and 0 warnings.
 - `pwsh ./studio/scripts/powershell/run-governance-tests.ps1`, expecting at least the existing
-  747 passed baseline and 0 failed.
+  958 passed baseline and 0 failed.
 - Explicit Batch mainline-note validation from the committed entry-plan base, expecting
   `VALID=true`, 0 errors and 0 warnings.
 - Explicit Aggregate validation, allowing only the canonical umbrella blocker while it is Draft.
@@ -243,7 +249,18 @@ Required before this note may become `Ready`:
 
 ## Follow-ups
 
-- Implement the four direct-repair sub-batches in the committed plan.
-- Append evidence-backed status records and the exact 35 Wave-4 re-entry triggers in a separate
-  accounting change.
+- Implement R-E13 without changing the revision-7 fold.
+- Append evidence-backed A2 through A4 and R-E13 completions, then the exact 35 Wave-4 re-entry
+  triggers, in a separate accounting change.
 - Stop at the R-E09/R-J03 merge-authorization checkpoint for separate owner direction.
+
+## 2026-07-23 R6-A5 Trigger-Authority Registration
+
+- Remediation plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca` records owner Choice A and
+  classifies the trigger representation gap as independent Medium R-E13.
+- Ledger revision 7 registers only R-E13 as `OPEN`, producing 132 findings, severity 8/32/53/39
+  and fold 83/43/5/1/0. The eleven A2 through A4 candidates remain `OPEN`.
+- A dedicated A2-A5 Batch note now owns bounded finalization. This broad note remains Draft/Open/TBD
+  because R6-A6, R-E09, R-J03, merge authorization and post-merge evidence remain pending.
+- `sdd-pipeline` remains experimental, default-disabled and execution-denied. No disposition,
+  promotion, consumer edit, push, merge or PR-thread resolution is authorized by registration.

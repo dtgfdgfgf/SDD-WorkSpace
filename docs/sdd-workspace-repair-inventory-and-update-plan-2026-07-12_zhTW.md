@@ -1,8 +1,8 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.34.0"
+version: "1.35.0"
 date: "2026-07-12"
-last_updated: "2026-07-22"
+last_updated: "2026-07-23"
 language: "zh-TW"
 owner: "元熙"
 status: "repair-in-progress"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f4ca59d274fffe8f1e49950d8bf796b95eda05d6"
+head_commit: "a45b7d33a59dd41d7765d29626bf43d2adb02cca"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -28,7 +28,7 @@ related_documents:
 
 ## 0. 執行摘要
 
-第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22；2026-07-21 R6 residual audit 再新增 R-B25 與 R-B26；2026-07-22 R6-A1 preflight 再新增 R-H20。因此目前為 131 條，編為 R-A01 至 R-A22、R-B01 至 R-B26、其餘區域至 R-H20 與 R-J03。現況分佈：Critical 8、High 32、Medium 52、Low 39。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
+第 3 節在 v1.1.0 逐列機器重算後共有 109 條 findings；R0 staged-snapshot 驗收再發現並新增 R-A14；2026-07-13 R2 唯讀獨立驗證再發現 R-A15、R-A16、R-B17、R-B18 四條；2026-07-14 治理 re-review 的 12 條 RVR findings 再新增 9 條（R-A17/A18/A19、R-B19/B20/B21/B22、R-C08、R-F06）；2026-07-15 RB-1 獨立複核再新增 R-B23；2026-07-18 RB-2 對抗複核再新增 R-B24；2026-07-20 RB-3 新增 R-A20 與 R-A21；2026-07-20 RB-5 新增 High R-A22；2026-07-21 R6 residual audit 再新增 R-B25 與 R-B26；2026-07-22 R6-A1 preflight 再新增 R-H20；2026-07-23 R6-A5 preflight 再新增 Medium R-E13。因此目前為 132 條，編為 R-A01 至 R-A22、R-B01 至 R-B26、其餘區域至 R-H20 與 R-J03。現況分佈：Critical 8、High 32、Medium 53、Low 39。初版摘要所寫 95 條與 7/17/40/31 分佈是計數錯誤，已在 v1.1.0 修正；R-A14 之後的新 findings 均附獨立回歸證據。
 
 **2026-07-14 誠實性還原（R2.1）**：2026-07-14 re-review 以本地反例推翻兩項先前 `COMPLETED` 宣稱。R-B02（RVR-01：換掉 tasks.md 為非 task 文字仍 completed）與 R-B05（RVR-03：`[bool]'false'`=`True`、missing-state 沿用 default）改回 `IN_PROGRESS`，closure 分別移交 R-B19、R-B20。`docs/mainline-updates/2026-07-14-r2-workflow-engine-integrity.md` 依 note 狀態機降回 `Draft` 並加 Revalidation。12 條 RVR 的完整對映與批次見第 16 節與 `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md`。
 
@@ -472,6 +472,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.32.0 | 2026-07-22 | After fixture repair `ea78b64` and committed re-entry correction `483947a`, the clean repair-and-plan tree passes 878 governance tests with 0 failures, runtime `VALID=true` with 0 errors and 0 warnings, and valid three-revision history. Revision 4 changes only R-E11 from IN_PROGRESS to COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across the unchanged 131 findings. The dedicated R6-A1 note remains Draft/Open pending final exact-tree gates and note-only finalization. See Section 42. |
 | 1.33.0 | 2026-07-22 | Appends revision 5 after finalization head `f0f325b` failed explicit Batch readiness with `branch-evidence-coverage-missing` for `docs/README.md`: the Ready note could not cite that same commit's previously unknown hash as the path's last-touch evidence. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated note returns to Draft/Open. The interrupted exact-tree suite is not closure evidence. See Section 43. |
 | 1.34.0 | 2026-07-22 | After honesty demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` and committed non-self-referential plan `f4ca59d274fffe8f1e49950d8bf796b95eda05d6`, the clean five-revision tree passes 878 governance tests with 0 failures, runtime `VALID=true` with 0 errors and 0 warnings, and valid history at fold 82/42/5/2/0. Revision 6 changes only R-E11 from IN_PROGRESS to COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across 131 findings. The dedicated note remains Draft/Open/Batch until a later two-file finalization can cite this accounting commit's real hash. See Section 44. |
+| 1.35.0 | 2026-07-23 | After committed plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`, revision 7 registers new Medium R-E13 as OPEN before trigger-authority implementation begins. Inventory becomes 132 with severity 8/32/53/39 and fold 83 COMPLETED / 43 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED. Revisions 1 through 6 remain immutable, R-E11 remains COMPLETED, and no A2 through A4 finding is closed or Wave-4 item dispositioned. See Section 45. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -2028,6 +2029,59 @@ merge and post-merge evidence remain unchanged. This accounting does not authori
   "statusCounts": {
     "COMPLETED": 83,
     "OPEN": 42,
+    "DECIDED": 5,
+    "IN_PROGRESS": 1,
+    "DISPOSITIONED": 0
+  }
+}
+```
+
+## 45. 2026-07-23 R6-A5 R-E13 trigger-authority registration
+
+Committed remediation amendment `a45b7d33a59dd41d7765d29626bf43d2adb02cca` records the
+owner-selected Choice A after R6-A5 preflight proved that the closed status-entry schema cannot
+represent the exact re-entry trigger required by Sections 36.2 and 36.3. Treating an adjacent
+Markdown table as sufficient would leave that condition outside the canonical `finding_status`
+authority. The owner classifies the independent future-transition failure as new Medium R-E13
+rather than reopening R-E11: revisions 1 through 6 contain no `DISPOSITIONED` entry, and their
+existing schema, fold, index and history claims remain valid.
+
+| ID | Severity | 2026-07-23 finding | Required disposition | Current status |
+|---|---|---|---|---|
+| R-E13 | Medium | The canonical finding-status entry contract permits only `id` and `status`, so it cannot carry or fail-closed validate the mandatory per-ID re-entry trigger for a `DISPOSITIONED` finding; a generic, missing or mismatched trigger cannot be rejected inside the authoritative record | Before the first Wave-4 disposition, add a conditionally required `reentryTrigger`, exact 35-ID Section 36.2 mapping validation, discriminating type/content/swap mutations and a revert-sensitive shared-runtime anchor while preserving revisions 1 through 7 | OPEN |
+
+R-E13 raises the inventory to 132 and severity to Critical 8, High 32, Medium 53 and Low 39.
+Revision 7 registers only R-E13 as `OPEN`; every prior status remains unchanged. The fold is
+therefore 83 `COMPLETED`, 43 `OPEN`, 5 `DECIDED`, 1 `IN_PROGRESS` and 0 `DISPOSITIONED`.
+Revisions 1 through 6 remain an immutable prefix.
+
+This registration precedes implementation. It creates and indexes the dedicated A2-A5 Batch note
+as Draft/Open and records R-E13 in the broad R6 note without promoting that note. It does not
+implement or complete R-E13, account for the eleven A2 through A4 candidates, disposition a
+Wave-4 item, complete R-E09 or R-J03, promote a workflow, edit a consumer, push, merge or resolve
+PR threads. `sdd-pipeline` remains experimental, default-disabled and execution-denied; PR #3
+remains `NOT READY TO MERGE`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 7,
+  "recordType": "delta",
+  "recordedDate": "2026-07-23",
+  "ledgerVersion": "1.35.0",
+  "statuses": [
+    {"id":"R-E13","status":"OPEN"}
+  ],
+  "inventoryCount": 132,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 53,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 83,
+    "OPEN": 43,
     "DECIDED": 5,
     "IN_PROGRESS": 1,
     "DISPOSITIONED": 0
