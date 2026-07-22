@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`
+**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
@@ -18,18 +18,25 @@ runtime result but received zero because the fixture still replaced revision-1 c
 the revision-2 index contains `83/42`, so no mutation occurred. Inspection also found that
 `docs/README.md` still described this note as Draft/Open after finalization made it Ready/Closed.
 
-This failure reopens only R-E11 as `IN_PROGRESS`. The evidence for R-D07, R-E02, R-E08, R-H03,
-R-H04 and R-H20 remains valid, so those six stay `COMPLETED`. Re-entry requires a dynamic
-current-marker mutation with an explicit mutation-occurrence assertion, synchronized index prose,
-and the complete exact-tree gate contract below. Until then this note is Draft with reconciliation
-Open; R6-A2 through R6-A6 remain pending and the branch remains `NOT READY TO MERGE`.
+This failure reopened only R-E11 as `IN_PROGRESS`. The evidence for R-D07, R-E02, R-E08, R-H03,
+R-H04 and R-H20 remained valid, so those six stayed `COMPLETED`.
+
+Repair commit `ea78b64fec17ee074018b9dc17abea31404f8f16` now derives the current index marker,
+asserts that each mutation changes the fixture, and makes the isolated ledger fixture
+revision-aware. On the clean repair-and-plan tree at
+`483947a19cc4790785ae710bd7cf5e9ab9fff335`, the complete governance suite reports 878 passed and
+0 failed, runtime reports `VALID=true` with 0 errors and 0 warnings, and the three-revision ledger
+history remains valid at 131 findings and fold 82/42/5/2/0. Revision 4 therefore restores only
+R-E11 to `COMPLETED`. This note remains Draft with reconciliation Open until the separate
+note-only finalization and complete exact-tree gate contract below; R6-A2 through R6-A6 remain
+pending and the branch remains `NOT READY TO MERGE`.
 
 ## Summary
 
 - Establish a machine-bounded, append-only finding-status authority without making the full repair
   ledger authoritative.
-- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20 while
-  R-E11 re-enters verification after the finalization-tree failure.
+- Preserve completed implementation for R-D07, R-E02, R-E08, R-H03, R-H04 and R-H20, and restore
+  R-E11 only after its repaired negative fixtures and clean pre-accounting gates pass.
 - Keep consumer repositories, workflow promotion, Aggregate acceptance and the remaining R6
   batches outside this checkpoint.
 
@@ -44,14 +51,17 @@ Copilot adapter and fifteen dependent Claude mirrors.
 The implementation adds exact schema, fold, visibility, index and BaseRef-history validation for
 finding statuses; path-scoped Markdown formatting; current phase and entry-point truth; and an exact
 source-to-mirror partition. Plan correction
-`3e64e4e785496d604e16975752392d7bc2b6c50e` authorizes this A1-only accounting checkpoint while
-retaining the later R6-A5 accounting boundary for Wave-4 dispositions and cross-batch convergence.
+`3e64e4e785496d604e16975752392d7bc2b6c50e` authorizes the original A1-only accounting checkpoint.
+After the failed finalization, amendment `483947a19cc4790785ae710bd7cf5e9ab9fff335` preserves the
+honesty-demotion record and authorizes the revision-4 re-entry sequence while retaining the later
+R6-A5 accounting boundary for Wave-4 dispositions and cross-batch convergence.
 
 ## Scope
 
 In scope:
 
-- R-E11 scoped finding-status schema, validator, runtime integration and append-only revision 2.
+- R-E11 scoped finding-status schema, validator, runtime integration and append-only revisions 1
+  through 4, including the revision-3 honesty demotion and revision-4 re-entry.
 - R-D07 artifact path/type formatting enforcement with bounded semantic exceptions.
 - R-E02 and R-E08 adapter phase and current-phase truth.
 - R-H03 and R-H04 README and workspace-structure truth.
@@ -77,8 +87,11 @@ Out of scope:
 | `README.md`, `WORKSPACE_STRUCTURE.md` | Reconcile current workflow and workspace entry truth |
 | `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` | Synchronize the Constitution 1.10.0 bootstrap and current adapter truth |
 | `studio/QUICKSTART.md`, `studio/SDD-QUICKSTART-GUIDE.md` | Reconcile current phase and Claude mirror semantics |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Append revision 2 for only the seven evidence-backed completions |
-| `docs/README.md` | Match the revision-2 fold in the dependent index |
+| `studio/tests/check-speckit-runtime.Tests.ps1` | Derive the current finding-status index marker and require a real tampering mutation |
+| `studio/tests/mainline-note-validation.Tests.ps1` | Derive the current marker for runtime-propagation tampering evidence |
+| `studio/tests/validate-finding-status-ledger.Tests.ps1` | Keep the isolated unit fixture explicitly revision-aware |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve revisions 1 through 3 and append revision 4 for only R-E11 re-entry |
+| `docs/README.md` | Match the revision-4 fold in the dependent index |
 
 ## Impact
 
@@ -96,21 +109,28 @@ Out of scope:
 | `AGENTS.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `CLAUDE.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `.github/copilot-instructions.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes bootstrap, phase and dependent-adapter truth. |
-| `docs/README.md` | `must_update` | `updated` | Revision 3 matches 131 findings, fold 82/42/5/2/0 and this note's Draft/Open state. |
+| `docs/README.md` | `must_update` | `updated` | Revision 4 matches 131 findings, fold 83/42/5/1/0 and this note's Draft/Open state. |
 
 ## Validation
 
-Observed implementation and accounting evidence:
+Observed evidence is separated by tree:
 
-- The complete governance suite reports 878 passed, 0 failed, 0 skipped and 0 not run.
-- The staged-snapshot pre-commit gate passes shared runtime, adapter and impact-route checks.
-- Runtime and branch-mode mainline validation at accounting commit
-  `bafe90467c326bf7d4b69988ebbf93c321cb4a91` report `VALID=true`, 0 errors and 0 warnings.
-- BaseRef history validation from `9b83f7a5d2e8630955efdb458f0e0e9a1c367839` through accounting
-  commit `bafe90467c326bf7d4b69988ebbf93c321cb4a91` reports exactly two valid records,
-  revision 2, 131 findings, fold 83/42/5/1/0 and `HISTORY_VALID=true`.
-- Claude verification reports 15 generated mirrors, 1 skipped dependent adapter and 0 errors.
-- Impact-registry comparison reports fresh generated output.
+- The original implementation and revision-2 accounting tree reported 878 passed, 0 failed,
+  runtime and Batch `VALID=true` with 0 errors and 0 warnings, and two valid finding-status
+  revisions at fold 83/42/5/1/0.
+- Finalization head `8f0dd46b3002626892d02bdf1808e68f21828005` refuted the Ready claim because the
+  finding-status tampering fixture performed no mutation. Demotion commit
+  `13d6b282321cf06309b02779f93fbf3a93411649` preserved that evidence as revision 3 and returned
+  only R-E11 to `IN_PROGRESS`.
+- Repair commit `ea78b64fec17ee074018b9dc17abea31404f8f16` passes 69 ledger tests, 102
+  mainline-note tests and three focused runtime/mainline integration cases with 0 failures.
+- On clean repair-and-plan head `483947a19cc4790785ae710bd7cf5e9ab9fff335`, the complete
+  governance suite reports 878 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run; runtime
+  reports `VALID=true`, 0 errors and 0 warnings; and BaseRef history validation reports exactly
+  three valid records, revision 3, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=true`.
+- Revision 4 records only R-E11 as `COMPLETED`, with fold 83/42/5/1/0. The committed revision-4
+  accounting tree, note-only finalization tree and final exact-tree gates are not yet Ready
+  evidence at this checkpoint.
 
 Any future committed Ready tree is subject to this immediate fail-and-demote contract:
 
@@ -137,6 +157,6 @@ Any future committed Ready tree is subject to this immediate fail-and-demote con
 
 ## Follow-ups
 
-- Repair the R-E11 mutation fixture without weakening the runtime validator, then rerun every
-  exact-tree gate before restoring Ready/Closed.
+- Create a separate note-only finalization after this revision-4 accounting commit, then rerun
+  every exact-tree gate before relying on Ready/Closed.
 - Continue R6-A2 without absorbing any A3 through A6 finding or Wave-4 disposition.
