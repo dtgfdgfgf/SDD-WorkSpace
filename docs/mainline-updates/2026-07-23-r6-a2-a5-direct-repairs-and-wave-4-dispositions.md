@@ -3,10 +3,10 @@
 **Date**: 2026-07-23
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`; registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052`; accounting `TBD`
+**Status**: Ready
+**Related Commits**: plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`; registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052`; accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -15,8 +15,8 @@
   any unrelated finding.
 - Record exactly 35 owner-approved Wave-4 dispositions in revision 9, each with its exact re-entry
   trigger inside the canonical machine record.
-- Preserve the accounting commit as `TBD` and this note as Draft/Open/Batch until exact-tree gates
-  and later note-only finalization exist.
+- Bind the completion and disposition records to accounting commit
+  `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` and close this bounded Batch reconciliation.
 - Keep both R6 umbrella notes Draft and keep `sdd-pipeline` experimental, default-disabled and
   execution-denied.
 
@@ -40,10 +40,12 @@ Registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310` precedes trigger impleme
 revision 7. The clean implementation tree reports 986 governance tests passed with 0 failed and
 canonical runtime `VALID=true` with 0 errors and 0 warnings.
 
-Revision 8 now records exactly the eleven A2 through A4 completions plus R-E13. Revision 9 records
-the authorized thirty `OPEN` and five `DECIDED` findings as conditionally `DISPOSITIONED`. The
-accounting bytes are present, but their commit hash is intentionally `TBD`; this note therefore
-remains Draft/Open/Batch pending committed exact-tree validation and separate note-only finalization.
+Revision 8 records exactly the eleven A2 through A4 completions plus R-E13. Revision 9 records the
+authorized thirty `OPEN` and five `DECIDED` findings as conditionally `DISPOSITIONED`. Accounting
+commit `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` contains those exact bytes. Its committed tree
+reports canonical runtime `VALID=true` with 0 errors and 0 warnings, plus nine consecutive valid
+status records, 132 findings, severity 8/32/53/39 and fold 95/1/0/1/35. This note is Ready/Closed
+only for the bounded Batch scope; it does not satisfy Aggregate, R6-A6, merge or post-merge gates.
 
 ## Scope
 
@@ -112,7 +114,7 @@ Pre-accounting implementation gates:
 - Canonical runtime: `VALID=true`, 0 errors and 0 warnings.
 - Revision-7 committed history: valid consecutive history, 132 findings and fold 83/43/5/1/0.
 
-Required before this note may become `Ready`:
+Required for this note to remain `Ready`:
 
 - Old implementation rejects a legitimate trigger-bearing entry; repaired implementation accepts
   the exact authorized entry and rejects all missing, type, blank, generic, mismatch, swap and
@@ -121,8 +123,8 @@ Required before this note may become `Ready`:
 - Runtime reports `VALID=true`, 0 errors and 0 warnings.
 - Finding history has the exact consecutive registration, completion and disposition revisions,
   132 findings, severity 8/32/53/39 and fold 95/1/0/1/35.
-- The accounting commit has a real 40-character lowercase hash and replaces `TBD` in a later
-  note-only finalization.
+- Accounting commit `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` remains the exact revision-8 and
+  revision-9 authority cited by this note-only finalization.
 - Explicit Batch readiness from `b3e7c15c2e70aebf3bd40b5a73f24285de507476` reports
   `VALID=true`, 0 errors and 0 warnings.
 - Aggregate readiness fails only with the canonical umbrella blocker.
@@ -130,14 +132,14 @@ Required before this note may become `Ready`:
 
 ## Merge Notes
 
-- This note remains Draft with reconciliation Open because the completion and disposition bytes
-  do not yet have their accounting commit hash or post-accounting exact-tree evidence.
+- This note is Ready with reconciliation Closed for the explicit Batch scope. Any failed
+  finalization-tree gate requires truthful demotion and append-only per-ID reversal where evidence
+  refutes a status.
 - The broad R6 convergence note and canonical Wave-3 umbrella remain Draft and non-authorizing.
 - PR #3 remains `NOT READY TO MERGE`; this batch does not authorize promotion, push or merge.
 
 ## Follow-ups
 
-- Commit only the authorized accounting paths, then run all exact-tree gates from the committed
-  accounting head.
-- Finalize only this dedicated note and its matching index row after the accounting hash exists.
+- Run all exact-tree gates on the committed note-only finalization and preserve this Ready state
+  only while every Batch gate remains green.
 - Continue R6-A6 as a separate checkpoint after this bounded A2-A5 note is truthfully finalized.
