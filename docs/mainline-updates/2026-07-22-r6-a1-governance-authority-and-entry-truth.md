@@ -3,10 +3,10 @@
 **Date**: 2026-07-22
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`
+**Status**: Ready
+**Related Commits**: `105a09cd02f7d8b4765e49859390908e55bd97d1`, `3e64e4e785496d604e16975752392d7bc2b6c50e`, `bafe90467c326bf7d4b69988ebbf93c321cb4a91`, `13d6b282321cf06309b02779f93fbf3a93411649`, `ea78b64fec17ee074018b9dc17abea31404f8f16`, `483947a19cc4790785ae710bd7cf5e9ab9fff335`, `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`, `4d8bbe23a2e0bca39bc1e786780866af06227d7c`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Revalidation (2026-07-22, Finalization-Tree Failure)
@@ -27,9 +27,14 @@ revision-aware. On the clean repair-and-plan tree at
 `483947a19cc4790785ae710bd7cf5e9ab9fff335`, the complete governance suite reports 878 passed and
 0 failed, runtime reports `VALID=true` with 0 errors and 0 warnings, and the three-revision ledger
 history remains valid at 131 findings and fold 82/42/5/2/0. Revision 4 therefore restores only
-R-E11 to `COMPLETED`. This note remains Draft with reconciliation Open until the separate
-note-only finalization and complete exact-tree gate contract below; R6-A2 through R6-A6 remain
-pending and the branch remains `NOT READY TO MERGE`.
+R-E11 to `COMPLETED`. Accounting commit `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`
+preserves exactly four consecutive revisions and passes its staged-snapshot audit. This separate
+documentation-only finalization, authorized by surface-set correction
+`4d8bbe23a2e0bca39bc1e786780866af06227d7c`, now transitions the dedicated Batch note to Ready
+with reconciliation Closed and synchronizes its two dependent index surfaces. The complete
+exact-tree gate contract below will be run immediately against the committed finalization tree;
+any deviation requires immediate demotion. R6-A2 through R6-A6 remain pending and the branch
+remains `NOT READY TO MERGE`.
 
 ## Summary
 
@@ -91,7 +96,7 @@ Out of scope:
 | `studio/tests/mainline-note-validation.Tests.ps1` | Derive the current marker for runtime-propagation tampering evidence |
 | `studio/tests/validate-finding-status-ledger.Tests.ps1` | Keep the isolated unit fixture explicitly revision-aware |
 | `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Preserve revisions 1 through 3 and append revision 4 for only R-E11 re-entry |
-| `docs/README.md` | Match the revision-4 fold in the dependent index |
+| `docs/README.md` | Preserve the revision-4 machine marker and synchronize the dependent Ready/Closed prose |
 
 ## Impact
 
@@ -109,7 +114,7 @@ Out of scope:
 | `AGENTS.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `CLAUDE.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes the generated Constitution 1.10.0 bootstrap. |
 | `.github/copilot-instructions.md` | `must_update` | `updated` | Implementation `105a09c` synchronizes bootstrap, phase and dependent-adapter truth. |
-| `docs/README.md` | `must_update` | `updated` | Revision 4 matches 131 findings, fold 83/42/5/1/0 and this note's Draft/Open state. |
+| `docs/README.md` | `must_update` | `updated` | Revision 4 remains 131 findings and fold 83/42/5/1/0 while its dependent prose matches this note's Ready/Closed state. |
 
 ## Validation
 
@@ -128,9 +133,14 @@ Observed evidence is separated by tree:
   governance suite reports 878 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run; runtime
   reports `VALID=true`, 0 errors and 0 warnings; and BaseRef history validation reports exactly
   three valid records, revision 3, 131 findings, fold 82/42/5/2/0 and `HISTORY_VALID=true`.
-- Revision 4 records only R-E11 as `COMPLETED`, with fold 83/42/5/1/0. The committed revision-4
-  accounting tree, note-only finalization tree and final exact-tree gates are not yet Ready
-  evidence at this checkpoint.
+- Accounting commit `a74a08a191b8ec1bd67b2f2b9112e2810f10959c` passes its staged-snapshot
+  audit and committed BaseRef history validation with exactly four consecutive valid revisions,
+  revision 4, 131 findings, fold 83/42/5/1/0 and `HISTORY_VALID=true`.
+- Under surface-set correction `4d8bbe23a2e0bca39bc1e786780866af06227d7c`, this finalization
+  changes exactly this note, its mainline index row and only the dependent note-state prose in
+  `docs/README.md`; the revision-4 machine marker is unchanged. The complete exact-tree gates will
+  now run against its committed head; any failure activates the demotion contract below and cannot
+  be treated as Ready evidence.
 
 Any future committed Ready tree is subject to this immediate fail-and-demote contract:
 
@@ -149,14 +159,15 @@ Any future committed Ready tree is subject to this immediate fail-and-demote con
 
 ## Merge Notes
 
-- This dedicated Batch note is `Draft` with reconciliation `Open` until R-E11 re-entry evidence and
-  every exact-tree gate exist.
+- This dedicated Batch note is `Ready` with reconciliation `Closed` under the immediate exact-tree
+  fail-and-demote contract. Any failed gate requires restoring Draft/Open before other work.
 - Even after bounded A1 readiness, the branch remains `NOT READY TO MERGE` because R6-A2 through
   R6-A6, Aggregate acceptance, merge and post-merge evidence remain incomplete.
 - This batch does not authorize workflow promotion, push, merge or PR-thread resolution.
 
 ## Follow-ups
 
-- Create a separate note-only finalization after this revision-4 accounting commit, then rerun
-  every exact-tree gate before relying on Ready/Closed.
-- Continue R6-A2 without absorbing any A3 through A6 finding or Wave-4 disposition.
+- Run every exact-tree gate against the committed note-only finalization head; demote immediately
+  if any result deviates from the contract.
+- After the gates pass, continue R6-A2 without absorbing any A3 through A6 finding or Wave-4
+  disposition.
