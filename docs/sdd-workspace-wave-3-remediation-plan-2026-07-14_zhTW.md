@@ -1,14 +1,14 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.24.0"
+version: "1.25.0"
 date: "2026-07-14"
-last_updated: "2026-07-22"
+last_updated: "2026-07-23"
 language: "zh-TW"
 status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a"
+head_commit: "32a58e653cc4b541db88b23ad4b90fd7b81007a5"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -223,6 +223,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.22.0 | 2026-07-22 | Owner Choice A resolves the R6-A1 re-entry plan drift discovered after repair `ea78b64fec17ee074018b9dc17abea31404f8f16`. The append-only history must preserve revisions 1 through 3 and may append revision 4 only for R-E11 after the repaired clean tree passes its pre-accounting gates. A later note-only finalization must validate exactly four consecutive revisions on the re-entry final tree. No status changes in this plan-only amendment; see Section 28. |
 | 1.23.0 | 2026-07-22 | Owner Choice A resolves the finalization surface-set contradiction found after revision-4 accounting `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`. Because `docs/README.md` contains current note-state prose, changing the dedicated note to Ready/Closed without synchronizing that prose would recreate the stale-truth defect recorded in Section 41. The finalization commit may therefore update exactly the dedicated note, its mainline index row and the `docs/README.md` note-state prose while preserving the revision-4 machine marker and every finding status. No readiness or status changes occur in this plan-only amendment; see Section 29. |
 | 1.24.0 | 2026-07-22 | Owner Choice A defines a non-self-referential R-E11 re-entry after finalization `f0f325b` failed Batch last-touch coverage and honesty demotion `4ce95a4` appended revision 5. Revision 6 accounting will make `docs/README.md` prose state-neutral while the note remains Draft/Open; a later two-file finalization can cite the revision-6 accounting commit that last touched the ledger and docs index. The validator is not weakened, and no status changes occur in this plan-only amendment; see Section 30. |
+| 1.25.0 | 2026-07-23 | Owner Choice A resolves the R6-A5 trigger-authority contradiction before the first `DISPOSITIONED` record. New Medium R-E13 records the independent fail-open representation gap without reopening R-E11. A registration revision must precede a separate backward-compatible schema and validator implementation; only later accounting may complete the evidence-backed A2 through A4 repairs and R-E13, and disposition the 35 owner-approved Wave-4 items with exact per-ID triggers. No status changes occur in this plan-only amendment; see Section 31. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1185,3 +1186,96 @@ R-H04 and R-H20 remain `COMPLETED`. R6-A2 through R6-A6, Wave-4 dispositions, R-
 Aggregate acceptance, workflow promotion, merge and post-merge evidence remain unchanged.
 `projects/`, `learning/` and `studio/workflows/` are excluded. `sdd-pipeline` remains experimental,
 default-disabled and execution-denied; PR #3 remains `NOT READY TO MERGE`.
+
+## 31. 2026-07-23 R6-A5 trigger-bearing disposition authority and accounting sequence
+
+R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d`, R6-A3 implementation
+`be5fb24fd79a47d8f0db9f61be2a747d06b29088` and R6-A4 implementation
+`32a58e653cc4b541db88b23ad4b90fd7b81007a5` now exist. The six-record authoritative fold remains
+83 `COMPLETED`, 42 `OPEN`, 5 `DECIDED`, 1 `IN_PROGRESS` and 0 `DISPOSITIONED` across 131
+findings. All eleven A2 through A4 direct-repair candidates remain `OPEN`; the Wave-4 set remains
+exactly 30 `OPEN` and 5 `DECIDED`.
+
+Read-only A5 preflight found a material representation contradiction. Section 24 requires the exact
+Section 36.2 re-entry triggers to be copied into status accounting records, but
+`studio/runtime/finding-status-record.schema.json` permits each status entry to contain only `id`
+and `status`, and `validate-finding-status-ledger.ps1` rejects every third field. The current
+validator therefore accepts a triggerless `DISPOSITIONED` delta while rejecting the trigger-bearing
+record required by the owner authorization. An adjacent Markdown table cannot resolve the defect:
+ledger narrative is `informational`, while only canonical `finding-status-record-v1` blocks have
+`source_of_truth` authority for `finding_status`.
+
+This failure mode is not the R-E11 defect that created a single status ledger and protected its
+append-only fold, index and Git history. It is an independently enforced conditional-metadata gap
+discovered before the first disposition. Owner Choice A on 2026-07-23 therefore authorizes new
+Medium R-E13: a `DISPOSITIONED` status can currently omit its exact owner-approved re-entry trigger,
+and the authority schema cannot carry the required trigger. R-E13 requires conditional record shape,
+an exact 35-ID trigger map, fail-closed validation and discriminating mutations. Revisions 1 through
+6 contain no `DISPOSITIONED` entry and remain valid; R-E11 remains `COMPLETED`. R-E13 does not
+become an authoritative finding until the registration record below is committed.
+
+After registration, the all-R6 direct-repair authorization contains 19 findings: the 18 in corrected
+Section 37 plus R-E13. Only 12 remain for A5 completion accounting because the seven A1 findings
+are already `COMPLETED`. This section supersedes Section 37 only for inventory, severity, direct-set
+count and prospective folds; every Section 36.2 trigger remains unchanged. The permitted pre-merge
+fold becomes 95 `COMPLETED` / 1 `OPEN` / 1 `IN_PROGRESS` / 35 `DISPOSITIONED`; only actual
+merge and post-merge evidence may produce 97 `COMPLETED` / 35 `DISPOSITIONED` across 132
+findings.
+
+The authorized sequence is:
+
+1. Commit this plan-only amendment. It may modify only this remediation-plan file and must not
+   change the ledger, a finding status, note readiness, runtime or test bytes, workflow authorization
+   or merge state.
+2. In a separate registration accounting commit, append revision 7 with ledger version 1.35.0 and
+   register only R-E13 as Medium `OPEN`. Preserve revisions 1 through 6 as an immutable prefix. The
+   resulting inventory is 132, severity is 8 Critical / 32 High / 53 Medium / 39 Low, and the fold is
+   83 `COMPLETED` / 43 `OPEN` / 5 `DECIDED` / 1 `IN_PROGRESS` / 0 `DISPOSITIONED`. Synchronize
+   the `docs/README.md` marker and create and index
+   `docs/mainline-updates/2026-07-23-r6-a2-a5-direct-repairs-and-wave-4-dispositions.md` as a
+   dedicated Draft/Open/Batch note. This registration may not change schema, validator or tests.
+3. In a separate implementation commit, extend the version-1 status-entry schema and its exact
+   PowerShell contract so `reentryTrigger` is required as a non-empty, non-whitespace string when
+   and only when `status` is `DISPOSITIONED`. Non-disposition entries retain the exact two-key
+   `id`/`status` shape. Revisions 1 through 7 remain valid without byte rewriting. The validator
+   must expand the fifteen grouped Section 36.2 rows into an exact 35-ID ordinal mapping; runtime
+   must not parse the informational Markdown table as authority.
+4. The implementation must reject a missing, null, Boolean, numeric, array, object, empty,
+   whitespace-only, generic, mismatched, swapped, duplicate or unauthorized trigger. It must also
+   reject any trigger on `COMPLETED`, `OPEN`, `DECIDED` or `IN_PROGRESS`. Focused tests and a
+   shared-runtime contract invariant must fail if the conditional schema, exact mapping, ordinal
+   comparison or rejection logic is removed. The implementation may update only the schema,
+   validator, shared runtime contract, runtime and mainline integration needed to enforce that
+   contract, and their tests; it may not append a status revision.
+5. Before completion accounting, run the focused trigger mutations, the complete governance suite
+   with at least 958 passes and 0 failures, canonical runtime with `VALID=true` and 0 errors or
+   warnings, revision-7 history with 132 findings and fold 83/43/5/1/0, and diff/worktree hygiene.
+   R-B23 may be dispositioned only if the exact tree still proves `sdd-pipeline` experimental,
+   default-disabled and execution-denied.
+6. In one later accounting commit, append two semantically separate consecutive records. Revision 8,
+   ledger version 1.36.0, changes R-A21, R-B18, R-B25, R-B26, R-C04, R-C06, R-G01, R-G03,
+   R-G04, R-H06, R-H09 and R-E13 from `OPEN` to `COMPLETED`, producing fold 95/31/5/1/0.
+   Revision 9, ledger version 1.37.0, changes exactly the thirty `OPEN` and five `DECIDED` IDs in
+   Sections 36.2 and 37.1 to `DISPOSITIONED`, with one byte-exact `reentryTrigger` on every entry.
+   The resulting fold is 95 `COMPLETED` / 1 `OPEN` / 0 `DECIDED` / 1 `IN_PROGRESS` /
+   35 `DISPOSITIONED`; inventory and severity remain 132 and 8/32/53/39. R-E09 remains
+   `IN_PROGRESS`; R-J03 remains `OPEN`.
+7. The accounting commit must synchronize the state-neutral `docs/README.md` revision-9 marker,
+   reconcile the dedicated note while keeping it Draft/Open/Batch, and keep the broad R6 convergence
+   note plus the canonical Wave-3 umbrella Draft/Open. A later note-only finalization commit may
+   modify only the dedicated A2-A5 note and its matching mainline index row, set only that note and
+   row to Ready with reconciliation Closed, and cite complete 40-character lowercase hashes for
+   this plan, registration, A2, A3, A4, trigger-contract implementation and revision-8/revision-9
+   accounting commit.
+8. Validate the committed finalization tree from
+   `b3e7c15c2e70aebf3bd40b5a73f24285de507476`: runtime must be `VALID=true` with 0 errors and
+   0 warnings; the complete suite must have at least 958 passes and 0 failures; finding history must
+   contain exactly nine consecutive valid records and fold 95/1/0/1/35; explicit Batch readiness
+   must be valid with 0 errors and 0 warnings; Aggregate readiness may fail only on the canonical
+   umbrella; exact trigger mutations, workflow denial, `git diff --check` and clean-worktree checks
+   must pass. A failed gate requires a truthful per-ID reversal in a later append-only revision for
+   every claim that the evidence refutes; unaffected findings require explicit independent evidence.
+
+This amendment authorizes no consumer edit, workflow promotion, push, merge, PR-thread resolution
+or post-merge claim. `sdd-pipeline` remains experimental, default-disabled and execution-denied.
+R6-A6, R-E09 and R-J03 remain pending; PR #3 remains `NOT READY TO MERGE`.
