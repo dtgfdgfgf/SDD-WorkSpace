@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.22.0"
+version: "1.23.0"
 date: "2026-07-14"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "ea78b64fec17ee074018b9dc17abea31404f8f16"
+head_commit: "a74a08a191b8ec1bd67b2f2b9112e2810f10959c"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -221,6 +221,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.20.0 | 2026-07-22 | A second R6-A1 drift-stop refines R-H20 after the source directory proves mixed-authority: 14 `*.agent.md` files and `async-python-reviewer.md` are the 15 canonical generator inputs, while `copilot-instructions.md` is a dependent adapter and all 15 Claude outputs are dependent mirrors. Owner Choice A keeps this within R-H20, changes no counts or statuses, and requires exact partition tests before implementation continues; see Section 26. |
 | 1.21.0 | 2026-07-22 | Corrects the accounting sequence after implementation `105a09cd02f7d8b4765e49859390908e55bd97d1`: R6-A1 may receive its own evidence-backed revision-2 status delta and dedicated Batch note before A2 through A4, while R6-A5 remains the later Wave-4 and multi-batch accounting point. This timing correction changes no status by itself and preserves non-promotion, consumer exclusions, R-E09/R-J03 terminal boundaries and PR #3 NOT READY state; see Section 27. |
 | 1.22.0 | 2026-07-22 | Owner Choice A resolves the R6-A1 re-entry plan drift discovered after repair `ea78b64fec17ee074018b9dc17abea31404f8f16`. The append-only history must preserve revisions 1 through 3 and may append revision 4 only for R-E11 after the repaired clean tree passes its pre-accounting gates. A later note-only finalization must validate exactly four consecutive revisions on the re-entry final tree. No status changes in this plan-only amendment; see Section 28. |
+| 1.23.0 | 2026-07-22 | Owner Choice A resolves the finalization surface-set contradiction found after revision-4 accounting `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`. Because `docs/README.md` contains current note-state prose, changing the dedicated note to Ready/Closed without synchronizing that prose would recreate the stale-truth defect recorded in Section 41. The finalization commit may therefore update exactly the dedicated note, its mainline index row and the `docs/README.md` note-state prose while preserving the revision-4 machine marker and every finding status. No readiness or status changes occur in this plan-only amendment; see Section 29. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1088,3 +1089,42 @@ This amendment does not reopen or absorb R-D07, R-E02, R-E08, R-H03, R-H04 or R-
 not authorize R6-A2 through R6-A6, Wave-4 dispositions, R-E09, R-J03, consumer edits, workflow
 promotion, push, merge or PR-thread resolution. `sdd-pipeline` remains experimental,
 default-disabled and execution-denied; PR #3 remains `NOT READY TO MERGE`.
+
+## 29. 2026-07-22 R6-A1 finalization surface-set correction
+
+Revision-4 accounting commit `a74a08a191b8ec1bd67b2f2b9112e2810f10959c` passes its
+staged-snapshot audit and committed BaseRef history validation with exactly four consecutive valid
+revisions, 131 findings, fold 83/42/5/1/0 and `HISTORY_VALID=true`. It truthfully keeps the
+dedicated R6-A1 note Draft/Open, and `docs/README.md` records that current state in its dependent
+human-readable prose while its machine index records revision 4.
+
+The independent pre-finalization review then found a contradiction in Section 28 item 5. That item
+allowed the finalization commit to change only the dedicated note and its matching mainline index
+row. Once those surfaces become Ready/Closed, the current note-state prose in `docs/README.md`
+would still say Draft/Open. That would recreate the same stale Surface Truthfulness defect recorded
+in Section 41. Leaving the prose stale and silently adding a third path are both prohibited.
+
+Owner Choice A supersedes only the Section 28 item 5 finalization file set and establishes this
+sequence:
+
+1. Commit this plan-only amendment without changing note readiness, reconciliation or finding
+   status.
+2. In a separate documentation-only finalization commit, modify exactly these three paths:
+   `docs/mainline-updates/2026-07-22-r6-a1-governance-authority-and-entry-truth.md`,
+   `docs/mainline-updates/README.md` and `docs/README.md`.
+3. Set the dedicated Batch note to Ready with reconciliation Closed, set only its matching mainline
+   index row to Ready, and synchronize only the dependent note-state prose in `docs/README.md` to
+   Ready/Closed. The exact `finding-status-index-v1` marker must remain revision 4 with 131 findings
+   and fold 83/42/5/1/0.
+4. Preserve every ledger byte, all four finding-status revisions, every finding disposition, all
+   other notes and all other mainline index rows. The finalization commit may cite accounting
+   `a74a08a191b8ec1bd67b2f2b9112e2810f10959c` but may not claim completion of R6-A2 through R6-A6,
+   R-E09, R-J03, Aggregate acceptance, promotion, merge or post-merge evidence.
+5. Run the complete Section 28 item 6 exact-tree gates against the committed finalization head. Any
+   deviation requires immediate Draft/Open demotion and synchronization of all three note-state
+   surfaces before other work continues.
+
+This correction changes no finding status, ledger record, workflow authorization or merge state.
+`projects/`, `learning/` and `studio/workflows/` remain outside the finalization diff.
+`sdd-pipeline` remains experimental, default-disabled and execution-denied; PR #3 remains
+`NOT READY TO MERGE`.
