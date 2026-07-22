@@ -182,6 +182,33 @@ Required before this note may become `Ready`:
 - `sdd-pipeline` remains experimental, default-disabled and execution-denied. This candidate does
   not authorize promotion, push or merge.
 
+## 2026-07-22 R6-A3 Lifecycle Truthfulness Implementation Candidate
+
+- The R-C04 candidate retires both unenforced extension compatibility version fields from the
+  manifest schema and canonical smoke manifest. The compatibility surface now declares only the
+  enforced `studio-first` mode, and an intake mutation that restores either retired field is
+  rejected.
+- The R-C06 candidate removes the producerless `sync` source from extension catalog policy,
+  catalog and state schemas, and shared parsing. A deprecated extension can no longer be newly
+  enabled. Only an existing state entry with Boolean `enabled=true` and an exact current-version
+  pin can repeat the enable request as a byte-preserving no-op; absent, disabled, null, wrong-type,
+  stale-pin and `sync` variants fail closed.
+- The independent R-B25 candidate retires the workflow analogue from the canonical
+  `sdd-pipeline` manifest and makes shared listing and execution authorization reject field
+  reintroduction. This is field retirement only and does not promote the workflow.
+- The independent R-B26 candidate applies the same deprecated same-pin no-op boundary to workflow
+  state mutation and shared authorization, and removes `sync` from workflow catalog policy and
+  schemas. Listing and execution continue to consume the same fail-closed registry result.
+- Discriminating lifecycle tests exercise the retired fields, case-variant and unknown workflow
+  compatibility keys, every deprecated-state variant, and source null, wrong-type and `sync`
+  cases. Runtime contract mutations separately anchor all four finding boundaries against
+  reversion.
+- R-C04, R-C06, R-B25 and R-B26 remain `OPEN` until R6-A5 appends their committed implementation
+  hash and exact-tree evidence. This note remains `Draft`, Related Commits `TBD` and reconciliation
+  `Open`.
+- `sdd-pipeline` remains experimental, default-disabled and execution-denied. No consumer tree,
+  promotion, push or merge is authorized by this candidate.
+
 ## Follow-ups
 
 - Implement the four direct-repair sub-batches in the committed plan.

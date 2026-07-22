@@ -73,12 +73,6 @@
         "mode": {
           "type": "string",
           "const": "studio-first"
-        },
-        "minStudioConstitutionVersion": {
-          "type": "string"
-        },
-        "minWorkspaceStructureVersion": {
-          "type": "string"
         }
       }
     },

@@ -1015,6 +1015,41 @@ function Read-WorkflowManifestIdentity {
             $rawId = if ($manifest.ContainsKey('id')) { $manifest['id'] } else { $null }
             $rawVersion = if ($manifest.ContainsKey('version')) { $manifest['version'] } else { $null }
 
+            if (-not $manifest.ContainsKey('compatibility')) {
+                $manifestErrors += "Workflow manifest for '$ExpectedId' must declare compatibility as the exact object { mode: 'studio-first' }."
+            } else {
+                $compatibility = $manifest['compatibility']
+                if ($compatibility -isnot [System.Collections.IDictionary]) {
+                    $manifestErrors += "Workflow manifest for '$ExpectedId' compatibility must be an object with exactly mode='studio-first'."
+                } else {
+                    $compatibilityKeys = @($compatibility.Keys | ForEach-Object { [string]$_ })
+                    $retiredCompatibilityKeys = @(
+                        $compatibilityKeys |
+                            Where-Object { $_ -ieq 'minStudioConstitutionVersion' }
+                    )
+                    if ($retiredCompatibilityKeys.Count -gt 0) {
+                        $manifestErrors += "Workflow manifest for '$ExpectedId' declares retired compatibility field '$($retiredCompatibilityKeys[0])'; the field must be absent."
+                    }
+
+                    $unsupportedCompatibilityKeys = @(
+                        $compatibilityKeys |
+                            Where-Object { $_ -cne 'mode' }
+                    )
+                    if ($unsupportedCompatibilityKeys.Count -gt 0) {
+                        $manifestErrors += "Workflow manifest for '$ExpectedId' declares unsupported compatibility field(s): $($unsupportedCompatibilityKeys -join ', '). Only the exact 'mode' field is allowed."
+                    }
+
+                    if (-not ($compatibilityKeys -ccontains 'mode')) {
+                        $manifestErrors += "Workflow manifest for '$ExpectedId' compatibility must declare the exact lowercase 'mode' field."
+                    } else {
+                        $rawMode = $compatibility['mode']
+                        if ($rawMode -isnot [string] -or [string]$rawMode -cne 'studio-first') {
+                            $manifestErrors += "Workflow manifest for '$ExpectedId' compatibility mode must be the exact string 'studio-first'."
+                        }
+                    }
+                }
+            }
+
             if ($rawId -isnot [string] -or [string]::IsNullOrWhiteSpace([string]$rawId)) {
                 $manifestErrors += "Workflow manifest for '$ExpectedId' must declare a non-empty string id."
             } else {
@@ -1330,6 +1365,16 @@ function Get-WorkflowRegistrySnapshot {
         }
 
         $stateEntry = if ($states.ContainsKey($entryId)) { $states[$entryId] } else { $null }
+        $deprecatedEnablement = [PSCustomObject][ordered]@{
+            ALLOWED = $false
+            ERRORS  = @()
+        }
+        if ($reviewStatus -eq 'deprecated') {
+            $deprecatedEnablement = Get-DeprecatedWorkflowEnablementDecision `
+                -Id $entryId `
+                -ExpectedVersion ([string]$entry['version']) `
+                -StateEntry $stateEntry
+        }
         if ($defaultEnabled -eq $true -and ($reviewStatus -ne 'approved' -or $trustLevel -notin @('core', 'curated'))) {
             $errors += "Workflow '$entryId' defaultEnabled=true requires reviewStatus=approved and trustLevel core or curated; this violates the default-enable policy"
         }
@@ -1340,6 +1385,15 @@ function Get-WorkflowRegistrySnapshot {
             $reviewStatus -notin @('approved', 'deprecated')
         ) {
             $errors += "Workflow '$entryId' enabled state requires reviewStatus approved or deprecated; reviewStatus '$reviewStatus' cannot be enabled via the state ledger"
+        }
+        if (
+            $stateEntry -is [System.Collections.IDictionary] -and
+            (Test-StrictBooleanValue -Value $stateEntry['enabled']) -and
+            $stateEntry['enabled'] -eq $true -and
+            $reviewStatus -eq 'deprecated' -and
+            -not $deprecatedEnablement.ALLOWED
+        ) {
+            $errors += @($deprecatedEnablement.ERRORS)
         }
 
         $effectiveEnabled = $false
@@ -1367,6 +1421,8 @@ function Get-WorkflowRegistrySnapshot {
             STEP_TYPES_USED   = @($entry['stepTypesUsed'])
             PINNED_VERSION    = if ($stateEntry -is [System.Collections.IDictionary]) { [string]$stateEntry['pinnedVersion'] } else { $null }
             STATE_SOURCE      = if ($stateEntry -is [System.Collections.IDictionary]) { [string]$stateEntry['source'] } else { $null }
+            DEPRECATED_ENABLE_NOOP_ELIGIBLE = [bool]$deprecatedEnablement.ALLOWED
+            DEPRECATED_ENABLE_ERRORS = @($deprecatedEnablement.ERRORS)
             WORKFLOW_PATH     = $workflowPath
             WORKFLOW_SHA256   = if ($workflowSha256 -is [string]) { [string]$workflowSha256 } else { $null }
             ACTUAL_WORKFLOW_SHA256 = $actualWorkflowSha256
@@ -1414,6 +1470,12 @@ function Get-WorkflowExecutionAuthorization {
         if ([string]$entry.REVIEW_STATUS -eq 'rejected') {
             $errors += "Workflow '$Id' has reviewStatus 'rejected' and is retained for audit history only."
         }
+        if (
+            [string]$entry.REVIEW_STATUS -eq 'deprecated' -and
+            $entry.DEPRECATED_ENABLE_NOOP_ELIGIBLE -ne $true
+        ) {
+            $errors += @($entry.DEPRECATED_ENABLE_ERRORS)
+        }
         if ($entry.ENABLED -ne $true) {
             $errors += "Workflow '$Id' is not enabled (reviewStatus '$($entry.REVIEW_STATUS)', defaultEnabled=$($entry.DEFAULT_ENABLED)). Enable it explicitly with set-workflow-state.ps1 -Id $Id -State enabled."
         }
@@ -1425,6 +1487,51 @@ function Get-WorkflowExecutionAuthorization {
         ERRORS       = @($errors)
         ENTRY        = $entry
         ENABLE_SOURCE = if ($entry) { [string]$entry.ENABLE_SOURCE } else { $null }
+    }
+}
+
+function Get-DeprecatedWorkflowEnablementDecision {
+    <#
+    .SYNOPSIS
+    Decide whether a deprecated workflow enable request is a retained-state no-op.
+
+    .DESCRIPTION
+    Deprecated workflows cannot be newly enabled. The sole allowed enable request
+    is for an existing JSON state object whose enabled value is the Boolean true,
+    whose pin exactly matches the catalog version, and whose provenance is one of
+    the two locally supported state sources.
+    #>
+    param(
+        [Parameter(Mandatory = $true)] [string]$Id,
+        [Parameter(Mandatory = $true)] [string]$ExpectedVersion,
+        [AllowNull()] [object]$StateEntry
+    )
+
+    $errors = @()
+    if ($StateEntry -isnot [System.Collections.IDictionary]) {
+        $errors += "Deprecated workflow '$Id' cannot be newly enabled because no existing state entry is present."
+    } else {
+        $enabledValue = if ($StateEntry.ContainsKey('enabled')) { $StateEntry['enabled'] } else { $null }
+        if (-not (Test-StrictBooleanValue -Value $enabledValue) -or $enabledValue -ne $true) {
+            $errors += "Deprecated workflow '$Id' enablement requires an existing JSON Boolean enabled=true state."
+        }
+
+        $pinnedVersion = if ($StateEntry.ContainsKey('pinnedVersion')) { $StateEntry['pinnedVersion'] } else { $null }
+        if ($pinnedVersion -isnot [string] -or [string]$pinnedVersion -cne $ExpectedVersion) {
+            $renderedPin = if ($null -eq $pinnedVersion) { '<null>' } else { [string]$pinnedVersion }
+            $errors += "Deprecated workflow '$Id' enablement requires pinnedVersion '$ExpectedVersion'; found '$renderedPin'."
+        }
+
+        $source = if ($StateEntry.ContainsKey('source')) { $StateEntry['source'] } else { $null }
+        if ($source -isnot [string] -or [string]$source -cnotin @('default', 'manual')) {
+            $renderedSource = if ($null -eq $source) { '<null>' } else { [string]$source }
+            $errors += "Deprecated workflow '$Id' state source must be 'default' or 'manual'; found '$renderedSource'."
+        }
+    }
+
+    return [PSCustomObject][ordered]@{
+        ALLOWED = ($errors.Count -eq 0)
+        ERRORS  = @($errors)
     }
 }
 
@@ -2363,7 +2470,7 @@ function Get-ExtensionRegistryTrustLevels {
 }
 
 function Get-ExtensionStateSources {
-    return @('default', 'manual', 'sync')
+    return @('default', 'manual')
 }
 
 function Invoke-JsonScript {

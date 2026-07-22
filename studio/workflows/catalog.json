@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "updated": "2026-07-18T00:00:00+08:00",
+  "updated": "2026-07-22T00:00:00+08:00",
   "policy": {
     "mode": "studio-first",
     "curatedOnly": true,
@@ -19,8 +19,7 @@
     ],
     "stateSources": [
       "default",
-      "manual",
-      "sync"
+      "manual"
     ]
   },
   "workflows": [

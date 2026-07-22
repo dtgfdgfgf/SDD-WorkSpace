@@ -13,7 +13,9 @@
 - `draft`: local intake only; cannot be default-enabled.
 - `approved`: curated and allowed to participate in managed rollout.
 - `experimental`: locally testable but never default-enabled.
-- `deprecated`: still cataloged for compatibility, but should not be newly enabled.
+- `deprecated`: still cataloged for compatibility; it cannot be newly enabled. An enable request
+  is accepted only as a byte-preserving no-op when the existing state entry is already enabled and
+  pinned to the current catalog version.
 - `rejected`: retained only for audit history; not installable.
 
 ## Trust Levels
@@ -34,6 +36,8 @@
 - Validation: `validate-workflow.ps1 -Id <id>` parses the YAML and asserts the schema.
 - Governance: register the workflow in `catalog.json` with `reviewStatus=draft` or stricter.
 - Activation: write `state.json` via `set-workflow-state.ps1`.
+- State provenance: registry state accepts only `default` and `manual`. Remote provenance is not a
+  supported state source.
 - Execution: drive the runtime with `run-workflow.ps1 -Id <id> -Feature <feature>`. The runner authorizes the workflow against `catalog.json`, `state.json`, and `manifest.json` (fail-closed) before dispatch: an uncataloged, rejected, not-enabled, policy-violating, identity-mismatched, or approval-digest-mismatched workflow is denied even if its directory exists. The engine hashes and parses the same exact `workflow.yml` byte snapshot, then binds its SHA-256 to RunState. RunState is persisted at `<project>/.workflow/runs/<feature>/state.json` for `-Resume` / `-ConfirmGate` / `-RejectGate` / `-Restart`; starting a run never creates anything under `specs/`.
 - Removal: remove catalog entry, state entry, and workflow directory together.
 
@@ -83,7 +87,7 @@
 
 ## Guardrails
 
-- No remote catalog sync.
+- Catalog and state changes are local-only; no remote registry producer is supported.
 - No direct writes into existing `projects/` or `learning/` from workflow execution; the workflow engine routes side effects through standard `dispatch: script` invocations.
 - No workflow may override core shared files or another workflow's outputs.
 - Any path escaping the workspace root, the project root, or the workflow root is rejected at runtime. Workflow registry authorization checks both the normalized lexical path and every existing reparse-point target for the selected source directory, `workflow.yml`, and `manifest.json`; an external junction or symbolic-link target is denied by listing and execution through the same shared decision.

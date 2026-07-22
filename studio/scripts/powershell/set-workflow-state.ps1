@@ -7,8 +7,10 @@
 
 .DESCRIPTION
     Writes one entry into studio/workflows/state.json. The workflow MUST already
-    exist in catalog.json. Workflows in reviewStatus other than approved or
-    deprecated cannot be enabled. Mirrors the shape of set-extension-state.ps1.
+    exist in a valid shared registry. Only approved workflows can be newly
+    enabled. A deprecated workflow enable request is accepted only as a
+    byte-preserving no-op for an already-enabled state pinned to the current
+    catalog version.
 
 .PARAMETER Id
     The workflow id to update.
@@ -52,29 +54,53 @@ $statePath = Join-Path $workflowsRoot 'state.json'
 if (-not (Test-Path -LiteralPath $catalogPath)) { throw "catalog.json not found: $catalogPath" }
 if (-not (Test-Path -LiteralPath $statePath)) { throw "state.json not found: $statePath" }
 
-$catalog = Read-JsonFile -Path $catalogPath
-$workflowEntry = $null
-foreach ($entry in @($catalog.workflows)) {
-    if (-not $entry) { continue }
-    $entryHt = if ($entry -is [hashtable]) { $entry } else {
-        $h = @{}
-        $entry.PSObject.Properties | ForEach-Object { $h[$_.Name] = $_.Value }
-        $h
-    }
-    if ([string]$entryHt.id -eq $Id) {
-        $workflowEntry = $entryHt
-        break
-    }
+$registry = Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot
+if (-not $registry.VALID) {
+    Write-Error ("Workflow registry is invalid; refusing state mutation: {0}" -f (@($registry.ERRORS) -join '; '))
+    exit 1
 }
 
-if (-not $workflowEntry) {
+$workflow = @($registry.WORKFLOWS | Where-Object { [string]$_.ID -eq $Id }) |
+    Select-Object -First 1
+if (-not $workflow) {
     Write-Error "Workflow not found in catalog: $Id"
     exit 1
 }
+$workflowEntry = $workflow.CATALOG_ENTRY
+$reviewStatus = [string]$workflow.REVIEW_STATUS
 
-if ($State -eq 'enabled' -and [string]$workflowEntry.reviewStatus -notin @('approved', 'deprecated')) {
-    Write-Error "Workflow reviewStatus '$($workflowEntry.reviewStatus)' cannot be enabled: $Id"
-    exit 1
+if ($State -eq 'enabled') {
+    if ($reviewStatus -eq 'deprecated') {
+        if ($workflow.DEPRECATED_ENABLE_NOOP_ELIGIBLE -ne $true) {
+            Write-Error ("Deprecated workflow cannot be newly enabled: {0}" -f (@($workflow.DEPRECATED_ENABLE_ERRORS) -join '; '))
+            exit 1
+        }
+
+        $result = [ordered]@{
+            ID             = $Id
+            STATE          = $State
+            ENABLED        = $true
+            PINNED_VERSION = [string]$workflow.VERSION
+            REVIEW_STATUS  = $reviewStatus
+            STATE_PATH     = $statePath
+            CHANGED        = $false
+            NO_OP          = $true
+        }
+
+        if ($Json) {
+            [PSCustomObject]$result | ConvertTo-Json -Depth 5
+            exit 0
+        }
+
+        Write-Output ("Workflow state unchanged: {0} is deprecated and already enabled at pinned version {1}." -f $Id, $workflow.VERSION)
+        Write-Output "State file: $statePath"
+        exit 0
+    }
+
+    if ($reviewStatus -ne 'approved') {
+        Write-Error "Workflow reviewStatus '$reviewStatus' cannot be enabled: $Id"
+        exit 1
+    }
 }
 
 $stateData = Read-JsonFile -Path $statePath
@@ -105,8 +131,10 @@ $result = [ordered]@{
     STATE          = $State
     ENABLED        = $enabled
     PINNED_VERSION = [string]$workflowEntry.version
-    REVIEW_STATUS  = [string]$workflowEntry.reviewStatus
+    REVIEW_STATUS  = $reviewStatus
     STATE_PATH     = $statePath
+    CHANGED        = $true
+    NO_OP          = $false
 }
 
 if ($Json) {

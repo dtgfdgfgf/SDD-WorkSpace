@@ -65,6 +65,48 @@ if (-not $stateDocument.VALID) {
 $stateData = $stateDocument.DATA
 
 $enabled = ($State -eq 'enabled')
+if ($enabled -and $extension.reviewStatus -eq 'deprecated') {
+    $hasExistingState = (
+        $stateData.states -is [System.Collections.IDictionary] -and
+        $stateData.states.ContainsKey($Id)
+    )
+    $existingState = if ($hasExistingState) { $stateData.states[$Id] } else { $null }
+    $hasExactEnabledPin = (
+        $existingState -is [System.Collections.IDictionary] -and
+        $existingState.ContainsKey('enabled') -and
+        $existingState.enabled -is [bool] -and
+        $existingState.enabled -eq $true -and
+        $existingState.ContainsKey('pinnedVersion') -and
+        $existingState.pinnedVersion -is [string] -and
+        $existingState.pinnedVersion -ceq [string]$extension.version
+    )
+
+    if (-not $hasExactEnabledPin) {
+        Write-Error "Deprecated extension '$Id' cannot be newly enabled or repinned; only an existing enabled state at exact pinnedVersion '$($extension.version)' is allowed."
+        exit 1
+    }
+
+    $result = [ordered]@{
+        ID                 = $Id
+        STATE              = $State
+        ENABLED            = $true
+        PINNED_VERSION     = $extension.version
+        REVIEW_STATUS      = $extension.reviewStatus
+        STATE_PATH         = $paths.EXTENSIONS_STATE_PATH
+        NO_OP              = $true
+        MIRROR_INVALIDATED = $false
+    }
+
+    if ($Json) {
+        [PSCustomObject]$result | ConvertTo-Json -Depth 5
+        exit 0
+    }
+
+    Write-Output ("Extension state unchanged: {0} remains enabled at {1}" -f $Id, $extension.version)
+    Write-Output "State file: $($paths.EXTENSIONS_STATE_PATH)"
+    exit 0
+}
+
 $stateData.states[$Id] = [ordered]@{
     enabled       = $enabled
     pinnedVersion = $extension.version
@@ -133,6 +175,7 @@ $result = [ordered]@{
     PINNED_VERSION = $extension.version
     REVIEW_STATUS = $extension.reviewStatus
     STATE_PATH    = $paths.EXTENSIONS_STATE_PATH
+    NO_OP         = $false
     MIRROR_INVALIDATED = ($null -ne $mirrorBackup)
 }
 

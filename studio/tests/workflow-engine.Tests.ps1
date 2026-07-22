@@ -63,6 +63,7 @@ BeforeAll {
         [ordered]@{
             id = $wfId; version = $ManifestVersion; title = 'Engine Test Fixture'
             kind = 'workflow'; status = 'active'; owner = 'studio'
+            compatibility = [ordered]@{ mode = 'studio-first' }
         } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $wfDir 'manifest.json')
 
         $catalogWorkflows = @()
@@ -80,7 +81,7 @@ BeforeAll {
             mode = 'studio-first'; curatedOnly = $true; autoEnableNewWorkflows = $false
             reviewStatuses = @('draft', 'approved', 'experimental', 'deprecated', 'rejected')
             trustLevels = @('core', 'curated', 'experimental')
-            stateSources = @('default', 'manual', 'sync')
+            stateSources = @('default', 'manual')
         }
         [ordered]@{ version = '1.0.0'; updated = '2026-07-14T00:00:00+08:00'; policy = $catalogPolicy; workflows = $catalogWorkflows } |
             ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $studioFixture 'workflows/catalog.json')

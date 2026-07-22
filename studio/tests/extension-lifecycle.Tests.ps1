@@ -59,7 +59,7 @@ BeforeAll {
                 autoEnableNewExtensions = $false
                 reviewStatuses = @('draft', 'approved', 'experimental', 'deprecated', 'rejected')
                 trustLevels = @('core', 'curated', 'experimental')
-                stateSources = @('default', 'manual', 'sync')
+                stateSources = @('default', 'manual')
             }
             extensions = @()
         }
@@ -154,6 +154,25 @@ BeforeAll {
         Write-TestJson -Path $Fixture.CatalogPath -Data $catalog
     }
 
+    function script:Deprecate-TestExtension {
+        param(
+            [Parameter(Mandatory = $true)]
+            $Fixture,
+            [Parameter(Mandatory = $true)]
+            [string]$Id
+        )
+
+        $catalog = Get-Content -LiteralPath $Fixture.CatalogPath -Raw | ConvertFrom-Json -AsHashtable
+        $entry = @($catalog.extensions | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
+        $entry.reviewStatus = 'deprecated'
+        $entry.defaultEnabled = $false
+        $entry.approvedBy = $null
+        $entry.approvedAt = $null
+        $entry.approvedContentSha256 = $null
+        $catalog.updated = (Get-Date).ToString('o')
+        Write-TestJson -Path $Fixture.CatalogPath -Data $catalog
+    }
+
     function script:Get-TestExtensionHash {
         param(
             [Parameter(Mandatory = $true)]
@@ -199,6 +218,137 @@ BeforeAll {
             capabilities = @('fixture')
             notes = 'fixture'
         }
+    }
+}
+
+Describe 'R6-A3 extension lifecycle truthfulness' {
+    It 'rejects reintroduction of either retired compatibility version field' {
+        $schema = Get-Content -LiteralPath (Join-Path $WorkspaceRoot 'studio/extensions/manifest.schema.json') -Raw | ConvertFrom-Json -AsHashtable
+        $schema.properties.compatibility.additionalProperties | Should -BeFalse
+        $schema.properties.compatibility.properties.ContainsKey('minStudioConstitutionVersion') | Should -BeFalse
+        $schema.properties.compatibility.properties.ContainsKey('minWorkspaceStructureVersion') | Should -BeFalse
+
+        $canonicalManifest = Get-Content -LiteralPath (Join-Path $WorkspaceRoot 'studio/extensions/extension-smoke/manifest.json') -Raw | ConvertFrom-Json -AsHashtable
+        $canonicalManifest.compatibility.ContainsKey('minStudioConstitutionVersion') | Should -BeFalse
+        $canonicalManifest.compatibility.ContainsKey('minWorkspaceStructureVersion') | Should -BeFalse
+
+        foreach ($field in @('minStudioConstitutionVersion', 'minWorkspaceStructureVersion')) {
+            $fixture = New-ExtensionFixture
+            $source = New-TestExtensionSource -Fixture $fixture
+            $manifestPath = Join-Path $source 'manifest.json'
+            $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json -AsHashtable
+            $manifest.compatibility[$field] = '9.9.9'
+            Write-TestJson -Path $manifestPath -Data $manifest
+            $beforeCatalog = Get-Content -LiteralPath $fixture.CatalogPath -Raw
+
+            $result = Invoke-ExtensionScript -Fixture $fixture -Name 'add-extension.ps1' -Arguments @('-SourceDir', $source, '-Json')
+
+            $result.ExitCode | Should -Not -Be 0 -Because $field
+            $result.Raw | Should -Match 'schema validation failed|does not conform to schema' -Because $field
+            (Get-Content -LiteralPath $fixture.CatalogPath -Raw) | Should -BeExactly $beforeCatalog -Because $field
+            (Test-Path -LiteralPath (Join-Path $fixture.ExtensionRoot 'fixture-extension')) | Should -BeFalse -Because $field
+        }
+    }
+
+    It 'rejects sync in both catalog policy and state sources' {
+        $catalogFixture = New-ExtensionFixture
+        $catalog = Get-Content -LiteralPath $catalogFixture.CatalogPath -Raw | ConvertFrom-Json -AsHashtable
+        $catalog.policy.stateSources = @('default', 'manual', 'sync')
+        Write-TestJson -Path $catalogFixture.CatalogPath -Data $catalog
+
+        $catalogValidation = Invoke-ExtensionScript -Fixture $catalogFixture -Name 'validate-extension-registry.ps1' -Arguments @('-Json')
+        $catalogParsed = $catalogValidation.Raw | ConvertFrom-Json
+        $catalogParsed.VALID | Should -BeFalse
+        ($catalogParsed.ERRORS -join "`n") | Should -Match 'schema validation failed|does not conform to schema'
+
+        $stateFixture = New-ExtensionFixture
+        $source = New-TestExtensionSource -Fixture $stateFixture
+        (Invoke-ExtensionScript -Fixture $stateFixture -Name 'add-extension.ps1' -Arguments @('-SourceDir', $source, '-Json')).ExitCode | Should -Be 0
+        $state = Get-Content -LiteralPath $stateFixture.StatePath -Raw | ConvertFrom-Json -AsHashtable
+        $state.states['fixture-extension'] = [ordered]@{
+            enabled = $false
+            pinnedVersion = '1.0.0'
+            changedAt = (Get-Date).ToString('o')
+            source = 'sync'
+        }
+        Write-TestJson -Path $stateFixture.StatePath -Data $state
+
+        $stateValidation = Invoke-ExtensionScript -Fixture $stateFixture -Name 'validate-extension-registry.ps1' -Arguments @('-Json')
+        $stateParsed = $stateValidation.Raw | ConvertFrom-Json
+        $stateParsed.VALID | Should -BeFalse
+        ($stateParsed.ERRORS -join "`n") | Should -Match 'schema validation failed|does not conform to schema|Unsupported state source'
+    }
+
+    It 'denies deprecated enablement from <Name>' -ForEach @(
+        @{ Name = 'a missing state entry'; Kind = 'missing'; RegistryValid = $true }
+        @{ Name = 'a disabled state'; Kind = 'disabled'; RegistryValid = $true }
+        @{ Name = 'a null pin'; Kind = 'null-pin'; RegistryValid = $false }
+        @{ Name = 'a stale pin'; Kind = 'stale-pin'; RegistryValid = $false }
+        @{ Name = 'a wrong-type enabled value'; Kind = 'wrong-type'; RegistryValid = $false }
+        @{ Name = 'a sync source'; Kind = 'sync'; RegistryValid = $false }
+        @{ Name = 'a null provenance source'; Kind = 'source-null'; RegistryValid = $false }
+        @{ Name = 'a wrong-type provenance source'; Kind = 'source-wrong-type'; RegistryValid = $false }
+    ) {
+        $fixture = New-ExtensionFixture
+        $source = New-TestExtensionSource -Fixture $fixture
+        (Invoke-ExtensionScript -Fixture $fixture -Name 'add-extension.ps1' -Arguments @('-SourceDir', $source, '-Json')).ExitCode | Should -Be 0
+        Deprecate-TestExtension -Fixture $fixture -Id 'fixture-extension'
+
+        if ($Kind -ne 'missing') {
+            $state = Get-Content -LiteralPath $fixture.StatePath -Raw | ConvertFrom-Json -AsHashtable
+            $state.states['fixture-extension'] = [ordered]@{
+                enabled = if ($Kind -eq 'disabled') { $false } elseif ($Kind -eq 'wrong-type') { 'true' } else { $true }
+                pinnedVersion = if ($Kind -eq 'null-pin') { $null } elseif ($Kind -eq 'stale-pin') { '0.9.0' } else { '1.0.0' }
+                changedAt = (Get-Date).ToString('o')
+                source = if ($Kind -eq 'sync') {
+                    'sync'
+                } elseif ($Kind -eq 'source-null') {
+                    $null
+                } elseif ($Kind -eq 'source-wrong-type') {
+                    42
+                } else {
+                    'manual'
+                }
+            }
+            Write-TestJson -Path $fixture.StatePath -Data $state
+        }
+
+        $beforeState = Get-Content -LiteralPath $fixture.StatePath -Raw
+        $validation = Invoke-ExtensionScript -Fixture $fixture -Name 'validate-extension-registry.ps1' -Arguments @('-Json')
+        $parsedValidation = $validation.Raw | ConvertFrom-Json
+        $parsedValidation.VALID | Should -Be $RegistryValid
+        if ($Kind -in @('null-pin', 'stale-pin')) {
+            ($parsedValidation.ERRORS -join "`n") | Should -Match 'Deprecated extension.*exact pinnedVersion'
+        }
+
+        $result = Invoke-ExtensionScript -Fixture $fixture -Name 'set-extension-state.ps1' -Arguments @('-Id', 'fixture-extension', '-State', 'enabled', '-Json')
+
+        $result.ExitCode | Should -Not -Be 0
+        (Get-Content -LiteralPath $fixture.StatePath -Raw) | Should -BeExactly $beforeState
+    }
+
+    It 'treats an already-enabled same-pin deprecated request as a byte-preserving no-op' {
+        $fixture = New-ExtensionFixture
+        $source = New-TestExtensionSource -Fixture $fixture
+        (Invoke-ExtensionScript -Fixture $fixture -Name 'add-extension.ps1' -Arguments @('-SourceDir', $source, '-Json')).ExitCode | Should -Be 0
+        Approve-TestExtension -Fixture $fixture -Id 'fixture-extension'
+        (Invoke-ExtensionScript -Fixture $fixture -Name 'set-extension-state.ps1' -Arguments @('-Id', 'fixture-extension', '-State', 'enabled', '-Json')).ExitCode | Should -Be 0
+        Deprecate-TestExtension -Fixture $fixture -Id 'fixture-extension'
+        New-Item -ItemType Directory -Path $fixture.MirrorRoot -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $fixture.MirrorRoot 'sentinel.txt') -Value 'preserve-deprecated-no-op' -Encoding utf8NoBOM
+        $beforeState = Get-Content -LiteralPath $fixture.StatePath -Raw
+
+        $beforeValidation = Invoke-ExtensionScript -Fixture $fixture -Name 'validate-extension-registry.ps1' -Arguments @('-Json')
+        ($beforeValidation.Raw | ConvertFrom-Json).VALID | Should -BeTrue
+        $result = Invoke-ExtensionScript -Fixture $fixture -Name 'set-extension-state.ps1' -Arguments @('-Id', 'fixture-extension', '-State', 'enabled', '-Json')
+        $parsed = $result.Raw | ConvertFrom-Json
+
+        $result.ExitCode | Should -Be 0
+        $parsed.NO_OP | Should -BeTrue
+        $parsed.MIRROR_INVALIDATED | Should -BeFalse
+        (Get-Content -LiteralPath $fixture.StatePath -Raw) | Should -BeExactly $beforeState
+        (Get-Content -LiteralPath (Join-Path $fixture.MirrorRoot 'sentinel.txt') -Raw).Trim() | Should -BeExactly 'preserve-deprecated-no-op'
+        @(Get-ChildItem -LiteralPath $fixture.TransactionRoot -Directory -ErrorAction SilentlyContinue).Count | Should -Be 0
     }
 }
 

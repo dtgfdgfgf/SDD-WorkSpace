@@ -14,8 +14,7 @@
   ],
   "runtimeScopes": ["agents", "docs"],
   "compatibility": {
-    "mode": "studio-first",
-    "minStudioConstitutionVersion": "1.8.0"
+    "mode": "studio-first"
   },
   "entryPoints": {
     "docs": [

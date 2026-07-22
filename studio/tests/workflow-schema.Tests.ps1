@@ -84,6 +84,38 @@ Describe 'studio/workflows/ scaffolding presence' {
     It 'POLICY.md exists' {
         Test-Path -LiteralPath (Join-Path $WorkspaceRoot 'studio/workflows/POLICY.md') | Should -BeTrue
     }
+
+    It 'retires the unenforced workflow compatibility version field without promoting sdd-pipeline' {
+        $manifest = Get-Content `
+            -LiteralPath (Join-Path $WorkspaceRoot 'studio/workflows/sdd-pipeline/manifest.json') `
+            -Raw |
+            ConvertFrom-Json -AsHashtable
+        $catalog = Get-Content -LiteralPath $script:catalogPath -Raw | ConvertFrom-Json -AsHashtable
+        $entry = @($catalog.workflows | Where-Object { $_.id -eq 'sdd-pipeline' })[0]
+
+        $manifest.compatibility.ContainsKey('minStudioConstitutionVersion') | Should -BeFalse
+        $entry.reviewStatus | Should -BeExactly 'experimental'
+        $entry.trustLevel | Should -BeExactly 'experimental'
+        $entry.defaultEnabled | Should -BeFalse
+        $entry.workflowSha256 | Should -BeNullOrEmpty
+    }
+
+    It 'limits workflow state provenance to default and manual across catalog and schemas' {
+        $catalog = Get-Content -LiteralPath $script:catalogPath -Raw | ConvertFrom-Json
+        @($catalog.policy.stateSources) | Should -HaveCount 2
+        @($catalog.policy.stateSources) | Should -Contain 'default'
+        @($catalog.policy.stateSources) | Should -Contain 'manual'
+        @($catalog.policy.stateSources) | Should -Not -Contain 'sync'
+
+        $catalogSchema = Get-Content `
+            -LiteralPath (Join-Path $WorkspaceRoot 'studio/workflows/catalog.schema.json') `
+            -Raw
+        $stateSchema = Get-Content `
+            -LiteralPath (Join-Path $WorkspaceRoot 'studio/workflows/state.schema.json') `
+            -Raw
+        $catalogSchema | Should -Not -Match '"sync"'
+        $stateSchema | Should -Not -Match '"sync"'
+    }
 }
 
 Describe 'list-workflows.ps1 against the live catalog' {

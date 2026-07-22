@@ -8,6 +8,7 @@
 - During the `1.2.0` migration, approvals without verifiable evidence for the current bytes are
   cleared and returned to draft review, experimental trust, and disabled-by-default state.
 - `state.json` is the workspace enable/disable ledger.
+- State ledger sources are limited to `default` and `manual`; synchronized state is unsupported.
 - `resources/studio-runtime/merged/` is a generated mirror only. It is disposable and must never be hand-edited.
 - `contentSha256` binds the catalog entry to the current extension bytes. `approvedContentSha256` binds approval evidence to the reviewed bytes.
 
@@ -16,7 +17,9 @@
 - `draft`: local intake only; cannot be default-enabled.
 - `approved`: curated and allowed to participate in managed rollout.
 - `experimental`: locally testable but never default-enabled.
-- `deprecated`: still cataloged for compatibility, but should not be newly enabled.
+- `deprecated`: still cataloged for compatibility, but cannot be newly enabled. An enable request is
+  accepted only as a byte-preserving no-op when the state ledger already records `enabled=true` at
+  the exact current extension version.
 - `rejected`: retained only for audit history; not installable.
 
 ## Trust Levels
@@ -46,7 +49,7 @@
 
 ## Guardrails
 
-- No remote catalog sync.
+- Catalog and state changes are local-only; no remote registry producer is supported.
 - No direct writes into existing `projects/` or `learning/`.
 - No extension may override core shared files or another extension's exported files.
 - Entry points must remain inside both the extension root and their normalized declared runtime scope.

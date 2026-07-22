@@ -1,15 +1,15 @@
 #!/usr/bin/env pwsh
 #Requires -Module Pester
 
-# Discriminating R-B20 coverage: each tamper below reached workflow execution under
-# the pre-RB-1 runner because it skipped schemas, coerced booleans, or fell back to
-# defaultEnabled. The shared registry validator must now deny both run and listing.
+# Discriminating R-B20/R-B25/R-B26 coverage: authorization tampering must be
+# denied by the same shared decision used by the runner, listing, and state setter.
 
 BeforeAll {
     . "$PSScriptRoot/governance.config.ps1"
 
     $script:runWorkflow = Join-Path $WorkspaceRoot 'studio/scripts/powershell/run-workflow.ps1'
     $script:listWorkflows = Join-Path $WorkspaceRoot 'studio/scripts/powershell/list-workflows.ps1'
+    $script:setWorkflowState = Join-Path $WorkspaceRoot 'studio/scripts/powershell/set-workflow-state.ps1'
     $script:workflowSchemas = Join-Path $WorkspaceRoot 'studio/workflows'
 
     function script:Write-FixtureJson {
@@ -64,6 +64,9 @@ steps:
             kind = 'workflow'
             status = 'active'
             owner = 'studio'
+            compatibility = [ordered]@{
+                mode = 'studio-first'
+            }
         })
 
         $policy = [ordered]@{
@@ -72,7 +75,7 @@ steps:
             autoEnableNewWorkflows = $false
             reviewStatuses = @('draft', 'approved', 'experimental', 'deprecated', 'rejected')
             trustLevels = @('core', 'curated', 'experimental')
-            stateSources = @('default', 'manual', 'sync')
+            stateSources = @('default', 'manual')
         }
         $catalogEntry = [ordered]@{
             id = $id
@@ -237,6 +240,90 @@ steps:
                 $manifest['id'] = 'other-workflow'
                 Write-FixtureJson -Path $Fixture.ManifestPath -Data $manifest
             }
+            'manifest-retired-compatibility-field' {
+                $manifest = Get-Content -LiteralPath $Fixture.ManifestPath -Raw | ConvertFrom-Json -AsHashtable
+                $manifest['compatibility']['minStudioConstitutionVersion'] = '1.10.0'
+                Write-FixtureJson -Path $Fixture.ManifestPath -Data $manifest
+            }
+            'manifest-case-variant-retired-compatibility-field' {
+                $manifest = Get-Content -LiteralPath $Fixture.ManifestPath -Raw | ConvertFrom-Json -AsHashtable
+                $manifest['compatibility']['MinStudioConstitutionVersion'] = '1.10.0'
+                Write-FixtureJson -Path $Fixture.ManifestPath -Data $manifest
+            }
+            'manifest-unknown-compatibility-field' {
+                $manifest = Get-Content -LiteralPath $Fixture.ManifestPath -Raw | ConvertFrom-Json -AsHashtable
+                $manifest['compatibility']['futureCompatibilityClaim'] = 'unenforced'
+                Write-FixtureJson -Path $Fixture.ManifestPath -Data $manifest
+            }
+            'catalog-sync-source-policy' {
+                $catalog.policy.stateSources = @('default', 'manual', 'sync')
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'state-sync-source' {
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.source = 'sync'
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'state-null-source' {
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.source = $null
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'state-number-source' {
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.source = 42
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'deprecated-missing-state' {
+                $catalog.workflows[0].reviewStatus = 'deprecated'
+                $catalog.workflows[0].defaultEnabled = $false
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+            }
+            'deprecated-disabled-state' {
+                $catalog.workflows[0].reviewStatus = 'deprecated'
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.enabled = $false
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'deprecated-null-pin-state' {
+                $catalog.workflows[0].reviewStatus = 'deprecated'
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.pinnedVersion = $null
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'deprecated-stale-pin-state' {
+                $catalog.workflows[0].reviewStatus = 'deprecated'
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.pinnedVersion = '9.9.9'
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'deprecated-string-enabled-state' {
+                $catalog.workflows[0].reviewStatus = 'deprecated'
+                $catalog.workflows[0].defaultEnabled = $false
+                $stateEntry.enabled = 'true'
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
+            'deprecated-enabled-same-pin' {
+                $catalog.workflows[0].reviewStatus = 'deprecated'
+                $catalog.workflows[0].defaultEnabled = $false
+                $state.states[$Fixture.Id] = $stateEntry
+                Write-FixtureJson -Path $Fixture.CatalogPath -Data $catalog
+                Write-FixtureJson -Path $Fixture.StatePath -Data $state
+            }
             'missing-manifest' {
                 Remove-Item -LiteralPath $Fixture.ManifestPath -Force
             }
@@ -365,6 +452,24 @@ steps:
             Raw = $raw
         }
     }
+
+    function script:Invoke-FixtureStateSetter {
+        param([Parameter(Mandatory)] $Fixture)
+
+        $output = & pwsh -NoProfile -Command '& { param($scriptPath, $studioRoot, $id) $env:SDD_STUDIO_ROOT = $studioRoot; & $scriptPath -Id $id -State enabled -Json; exit $LASTEXITCODE }' `
+            $script:setWorkflowState $Fixture.StudioRoot $Fixture.Id 2>&1
+        $exitCode = $LASTEXITCODE
+        $raw = $output -join [Environment]::NewLine
+        $result = $null
+        if ($exitCode -eq 0) {
+            $result = $raw | ConvertFrom-Json
+        }
+        return [PSCustomObject]@{
+            ExitCode = $exitCode
+            Result = $result
+            Raw = $raw
+        }
+    }
 }
 
 Describe 'run-workflow: shared fail-closed registry authorization (R-B20)' {
@@ -445,6 +550,13 @@ Describe 'run-workflow: shared fail-closed registry authorization (R-B20)' {
         @{ Name = 'catalog sourcePath outside workflows root'; Kind = 'source-path-outside-root'; ErrorPattern = 'escapes workflows root' }
         @{ Name = 'catalog sourcePath junction target outside workflows root'; Kind = 'source-path-junction-outside-root'; ErrorPattern = 'reparse point outside workflows root.*outside physical root' }
         @{ Name = 'manifest id mismatch'; Kind = 'manifest-id-mismatch'; ErrorPattern = 'Workflow identity mismatch' }
+        @{ Name = 'retired workflow compatibility field reintroduction'; Kind = 'manifest-retired-compatibility-field'; ErrorPattern = 'retired compatibility field' }
+        @{ Name = 'case-variant retired workflow compatibility field reintroduction'; Kind = 'manifest-case-variant-retired-compatibility-field'; ErrorPattern = 'retired compatibility field' }
+        @{ Name = 'unknown workflow compatibility field'; Kind = 'manifest-unknown-compatibility-field'; ErrorPattern = 'unsupported compatibility field' }
+        @{ Name = 'catalog policy reintroduces sync provenance'; Kind = 'catalog-sync-source-policy' }
+        @{ Name = 'state uses sync provenance'; Kind = 'state-sync-source' }
+        @{ Name = 'state uses null provenance'; Kind = 'state-null-source' }
+        @{ Name = 'state uses wrong-type provenance'; Kind = 'state-number-source' }
         @{ Name = 'missing manifest'; Kind = 'missing-manifest'; ErrorPattern = 'manifest missing' }
         @{ Name = 'malformed manifest JSON'; Kind = 'malformed-manifest'; ErrorPattern = 'Invalid workflow manifest JSON' }
         @{ Name = 'manifest JSON null'; Kind = 'null-manifest'; ErrorPattern = 'must be a JSON object' }
@@ -476,6 +588,92 @@ Describe 'run-workflow: shared fail-closed registry authorization (R-B20)' {
             $runner.Result.ERROR | Should -Match $ErrorPattern
             ($listing.Result.ERRORS -join "`n") | Should -Match $ErrorPattern
         }
+    }
+}
+
+Describe 'workflow deprecated lifecycle and provenance hardening (R-B25/R-B26)' {
+    It 'denies a deprecated enable request with <Name> state in the mutator' -ForEach @(
+        @{ Name = 'missing'; Kind = 'deprecated-missing-state' }
+        @{ Name = 'disabled'; Kind = 'deprecated-disabled-state' }
+        @{ Name = 'null pin'; Kind = 'deprecated-null-pin-state' }
+        @{ Name = 'stale pin'; Kind = 'deprecated-stale-pin-state' }
+        @{ Name = 'wrong-type enabled'; Kind = 'deprecated-string-enabled-state' }
+        @{ Name = 'sync provenance'; Kind = 'state-sync-source' }
+        @{ Name = 'null provenance'; Kind = 'state-null-source' }
+        @{ Name = 'wrong-type provenance'; Kind = 'state-number-source' }
+    ) {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind $Kind
+
+        if ($Kind -like 'state-*') {
+            $catalog = Get-Content -LiteralPath $fixture.CatalogPath -Raw | ConvertFrom-Json -AsHashtable
+            $catalog.workflows[0].reviewStatus = 'deprecated'
+            Write-FixtureJson -Path $fixture.CatalogPath -Data $catalog
+        }
+
+        $setter = Invoke-FixtureStateSetter -Fixture $fixture
+        $setter.ExitCode | Should -Be 1
+        $setter.Raw | Should -Match 'invalid|Deprecated workflow cannot be newly enabled'
+    }
+
+    It 'keeps missing or disabled deprecated state valid for listing but execution-denied' -ForEach @(
+        @{ Kind = 'deprecated-missing-state'; ErrorPattern = 'no existing state entry' }
+        @{ Kind = 'deprecated-disabled-state'; ErrorPattern = 'enabled=true' }
+    ) {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind $Kind
+
+        $listing = Invoke-FixtureListing -Fixture $fixture
+        $listing.ExitCode | Should -Be 0
+        $listing.Result.VALID | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeFalse
+        ($listing.Result.WORKFLOWS[0].authorizationErrors -join "`n") | Should -Match $ErrorPattern
+
+        $runner = Invoke-FixtureRunner -Fixture $fixture
+        $runner.ExitCode | Should -Be 1
+        $runner.Result.STATUS | Should -Be 'denied'
+        $runner.Result.ERROR | Should -Match $ErrorPattern
+    }
+
+    It 'denies an enabled deprecated workflow with a null or stale pin in listing and runner' -ForEach @(
+        @{ Kind = 'deprecated-null-pin-state'; ErrorPattern = 'pinnedVersion' }
+        @{ Kind = 'deprecated-stale-pin-state'; ErrorPattern = 'pinnedVersion' }
+    ) {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind $Kind
+
+        $listing = Invoke-FixtureListing -Fixture $fixture
+        $listing.ExitCode | Should -Be 1
+        $listing.Result.VALID | Should -BeFalse
+        $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeFalse
+        ($listing.Result.ERRORS -join "`n") | Should -Match $ErrorPattern
+
+        $runner = Invoke-FixtureRunner -Fixture $fixture
+        $runner.ExitCode | Should -Be 1
+        $runner.Result.STATUS | Should -Be 'denied'
+        $runner.Result.ERROR | Should -Match $ErrorPattern
+    }
+
+    It 'permits only an already-enabled same-pin deprecated no-op and preserves state bytes' {
+        $fixture = New-RunnerAuthorizationFixture
+        Set-RunnerAuthorizationTamper -Fixture $fixture -Kind 'deprecated-enabled-same-pin'
+        $before = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($fixture.StatePath))
+
+        $listing = Invoke-FixtureListing -Fixture $fixture
+        $listing.ExitCode | Should -Be 0
+        $listing.Result.VALID | Should -BeTrue
+        $listing.Result.WORKFLOWS[0].executionAuthorized | Should -BeTrue
+
+        $runner = Invoke-FixtureRunner -Fixture $fixture
+        $runner.ExitCode | Should -Be 43
+        $runner.Result.STATUS | Should -Be 'awaiting_gate'
+
+        $setter = Invoke-FixtureStateSetter -Fixture $fixture
+        $setter.ExitCode | Should -Be 0
+        $setter.Result.CHANGED | Should -BeFalse
+        $setter.Result.NO_OP | Should -BeTrue
+        $after = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($fixture.StatePath))
+        $after | Should -BeExactly $before
     }
 }
 

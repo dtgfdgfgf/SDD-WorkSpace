@@ -1,6 +1,6 @@
 {
   "version": "1.2.0",
-  "updated": "2026-07-20T11:28:25+08:00",
+  "updated": "2026-07-22T17:56:16+08:00",
   "policy": {
     "mode": "studio-first",
     "curatedOnly": true,
@@ -19,8 +19,7 @@
     ],
     "stateSources": [
       "default",
-      "manual",
-      "sync"
+      "manual"
     ]
   },
   "extensions": [
@@ -35,7 +34,7 @@
       "owner": "studio",
       "approvedBy": null,
       "approvedAt": null,
-      "contentSha256": "cb0b532e10314d5a1465cce650f6db5e46c08b9eaf6e53b0c08ffc0350e78bf0",
+      "contentSha256": "205795720b72ea3e8b4a40641e742578e5a27bc07a9f57a59637ab082666b991",
       "approvedContentSha256": null,
       "runtimeScopes": [
         "scripts",

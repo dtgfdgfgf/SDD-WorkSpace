@@ -1728,6 +1728,13 @@
         "[Parameter(Mandatory = $true)] [string]$ExpectedId",
         "[Parameter(Mandatory = $true)] [string]$ExpectedVersion",
         "Workflow identity mismatch for manifest",
+        "$retiredCompatibilityKeys",
+        "Where-Object { $_ -ieq 'minStudioConstitutionVersion' }",
+        "$unsupportedCompatibilityKeys",
+        "Where-Object { $_ -cne 'mode' }",
+        "$compatibilityKeys -ccontains 'mode'",
+        "$rawMode -isnot [string]",
+        "compatibility mode must be the exact string 'studio-first'",
         "Assert-PathInsideRoot",
         "-Root $workflowsRoot",
         "-Candidate $sourceRoot",
@@ -1753,6 +1760,15 @@
         "$reviewStatus -in @('approved', 'deprecated')",
         "requires a lowercase workflowSha256 approval digest",
         "Workflow approval digest mismatch",
+        "function Get-DeprecatedWorkflowEnablementDecision",
+        "Test-StrictBooleanValue -Value $enabledValue",
+        "[string]$source -cnotin @('default', 'manual')",
+        "Deprecated workflow '$Id' cannot be newly enabled because no existing state entry is present",
+        "enablement requires an existing JSON Boolean enabled=true state",
+        "enablement requires pinnedVersion '$ExpectedVersion'",
+        "state source must be 'default' or 'manual'",
+        "DEPRECATED_ENABLE_NOOP_ELIGIBLE",
+        "DEPRECATED_ENABLE_ERRORS",
         "WORKFLOW_PATH",
         "WORKFLOW_SHA256",
         "ACTUAL_WORKFLOW_SHA256",
@@ -1834,6 +1850,152 @@
       ]
     },
     {
+      "id": "extension-policy-deprecated-and-source-truthfulness",
+      "path": "studio/extensions/POLICY.md",
+      "mustContainAll": [
+        "State ledger sources are limited to `default` and `manual`",
+        "cannot be newly enabled",
+        "byte-preserving no-op",
+        "exact current extension version",
+        "Catalog and state changes are local-only; no remote registry producer is supported."
+      ],
+      "mustNotContainAny": [
+        "`sync`"
+      ]
+    },
+    {
+      "id": "workflow-policy-deprecated-and-source-truthfulness",
+      "path": "studio/workflows/POLICY.md",
+      "mustContainAll": [
+        "it cannot be newly enabled",
+        "byte-preserving no-op",
+        "pinned to the current catalog version",
+        "State provenance: registry state accepts only `default` and `manual`",
+        "Catalog and state changes are local-only; no remote registry producer is supported."
+      ],
+      "mustNotContainAny": [
+        "`sync`"
+      ]
+    },
+    {
+      "id": "workflow-state-mutator-deprecated-noop",
+      "path": "studio/scripts/powershell/set-workflow-state.ps1",
+      "mustContainAll": [
+        "Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot",
+        "Workflow registry is invalid; refusing state mutation",
+        "$workflow.DEPRECATED_ENABLE_NOOP_ELIGIBLE -ne $true",
+        "Deprecated workflow cannot be newly enabled",
+        "CHANGED        = $false",
+        "NO_OP          = $true",
+        "Workflow state unchanged"
+      ]
+    },
+    {
+      "id": "workflow-lifecycle-discriminating-tests",
+      "path": "studio/tests/workflow-runner-authorization.Tests.ps1",
+      "mustContainAll": [
+        "retired workflow compatibility field reintroduction",
+        "case-variant retired workflow compatibility field reintroduction",
+        "unknown workflow compatibility field",
+        "catalog policy reintroduces sync provenance",
+        "state uses null provenance",
+        "state uses wrong-type provenance",
+        "denies a deprecated enable request with <Name> state in the mutator",
+        "keeps missing or disabled deprecated state valid for listing but execution-denied",
+        "denies an enabled deprecated workflow with a null or stale pin in listing and runner",
+        "permits only an already-enabled same-pin deprecated no-op and preserves state bytes"
+      ]
+    },
+    {
+      "id": "workflow-lifecycle-non-promotion-tests",
+      "path": "studio/tests/workflow-schema.Tests.ps1",
+      "mustContainAll": [
+        "retires the unenforced workflow compatibility version field without promoting sdd-pipeline",
+        "limits workflow state provenance to default and manual across catalog and schemas",
+        "$entry.reviewStatus | Should -BeExactly 'experimental'",
+        "$entry.trustLevel | Should -BeExactly 'experimental'",
+        "$entry.defaultEnabled | Should -BeFalse",
+        "$entry.workflowSha256 | Should -BeNullOrEmpty"
+      ]
+    },
+    {
+      "id": "r6-a3-runtime-contract-reversion-tests",
+      "path": "studio/tests/check-speckit-runtime.Tests.ps1",
+      "mustContainAll": [
+        "fails when retired extension compatibility fields are reintroduced",
+        "fails when retired workflow compatibility fields are reintroduced",
+        "fails when the retired extension sync source is restored in shared parsing",
+        "fails when the retired workflow sync source is restored in the catalog schema"
+      ]
+    },
+    {
+      "id": "extension-manifest-compatibility-field-retirement",
+      "path": "studio/extensions/manifest.schema.json",
+      "mustContainAll": [
+        "\"required\": [\"mode\"]",
+        "\"const\": \"studio-first\""
+      ],
+      "mustNotContainAny": [
+        "minStudioConstitutionVersion",
+        "minWorkspaceStructureVersion"
+      ]
+    },
+    {
+      "id": "extension-smoke-compatibility-field-retirement",
+      "path": "studio/extensions/extension-smoke/manifest.json",
+      "mustContainAll": [
+        "\"mode\": \"studio-first\""
+      ],
+      "mustNotContainAny": [
+        "minStudioConstitutionVersion",
+        "minWorkspaceStructureVersion"
+      ]
+    },
+    {
+      "id": "extension-state-source-retirement",
+      "path": "studio/extensions/catalog.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "extension-state-ledger-source-retirement",
+      "path": "studio/extensions/state.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "extension-catalog-source-retirement",
+      "path": "studio/extensions/catalog.json",
+      "mustContainAll": [
+        "\"reviewStatus\": \"draft\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"stateSources\": [\n      \"default\",\n      \"manual\"\n    ]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "extension-shared-state-source-retirement",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Get-ExtensionStateSources",
+        "return @('default', 'manual')"
+      ],
+      "mustNotContainAny": [
+        "return @('default', 'manual', 'sync')"
+      ]
+    },
+    {
       "id": "extension-registry-schema-path-and-transaction-helpers",
       "path": "studio/scripts/powershell/extension-registry-common.ps1",
       "mustContainAll": [
@@ -1873,7 +2035,15 @@
         "Get-ExtensionContentSha256",
         "approvedBy, approvedAt, and approvedContentSha256 must be set or cleared together",
         "Catalog contentSha256 does not match actual extension bytes",
-        "Content-bound approval is stale"
+        "Content-bound approval is stale",
+        "$hasStrictEnabledState",
+        "$stateEntry.enabled -is [bool]",
+        "$stateEntry.pinnedVersion -is [string]",
+        "Deprecated extension '$extensionId' may remain enabled only at exact pinnedVersion"
+      ],
+      "mustNotContainAny": [
+        "[bool]$stateEntry.enabled",
+        "[bool]$catalogEntry.defaultEnabled"
       ]
     },
     {
@@ -1926,7 +2096,12 @@
         "Restore-ExtensionMirrorFromTransaction",
         "$rollbackErrors.Count -eq 0",
         "Recovery evidence retained at:",
-        "MIRROR_INVALIDATED"
+        "MIRROR_INVALIDATED",
+        "Deprecated extension '$Id' cannot be newly enabled or repinned",
+        "$existingState.enabled -is [bool]",
+        "$existingState.pinnedVersion -is [string]",
+        "NO_OP              = $true",
+        "MIRROR_INVALIDATED = $false"
       ]
     },
     {
@@ -1959,7 +2134,13 @@
         "restores a transaction baseline through verified same-directory atomic replacement",
         "detects byte replacement after approval even when manifest identity is unchanged",
         "denies a workspace alias whose physical output overlaps the extension authority root",
-        "exercises add approve enable export disable re-enable export and remove lifecycle"
+        "exercises add approve enable export disable re-enable export and remove lifecycle",
+        "rejects reintroduction of either retired compatibility version field",
+        "rejects sync in both catalog policy and state sources",
+        "denies deprecated enablement from <Name>",
+        "a null provenance source",
+        "a wrong-type provenance source",
+        "treats an already-enabled same-pin deprecated request as a byte-preserving no-op"
       ]
     },
     {
@@ -2686,6 +2867,50 @@
     }
   ],
   "workflowInvariants": [
+    {
+      "id": "sdd-pipeline-compatibility-field-retirement",
+      "path": "studio/workflows/sdd-pipeline/manifest.json",
+      "mustContainAll": [
+        "\"mode\": \"studio-first\""
+      ],
+      "mustNotContainAny": [
+        "minStudioConstitutionVersion"
+      ]
+    },
+    {
+      "id": "workflow-catalog-state-source-retirement",
+      "path": "studio/workflows/catalog.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "workflow-state-ledger-source-retirement",
+      "path": "studio/workflows/state.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "workflow-catalog-source-retirement-and-non-promotion",
+      "path": "studio/workflows/catalog.json",
+      "mustContainAll": [
+        "\"reviewStatus\": \"experimental\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"workflowSha256\": null",
+        "\"stateSources\": [\n      \"default\",\n      \"manual\"\n    ]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
     {
       "id": "sdd-pipeline-readiness-statuses",
       "path": "studio/workflows/sdd-pipeline/workflow.yml",

@@ -50,7 +50,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["default", "manual", "sync"]
+            "enum": ["default", "manual"]
           },
           "uniqueItems": true
         }

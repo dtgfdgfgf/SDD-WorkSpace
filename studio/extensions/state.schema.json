@@ -34,7 +34,7 @@
           },
           "source": {
             "type": "string",
-            "enum": ["default", "manual", "sync"]
+            "enum": ["default", "manual"]
           }
         }
       }

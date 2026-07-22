@@ -483,21 +483,45 @@ foreach ($extensionId in $allIds) {
         }
     }
 
+    $hasStrictEnabledState = (
+        $stateEntry -is [System.Collections.IDictionary] -and
+        $stateEntry.ContainsKey('enabled') -and
+        $stateEntry.enabled -is [bool] -and
+        $stateEntry.enabled -eq $true
+    )
+
     if ($stateEntry -and $catalogEntry) {
-        if ($catalogEntry.reviewStatus -notin @('approved', 'deprecated') -and $stateEntry.enabled) {
+        if ($catalogEntry.reviewStatus -notin @('approved', 'deprecated') -and $hasStrictEnabledState) {
             $extensionErrors += New-Issue -Scope 'state' -Message "State enables '$extensionId' even though reviewStatus is '$($catalogEntry.reviewStatus)'"
         }
     }
 
-    if ($stateEntry -and $manifestInfo -and $stateEntry.pinnedVersion -and $stateEntry.pinnedVersion -ne $manifestInfo.manifest.version) {
+    if ($catalogEntry -and $catalogEntry.reviewStatus -eq 'deprecated' -and $hasStrictEnabledState) {
+        $hasExactDeprecatedPin = (
+            $manifestInfo -and
+            $stateEntry.ContainsKey('pinnedVersion') -and
+            $stateEntry.pinnedVersion -is [string] -and
+            $stateEntry.pinnedVersion -ceq [string]$manifestInfo.manifest.version
+        )
+        if (-not $hasExactDeprecatedPin) {
+            $expectedVersion = if ($manifestInfo) { [string]$manifestInfo.manifest.version } else { '<missing-manifest>' }
+            $extensionErrors += New-Issue -Scope 'state' -Message "Deprecated extension '$extensionId' may remain enabled only at exact pinnedVersion '$expectedVersion'"
+        }
+    } elseif (
+        $stateEntry -is [System.Collections.IDictionary] -and
+        $manifestInfo -and
+        $stateEntry.ContainsKey('pinnedVersion') -and
+        $stateEntry.pinnedVersion -is [string] -and
+        $stateEntry.pinnedVersion -cne [string]$manifestInfo.manifest.version
+    ) {
         $extensionWarnings += New-Issue -Scope 'state' -Message "Pinned version '$($stateEntry.pinnedVersion)' differs from manifest version '$($manifestInfo.manifest.version)' for '$extensionId'"
     }
 
     $effectiveEnabled = $false
-    if ($stateEntry -and $stateEntry.enabled -ne $null) {
-        $effectiveEnabled = [bool]$stateEntry.enabled
-    } elseif ($catalogEntry -and $catalogEntry.defaultEnabled -eq $true) {
-        $effectiveEnabled = $true
+    if ($stateEntry -is [System.Collections.IDictionary] -and $stateEntry.enabled -is [bool]) {
+        $effectiveEnabled = $stateEntry.enabled
+    } elseif ($catalogEntry -and $catalogEntry.defaultEnabled -is [bool]) {
+        $effectiveEnabled = $catalogEntry.defaultEnabled
     }
 
     $extensions += [ordered]@{
@@ -508,7 +532,7 @@ foreach ($extensionId in $allIds) {
         path             = if ($manifestInfo) { $manifestInfo.root } else { $null }
         reviewStatus     = if ($catalogEntry) { $catalogEntry.reviewStatus } else { 'uncataloged' }
         trustLevel       = if ($catalogEntry) { $catalogEntry.trustLevel } else { 'unknown' }
-        defaultEnabled   = if ($catalogEntry -and $catalogEntry.defaultEnabled -ne $null) { [bool]$catalogEntry.defaultEnabled } else { $false }
+        defaultEnabled   = if ($catalogEntry -and $catalogEntry.defaultEnabled -is [bool]) { $catalogEntry.defaultEnabled } else { $false }
         enabled          = $effectiveEnabled
         stateSource      = if ($stateEntry) { $stateEntry.source } else { $null }
         pinnedVersion    = if ($stateEntry) { $stateEntry.pinnedVersion } else { $null }

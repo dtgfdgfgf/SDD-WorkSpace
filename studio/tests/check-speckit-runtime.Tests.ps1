@@ -1467,6 +1467,124 @@ Invoke-JsonScriptDetailed -ScriptPath $findingStatusLedgerScript `
         $audit.ExitCode | Should -Not -Be 0
         @($audit.Result.FAILURES.id) | Should -Contain 'governance-ci-enforcement'
     }
+
+    It 'fails when retired extension compatibility fields are reintroduced' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $manifestPath = Join-Path $fixtureRoot 'studio/extensions/extension-smoke/manifest.json'
+        $content = [System.IO.File]::ReadAllText($manifestPath)
+        $currentCompatibility = '"compatibility": {' + "`n" + '    "mode": "studio-first"' + "`n" + '  }'
+        $reintroducedCompatibility = '"compatibility": {' + "`n" + '    "mode": "studio-first",' + "`n" + '    "minStudioConstitutionVersion": "1.3.0",' + "`n" + '    "minWorkspaceStructureVersion": "1.2.0"' + "`n" + '  }'
+        $content.Contains($currentCompatibility, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $currentCompatibility,
+            $reintroducedCompatibility,
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $manifestPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'extension-smoke-compatibility-field-retirement'
+    }
+
+    It 'fails when retired workflow compatibility fields are reintroduced' {
+        $tamperingCases = @(
+            @{
+                Field = 'minStudioConstitutionVersion'
+                ExpectedFailure = 'sdd-pipeline-compatibility-field-retirement'
+            },
+            @{
+                Field = 'MinStudioConstitutionVersion'
+                ExpectedFailure = 'workflow-registry-invalid'
+            }
+        )
+
+        foreach ($case in $tamperingCases) {
+            $fixtureRoot = New-RuntimeAuditFixture
+            $manifestPath = Join-Path $fixtureRoot 'studio/workflows/sdd-pipeline/manifest.json'
+            $content = [System.IO.File]::ReadAllText($manifestPath)
+            $currentCompatibility = '"compatibility": {' + "`n" + '    "mode": "studio-first"' + "`n" + '  }'
+            $reintroducedCompatibility = '"compatibility": {' + "`n" + '    "mode": "studio-first",' + "`n" +
+                ('    "' + $case.Field + '": "1.8.0"') + "`n" + '  }'
+            $content.Contains($currentCompatibility, [System.StringComparison]::Ordinal) |
+                Should -BeTrue
+            $tampered = $content.Replace(
+                $currentCompatibility,
+                $reintroducedCompatibility,
+                [System.StringComparison]::Ordinal
+            )
+            [System.IO.File]::WriteAllText(
+                $manifestPath,
+                ($tampered -replace "`r`n?", "`n"),
+                [System.Text.UTF8Encoding]::new($false)
+            )
+
+            $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+            $audit.ExitCode | Should -Not -Be 0
+            @($audit.Result.FAILURES.id) |
+                Should -Contain $case.ExpectedFailure
+        }
+    }
+
+    It 'fails when the retired extension sync source is restored in shared parsing' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $commonPath = Join-Path $fixtureRoot 'studio/scripts/powershell/common.ps1'
+        $content = [System.IO.File]::ReadAllText($commonPath)
+        $retiredSourceSet = "return @('default', 'manual')"
+        $legacySourceSet = "return @('default', 'manual', 'sync')"
+        $content.Contains($retiredSourceSet, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $retiredSourceSet,
+            $legacySourceSet,
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $commonPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'extension-shared-state-source-retirement'
+    }
+
+    It 'fails when the retired workflow sync source is restored in the catalog schema' {
+        $fixtureRoot = New-RuntimeAuditFixture
+        $schemaPath = Join-Path $fixtureRoot 'studio/workflows/catalog.schema.json'
+        $content = [System.IO.File]::ReadAllText($schemaPath)
+        $retiredSourceSet = '"enum": ["default", "manual"]'
+        $legacySourceSet = '"enum": ["default", "manual", "sync"]'
+        $content.Contains($retiredSourceSet, [System.StringComparison]::Ordinal) |
+            Should -BeTrue
+        $tampered = $content.Replace(
+            $retiredSourceSet,
+            $legacySourceSet,
+            [System.StringComparison]::Ordinal
+        )
+        [System.IO.File]::WriteAllText(
+            $schemaPath,
+            ($tampered -replace "`r`n?", "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+
+        $audit.ExitCode | Should -Not -Be 0
+        @($audit.Result.FAILURES.id) |
+            Should -Contain 'workflow-catalog-state-source-retirement'
+    }
 }
 
 Describe 'governance test coverage configuration' {
