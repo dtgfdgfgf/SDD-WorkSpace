@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.23.0"
+version: "1.24.0"
 date: "2026-07-14"
 last_updated: "2026-07-22"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "a74a08a191b8ec1bd67b2f2b9112e2810f10959c"
+head_commit: "4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -222,6 +222,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.21.0 | 2026-07-22 | Corrects the accounting sequence after implementation `105a09cd02f7d8b4765e49859390908e55bd97d1`: R6-A1 may receive its own evidence-backed revision-2 status delta and dedicated Batch note before A2 through A4, while R6-A5 remains the later Wave-4 and multi-batch accounting point. This timing correction changes no status by itself and preserves non-promotion, consumer exclusions, R-E09/R-J03 terminal boundaries and PR #3 NOT READY state; see Section 27. |
 | 1.22.0 | 2026-07-22 | Owner Choice A resolves the R6-A1 re-entry plan drift discovered after repair `ea78b64fec17ee074018b9dc17abea31404f8f16`. The append-only history must preserve revisions 1 through 3 and may append revision 4 only for R-E11 after the repaired clean tree passes its pre-accounting gates. A later note-only finalization must validate exactly four consecutive revisions on the re-entry final tree. No status changes in this plan-only amendment; see Section 28. |
 | 1.23.0 | 2026-07-22 | Owner Choice A resolves the finalization surface-set contradiction found after revision-4 accounting `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`. Because `docs/README.md` contains current note-state prose, changing the dedicated note to Ready/Closed without synchronizing that prose would recreate the stale-truth defect recorded in Section 41. The finalization commit may therefore update exactly the dedicated note, its mainline index row and the `docs/README.md` note-state prose while preserving the revision-4 machine marker and every finding status. No readiness or status changes occur in this plan-only amendment; see Section 29. |
+| 1.24.0 | 2026-07-22 | Owner Choice A defines a non-self-referential R-E11 re-entry after finalization `f0f325b` failed Batch last-touch coverage and honesty demotion `4ce95a4` appended revision 5. Revision 6 accounting will make `docs/README.md` prose state-neutral while the note remains Draft/Open; a later two-file finalization can cite the revision-6 accounting commit that last touched the ledger and docs index. The validator is not weakened, and no status changes occur in this plan-only amendment; see Section 30. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1128,3 +1129,59 @@ This correction changes no finding status, ledger record, workflow authorization
 `projects/`, `learning/` and `studio/workflows/` remain outside the finalization diff.
 `sdd-pipeline` remains experimental, default-disabled and execution-denied; PR #3 remains
 `NOT READY TO MERGE`.
+
+## 30. 2026-07-22 R6-A1 non-self-referential R-E11 re-entry
+
+Finalization `f0f325b41563dea5cfa5d53582fbc0c316938f02` synchronized the three paths authorized by
+Section 29, but explicit Batch readiness failed with one `branch-evidence-coverage-missing` error
+for `docs/README.md`. Because the same commit last touched that path and made the note Ready, its
+hash could not already appear in the note's `Related Commits`. Honesty demotion
+`4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` therefore appended revision 5, returned only R-E11
+to `IN_PROGRESS`, restored the dedicated note to Draft/Open and produced fold 82/42/5/2/0 across
+the unchanged 131 findings.
+
+Owner Choice A does not exempt any path or weaken `validate-mainline-notes.ps1`. Sections 28 and 29
+remain historical records of the refuted four-revision sequence. This section supersedes their
+terminal revision count and re-entry ordering as follows:
+
+1. Commit this plan-only amendment without changing a finding status, note readiness or
+   reconciliation state.
+2. On the clean demotion-and-plan tree, run the complete governance suite with at least 878 passes
+   and 0 failures, runtime with `VALID=true`, 0 errors and 0 warnings, and BaseRef history with
+   exactly five consecutive valid revisions, 131 findings, fold 82/42/5/2/0 and
+   `HISTORY_VALID=true`. R-E11 remains `IN_PROGRESS` until all pre-accounting gates pass.
+3. In a separate revision-6 accounting commit, modify exactly the ledger, `docs/README.md`, the
+   dedicated R6-A1 note and its mainline index. Revision 6 may change only R-E11 from
+   `IN_PROGRESS` to `COMPLETED`, producing fold 83/42/5/1/0 with severity 8/32/52/39. Revisions 1
+   through 5 must remain an exact immutable prefix.
+4. The revision-6 accounting commit keeps the dedicated note Draft/Open/Batch and its mainline row
+   Draft. The exact `finding-status-index-v1` marker in `docs/README.md` must record revision 6,
+   131 findings and fold 83/42/5/1/0. The prose in that same row must be state-neutral: it may direct
+   readers to the dedicated note and its mainline row for current readiness and retain the
+   fail-and-demote boundary, but it must not assert Draft/Open, Ready/Closed or that a named
+   finalization transition is still pending.
+5. After committing revision 6 and obtaining its real hash, create a separate finalization commit
+   that modifies exactly the dedicated note and its matching mainline index row. Set the note to
+   Ready with reconciliation Closed, set that one row to Ready, and add the real revision-6
+   accounting hash, this plan commit and honesty demotion
+   `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` to `Related Commits`. All three newly added
+   references must use their complete 40-character lowercase commit hashes. `docs/README.md`, the
+   ledger, every other note and every other index row must remain unchanged in finalization.
+6. Validate the committed finalization tree from base
+   `9b83f7a5d2e8630955efdb458f0e0e9a1c367839`. The Ready note must cover the real last-touch commits
+   for every non-note shared path, including the revision-6 accounting commit for the ledger and
+   `docs/README.md` and this plan commit for the remediation plan. Explicit Batch readiness must
+   report `VALID=true`, 0 errors, 0 warnings and no `branch-evidence-coverage-missing` result.
+   Runtime must report `VALID=true`, 0 errors and 0 warnings; the complete suite must have at least
+   878 passes and 0 failures; history must contain exactly six consecutive valid revisions, 131
+   findings and fold 83/42/5/1/0; Aggregate must fail only with the canonical umbrella blocker;
+   Claude mirrors, impact registry, bootstrap, workflow denial and diff/worktree hygiene must pass.
+7. Any deviation immediately returns the note to Draft/Open and R-E11 to its truthful non-complete
+   state through a new append-only revision before other work continues.
+
+This re-entry remains wholly within R-E11 because it repairs the evidence sequence required for
+that finding's completion; it does not hide an unrelated residual. R-D07, R-E02, R-E08, R-H03,
+R-H04 and R-H20 remain `COMPLETED`. R6-A2 through R6-A6, Wave-4 dispositions, R-E09, R-J03,
+Aggregate acceptance, workflow promotion, merge and post-merge evidence remain unchanged.
+`projects/`, `learning/` and `studio/workflows/` are excluded. `sdd-pipeline` remains experimental,
+default-disabled and execution-denied; PR #3 remains `NOT READY TO MERGE`.
