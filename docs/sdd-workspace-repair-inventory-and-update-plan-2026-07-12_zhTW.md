@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.35.0"
+version: "1.37.0"
 date: "2026-07-12"
 last_updated: "2026-07-23"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "a45b7d33a59dd41d7765d29626bf43d2adb02cca"
+head_commit: "5e99ad9569cc0212212a0191193702c25f6af052"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -473,6 +473,8 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.33.0 | 2026-07-22 | Appends revision 5 after finalization head `f0f325b` failed explicit Batch readiness with `branch-evidence-coverage-missing` for `docs/README.md`: the Ready note could not cite that same commit's previously unknown hash as the path's last-touch evidence. Only R-E11 returns from COMPLETED to IN_PROGRESS, producing 82 COMPLETED / 42 OPEN / 5 DECIDED / 2 IN_PROGRESS / 0 DISPOSITIONED; the dedicated note returns to Draft/Open. The interrupted exact-tree suite is not closure evidence. See Section 43. |
 | 1.34.0 | 2026-07-22 | After honesty demotion `4ce95a4ed2ce941ae2291dd1002b6c7f99bbb59a` and committed non-self-referential plan `f4ca59d274fffe8f1e49950d8bf796b95eda05d6`, the clean five-revision tree passes 878 governance tests with 0 failures, runtime `VALID=true` with 0 errors and 0 warnings, and valid history at fold 82/42/5/2/0. Revision 6 changes only R-E11 from IN_PROGRESS to COMPLETED, producing 83 COMPLETED / 42 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED across 131 findings. The dedicated note remains Draft/Open/Batch until a later two-file finalization can cite this accounting commit's real hash. See Section 44. |
 | 1.35.0 | 2026-07-23 | After committed plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`, revision 7 registers new Medium R-E13 as OPEN before trigger-authority implementation begins. Inventory becomes 132 with severity 8/32/53/39 and fold 83 COMPLETED / 43 OPEN / 5 DECIDED / 1 IN_PROGRESS / 0 DISPOSITIONED. Revisions 1 through 6 remain immutable, R-E11 remains COMPLETED, and no A2 through A4 finding is closed or Wave-4 item dispositioned. See Section 45. |
+| 1.36.0 | 2026-07-23 | After committed R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d`, R6-A3 implementation `be5fb24fd79a47d8f0db9f61be2a747d06b29088`, R6-A4 implementation `32a58e653cc4b541db88b23ad4b90fd7b81007a5` and trigger-contract implementation `5e99ad9569cc0212212a0191193702c25f6af052`, revision 8 changes exactly R-A21/R-B18/R-B25/R-B26/R-C04/R-C06/R-G01/R-G03/R-G04/R-H06/R-H09/R-E13 from OPEN to COMPLETED. The fold becomes 95/31/5/1/0 across 132 findings. See Section 46. |
+| 1.37.0 | 2026-07-23 | Revision 9 changes exactly the thirty OPEN and five DECIDED findings authorized in Sections 36.2 and 37.1 to DISPOSITIONED, with the exact owner-approved `reentryTrigger` on every entry. Inventory and severity remain 132 and 8/32/53/39; the fold becomes 95 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED. R-E09 remains IN_PROGRESS and R-J03 remains OPEN. See Section 46. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -2085,6 +2087,136 @@ remains `NOT READY TO MERGE`.
     "DECIDED": 5,
     "IN_PROGRESS": 1,
     "DISPOSITIONED": 0
+  }
+}
+```
+
+## 46. 2026-07-23 R6-A2 through A5 completion and trigger-bearing disposition accounting
+
+Committed implementations now exist for R6-A2 at
+`814cc6169e6d1bf9167ce91249dbd58ac548674d`, R6-A3 at
+`be5fb24fd79a47d8f0db9f61be2a747d06b29088`, R6-A4 at
+`32a58e653cc4b541db88b23ad4b90fd7b81007a5` and the R-E13 trigger contract at
+`5e99ad9569cc0212212a0191193702c25f6af052`. The clean trigger-contract implementation tree
+reports 986 governance tests passed with 0 failed and canonical runtime `VALID=true` with 0 errors
+and 0 warnings. Revision-7 history validation is also valid with 132 findings and fold 83/43/5/1/0.
+
+Revision 8 records only the twelve evidence-backed completions authorized by remediation-plan
+Section 31. R-A21 and R-B18 are backed by R6-A2; R-B25, R-B26, R-C04 and R-C06 are backed by
+R6-A3; R-G01, R-G03, R-G04, R-H06 and R-H09 are backed by R6-A4; R-E13 is backed by the
+trigger-contract implementation. The resulting fold is 95 `COMPLETED`, 31 `OPEN`, 5 `DECIDED`,
+1 `IN_PROGRESS` and 0 `DISPOSITIONED`.
+
+Revision 9 then records exactly the thirty `OPEN` and five `DECIDED` Wave-4 findings authorized by
+Sections 36.2 and 37.1 as `DISPOSITIONED`. Every entry carries its exact owner-approved
+`reentryTrigger` inside the canonical machine record. `DISPOSITIONED` remains a conditional
+deferral, not an implementation or risk-acceptance claim. Inventory and severity remain 132 and
+Critical 8, High 32, Medium 53 and Low 39. The resulting fold is 95 `COMPLETED`, 1 `OPEN`,
+0 `DECIDED`, 1 `IN_PROGRESS` and 35 `DISPOSITIONED`; R-E09 remains `IN_PROGRESS` and R-J03
+remains `OPEN`.
+
+The dedicated R6-A2 through A5 note remains Draft with reconciliation Open and validation scope
+Batch until the accounting commit has a real hash and the later note-only finalization passes every
+exact-tree gate. The broad R6 convergence note and canonical Wave-3 umbrella remain Draft/Open.
+This accounting does not authorize workflow promotion, consumer edits, push, merge, post-merge
+claims or PR-thread resolution. `sdd-pipeline` remains experimental, default-disabled and
+execution-denied; PR #3 remains `NOT READY TO MERGE`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 8,
+  "recordType": "delta",
+  "recordedDate": "2026-07-23",
+  "ledgerVersion": "1.36.0",
+  "statuses": [
+    {"id":"R-A21","status":"COMPLETED"},
+    {"id":"R-B18","status":"COMPLETED"},
+    {"id":"R-B25","status":"COMPLETED"},
+    {"id":"R-B26","status":"COMPLETED"},
+    {"id":"R-C04","status":"COMPLETED"},
+    {"id":"R-C06","status":"COMPLETED"},
+    {"id":"R-G01","status":"COMPLETED"},
+    {"id":"R-G03","status":"COMPLETED"},
+    {"id":"R-G04","status":"COMPLETED"},
+    {"id":"R-H06","status":"COMPLETED"},
+    {"id":"R-H09","status":"COMPLETED"},
+    {"id":"R-E13","status":"COMPLETED"}
+  ],
+  "inventoryCount": 132,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 53,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 95,
+    "OPEN": 31,
+    "DECIDED": 5,
+    "IN_PROGRESS": 1,
+    "DISPOSITIONED": 0
+  }
+}
+```
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 9,
+  "recordType": "delta",
+  "recordedDate": "2026-07-23",
+  "ledgerVersion": "1.37.0",
+  "statuses": [
+    {"id":"R-A13","status":"DISPOSITIONED","reentryTrigger":"Before adding or materially expanding `mustContainAll` literal assertions, or before the next contract-invariant refactor"},
+    {"id":"R-B23","status":"DISPOSITIONED","reentryTrigger":"Before any workflow promotion, execution authorization, or use of RunState/sidecar data as trusted evidence; deferral is valid only while `sdd-pipeline` stays experimental, default-disabled and execution-denied"},
+    {"id":"R-F01","status":"DISPOSITIONED","reentryTrigger":"Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time"},
+    {"id":"R-F02","status":"DISPOSITIONED","reentryTrigger":"Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time"},
+    {"id":"R-F03","status":"DISPOSITIONED","reentryTrigger":"Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time"},
+    {"id":"R-F05","status":"DISPOSITIONED","reentryTrigger":"Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time"},
+    {"id":"R-G02","status":"DISPOSITIONED","reentryTrigger":"Before upstream adoption, Yuanxi pack implementation, or any renewed current-baseline claim; upstream release and CLI facts must be re-verified at that time"},
+    {"id":"R-D08","status":"DISPOSITIONED","reentryTrigger":"Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors"},
+    {"id":"R-D09","status":"DISPOSITIONED","reentryTrigger":"Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors"},
+    {"id":"R-D10","status":"DISPOSITIONED","reentryTrigger":"Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors"},
+    {"id":"R-D11","status":"DISPOSITIONED","reentryTrigger":"Before the next change to agent source, Claude invocation guidance, discovery/version-agent surfaces or their generated mirrors"},
+    {"id":"R-E01","status":"DISPOSITIONED","reentryTrigger":"Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again"},
+    {"id":"R-E03","status":"DISPOSITIONED","reentryTrigger":"Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again"},
+    {"id":"R-E04","status":"DISPOSITIONED","reentryTrigger":"Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again"},
+    {"id":"R-E06","status":"DISPOSITIONED","reentryTrigger":"Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again"},
+    {"id":"R-E12","status":"DISPOSITIONED","reentryTrigger":"Before the corresponding constitution classification, authority taxonomy, bootstrap wording or hook classification is changed again"},
+    {"id":"R-G05","status":"DISPOSITIONED","reentryTrigger":"Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised"},
+    {"id":"R-G07","status":"DISPOSITIONED","reentryTrigger":"Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised"},
+    {"id":"R-G08","status":"DISPOSITIONED","reentryTrigger":"Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised"},
+    {"id":"R-G09","status":"DISPOSITIONED","reentryTrigger":"Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised"},
+    {"id":"R-G11","status":"DISPOSITIONED","reentryTrigger":"Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised"},
+    {"id":"R-G12","status":"DISPOSITIONED","reentryTrigger":"Before the affected document is reused as current guidance, supplied to an LLM for execution, or materially revised"},
+    {"id":"R-H07","status":"DISPOSITIONED","reentryTrigger":"Before the affected root asset, reserved directory or language policy is presented as a current supported surface"},
+    {"id":"R-H14","status":"DISPOSITIONED","reentryTrigger":"Before the affected root asset, reserved directory or language policy is presented as a current supported surface"},
+    {"id":"R-H18","status":"DISPOSITIONED","reentryTrigger":"Before the affected root asset, reserved directory or language policy is presented as a current supported surface"},
+    {"id":"R-I01","status":"DISPOSITIONED","reentryTrigger":"Before the shared-runtime upgrade scope is expanded or changed"},
+    {"id":"R-I02","status":"DISPOSITIONED","reentryTrigger":"Before adapter templates or the bootstrap generator are changed"},
+    {"id":"R-I04","status":"DISPOSITIONED","reentryTrigger":"Before a project claims complete prompt or knowledge-capture closure"},
+    {"id":"R-I05","status":"DISPOSITIONED","reentryTrigger":"Before a project claims complete prompt or knowledge-capture closure"},
+    {"id":"R-I09","status":"DISPOSITIONED","reentryTrigger":"Before the extension operator surface is documented or used externally"},
+    {"id":"R-D06","status":"DISPOSITIONED","reentryTrigger":"Before agent reseed or a model lifecycle, availability, cost or policy change"},
+    {"id":"R-D12","status":"DISPOSITIONED","reentryTrigger":"Only after a separate owner-authorized consumer exception and a decision between project-local Copilot overlay and Claude-only support; current `projects/` and `learning/` exclusion prevents implementation"},
+    {"id":"R-F04","status":"DISPOSITIONED","reentryTrigger":"Before agent-skill export/install is reused, advertised or repopulated"},
+    {"id":"R-H15","status":"DISPOSITIONED","reentryTrigger":"Before agent-skill export/install is reused, advertised or repopulated"},
+    {"id":"R-I03","status":"DISPOSITIONED","reentryTrigger":"Before route-aware auto-scaffold work or workflow promotion"}
+  ],
+  "inventoryCount": 132,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 53,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 95,
+    "OPEN": 1,
+    "DECIDED": 0,
+    "IN_PROGRESS": 1,
+    "DISPOSITIONED": 35
   }
 }
 ```

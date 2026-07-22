@@ -13,8 +13,8 @@
 
 - Record the owner-selected conservative R6 convergence plan before implementation begins.
 - Register R-B25, R-B26, R-H20 and R-E13 as new independent `OPEN` findings.
-- Directly repair 19 bounded safety and truthfulness findings, then conditionally disposition 35
-  non-critical findings to Wave-4 with exact re-entry triggers.
+- Record 19 bounded safety and truthfulness repairs across R6-A1 through A5, then conditionally
+  disposition 35 non-critical findings to Wave-4 with exact re-entry triggers.
 - Keep `sdd-pipeline` experimental, default-disabled and execution-denied.
 
 ## Why This Update Exists
@@ -40,7 +40,7 @@ silently expanding R-H03.
 R6-A5 preflight on 2026-07-23 found that the canonical status-entry schema cannot carry the exact
 re-entry trigger required for a `DISPOSITIONED` finding. The owner authorized Medium OPEN R-E13
 instead of silently expanding completed R-E11. Revisions 1 through 6 contain no disposition and
-remain valid; implementation and accounting remain separate.
+remain valid. Registration, trigger implementation and accounting remain semantically separate.
 
 ## Scope
 
@@ -74,22 +74,22 @@ Out of scope:
 ## Impact
 
 - The branch receives a committed Constitution Section 2.1 entry plan before implementation.
-- The known inventory is 132 findings with current fold 83 `COMPLETED`, 43 `OPEN`,
-  5 `DECIDED`, 1 `IN_PROGRESS` and 0 `DISPOSITIONED` after revision 7 registers R-E13.
-- No A2 through A4 finding becomes `COMPLETED` and no Wave-4 finding becomes `DISPOSITIONED`
-  in the R-E13 registration.
+- The known inventory is 132 findings with current fold 95 `COMPLETED`, 1 `OPEN`,
+  0 `DECIDED`, 1 `IN_PROGRESS` and 35 `DISPOSITIONED` after revisions 8 and 9.
+- Revision 7 remains the registration boundary; revision 8 records twelve A2 through A5
+  completions and revision 9 records exactly 35 conditional Wave-4 dispositions.
 - R-E09 and R-J03 remain terminal blockers; PR #3 remains `NOT READY TO MERGE`.
 
 ## Impact Reconciliation
 
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Version 1.35.0 revision 7 registers only Medium R-E13 as OPEN and preserves revisions 1 through 6. |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Versions 1.36.0 and 1.37.0 append revisions 8 and 9 while preserving revisions 1 through 7. |
 | `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.25.0 records the trigger-authority repair and accounting sequence before implementation. |
-| `docs/README.md` | `must_update` | `updated` | Index reports revision 7, 132 findings and current fold 83/43/5/1/0. |
+| `docs/README.md` | `must_update` | `updated` | Index reports revision 9, 132 findings and current fold 95/1/0/1/35. |
 | `docs/mainline-updates/README.md` | `must_update` | `updated` | Index state matches this Draft note. |
 | `studio/constitution/constitution.md` | `must_update` | `updated` | The implementation candidate defines the scoped authority, artifact policy and July 2026 phase review; no closure is claimed. |
-| `studio/runtime/shared-runtime-contract.json` | `must_update` | `updated` | The implementation candidate contains direct-repair policy and revert anchors; committed evidence and exact-tree gates remain pending. |
+| `studio/runtime/shared-runtime-contract.json` | `must_update` | `updated` | Committed direct-repair and trigger-contract implementations contain revert-sensitive policy, schema and mapping anchors. |
 
 ## Validation
 
@@ -114,8 +114,8 @@ Required before this note may become `Ready`:
 
 ## Merge Notes
 
-- This note remains `Draft`, reconciliation `Open` and Related Commits `TBD` until implementation
-  and accounting commits exist and the exact-tree gates pass.
+- This note remains `Draft`, reconciliation `Open` and Related Commits `TBD` until R6-A6,
+  Aggregate reconciliation, merge authorization and post-merge evidence exist.
 - Choice A keeps explicit Batch/Aggregate validation; the obsolete no-scope invocation has no
   acceptance authority.
 - This plan does not authorize workflow promotion, push or merge.
@@ -249,9 +249,8 @@ Required before this note may become `Ready`:
 
 ## Follow-ups
 
-- Implement R-E13 without changing the revision-7 fold.
-- Append evidence-backed A2 through A4 and R-E13 completions, then the exact 35 Wave-4 re-entry
-  triggers, in a separate accounting change.
+- Commit the revision-8 and revision-9 accounting bytes without widening their authorized path set.
+- Run committed exact-tree gates, then finalize only the dedicated A2-A5 note and its index row.
 - Stop at the R-E09/R-J03 merge-authorization checkpoint for separate owner direction.
 
 ## 2026-07-23 R6-A5 Trigger-Authority Registration
@@ -264,3 +263,19 @@ Required before this note may become `Ready`:
   because R6-A6, R-E09, R-J03, merge authorization and post-merge evidence remain pending.
 - `sdd-pipeline` remains experimental, default-disabled and execution-denied. No disposition,
   promotion, consumer edit, push, merge or PR-thread resolution is authorized by registration.
+
+## 2026-07-23 R6-A2 through A5 Accounting Candidate
+
+- R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`, R6-A3
+  `be5fb24fd79a47d8f0db9f61be2a747d06b29088`, R6-A4
+  `32a58e653cc4b541db88b23ad4b90fd7b81007a5` and trigger implementation
+  `5e99ad9569cc0212212a0191193702c25f6af052` are committed evidence for revision 8.
+- Revision 8 changes exactly twelve authorized findings to `COMPLETED`, producing interim fold
+  95/31/5/1/0. Revision 9 changes exactly thirty `OPEN` and five `DECIDED` findings to
+  trigger-bearing `DISPOSITIONED`, producing fold 95/1/0/1/35.
+- Inventory and severity remain 132 and 8/32/53/39. R-E09 remains `IN_PROGRESS`; R-J03 remains
+  `OPEN`. The accounting commit remains `TBD` until these bytes are committed.
+- The dedicated A2-A5 note remains Draft/Open/Batch pending committed exact-tree gates and later
+  note-only finalization. This broad note and the canonical Wave-3 umbrella remain Draft/Open.
+- `sdd-pipeline` remains experimental, default-disabled and execution-denied. This accounting does
+  not authorize promotion, consumer edits, push, merge, post-merge claims or PR-thread resolution.
