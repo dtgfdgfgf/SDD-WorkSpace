@@ -3,11 +3,31 @@
 **Date**: 2026-05-05
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: Wave-3 implementation `b01c36692cbaceec0ac9556b06c444fa4b069fb1`; R0 `bdd27809d82a9f99fc66db0a0db3fe325d53c226`; R1 `e543f6a9818007bac67f1ec942cacc22e577d17a`; RB-1 terminal schema `961df61ceb42dff8f6e9b9e5dc4253e9a6bfb374`; RB-1 template boundary `cb43de50385838888eedd94b48e6c4446e255e5a`; R2 workflow validation `6a53f6601510b58e0907ce14f3a015f6b03aea43`; RB-2 `ec25c073dbf7b04b7670e0923c08a79b792e3da8`; RB-3 `4f757e551ee196bc90e51ef21674c4983eae35ec`; RB-4 `9819e301318230ca0413d44a5bdf3d2a3b3e3ca6`; RB-5 implementation `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; RB-5 evidence `26da9a7412d902f2dfff48df23d04662687f4a9d`; RB-5 closure `44f768a12316cdb008f1fee263e03ed7ce9a8191`; R6 fixture `f2df26e98300c034f7fa03c7831b8f00aa6c470a`; R-D03 `6b749a1f153dc88412714db0ed6d8708170c5936`; R-F04 `e24d958421b4dc90ed04d507f008d7ec2bc3bec3`; R6-A1 `105a09cd02f7d8b4765e49859390908e55bd97d1`; R6-A1 finalization `b3e7c15c2e70aebf3bd40b5a73f24285de507476`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; R6-A5 trigger contract `5e99ad9569cc0212212a0191193702c25f6af052`; R6-A5 accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`; R6-A2 through A5 finalization `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`; R6-A6 plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13`; R6-A6 accounting `7910e0e54796fdb79abbc700993bf95327fa2390`; failed Aggregate finalization `0470fc528a93e51160b03c0f19a340ac89582db9`; honesty demotion `c16f2fa02b362569de21e51692a6b9e8d0592f05`; complete-coverage plan `aa6a08e2d75b9eb16a862e9978217d042bdac8c7`; complete-coverage accounting `2d963a72fcd49ced2a7ae8498e3faa3366858946`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 **Validation Scope**: Aggregate
+
+## R6-A6 Full-Suite Timeout Honesty Demotion
+
+Complete-coverage finalization `0ee547da6ecc85c848fa9f647dcc548ff66dcd33` passed canonical
+runtime, nine-record finding history, Batch readiness and Aggregate readiness from `main`, all with
+0 errors and 0 warnings. The official governance suite discovered exactly 986 tests in 27 files
+and began running with inherited process-scoped `PSExecutionPolicyPreference=Bypass`.
+
+The validation command reached its 2400-second tool timeout before Pester emitted a final summary.
+The partial output showed completed green files, including `check-speckit-runtime.Tests.ps1`,
+`mainline-note-validation.Tests.ps1` and `r6-fresh-fixture-e2e.Tests.ps1`, but it did not prove
+986 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run. A timeout without a complete result
+cannot satisfy the mandatory full-suite gate.
+
+This Aggregate note and matching index row therefore return immediately to Draft/Open. The timeout
+does not refute the Ready/Closed R6 Batch umbrella, a machine gate, finding status or completed test
+file. Re-entry requires a committed suite-only validation plan with a sufficient bounded timeout,
+followed by the same exact-tree runtime, ledger, Batch, Aggregate, hygiene and persistent-policy
+checks. R-E09 remains `IN_PROGRESS`, R-J03 remains `OPEN`, and no push, merge, workflow promotion,
+PR-thread resolution or post-merge action is authorized.
 
 ## R6-A6 Aggregate Honesty Demotion and Re-entry
 
