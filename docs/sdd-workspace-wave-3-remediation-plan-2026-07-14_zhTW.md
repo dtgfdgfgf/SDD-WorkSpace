@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.27.0"
+version: "1.28.0"
 date: "2026-07-14"
 last_updated: "2026-07-23"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "0e9574574737a578e55f01bb51f52782c96db5da"
+head_commit: "501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -224,6 +224,9 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.23.0 | 2026-07-22 | Owner Choice A resolves the finalization surface-set contradiction found after revision-4 accounting `a74a08a191b8ec1bd67b2f2b9112e2810f10959c`. Because `docs/README.md` contains current note-state prose, changing the dedicated note to Ready/Closed without synchronizing that prose would recreate the stale-truth defect recorded in Section 41. The finalization commit may therefore update exactly the dedicated note, its mainline index row and the `docs/README.md` note-state prose while preserving the revision-4 machine marker and every finding status. No readiness or status changes occur in this plan-only amendment; see Section 29. |
 | 1.24.0 | 2026-07-22 | Owner Choice A defines a non-self-referential R-E11 re-entry after finalization `f0f325b` failed Batch last-touch coverage and honesty demotion `4ce95a4` appended revision 5. Revision 6 accounting will make `docs/README.md` prose state-neutral while the note remains Draft/Open; a later two-file finalization can cite the revision-6 accounting commit that last touched the ledger and docs index. The validator is not weakened, and no status changes occur in this plan-only amendment; see Section 30. |
 | 1.25.0 | 2026-07-23 | Owner Choice A resolves the R6-A5 trigger-authority contradiction before the first `DISPOSITIONED` record. New Medium R-E13 records the independent fail-open representation gap without reopening R-E11. A registration revision must precede a separate backward-compatible schema and validator implementation; only later accounting may complete the evidence-backed A2 through A4 repairs and R-E13, and disposition the 35 owner-approved Wave-4 items with exact per-ID triggers. No status changes occur in this plan-only amendment; see Section 31. |
+| 1.26.0 | 2026-07-23 | Owner-authorized reconciliation-row re-entry records the missing `.claude/agents/*.md` `must_update` row after the first A2-A5 finalization failed its committed-tree Batch gate. The bounded two-file finalization may restore only the dedicated A2-A5 note and matching index row after every exact-tree gate passes; see Section 32. |
+| 1.27.0 | 2026-07-23 | Owner-authorized process-scoped validation re-entry records that Windows PowerShell 5.1 must inherit `PSExecutionPolicyPreference=Bypass` only for the official suite process so the existing version-guard test reaches `ScriptRequiresUnmatchedPSVersion`. No persistent execution policy, runtime, test or finding status may change; see Section 33. |
+| 1.28.0 | 2026-07-23 | The owner instruction to continue authorizes the prospective R6-A6 umbrella checkpoint after A2-A5 finalization `501f4d7`. Preflight proves runtime and Batch valid, finding revision 9 at fold 95/1/0/1/35, and exactly one Aggregate Draft-umbrella blocker from `main`. R6-A6 may finalize the two umbrellas under permanent Wave-3 non-promotion, but must stop before push or merge; R-E09 and R-J03 remain non-terminal until real merge and post-merge evidence exists. See Section 34. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1391,3 +1394,81 @@ sequence is:
 
 `sdd-pipeline` remains experimental, default-disabled and execution-denied. PR #3 remains
 `NOT READY TO MERGE`.
+
+## 34. 2026-07-23 R6-A6 umbrella checkpoint and merge-authorization boundary
+
+The owner instruction to continue work authorizes the prospective R6-A6 checkpoint defined by
+Section 24 after bounded A2-A5 finalization
+`501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`. It does not authorize push, merge, force-push,
+history rewrite, PR-thread resolution or post-merge accounting.
+
+Read-only preflight at that exact head produced the following current evidence:
+
+| Validation surface | Result |
+|---|---|
+| Worktree | Clean; local branch is 61 commits ahead of its remote tracking branch |
+| Canonical runtime | `VALID=true`, 0 errors, 0 warnings |
+| Finding-status ledger | 9 valid records, 132 findings, severity 8/32/53/39 and fold 95/1/0/1/35 |
+| Batch readiness from `b3e7c15c2e70aebf3bd40b5a73f24285de507476` | `VALID=true`, 0 errors, 0 warnings |
+| Aggregate readiness from `main` | Exactly one `aggregate-note-not-ready` error for `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` |
+| Workflow authorization | `sdd-pipeline` remains experimental, default-disabled and execution-denied |
+
+The Aggregate failure is therefore a single truthful umbrella-accounting blocker. No runtime,
+test, finding-status or consumer change is authorized for R6-A6. The Wave-3 decision is permanent
+non-promotion within this branch: `sdd-pipeline` remains unavailable for execution, and any future
+promotion requires a separately governed re-entry after the applicable disposition trigger is met.
+
+This preflight also found that the plan header had advanced to version 1.27.0 while the visible
+Version History stopped at 1.25.0. The 1.26.0 and 1.27.0 rows added by this plan-only amendment
+restore the already committed Section 32 and Section 33 history; they do not create a new finding
+or change an existing status.
+
+The authorized sequence is:
+
+1. Commit this version-1.28.0 plan-only amendment as the dated R6-A6 entry evidence. This commit may
+   modify only this remediation plan. It must not change an umbrella state, note index, finding
+   record, runtime, test, workflow authorization or consumer path.
+2. In a separate accounting-candidate commit, modify only:
+   `docs/mainline-updates/2026-07-21-r6-conservative-non-promotion-convergence.md`,
+   `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md`,
+   `docs/mainline-updates/README.md` and `docs/README.md`.
+3. Keep both umbrellas Draft/Open in that accounting candidate. Add a current R6-A6 reconciliation
+   section to each note, replace stale A2-A5 candidate statements with committed evidence, record
+   the permanent Wave-3 non-promotion decision, and make the `docs/README.md` prose state-neutral
+   while preserving the revision-9 `finding-status-index-v1` marker byte-for-byte.
+4. The Aggregate note must reconcile every `main`-to-head `must_update` target: `README.md`,
+   `studio/QUICKSTART.md`, `studio/SDD-QUICKSTART-GUIDE.md`, `.claude/agents/*.md`, `AGENTS.md`,
+   `CLAUDE.md`, `.github/copilot-instructions.md` and `docs/README.md`. Evidence must cite the
+   existing changed paths and the Ready/Closed Batch notes that already prove their exact repairs.
+5. The candidate must keep R-E09 `IN_PROGRESS` and R-J03 `OPEN`. It may account only for the
+   pre-merge R-E09 obligations that now have real evidence: historical note recovery,
+   fresh-fixture E2E, permanent non-promotion decision, complete Batch convergence and an
+   Aggregate-ready candidate. Actual merge accounting and post-merge verification remain absent.
+6. After the candidate commit has a real hash, create a separate note-only finalization commit that
+   modifies exactly the two umbrella notes and `docs/mainline-updates/README.md`. Set both notes and
+   their matching index rows to Ready with reconciliation Closed. Replace `TBD` with complete
+   40-character lowercase hashes for this plan, the accounting candidate and the material batch
+   evidence. Do not edit `docs/README.md`, the finding ledger, runtime, tests or any consumer path.
+7. Ready/Closed at this checkpoint means the branch evidence is coherent for owner merge review. It
+   does not mark R-E09 or R-J03 complete, does not claim `Merged`, and does not itself authorize
+   push, merge, promotion, PR-thread resolution or post-merge accounting.
+8. On the committed finalization tree, run the official complete governance suite with
+   `PSExecutionPolicyPreference=Bypass` inherited only by that suite process. It must discover
+   exactly 986 tests and report 986 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run.
+   Persistent MachinePolicy, UserPolicy, CurrentUser and LocalMachine execution policies must not
+   change.
+9. The same exact tree must pass canonical runtime with 0 errors and 0 warnings, finding history
+   with exactly nine consecutive records and fold 95/1/0/1/35, Batch readiness and Aggregate
+   readiness from `main` with 0 errors and 0 warnings, Claude parity, agent-authority partition,
+   impact-registry freshness, bootstrap validation, workflow execution denial, trigger mutations,
+   `git diff --check` and clean-worktree verification.
+10. Any finalization-tree deviation immediately returns the affected umbrella note and matching
+    index row to Draft/Open before other work continues. A documentation reconciliation failure
+    does not change a finding status unless independent evidence refutes that finding.
+11. After every gate passes, stop at the merge-authorization checkpoint and report the exact commit,
+    validation results, remaining R-E09/R-J03 states and the fact that the branch has not been
+    pushed or merged. Merge and post-merge closure require a separate owner instruction.
+
+This checkpoint remains inside the canonical workspace Section 2.1 shared-only route. It excludes
+`projects/`, `learning/`, workflow promotion and all external mutations. Until the finalization
+tree passes every gate, both umbrellas remain Draft/Open and PR #3 remains `NOT READY TO MERGE`.
