@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.28.0"
+version: "1.29.0"
 date: "2026-07-14"
 last_updated: "2026-07-23"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf"
+head_commit: "c16f2fa02b362569de21e51692a6b9e8d0592f05"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -227,6 +227,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.26.0 | 2026-07-23 | Owner-authorized reconciliation-row re-entry records the missing `.claude/agents/*.md` `must_update` row after the first A2-A5 finalization failed its committed-tree Batch gate. The bounded two-file finalization may restore only the dedicated A2-A5 note and matching index row after every exact-tree gate passes; see Section 32. |
 | 1.27.0 | 2026-07-23 | Owner-authorized process-scoped validation re-entry records that Windows PowerShell 5.1 must inherit `PSExecutionPolicyPreference=Bypass` only for the official suite process so the existing version-guard test reaches `ScriptRequiresUnmatchedPSVersion`. No persistent execution policy, runtime, test or finding status may change; see Section 33. |
 | 1.28.0 | 2026-07-23 | The owner instruction to continue authorizes the prospective R6-A6 umbrella checkpoint after A2-A5 finalization `501f4d7`. Preflight proves runtime and Batch valid, finding revision 9 at fold 95/1/0/1/35, and exactly one Aggregate Draft-umbrella blocker from `main`. R6-A6 may finalize the two umbrellas under permanent Wave-3 non-promotion, but must stop before push or merge; R-E09 and R-J03 remain non-terminal until real merge and post-merge evidence exists. See Section 34. |
+| 1.29.0 | 2026-07-23 | Aggregate finalization `0470fc5` passed runtime, ledger history and Batch but failed with exactly 80 coverage errors because its Related Commits omitted twelve exact last-touch commits. Honesty demotion `c16f2fa` restored only the Aggregate note and index row to Draft/Open. This re-entry plan authorizes complete commit coverage without changing runtime, tests, ledger, R6 Batch readiness or workflow authorization; see Section 35. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1472,3 +1473,76 @@ The authorized sequence is:
 This checkpoint remains inside the canonical workspace Section 2.1 shared-only route. It excludes
 `projects/`, `learning/`, workflow promotion and all external mutations. Until the finalization
 tree passes every gate, both umbrellas remain Draft/Open and PR #3 remains `NOT READY TO MERGE`.
+
+## 35. 2026-07-23 R6-A6 complete Aggregate coverage re-entry
+
+Finalization `0470fc528a93e51160b03c0f19a340ac89582db9` passed its staged runtime
+audit. Its exact committed tree then passed canonical runtime, nine-record finding history and
+Batch readiness from `main`, all with 0 errors and 0 warnings. Aggregate readiness failed with
+exactly 80 `branch-evidence-coverage-missing` errors and no other category.
+
+Honesty demotion `c16f2fa02b362569de21e51692a6b9e8d0592f05` returned only the configured
+Aggregate note and matching index row to Draft/Open. The R6 Batch umbrella remains Ready/Closed
+because its exact Batch gate passed. No finding status, runtime behavior, test result or workflow
+authorization was refuted.
+
+An isolated diagnostic clone at the failed finalization commit reproduced all 80 errors and
+resolved them to exactly twelve omitted last-touch commits:
+
+| Missing commit | Path count | Evidence boundary |
+|---|---:|---|
+| `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` | 1 | R6-A5 finding-status accounting |
+| `105a09cd02f7d8b4765e49859390908e55bd97d1` | 16 | R6-A1 authority, adapters, current guides and shared registry truth |
+| `26da9a7412d902f2dfff48df23d04662687f4a9d` | 1 | RB-5 sealed historical evidence |
+| `32a58e653cc4b541db88b23ad4b90fd7b81007a5` | 1 | R6-A4 current documentation audit surface |
+| `5e99ad9569cc0212212a0191193702c25f6af052` | 3 | R6-A5 trigger-bearing disposition contract |
+| `6a53f6601510b58e0907ce14f3a015f6b03aea43` | 1 | R2 workflow validation implementation |
+| `78c47eb0f3da7e75f3ba79943ea44f55984677a1` | 6 | RB-5 agent, authority and template implementation |
+| `814cc6169e6d1bf9167ce91249dbd58ac548674d` | 32 | R6-A2 feature binding across agents, setup scripts and workflow |
+| `961df61ceb42dff8f6e9b9e5dc4253e9a6bfb374` | 1 | RB-1 terminal analysis-result schema |
+| `bdd27809d82a9f99fc66db0a0db3fe325d53c226` | 2 | R0 containment, license and provenance cleanup |
+| `be5fb24fd79a47d8f0db9f61be2a747d06b29088` | 15 | R6-A3 extension and workflow lifecycle truthfulness |
+| `cb43de50385838888eedd94b48e6c4446e255e5a` | 1 | RB-1 critical gate template boundary |
+
+The path counts total exactly 80. The failure is an Aggregate evidence-reference omission, not a
+new implementation defect: the validator rejected the incomplete Ready claim as designed. No new
+finding ID is required.
+
+The authorized re-entry sequence is:
+
+1. Commit this version-1.29.0 plan-only amendment. It may modify only this remediation plan and
+   must not change a note state, index row, finding status, runtime, test, workflow authorization or
+   consumer path.
+2. In a separate documentation candidate, modify only
+   `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` and
+   `docs/mainline-updates/README.md`. Keep the note and index row Draft/Open.
+3. Add all twelve full hashes above to the Aggregate note's Related Commits field. Also cite this
+   plan commit, failed finalization `0470fc528a93e51160b03c0f19a340ac89582db9`, honesty demotion
+   `c16f2fa02b362569de21e51692a6b9e8d0592f05` and the candidate commit once it exists. Preserve
+   every already cited valid commit.
+4. Add an exact twelve-row coverage table to the Aggregate honesty-demotion section and state that
+   the set was reproduced at `0470fc528a93e51160b03c0f19a340ac89582db9`. Do not weaken,
+   bypass or modify `validate-mainline-notes.ps1`.
+5. Validate the committed Draft candidate from `main`. Runtime, finding history and Batch must
+   remain valid with 0 errors and 0 warnings. Aggregate must fail only with the canonical
+   `aggregate-note-not-ready` error and must report no coverage error.
+6. In a later note-only finalization, modify only the Aggregate note and its mainline index row.
+   Set only that note and row to Ready with reconciliation Closed, and cite the candidate's complete
+   hash. Preserve the Ready/Closed R6 Batch umbrella, `docs/README.md`, all nine finding records and
+   every runtime or test byte.
+7. On the exact committed finalization tree, runtime, nine-record finding history, Batch readiness
+   and Aggregate readiness from `main` must all report `VALID=true`, 0 errors and 0 warnings.
+   Claude parity, agent-authority partition, impact-registry freshness, bootstrap validation,
+   workflow execution denial, trigger mutations, `git diff --check` and clean-worktree verification
+   must pass.
+8. Only after those gates pass may the official 986-test suite run with process-scoped inherited
+   `PSExecutionPolicyPreference=Bypass`. It must report 986 passed, 0 failed, 0 skipped,
+   0 inconclusive and 0 not run without changing a persistent execution policy.
+9. Any failure immediately returns the Aggregate note and index row to Draft/Open. R-E09 remains
+   `IN_PROGRESS`, R-J03 remains `OPEN`, and no push, merge, workflow promotion, PR-thread
+   resolution or post-merge accounting is authorized.
+10. After every gate passes, stop at the owner merge-authorization checkpoint required by
+    Section 34.
+
+This re-entry is documentation-only and remains inside Constitution Section 2.1. `projects/`,
+`learning/`, consumers, workflow runtime behavior and external state remain outside scope.
