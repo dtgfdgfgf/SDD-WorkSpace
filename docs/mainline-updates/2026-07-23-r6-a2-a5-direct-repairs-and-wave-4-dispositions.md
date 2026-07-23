@@ -3,10 +3,10 @@
 **Date**: 2026-07-23
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`; registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052`; accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`
+**Status**: Ready
+**Related Commits**: plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`; registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052`; accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`; reconciliation re-entry plan `39665dd702664789c2c3f1670cd3bf6b6156748c`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -16,8 +16,8 @@
 - Record exactly 35 owner-approved Wave-4 dispositions in revision 9, each with its exact re-entry
   trigger inside the canonical machine record.
 - Bind the completion and disposition records to accounting commit
-  `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` while keeping this Batch reconciliation Draft/Open
-  after its committed-tree gate failure.
+  `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` and close the bounded Batch reconciliation after
+  adding the exact missing Claude-mirror impact row.
 - Keep both R6 umbrella notes Draft and keep `sdd-pipeline` experimental, default-disabled and
   execution-denied.
 
@@ -45,9 +45,10 @@ Revision 8 records exactly the eleven A2 through A4 completions plus R-E13. Revi
 authorized thirty `OPEN` and five `DECIDED` findings as conditionally `DISPOSITIONED`. Accounting
 commit `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` contains those exact bytes. Its committed tree
 reports canonical runtime `VALID=true` with 0 errors and 0 warnings, plus nine consecutive valid
-status records, 132 findings, severity 8/32/53/39 and fold 95/1/0/1/35. The later failed
-finalization leaves this note Draft/Open; it does not satisfy Batch, Aggregate, R6-A6, merge or
-post-merge gates.
+status records, 132 findings, severity 8/32/53/39 and fold 95/1/0/1/35. Re-entry plan
+`39665dd702664789c2c3f1670cd3bf6b6156748c` authorizes the exact missing Claude-mirror
+reconciliation row and this bounded note-only finalization. This Batch closure does not satisfy
+Aggregate, R6-A6, merge or post-merge gates.
 
 ## Scope
 
@@ -94,9 +95,10 @@ Out of scope:
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
 | `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Revisions 8 and 9 preserve revisions 1 through 7 and produce the authorized 95/1/0/1/35 fold. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.25.0 and plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca` define the prospective sequence. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.26.0, original plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca` and re-entry plan `39665dd702664789c2c3f1670cd3bf6b6156748c` define the prospective sequence and bounded finalization repair. |
 | `docs/README.md` | `must_update` | `updated` | Marker records revision 9, 132 findings and fold 95/1/0/1/35. |
-| `docs/mainline-updates/README.md` | `must_update` | `updated` | This dedicated note is indexed as Draft. |
+| `docs/mainline-updates/README.md` | `must_update` | `updated` | This dedicated note is indexed as Ready. |
+| `.claude/agents/*.md` | `must_update` | `updated` | R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d` reseeded the governed dependent mirrors from the canonical GitHub agent inputs; Claude parity and runtime validation provide exact-tree proof. |
 | `studio/runtime/finding-status-record.schema.json` | `must_update` | `updated` | Trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052` adds the conditional trigger-bearing entry shape. |
 | `studio/scripts/powershell/validate-finding-status-ledger.ps1` | `must_update` | `updated` | Trigger implementation enforces the exact 35-ID ordinal mapping and fail-closed mutations. |
 | `studio/runtime/shared-runtime-contract.json` | `must_update` | `updated` | Trigger implementation adds revert-sensitive schema, mapping and rejection anchors. |
@@ -134,9 +136,9 @@ Required before this note may re-enter `Ready`:
 
 ## Merge Notes
 
-- This note is Draft with reconciliation Open after the finalization-tree Batch gate exposed a
-  missing impact-reconciliation row. No merge or promotion authority follows from the partial
-  passing evidence.
+- This dedicated Batch note is Ready with reconciliation Closed after the owner-authorized
+  finalization added the exact missing Claude-mirror impact row. Batch closure grants no merge or
+  promotion authority.
 - The broad R6 convergence note and canonical Wave-3 umbrella remain Draft and non-authorizing.
 - PR #3 remains `NOT READY TO MERGE`; this batch does not authorize promotion, push or merge.
 
@@ -154,12 +156,16 @@ Canonical runtime remains `VALID=true` with 0 errors and 0 warnings. Finding his
 with nine records, 132 findings, severity 8/32/53/39 and fold 95/1/0/1/35. The A2 implementation
 did update the dependent Claude mirrors and parity validation remains green, so the failed gate
 does not refute a specific implementation or revision-8/revision-9 status. It does refute the
-Ready/Closed note claim; this note and its index row therefore return to Draft/Open before any
-repair. Re-entry requires an owner-authorized prospective plan, the missing exact reconciliation
-row, a later note-only finalization and the complete exact-tree gate set.
+Ready/Closed note claim; this note and its index row therefore returned to Draft/Open before any
+repair.
+
+Owner-authorized re-entry plan `39665dd702664789c2c3f1670cd3bf6b6156748c` records the exact
+two-file finalization boundary. This finalization adds the missing `.claude/agents/*.md`
+reconciliation row and restores only this dedicated note and matching index row to Ready/Closed.
+Every committed-tree gate remains mandatory; any deviation requires immediate Draft/Open demotion
+before R6-A6 begins.
 
 ## Follow-ups
 
-- Stop at this Draft/Open state until the owner chooses whether to authorize a prospective
-  reconciliation-row repair and new note-only finalization.
+- Any failed exact-tree finalization gate requires immediate Draft/Open demotion before other work.
 - Continue R6-A6 as a separate checkpoint after this bounded A2-A5 note is truthfully finalized.
