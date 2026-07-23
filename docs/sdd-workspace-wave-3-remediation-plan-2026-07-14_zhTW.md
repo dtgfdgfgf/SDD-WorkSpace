@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.30.0"
+version: "1.31.0"
 date: "2026-07-14"
 last_updated: "2026-07-23"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "d8dbdf275858d445087a39b35839566bf87697c7"
+head_commit: "4c5fde387fae49309191fbaf0e6ddb579db7c53b"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -229,6 +229,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.28.0 | 2026-07-23 | The owner instruction to continue authorizes the prospective R6-A6 umbrella checkpoint after A2-A5 finalization `501f4d7`. Preflight proves runtime and Batch valid, finding revision 9 at fold 95/1/0/1/35, and exactly one Aggregate Draft-umbrella blocker from `main`. R6-A6 may finalize the two umbrellas under permanent Wave-3 non-promotion, but must stop before push or merge; R-E09 and R-J03 remain non-terminal until real merge and post-merge evidence exists. See Section 34. |
 | 1.29.0 | 2026-07-23 | Aggregate finalization `0470fc5` passed runtime, ledger history and Batch but failed with exactly 80 coverage errors because its Related Commits omitted twelve exact last-touch commits. Honesty demotion `c16f2fa` restored only the Aggregate note and index row to Draft/Open. This re-entry plan authorizes complete commit coverage without changing runtime, tests, ledger, R6 Batch readiness or workflow authorization; see Section 35. |
 | 1.30.0 | 2026-07-23 | Complete-coverage finalization `0ee547d` passes runtime, ledger history, Batch and Aggregate with 0 errors and 0 warnings. The official suite discovers exactly 986 tests and completes multiple large green files, but the 2400-second tool limit expires before Pester emits a final summary; honesty demotion `d8dbdf2` restores the Aggregate note and index row to Draft/Open. This suite-only re-entry raises only the bounded validation timeout to 4500 seconds, not the test or acceptance standard. See Section 36. |
+| 1.31.0 | 2026-07-23 | Bounded-suite finalization `cc957a0` completes all 986 tests in 2945.4 seconds with every non-pass count 0 and unchanged persistent execution policy. Pester then exits `-1` because its NUnit report End step cannot call sandbox-denied `Get-CimInstance`; honesty demotion `4c5fde3` restores the Aggregate note and index row to Draft/Open. This re-entry authorizes only an explicitly approved elevated validation environment for CIM-backed report export, with no runtime, test or acceptance change. See Section 37. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1601,3 +1602,56 @@ The authorized suite-only re-entry is:
 
 This re-entry changes only the validation time allowance needed by the observed environment. It
 does not weaken, skip or modify any governance test or acceptance count.
+
+## 37. 2026-07-23 R6-A6 Pester report-export access re-entry
+
+Bounded-suite finalization `cc957a0` runs all 986 tests to completion in 2945.4 seconds. Pester
+reports 986 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not run. The wrapper also proves that
+persistent execution-policy values match exactly before and after the run.
+
+Pester then invokes its NUnit report End step. `Get-RunTimeEnvironment` calls `Get-CimInstance`,
+which the managed sandbox denies. The report export fails, the official entrypoint exits `-1` and
+the previous XML timestamp remains unchanged. Honesty demotion
+`4c5fde387fae49309191fbaf0e6ddb579db7c53b` returns only the Aggregate note and index row to
+Draft/Open.
+
+The complete green test summary means the failure is not a test, runtime or finding defect. It is
+an access boundary in the validation environment after test execution. No new finding ID or code
+change is authorized.
+
+The owner-continuation scope permits the following re-entry only after the execution environment
+requests and receives explicit tool approval:
+
+1. Commit this version-1.31.0 plan-only amendment. It may modify only this remediation plan.
+2. Run a read-only elevated preflight that calls `Get-CimInstance Win32_OperatingSystem` and returns
+   a non-empty operating-system identity. The command may not mutate the repository, system policy,
+   service state, registry or network.
+3. If the preflight is denied or fails, stop with the Aggregate note Draft/Open. Do not run another
+   full suite in the restricted sandbox.
+4. If the preflight succeeds, create a note-only finalization that modifies only
+   `docs/mainline-updates/2026-05-05-studio-workflows-runtime.md` and
+   `docs/mainline-updates/README.md`. Add this plan commit and honesty demotion
+   `4c5fde387fae49309191fbaf0e6ddb579db7c53b` to Related Commits, then restore only the
+   Aggregate note and matching index row to Ready/Closed.
+5. Run the unchanged official governance entrypoint with explicit elevated tool approval, the same
+   4500-second timeout and only process-scoped inherited `PSExecutionPolicyPreference=Bypass`.
+   Do not call `Set-ExecutionPolicy`.
+6. Require command exit 0, a complete 986 passed / 0 failed / 0 skipped / 0 inconclusive /
+   0 not run summary, and a newly written NUnit XML whose aggregate counts match the console
+   result.
+7. Capture all persistent execution-policy scopes before and after, remove the process environment
+   override after the child exits and require exact equality.
+8. After the suite, re-run canonical runtime, nine-record finding history, Batch readiness and
+   Aggregate readiness from `main`; each must report `VALID=true`, 0 errors and 0 warnings.
+   Historical evidence must remain 18 of 18 valid.
+9. Claude parity, agent-authority partition, impact-registry freshness, bootstrap validation,
+   workflow execution denial, trigger mutations, `git diff --check`, ignored-artifact containment
+   and clean-worktree verification must pass.
+10. Any failure immediately returns the Aggregate note and index row to Draft/Open. R-E09 remains
+    `IN_PROGRESS`, R-J03 remains `OPEN`, and no push, merge, workflow promotion, PR-thread
+    resolution or post-merge accounting is authorized.
+11. After every gate passes, stop at the owner merge-authorization checkpoint required by
+    Section 34.
+
+This re-entry changes only the process privilege needed by Pester 5.7.1 to write environment
+metadata into its configured NUnit report. It grants no broader delivery or repository authority.
