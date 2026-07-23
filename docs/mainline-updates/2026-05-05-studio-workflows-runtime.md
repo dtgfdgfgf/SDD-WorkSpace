@@ -3,17 +3,19 @@
 **Date**: 2026-05-05
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: TBD
+**Status**: Ready
+**Related Commits**: Wave-3 implementation `b01c36692cbaceec0ac9556b06c444fa4b069fb1`; R1 `e543f6a9818007bac67f1ec942cacc22e577d17a`; RB-2 `ec25c073dbf7b04b7670e0923c08a79b792e3da8`; RB-3 `4f757e551ee196bc90e51ef21674c4983eae35ec`; RB-4 `9819e301318230ca0413d44a5bdf3d2a3b3e3ca6`; RB-5 `44f768a12316cdb008f1fee263e03ed7ce9a8191`; R6 fixture `f2df26e98300c034f7fa03c7831b8f00aa6c470a`; R-D03 `6b749a1f153dc88412714db0ed6d8708170c5936`; R-F04 `e24d958421b4dc90ed04d507f008d7ec2bc3bec3`; R6-A1 `b3e7c15c2e70aebf3bd40b5a73f24285de507476`; R6-A2 through A5 `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`; R6-A6 plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13`; R6-A6 accounting `7910e0e54796fdb79abbc700993bf95327fa2390`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Aggregate
 
-## R6-A6 Aggregate Accounting Candidate
+## R6-A6 Aggregate Reconciliation
 
 R6-A6 entry plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13` authorizes this
-documentation-only candidate. This section is the current Wave-3 disposition and supersedes every
-older pending-state statement below without erasing the historical chronology.
+documentation-only reconciliation. Accounting candidate
+`7910e0e54796fdb79abbc700993bf95327fa2390` supplies the non-self-referential current-state
+bytes. This section is the current Wave-3 disposition and supersedes every older pending-state
+statement below without erasing the historical chronology.
 
 The branch has completed its bounded security, governance, agent, extension, workflow,
 documentation and evidence repairs through:
@@ -40,12 +42,10 @@ Read-only preflight at `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf` produced:
 | Aggregate readiness from `main` | Exactly one `aggregate-note-not-ready` error for this Draft note |
 | Worktree | Clean |
 
-This accounting candidate keeps the note Draft/Open/TBD until its commit has a real hash. A later
-note-only finalization may set this note and its index row to Ready/Closed after citing that hash
-and the material batch evidence. Ready/Closed will mean the branch is coherent for owner merge
-review; it will not authorize push or merge. R-E09 remains `IN_PROGRESS` for actual merge
-accounting and post-merge verification, and R-J03 remains `OPEN` because `main` has not been
-updated.
+This note is Ready/Closed because the accounting candidate now has a real hash and the material
+batch evidence is cited. Ready/Closed means the branch is coherent for owner merge review; it does
+not authorize push or merge. R-E09 remains `IN_PROGRESS` for actual merge accounting and
+post-merge verification, and R-J03 remains `OPEN` because `main` has not been updated.
 
 ## R6 Fresh-Fixture Evidence Reconciliation (2026-07-21)
 
