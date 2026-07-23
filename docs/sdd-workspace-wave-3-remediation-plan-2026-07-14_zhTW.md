@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.26.0"
+version: "1.27.0"
 date: "2026-07-14"
 last_updated: "2026-07-23"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "958a10233da6e5f3024d4ac851dc192f3271d137e"
+head_commit: "0e9574574737a578e55f01bb51f52782c96db5da"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -1325,6 +1325,66 @@ The owner explicitly authorized this bounded re-entry on 2026-07-23. The authori
    finding status unless its evidence independently refutes that finding; any refuted per-ID claim
    still requires a later append-only status revision.
 7. Only after this bounded Batch is truthfully Ready/Closed may R6-A6 begin as its separate
+   checkpoint. This amendment does not authorize R6-A6 implementation, Aggregate acceptance,
+   completion of R-E09 or R-J03, workflow promotion, consumer edits, push, merge, PR-thread
+   resolution or post-merge claims.
+
+`sdd-pipeline` remains experimental, default-disabled and execution-denied. PR #3 remains
+`NOT READY TO MERGE`.
+
+## 33. 2026-07-23 R6-A2 through A5 process-scoped validation re-entry
+
+Finalization `c1ec860554a8606d3a78441e0f825449dc6cae57` repaired the missing
+`.claude/agents/*.md` reconciliation row and passed the staged-snapshot audit. Its exact committed
+tree also passed canonical runtime, Claude parity, agent authority partition, impact-registry
+freshness and the nine-record finding history at fold 95/1/0/1/35.
+
+The complete governance suite discovered 986 tests and returned 985 passed and 1 failed. The
+single failure was
+`Repository text hygiene.fails fast with the version requirement under Windows PowerShell 5.1`.
+The test expected `ScriptRequiresUnmatchedPSVersion`, but this host's Windows PowerShell 5.1 has
+no effective execution policy and rejected all script loading first with `UnauthorizedAccess`.
+Honesty demotion `0e9574574737a578e55f01bb51f52782c96db5da` therefore returned the dedicated
+note and index row to Draft/Open without changing a finding status.
+
+Read-only diagnosis proved that an inherited process-scoped
+`PSExecutionPolicyPreference=Bypass` leaves MachinePolicy, UserPolicy, CurrentUser and LocalMachine
+unchanged, while the same Windows PowerShell 5.1 command reaches the intended version guard and
+returns nonzero with `ScriptRequiresUnmatchedPSVersion`. This is a validation-environment
+precondition, not a runtime, test or finding implementation change. No new ledger ID is introduced;
+revision 8, revision 9, R-E09 and R-J03 remain unchanged.
+
+The owner explicitly authorized this bounded process-scoped re-entry on 2026-07-23. The authorized
+sequence is:
+
+1. Commit this plan-only amendment. It may modify only this remediation-plan file and must not
+   change a finding status, note readiness, runtime, test, workflow authorization, persistent
+   execution policy or merge state.
+2. In a separate documentation-only finalization commit, modify exactly
+   `docs/mainline-updates/2026-07-23-r6-a2-a5-direct-repairs-and-wave-4-dispositions.md` and
+   `docs/mainline-updates/README.md`. Add this plan commit's complete 40-character lowercase hash
+   to `Related Commits`, preserve the repaired `.claude/agents/*.md` row, and set only the dedicated
+   note and matching index row to Ready/Closed.
+3. Preserve all nine finding-status records, `docs/README.md`, the broad R6 note, the canonical
+   Wave-3 umbrella, every other note and every other index row byte-for-byte. Do not edit the
+   failing test or any runtime source.
+4. Run the official complete governance entrypoint on the committed finalization tree with
+   `PSExecutionPolicyPreference=Bypass` set only in that test process and inherited by its child
+   Windows PowerShell 5.1 process. Do not call `Set-ExecutionPolicy` for MachinePolicy, UserPolicy,
+   CurrentUser or LocalMachine. The suite must discover exactly 986 tests and report 986 passed,
+   0 failed, 0 skipped, 0 inconclusive and 0 not run.
+5. Validate the same committed tree from
+   `b3e7c15c2e70aebf3bd40b5a73f24285de507476`: canonical runtime must report `VALID=true`,
+   0 errors and 0 warnings; finding history must contain exactly nine consecutive valid records,
+   132 findings, severity 8/32/53/39 and fold 95/1/0/1/35; explicit Batch readiness must report
+   `VALID=true`, 0 errors and 0 warnings; Aggregate readiness must fail only with the canonical
+   Wave-3 umbrella `aggregate-note-not-ready` blocker. Claude parity, agent authority partition,
+   impact-registry freshness, bootstrap validation, workflow execution denial, exact trigger
+   mutations, `git diff --check` and clean-worktree verification must also pass.
+6. Any deviation immediately returns the dedicated note and index row to Draft/Open before other
+   work continues. A validation-environment failure does not alter a finding status unless
+   independent evidence refutes that finding.
+7. Only after this bounded Batch is truthfully Ready/Closed may R6-A6 begin as a separate
    checkpoint. This amendment does not authorize R6-A6 implementation, Aggregate acceptance,
    completion of R-E09 or R-J03, workflow promotion, consumer edits, push, merge, PR-thread
    resolution or post-merge claims.
