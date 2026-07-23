@@ -3,10 +3,10 @@
 **Date**: 2026-07-23
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`; registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052`; accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`; reconciliation re-entry plan `39665dd702664789c2c3f1670cd3bf6b6156748c`; failed finalization `c1ec860554a8606d3a78441e0f825449dc6cae57`
+**Status**: Ready
+**Related Commits**: plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`; registration `97f63b15ab97f506403a9a4a55a119f7f9c7c310`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052`; accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`; reconciliation re-entry plan `39665dd702664789c2c3f1670cd3bf6b6156748c`; failed finalization `c1ec860554a8606d3a78441e0f825449dc6cae57`; process-scoped validation plan `29243533aba499a6adcbc43224cf5eae0bca14fd`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -17,7 +17,7 @@
   trigger inside the canonical machine record.
 - Bind the completion and disposition records to accounting commit
   `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`, preserve the repaired Claude-mirror impact row and
-  keep this Batch Draft/Open after the complete-suite gate failed.
+  close this bounded Batch under the owner-authorized process-scoped validation plan.
 - Keep both R6 umbrella notes Draft and keep `sdd-pipeline` experimental, default-disabled and
   execution-denied.
 
@@ -95,9 +95,9 @@ Out of scope:
 | Target | Impact | Disposition | Evidence |
 |---|---|---|---|
 | `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | `must_update` | `updated` | Revisions 8 and 9 preserve revisions 1 through 7 and produce the authorized 95/1/0/1/35 fold. |
-| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.26.0, original plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca` and re-entry plan `39665dd702664789c2c3f1670cd3bf6b6156748c` define the prospective sequence and bounded finalization repair. |
+| `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | `must_update` | `updated` | Version 1.27.0, original plan `a45b7d33a59dd41d7765d29626bf43d2adb02cca`, reconciliation plan `39665dd702664789c2c3f1670cd3bf6b6156748c` and process-scoped validation plan `29243533aba499a6adcbc43224cf5eae0bca14fd` define the bounded finalization sequence. |
 | `docs/README.md` | `must_update` | `updated` | Marker records revision 9, 132 findings and fold 95/1/0/1/35. |
-| `docs/mainline-updates/README.md` | `must_update` | `updated` | This dedicated note is indexed as Draft. |
+| `docs/mainline-updates/README.md` | `must_update` | `updated` | This dedicated note is indexed as Ready. |
 | `.claude/agents/*.md` | `must_update` | `updated` | R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d` reseeded the governed dependent mirrors from the canonical GitHub agent inputs; Claude parity and runtime validation provide exact-tree proof. |
 | `studio/runtime/finding-status-record.schema.json` | `must_update` | `updated` | Trigger implementation `5e99ad9569cc0212212a0191193702c25f6af052` adds the conditional trigger-bearing entry shape. |
 | `studio/scripts/powershell/validate-finding-status-ledger.ps1` | `must_update` | `updated` | Trigger implementation enforces the exact 35-ID ordinal mapping and fail-closed mutations. |
@@ -136,9 +136,8 @@ Required before this note may re-enter `Ready`:
 
 ## Merge Notes
 
-- This dedicated Batch note is Draft with reconciliation Open after the complete governance suite
-  returned one failed environment-sensitive test. No merge or promotion authority follows from
-  the partial passing evidence.
+- This dedicated Batch note is Ready with reconciliation Closed under the owner-authorized
+  process-scoped validation plan. Batch closure grants no merge or promotion authority.
 - The broad R6 convergence note and canonical Wave-3 umbrella remain Draft and non-authorizing.
 - PR #3 remains `NOT READY TO MERGE`; this batch does not authorize promotion, push or merge.
 
@@ -178,8 +177,16 @@ the mandatory complete-suite result of at least 958 passed and 0 failed. This no
 therefore return immediately to Draft/Open. The repaired `.claude/agents/*.md` reconciliation row
 remains present and does not require reversal.
 
+Owner-authorized process-scoped validation plan
+`29243533aba499a6adcbc43224cf5eae0bca14fd` proves that an inherited
+`PSExecutionPolicyPreference=Bypass` lets the Windows PowerShell 5.1 child reach the intended
+`ScriptRequiresUnmatchedPSVersion` guard without changing a persistent execution policy. This
+finalization restores only this dedicated note and matching index row to Ready/Closed. The official
+986-test suite must run on this committed tree under that process-scoped precondition, followed by
+the complete runtime, history, Batch, Aggregate and hygiene gates. Any deviation requires immediate
+Draft/Open demotion before R6-A6 begins.
+
 ## Follow-ups
 
-- Stop at this Draft/Open state until the owner authorizes a prospective response to the
-  environment-sensitive complete-suite failure and a later finalization attempt.
+- Any failed exact-tree finalization gate requires immediate Draft/Open demotion before other work.
 - Continue R6-A6 as a separate checkpoint after this bounded A2-A5 note is truthfully finalized.
