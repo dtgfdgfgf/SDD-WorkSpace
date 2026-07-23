@@ -5,9 +5,47 @@
 **Target Branch**: `main`
 **Status**: Draft
 **Related Commits**: TBD
-**Related PR**: N/A
+**Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Aggregate
+
+## R6-A6 Aggregate Accounting Candidate
+
+R6-A6 entry plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13` authorizes this
+documentation-only candidate. This section is the current Wave-3 disposition and supersedes every
+older pending-state statement below without erasing the historical chronology.
+
+The branch has completed its bounded security, governance, agent, extension, workflow,
+documentation and evidence repairs through:
+
+- RB-1 through RB-5 implementation and accounting.
+- R6 fresh-fixture E2E and its Ready/Closed Batch note.
+- R6-A1 finalization `b3e7c15c2e70aebf3bd40b5a73f24285de507476`.
+- R6-A2 through A5 finalization `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`.
+- Finding-status revision 9 with 132 findings, severity 8/32/53/39 and fold 95/1/0/1/35.
+
+The owner-selected Wave-3 result is permanent non-promotion within this branch.
+`sdd-pipeline` remains experimental, default-disabled and execution-denied. Any future promotion
+requires a separately governed re-entry after the applicable disposition trigger is met. This
+decision closes the pre-merge promotion-decision obligation without claiming that the experimental
+runtime is a supported delivery surface.
+
+Read-only preflight at `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf` produced:
+
+| Validation surface | Result |
+|---|---|
+| Canonical runtime | `VALID=true`, 0 errors, 0 warnings |
+| Finding-status ledger | 9 records, 132 findings, fold 95/1/0/1/35 |
+| Batch readiness from `b3e7c15c2e70aebf3bd40b5a73f24285de507476` | `VALID=true`, 0 errors, 0 warnings |
+| Aggregate readiness from `main` | Exactly one `aggregate-note-not-ready` error for this Draft note |
+| Worktree | Clean |
+
+This accounting candidate keeps the note Draft/Open/TBD until its commit has a real hash. A later
+note-only finalization may set this note and its index row to Ready/Closed after citing that hash
+and the material batch evidence. Ready/Closed will mean the branch is coherent for owner merge
+review; it will not authorize push or merge. R-E09 remains `IN_PROGRESS` for actual merge
+accounting and post-merge verification, and R-J03 remains `OPEN` because `main` has not been
+updated.
 
 ## R6 Fresh-Fixture Evidence Reconciliation (2026-07-21)
 
@@ -184,9 +222,19 @@ Explicitly out of scope (deferred):
 
 ## Impact Reconciliation
 
-Reconciliation remains open. This historical Aggregate note does not close any current
-`must_update` route and does not authorize workflow promotion or merge. R6 must reconcile the
-current aggregate branch diff and replace `TBD` only with verified final evidence.
+The current `main`-to-head branch diff requires the following eight `must_update` targets. Every
+target is present in the branch diff and already has a dedicated Ready/Closed Batch proof.
+
+| Target | Impact | Disposition | Evidence |
+|---|---|---|---|
+| `README.md` | `must_update` | `updated` | R6-A1 implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` aligns current governance and authority truth; the R6-A1 Batch note is Ready/Closed at `b3e7c15c2e70aebf3bd40b5a73f24285de507476`. |
+| `studio/QUICKSTART.md` | `must_update` | `updated` | R6-A1 implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` updates the governed quickstart; the R6-A1 Batch note provides exact-tree proof. |
+| `studio/SDD-QUICKSTART-GUIDE.md` | `must_update` | `updated` | R6-A1 implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` updates the governed methodology guide; the R6-A1 Batch note provides exact-tree proof. |
+| `.claude/agents/*.md` | `must_update` | `updated` | R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d` reseeds the dependent mirrors; A2-A5 finalization `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf` passes the reconciled Batch gate. |
+| `AGENTS.md` | `must_update` | `updated` | R6-A1 implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` synchronizes the generated bootstrap; adapter validation is included in the Ready/Closed R6-A1 evidence. |
+| `CLAUDE.md` | `must_update` | `updated` | R6-A1 implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` synchronizes the generated bootstrap; adapter validation is included in the Ready/Closed R6-A1 evidence. |
+| `.github/copilot-instructions.md` | `must_update` | `updated` | R6-A1 implementation `105a09cd02f7d8b4765e49859390908e55bd97d1` synchronizes the generated bootstrap; adapter validation is included in the Ready/Closed R6-A1 evidence. |
+| `docs/README.md` | `must_update` | `updated` | R6-A5 accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b` records revision 9 and fold 95/1/0/1/35; A2-A5 finalization `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf` validates the exact branch evidence. |
 
 ## Validation
 
@@ -209,12 +257,14 @@ CI prerequisite: `Install-Module -Name powershell-yaml -Scope CurrentUser` (one-
 
 ## Merge Notes
 
-This batch is mergeable in two passes if Stream B engine review takes longer than Stream A: Stream A (call-site hardening + tests + contract) is independently mergeable. Stream B (studio/workflows/ + engine + sdd-pipeline) builds on Stream A's `Assert-PathInsideRoot` discipline but does not depend on it for compilation.
+The historical two-pass proposal is superseded. The current branch is one reconciled Wave-3
+candidate. It may reach the owner merge-authorization checkpoint only after a separate
+Ready/Closed finalization and exact-tree full-suite, runtime, ledger, Batch, Aggregate and hygiene
+gates all pass.
 
-If splitting is preferred:
-
-1. Merge Stream A first, validating with `path-traversal-hardening.Tests.ps1` and `check-speckit-runtime.ps1 -Json`.
-2. Merge Stream B once engine review completes, validating with the workflow test suite plus an end-to-end `run-workflow.ps1 -DryRun` against a fixture feature.
+No push, merge, force-push, workflow promotion, PR-thread resolution or post-merge accounting is
+authorized by this note. R-E09 and R-J03 remain non-terminal until the owner authorizes a real
+merge and the post-merge gates produce evidence.
 
 ## Follow-ups
 

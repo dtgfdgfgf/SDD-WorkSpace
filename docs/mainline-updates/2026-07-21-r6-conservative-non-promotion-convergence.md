@@ -9,6 +9,41 @@
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
 
+## R6-A6 Umbrella Accounting Candidate
+
+R6-A6 entry plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13` authorizes this
+documentation-only candidate after the bounded A2-A5 note became Ready/Closed at
+`501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`. This section supersedes the stale current-state
+statements below while preserving their historical evidence.
+
+R6-A1 is separately Ready/Closed at
+`b3e7c15c2e70aebf3bd40b5a73f24285de507476`. A2 through A5 implementation and accounting are
+committed through `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`, and their dedicated Batch
+finalization is `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`. The authoritative ledger now has
+nine records, 132 findings, severity 8/32/53/39 and fold 95 `COMPLETED`, 1 `OPEN`,
+0 `DECIDED`, 1 `IN_PROGRESS` and 35 `DISPOSITIONED`.
+
+The owner-selected Wave-3 outcome is permanent non-promotion within this branch.
+`sdd-pipeline` remains experimental, default-disabled and execution-denied. Any future promotion
+requires a separately governed re-entry after the applicable disposition trigger is met.
+
+Read-only preflight at `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf` produced:
+
+| Validation surface | Result |
+|---|---|
+| Canonical runtime | `VALID=true`, 0 errors, 0 warnings |
+| Finding-status ledger | 9 records, 132 findings, fold 95/1/0/1/35 |
+| Batch readiness from `b3e7c15c2e70aebf3bd40b5a73f24285de507476` | `VALID=true`, 0 errors, 0 warnings |
+| Aggregate readiness from `main` | Exactly one expected `aggregate-note-not-ready` error for the Wave-3 umbrella |
+| Worktree | Clean |
+
+This candidate keeps this note Draft/Open/TBD until its own accounting commit has a real hash.
+A later note-only finalization may set this note and the Aggregate umbrella to Ready/Closed only
+after citing that hash and every material batch commit. R-E09 remains `IN_PROGRESS` because actual
+merge accounting and post-merge verification do not exist. R-J03 remains `OPEN` because `main`
+has not been updated. This candidate does not authorize push, merge, workflow promotion,
+PR-thread resolution or post-merge accounting.
+
 ## Summary
 
 - Record the owner-selected conservative R6 convergence plan before implementation begins.
