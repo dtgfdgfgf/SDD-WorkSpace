@@ -3,11 +3,31 @@
 **Date**: 2026-05-05
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: Wave-3 implementation `b01c36692cbaceec0ac9556b06c444fa4b069fb1`; R1 `e543f6a9818007bac67f1ec942cacc22e577d17a`; RB-2 `ec25c073dbf7b04b7670e0923c08a79b792e3da8`; RB-3 `4f757e551ee196bc90e51ef21674c4983eae35ec`; RB-4 `9819e301318230ca0413d44a5bdf3d2a3b3e3ca6`; RB-5 `44f768a12316cdb008f1fee263e03ed7ce9a8191`; R6 fixture `f2df26e98300c034f7fa03c7831b8f00aa6c470a`; R-D03 `6b749a1f153dc88412714db0ed6d8708170c5936`; R-F04 `e24d958421b4dc90ed04d507f008d7ec2bc3bec3`; R6-A1 `b3e7c15c2e70aebf3bd40b5a73f24285de507476`; R6-A2 through A5 `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`; R6-A6 plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13`; R6-A6 accounting `7910e0e54796fdb79abbc700993bf95327fa2390`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 **Validation Scope**: Aggregate
+
+## R6-A6 Aggregate Honesty Demotion
+
+Finalization `0470fc528a93e51160b03c0f19a340ac89582db9` passed the staged runtime
+audit. Its exact committed tree also passed canonical runtime with 0 errors and 0 warnings,
+finding-status history with nine valid records and fold 95/1/0/1/35, and Batch readiness from
+`main` with 0 errors and 0 warnings.
+
+Aggregate readiness from `main` failed with 80 `branch-evidence-coverage-missing` errors. Aggregate
+scope accepts commit coverage from the configured Aggregate note itself; the current Related
+Commits field cites material batch milestones but does not cite every changed path's exact
+last-touch commit. The result refutes this note's Ready/Closed claim without refuting the R6 Batch
+umbrella, a finding status, runtime behavior or test result.
+
+This note therefore returns immediately to Draft/Open. It may re-enter Ready/Closed only after a
+committed re-entry plan enumerates the exact missing last-touch commit set, a separate
+documentation candidate supplies those complete references, and a later finalization passes
+runtime, ledger history, Batch, Aggregate, full-suite and hygiene gates on one exact committed
+tree. R-E09 remains `IN_PROGRESS`, R-J03 remains `OPEN`, and no push, merge, promotion or
+post-merge action is authorized.
 
 ## R6-A6 Aggregate Reconciliation
 
