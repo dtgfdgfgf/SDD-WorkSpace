@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.25.0"
+version: "1.26.0"
 date: "2026-07-14"
 last_updated: "2026-07-23"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "32a58e653cc4b541db88b23ad4b90fd7b81007a5"
+head_commit: "958a10233da6e5f3024d4ac851dc192f3271d137e"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -1279,3 +1279,55 @@ The authorized sequence is:
 This amendment authorizes no consumer edit, workflow promotion, push, merge, PR-thread resolution
 or post-merge claim. `sdd-pipeline` remains experimental, default-disabled and execution-denied.
 R6-A6, R-E09 and R-J03 remain pending; PR #3 remains `NOT READY TO MERGE`.
+
+## 32. 2026-07-23 R6-A2 through A5 reconciliation-row re-entry
+
+Note-only finalization `34c2a02d788a26cd6a1f8757e999484c76408c54` changed the dedicated
+R6-A2 through A5 Batch note and its matching index row to Ready. The mandatory committed-tree
+Batch gate from `b3e7c15c2e70aebf3bd40b5a73f24285de507476` then reported one
+`must-update-reconciliation-missing` error for `.claude/agents/*.md`. Aggregate consequently
+reported that same error plus the expected canonical `aggregate-note-not-ready` blocker.
+
+Canonical runtime and the nine-record finding history remained valid. The R6-A2 implementation
+did update the dependent Claude mirrors and the exact-tree Claude parity checks remained green.
+The failed gate therefore refuted the dedicated Ready/Closed reconciliation claim, but did not
+refute any revision-8 or revision-9 finding completion or disposition. Honesty demotion
+`958a10233da6e5f3024d4ac851dc192f3271d137e` returned only the dedicated note and its index row
+to Draft/Open before repair.
+
+The owner explicitly authorized this bounded re-entry on 2026-07-23. The authorized sequence is:
+
+1. Commit this plan-only amendment. It may modify only this remediation-plan file, record the
+   authorization and exact re-entry gates, and must not change a finding status, note readiness,
+   reconciliation state, runtime byte, test, workflow authorization or merge state.
+2. In a separate documentation-only finalization commit, modify exactly
+   `docs/mainline-updates/2026-07-23-r6-a2-a5-direct-repairs-and-wave-4-dispositions.md` and
+   `docs/mainline-updates/README.md`.
+3. Add the missing exact `.claude/agents/*.md` `must_update` reconciliation row. Its evidence must
+   identify R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d` as the commit that
+   reseeded the governed dependent mirrors from the canonical GitHub agent inputs, and must retain
+   Claude parity plus runtime validation as the exact-tree proof. Add this plan commit's complete
+   40-character lowercase hash to `Related Commits`.
+4. Set only the dedicated note to Ready with reconciliation Closed and only its matching mainline
+   index row to Ready. Preserve all nine finding-status records, `docs/README.md`, the broad R6
+   note, the canonical Wave-3 umbrella, every other note and every other index row byte-for-byte.
+5. Validate the committed finalization tree from
+   `b3e7c15c2e70aebf3bd40b5a73f24285de507476`. The complete governance suite must report at
+   least 958 passes and 0 failures; canonical runtime must report `VALID=true`, 0 errors and
+   0 warnings; finding history must contain exactly nine consecutive valid records, 132 findings,
+   severity 8/32/53/39 and fold 95/1/0/1/35; explicit Batch readiness must report `VALID=true`,
+   0 errors and 0 warnings; Aggregate readiness must fail only with the canonical Wave-3 umbrella
+   `aggregate-note-not-ready` blocker. Claude parity, impact-registry validation, bootstrap
+   validation, workflow execution denial, trigger mutations, `git diff --check` and exact-tree
+   clean-worktree verification must also pass.
+6. Any finalization-tree deviation immediately returns the dedicated note and index row to
+   Draft/Open before other work continues. A failed reconciliation-only gate does not alter a
+   finding status unless its evidence independently refutes that finding; any refuted per-ID claim
+   still requires a later append-only status revision.
+7. Only after this bounded Batch is truthfully Ready/Closed may R6-A6 begin as its separate
+   checkpoint. This amendment does not authorize R6-A6 implementation, Aggregate acceptance,
+   completion of R-E09 or R-J03, workflow promotion, consumer edits, push, merge, PR-thread
+   resolution or post-merge claims.
+
+`sdd-pipeline` remains experimental, default-disabled and execution-denied. PR #3 remains
+`NOT READY TO MERGE`.
