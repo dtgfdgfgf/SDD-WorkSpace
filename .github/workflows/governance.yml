@@ -22,7 +22,9 @@ concurrency:
 jobs:
   audit-and-tests:
     runs-on: windows-latest
-    timeout-minutes: 20
+    # The measured full suite takes about 49 minutes locally without coverage; keep roughly
+    # twice that so hosted-runner variance and the scheduled coverage run fit (plan Section 38).
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -63,6 +65,14 @@ jobs:
           exit $LASTEXITCODE
 
       - name: Governance tests (Pester)
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        shell: pwsh
+        run: |
+          ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal
+          exit $LASTEXITCODE
+
+      - name: Governance tests with coverage (schedule and dispatch)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         shell: pwsh
         run: |
           ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal -CodeCoverage

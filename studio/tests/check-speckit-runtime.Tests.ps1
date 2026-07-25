@@ -1886,6 +1886,15 @@ Describe 'governance test coverage configuration' {
         $workflowContent | Should -Match 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0'
         $workflowContent | Should -Match 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
     }
+
+    It 'keeps coverage out of the required push and pull-request gate' {
+        $workflowContent = Get-Content -LiteralPath (Join-Path $WorkspaceRoot '.github/workflows/governance.yml') -Raw
+
+        $workflowContent | Should -Match 'timeout-minutes:\s*120'
+        $workflowContent | Should -Match "(?s)name: Governance tests \(Pester\)\s*\r?\n\s*if: github\.event_name == 'push' \|\| github\.event_name == 'pull_request'.*?run-governance-tests\.ps1 -Output Normal\s*\r?\n"
+        $workflowContent | Should -Match "(?s)name: Governance tests with coverage \(schedule and dispatch\)\s*\r?\n\s*if: github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'.*?run-governance-tests\.ps1 -Output Normal -CodeCoverage"
+        ([regex]::Matches($workflowContent, '-CodeCoverage')).Count | Should -Be 1
+    }
 }
 
 Describe 'runtime audit fixture output decoding' {

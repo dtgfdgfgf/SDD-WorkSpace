@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `TBD`; CI calibration `TBD`; README truthfulness `TBD`
+**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `TBD`; README truthfulness `TBD`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
@@ -70,8 +70,8 @@ Out of scope:
 | `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Section 47 and revision 10 (version 1.38.0) |
 | `docs/README.md` | Finding-status index row advanced to revision 10 |
 | `docs/mainline-updates/README.md` | Index row for this note |
-| `studio/tests/check-speckit-runtime.Tests.ps1` | Planned: fixture decoding repair plus discriminating test |
-| `.github/workflows/governance.yml` | Planned: timeout and coverage calibration |
+| `studio/tests/check-speckit-runtime.Tests.ps1` | Fixture decoding repair, discriminating test and CI-calibration revert anchor |
+| `.github/workflows/governance.yml` | Timeout raised to 120 minutes; coverage limited to schedule and dispatch |
 | `README.md` | Planned: consumer-directory truthfulness disclosure |
 
 ## Impact
