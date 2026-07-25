@@ -1897,6 +1897,17 @@ Describe 'governance test coverage configuration' {
     }
 }
 
+Describe 'workspace README truthfulness' {
+    It 'discloses that consumer directories are untracked and absent from a public clone' {
+        $readmeContent = Get-Content -LiteralPath (Join-Path $WorkspaceRoot 'README.md') -Raw
+
+        $readmeContent | Should -Match '`learning/` 與 `projects/` 是本機的 consumer 工作目錄'
+        $readmeContent | Should -Match '被 `\.gitignore` 排除、不納入本 repo 版本控制'
+        $readmeContent | Should -Match '公開 clone 不會包含任何練習或交付專案內容'
+        $readmeContent | Should -Not -Match '`learning/` 與 `projects/` 放實際練習和交付專案'
+    }
+}
+
 Describe 'runtime audit fixture output decoding' {
     It 'preserves non-ASCII child audit output when the parent console uses code page 950' {
         $fixtureRoot = Join-Path $TestDrive ("encoding-fixture-{0}" -f ([System.Guid]::NewGuid().ToString('N')))

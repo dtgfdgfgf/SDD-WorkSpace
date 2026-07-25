@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `TBD`; README truthfulness `TBD`
+**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `TBD`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
@@ -72,7 +72,7 @@ Out of scope:
 | `docs/mainline-updates/README.md` | Index row for this note |
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Fixture decoding repair, discriminating test and CI-calibration revert anchor |
 | `.github/workflows/governance.yml` | Timeout raised to 120 minutes; coverage limited to schedule and dispatch |
-| `README.md` | Planned: consumer-directory truthfulness disclosure |
+| `README.md` | Consumer-directory truthfulness disclosure (untracked directories, absent from a public clone) |
 
 ## Impact
 
@@ -88,7 +88,7 @@ Out of scope:
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
 | `docs/README.md` | `must_update` | `updated` | Finding-status index row advanced to `revision=10; ledgerVersion=1.38.0; inventoryCount=133` in the registration commit |
-| `README.md` | `must_update` | `pending` | Planned closed-list truthfulness repair in this batch |
+| `README.md` | `must_update` | `updated` | Consumer-directory disclosure replaced the misleading line-7 claim; a revert-sensitive Pester assertion guards the disclosure and rejects the old wording |
 | `studio/QUICKSTART.md` | `must_review` | `pending` | Review at finalization; no planned change |
 | `studio/SDD-QUICKSTART-GUIDE.md` | `must_review` | `pending` | Review at finalization; no planned change |
 

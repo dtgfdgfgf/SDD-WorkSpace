@@ -4,7 +4,7 @@
 
 一個以 Specification-Driven Development (SDD) 為核心的 studio-first 工作區，目標是把個人 AI 工程實踐、共享治理、專案初始化、知識回饋與 AI agent runtime 集中在同一個 workspace 內管理。
 
-這個 repo 不是單一產品專案，而是整個 SDD 工作室的基礎設施。`studio/` 放 canonical sources，`.github/` 放 Copilot runtime assets，`.claude/` 放 Claude runtime assets，`learning/` 與 `projects/` 放實際練習和交付專案。
+這個 repo 不是單一產品專案，而是整個 SDD 工作室的基礎設施。`studio/` 放 canonical sources，`.github/` 放 Copilot runtime assets，`.claude/` 放 Claude runtime assets。`learning/` 與 `projects/` 是本機的 consumer 工作目錄：兩者被 `.gitignore` 排除、不納入本 repo 版本控制，因此公開 clone 不會包含任何練習或交付專案內容；各 consumer 專案以獨立的 nested Git repo 自行管理。
 
 ## 環境需求
 
