@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.38.0"
+version: "1.39.0"
 date: "2026-07-12"
 last_updated: "2026-07-26"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "f428029467f3ba214ee6eef1eb6b4d5983f28aed"
+head_commit: "b63dff89fda341c3d291e48a57403458d5033deb"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -476,6 +476,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.36.0 | 2026-07-23 | After committed R6-A2 implementation `814cc6169e6d1bf9167ce91249dbd58ac548674d`, R6-A3 implementation `be5fb24fd79a47d8f0db9f61be2a747d06b29088`, R6-A4 implementation `32a58e653cc4b541db88b23ad4b90fd7b81007a5` and trigger-contract implementation `5e99ad9569cc0212212a0191193702c25f6af052`, revision 8 changes exactly R-A21/R-B18/R-B25/R-B26/R-C04/R-C06/R-G01/R-G03/R-G04/R-H06/R-H09/R-E13 from OPEN to COMPLETED. The fold becomes 95/31/5/1/0 across 132 findings. See Section 46. |
 | 1.37.0 | 2026-07-23 | Revision 9 changes exactly the thirty OPEN and five DECIDED findings authorized in Sections 36.2 and 37.1 to DISPOSITIONED, with the exact owner-approved `reentryTrigger` on every entry. Inventory and severity remain 132 and 8/32/53/39; the fold becomes 95 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED. R-E09 remains IN_PROGRESS and R-J03 remains OPEN. See Section 46. |
 | 1.38.0 | 2026-07-26 | After committed wave-3 plan Section 38 amendment `f428029467f3ba214ee6eef1eb6b4d5983f28aed`, the owner reproduces the elevated fixture failure in a directly executed canonical pwsh 7.5.4 terminal whose console code page is 950: `Invoke-RuntimeAuditFixture` decodes UTF-8 child audit output with the parent console encoding, corrupting non-ASCII contract text into unparseable JSON while the child audit itself reports the expected ten governed failures. Revision 10 registers new Medium R-A23 as OPEN before the fixture repair begins. Inventory becomes 133 with severity 8/32/54/39 and fold 95 COMPLETED / 2 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED. Revisions 1 through 9 remain immutable. See Section 47. |
+| 1.39.0 | 2026-07-26 | Repair `f8d064c81b592e1c42966a68db6325f1685db089` rewrites the fixture capture with an explicit UTF-8 process-output decoder and adds the discriminating test, which fails against the pre-repair helper grafted into a clean worktree and passes against the repaired helper. The owner then verifies both the previously failing bad-state test and the new test green in the same canonical CP950 pwsh 7.5.4 terminal that reproduced the defect. Revision 11 records R-A23 as COMPLETED; the fold becomes 96 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED across 133 findings. CI calibration `742a7fba7cbf088195211f0e35432c4734858b78` and README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb` land as batch-scoped delivery-surface repairs under plan Section 38 without changing any finding status. See Section 48. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -2269,6 +2270,60 @@ default-disabled and execution-denied; PR #3 remains `NOT READY TO MERGE`.
   "statusCounts": {
     "COMPLETED": 95,
     "OPEN": 2,
+    "DECIDED": 0,
+    "IN_PROGRESS": 1,
+    "DISPOSITIONED": 35
+  }
+}
+```
+
+## 48. 2026-07-26 R-A23 completion accounting
+
+Repair commit `f8d064c81b592e1c42966a68db6325f1685db089` replaces the console-encoding capture in
+`Invoke-RuntimeAuditFixture` with a process-level UTF-8 decoder and adds the discriminating test
+`preserves non-ASCII child audit output when the parent console uses code page 950`. The
+discriminating evidence is complete in both directions: the new test grafted onto the pre-repair
+helper in a clean worktree at registration commit `3393d9bb5784d9a4e0a2812bde2efbc264b31446`
+fails with the same UTF-8-as-Big5 corruption signature observed in the canonical reproduction,
+and the same test passes against the repaired helper. The owner then re-ran both the previously
+failing bad-state test and the new test in the same directly executed canonical pwsh 7.5.4
+terminal with a CP950 console; both pass with 98 tests discovered and zero failures.
+
+Revision 11 records only R-A23 as `COMPLETED`. The fold becomes 96 `COMPLETED`, 1 `OPEN`,
+0 `DECIDED`, 1 `IN_PROGRESS` and 35 `DISPOSITIONED` across 133 findings; the remaining `OPEN`
+finding is R-J03 and the remaining `IN_PROGRESS` finding is R-E09, both terminal merge items.
+
+The same Section 38 batch also lands CI calibration
+`742a7fba7cbf088195211f0e35432c4734858b78` (coverage limited to schedule and dispatch, timeout
+calibrated to 120 minutes, with a revert-sensitive workflow assertion) and README truthfulness
+`b63dff89fda341c3d291e48a57403458d5033deb` (consumer-directory disclosure with a revert-sensitive
+assertion). Per the owner ruling in plan Section 38, these are batch-scoped delivery-surface
+repairs and change no finding status.
+
+This accounting does not complete R-E09 or R-J03, does not make any note Ready, and does not
+authorize push, merge, workflow promotion or PR-thread resolution. `sdd-pipeline` remains
+experimental, default-disabled and execution-denied; PR #3 remains `NOT READY TO MERGE`.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 11,
+  "recordType": "delta",
+  "recordedDate": "2026-07-26",
+  "ledgerVersion": "1.39.0",
+  "statuses": [
+    {"id":"R-A23","status":"COMPLETED"}
+  ],
+  "inventoryCount": 133,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 54,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 96,
+    "OPEN": 1,
     "DECIDED": 0,
     "IN_PROGRESS": 1,
     "DISPOSITIONED": 35
