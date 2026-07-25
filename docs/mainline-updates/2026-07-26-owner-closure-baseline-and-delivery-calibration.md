@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `TBD`; fixture repair `TBD`; CI calibration `TBD`; README truthfulness `TBD`
+**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `TBD`; CI calibration `TBD`; README truthfulness `TBD`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
@@ -94,6 +94,11 @@ Out of scope:
 
 ## Validation
 
+- Discriminating R-A23 evidence: the new test
+  `preserves non-ASCII child audit output when the parent console uses code page 950` fails
+  against the pre-repair helper grafted into a clean worktree at the registration commit and
+  passes against the repaired helper; the previously failing bad-state test and the
+  `-WithoutYamlModule` branch both pass with the repaired helper.
 - `git diff --check`
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`
 - `pwsh ./studio/scripts/powershell/validate-finding-status-ledger.ps1 -BaseRef <batch-base> -HeadRef <head> -Json`

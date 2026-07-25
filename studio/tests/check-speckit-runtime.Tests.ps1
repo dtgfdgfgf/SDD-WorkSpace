@@ -41,13 +41,42 @@ BeforeAll {
         )
 
         $fixtureAuditScript = Join-Path $FixtureRoot 'studio/scripts/powershell/check-speckit-runtime.ps1'
+
+        # R-A23: the child pwsh writes UTF-8 to its redirected stdout, so the capture must decode
+        # UTF-8 explicitly; the parent console code page (for example CP950) must not participate.
+        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = (Get-Command pwsh).Source
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $startInfo.StandardOutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        $startInfo.StandardErrorEncoding = [System.Text.UTF8Encoding]::new($false)
         if ($WithoutYamlModule) {
-            $output = & pwsh -NoProfile -Command '& { param($audit) $env:PSModulePath = ''C:\__sdd_fixture_no_modules__''; & $audit -Json; exit $LASTEXITCODE }' $fixtureAuditScript 2>&1
+            $null = $startInfo.ArgumentList.Add('-NoProfile')
+            $null = $startInfo.ArgumentList.Add('-Command')
+            $null = $startInfo.ArgumentList.Add('& { param($audit) $env:PSModulePath = ''C:\__sdd_fixture_no_modules__''; & $audit -Json; exit $LASTEXITCODE }')
+            $null = $startInfo.ArgumentList.Add($fixtureAuditScript)
         } else {
-            $output = & pwsh -NoProfile -File $fixtureAuditScript -Json 2>&1
+            $null = $startInfo.ArgumentList.Add('-NoProfile')
+            $null = $startInfo.ArgumentList.Add('-File')
+            $null = $startInfo.ArgumentList.Add($fixtureAuditScript)
+            $null = $startInfo.ArgumentList.Add('-Json')
         }
-        $exitCode = $LASTEXITCODE
-        $raw = $output -join [Environment]::NewLine
+
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        try {
+            $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+            $stderrTask = $process.StandardError.ReadToEndAsync()
+            $process.WaitForExit()
+            $stdout = $stdoutTask.GetAwaiter().GetResult()
+            $stderr = $stderrTask.GetAwaiter().GetResult()
+            $exitCode = $process.ExitCode
+        } finally {
+            $process.Dispose()
+        }
+
+        $segments = @($stdout, $stderr) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        $raw = (@($segments) -join [Environment]::NewLine).TrimEnd("`r", "`n")
 
         try {
             $result = $raw | ConvertFrom-Json
@@ -1856,5 +1885,45 @@ Describe 'governance test coverage configuration' {
         ([regex]::Matches($workflowContent, 'validate-mainline-notes\.ps1 .*?-RequireReady')).Count | Should -Be 2
         $workflowContent | Should -Match 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0'
         $workflowContent | Should -Match 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+    }
+}
+
+Describe 'runtime audit fixture output decoding' {
+    It 'preserves non-ASCII child audit output when the parent console uses code page 950' {
+        $fixtureRoot = Join-Path $TestDrive ("encoding-fixture-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
+        $stubDirectory = Join-Path $fixtureRoot 'studio/scripts/powershell'
+        New-Item -ItemType Directory -Path $stubDirectory -Force | Out-Null
+        $stubScript = Join-Path $stubDirectory 'check-speckit-runtime.ps1'
+        $expectedMessage = 'prohibited text: `.claude/agents/` 是 Claude shared runtime source of truth。這是層級檢查'
+        $stubLines = @(
+            'param([switch]$Json)',
+            'if ([Console]::IsOutputRedirected) {',
+            '    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)',
+            '}',
+            '$payload = [ordered]@{',
+            '    VALID = $false',
+            '    ERROR_COUNT = 1',
+            ("    MESSAGE = '{0}'" -f $expectedMessage),
+            '}',
+            '$payload | ConvertTo-Json',
+            'exit 1'
+        )
+        [System.IO.File]::WriteAllText(
+            $stubScript,
+            (($stubLines -join "`n") + "`n"),
+            [System.Text.UTF8Encoding]::new($true)
+        )
+
+        $previousOutputEncoding = [Console]::OutputEncoding
+        try {
+            [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding(950)
+            $audit = Invoke-RuntimeAuditFixture -FixtureRoot $fixtureRoot
+        } finally {
+            [Console]::OutputEncoding = $previousOutputEncoding
+        }
+
+        $audit.ExitCode | Should -Be 1
+        $audit.Result.VALID | Should -BeFalse
+        $audit.Result.MESSAGE | Should -BeExactly $expectedMessage
     }
 }
