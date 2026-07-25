@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `TBD`
+**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
@@ -89,8 +89,8 @@ Out of scope:
 |--------|--------|-------------|----------|
 | `docs/README.md` | `must_update` | `updated` | Finding-status index row advanced to `revision=10; ledgerVersion=1.38.0; inventoryCount=133` in the registration commit |
 | `README.md` | `must_update` | `updated` | Consumer-directory disclosure replaced the misleading line-7 claim; a revert-sensitive Pester assertion guards the disclosure and rejects the old wording |
-| `studio/QUICKSTART.md` | `must_review` | `pending` | Review at finalization; no planned change |
-| `studio/SDD-QUICKSTART-GUIDE.md` | `must_review` | `pending` | Review at finalization; no planned change |
+| `studio/QUICKSTART.md` | `must_review` | `reviewed-no-change` | Reviewed on the accounting candidate: no governed statement about CI gating or consumer-directory tracking changes; consumer-space descriptions remain accurate |
+| `studio/SDD-QUICKSTART-GUIDE.md` | `must_review` | `reviewed-no-change` | Reviewed on the accounting candidate: no governed statement about CI gating or consumer-directory tracking changes; consumer-space descriptions remain accurate |
 
 ## Validation
 
