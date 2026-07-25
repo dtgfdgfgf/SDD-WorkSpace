@@ -3,10 +3,10 @@
 **Date**: 2026-07-26
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
+**Status**: Ready
 **Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Summary
@@ -44,8 +44,8 @@ code repair, per the Section 38 authorization.
 In scope:
 
 - The Section 38 plan-only amendment and this dedicated Batch note.
-- Ledger revision 10 registering R-A23 as `OPEN`, with the dependent `docs/README.md` index row
-  advanced in the same commit.
+- Ledger revision 10 registering R-A23 as `OPEN` and revision 11 recording it as `COMPLETED`,
+  with the dependent `docs/README.md` index row advanced in the same commit as each revision.
 - Conditional R-A23 repair limited to `studio/tests/check-speckit-runtime.Tests.ps1` with an
   old-fails/new-passes discriminating test.
 - `.github/workflows/governance.yml` timeout and coverage calibration that does not touch any
@@ -67,8 +67,8 @@ Out of scope:
 | Path | Change |
 |------|--------|
 | `docs/sdd-workspace-wave-3-remediation-plan-2026-07-14_zhTW.md` | Section 38 amendment (version 1.32.0) |
-| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Section 47 and revision 10 (version 1.38.0) |
-| `docs/README.md` | Finding-status index row advanced to revision 10 |
+| `docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md` | Sections 47 and 48, revisions 10 and 11 (version 1.39.0) |
+| `docs/README.md` | Finding-status index row advanced to revision 11 |
 | `docs/mainline-updates/README.md` | Index row for this note |
 | `studio/tests/check-speckit-runtime.Tests.ps1` | Fixture decoding repair, discriminating test and CI-calibration revert anchor |
 | `.github/workflows/governance.yml` | Timeout raised to 120 minutes; coverage limited to schedule and dispatch |
@@ -76,10 +76,12 @@ Out of scope:
 
 ## Impact
 
-- The ledger fold becomes 95 `COMPLETED` / 2 `OPEN` / 0 `DECIDED` / 1 `IN_PROGRESS` /
-  35 `DISPOSITIONED` across 133 findings; R-A23 is the only newly opened item.
-- The impact registry has no change-type route for `.github/workflows/`, so the planned CI
-  calibration is disclosed here explicitly instead of through machine routing.
+- R-A23 is the only finding this batch opens, and it closes inside the same batch. Revision 10
+  registers it as `OPEN` at fold 95 / 2 / 0 / 1 / 35, and revision 11 records it as `COMPLETED`,
+  leaving the batch terminal fold at 96 `COMPLETED` / 1 `OPEN` / 0 `DECIDED` / 1 `IN_PROGRESS` /
+  35 `DISPOSITIONED` across 133 findings.
+- The impact registry has no change-type route for `.github/workflows/`, so the CI calibration is
+  disclosed here explicitly instead of through machine routing.
 - R-E09 remains `IN_PROGRESS` and R-J03 remains `OPEN`; both close only through real merge and
   post-merge evidence under the separate owner authorization nodes.
 
@@ -87,7 +89,7 @@ Out of scope:
 
 | Target | Impact | Disposition | Evidence |
 |--------|--------|-------------|----------|
-| `docs/README.md` | `must_update` | `updated` | Finding-status index row advanced to `revision=10; ledgerVersion=1.38.0; inventoryCount=133` in the registration commit |
+| `docs/README.md` | `must_update` | `updated` | Finding-status index row advanced to `revision=11; ledgerVersion=1.39.0; inventoryCount=133` in accounting commit `00424901aa315d708c88c763ca77f52db3b981e5` |
 | `README.md` | `must_update` | `updated` | Consumer-directory disclosure replaced the misleading line-7 claim; a revert-sensitive Pester assertion guards the disclosure and rejects the old wording |
 | `studio/QUICKSTART.md` | `must_review` | `reviewed-no-change` | Reviewed on the accounting candidate: no governed statement about CI gating or consumer-directory tracking changes; consumer-space descriptions remain accurate |
 | `studio/SDD-QUICKSTART-GUIDE.md` | `must_review` | `reviewed-no-change` | Reviewed on the accounting candidate: no governed statement about CI gating or consumer-directory tracking changes; consumer-space descriptions remain accurate |
@@ -99,23 +101,59 @@ Out of scope:
   against the pre-repair helper grafted into a clean worktree at the registration commit and
   passes against the repaired helper; the previously failing bad-state test and the
   `-WithoutYamlModule` branch both pass with the repaired helper.
-- `git diff --check`
+Pre-finalization evidence, executed on accounting candidate
+`d9b09160ad9ce23f2a47ad43e74bab4e2b840e8d` per Section 38 gate order item 1:
+
+| Gate | Result |
+|---|---|
+| Official complete suite, canonical pwsh 7.5.4 terminal, no coverage | 989 total, 0 failures, 0 errors, 0 skipped, 0 inconclusive, 0 not-run in 2644.9 seconds, with a complete NUnit report emitted |
+| Suite command exit code | Not captured separately. `run-governance-tests.ps1` sets Pester `Run.Exit = $true`, so a zero-failure run exits 0; this is an inference from the recorded counts, not an observed value |
+| Suite tree identity | The report records `date="2026-07-26" time="05:49:24"`, which postdates the final batch commit at 05:36:56, and the owner attests a clean worktree throughout. This is a time-window plus attestation identity, not a hash-pinned exact-tree proof |
+| Batch assertions in the emitted report | R-A23 decoding test, CI coverage-split assertion and README disclosure assertion all present |
+| Canonical runtime audit | `VALID=true`, 0 errors, 0 warnings |
+| Finding-status ledger | Revision 11, 133 findings, fold 96/1/0/1/35, schema and index consistent |
+
+The R-A23 repair, the CI calibration and the README disclosure each carry a discriminating or
+revert-sensitive assertion inside that suite, so reverting any one of them fails the suite.
+
+The following gates belong to Section 38 gate order item 3 and run only after the finalization
+commit exists. They had not been executed when this note was written:
+
+- `git diff --check` and clean-worktree verification
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json`
-- `pwsh ./studio/scripts/powershell/validate-finding-status-ledger.ps1 -BaseRef <batch-base> -HeadRef <head> -Json`
-- Planned before finalization, per Section 38 gate order: the official complete governance suite
-  in a canonical environment on the Draft accounting-candidate tree, then
-  `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef <batch-base> -HeadRef <head> -RequireReady -ReadinessScope Batch -Json`.
+- `pwsh ./studio/scripts/powershell/validate-finding-status-ledger.ps1 -BaseRef <batch-base> -HeadRef <finalization-commit> -Json`, which supplies the append-only history comparison
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef main -HeadRef <finalization-commit> -RequireReady -ReadinessScope Batch -Json`
+- `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef main -HeadRef <finalization-commit> -RequireReady -ReadinessScope Aggregate -Json`
+
+Both readiness gates use `-BaseRef main`, matching the precedent in plan Sections 35 and 36. A
+narrower base would place this batch's own entry-plan commit outside the evaluated range and
+produce a spurious `commit-evidence-out-of-range` failure.
 
 ## Merge Notes
 
-- Draft. This note may become Ready only after every landed Section 38 item has a real commit
-  hash and the pre-finalization gates pass on the accounting-candidate tree.
+- Ready/Closed. Every landed Section 38 item has a real commit hash, and the gate order item 1
+  suite evidence recorded under Validation was produced on accounting candidate
+  `d9b09160ad9ce23f2a47ad43e74bab4e2b840e8d`. The item 3 fast gates run after this commit.
 - Ready grants no push or merge authority. Push with PR update, merge, and post-merge accounting
-  each require a separate explicit owner instruction under Section 38.
+  each require a separate explicit owner instruction under Section 38. Work stops at the
+  Section 34 merge-authorization checkpoint.
+- Any post-finalization gate deviation returns this note and its index row to Draft/Open;
+  Section 38 permits at most two such re-entries before the work halts for owner re-scoping.
 
 ## Follow-ups
 
-- Aggregate finalization of the Wave-3 umbrella under the Section 38 gate order, with at most two
-  re-entries before mandatory stop and owner re-scoping.
+- Aggregate finalization of the Wave-3 umbrella landed in this same note-only change. The
+  remaining pre-merge work is the Section 38 gate order item 3 fast-gate set listed under
+  Validation, followed by the Section 34 merge-authorization decision.
+- The calibrated `governance.yml` has never executed on GitHub Actions. The branch is unpushed,
+  so the 120-minute timeout is calibrated only against the local 2644.9-second measurement. Live
+  CI calibration, capped at two iterations by Section 38 item 4, remains outstanding.
+- Observation for a future dated amendment, not repaired here:
+  `studio/scripts/powershell/validate-mainline-notes.ps1` decodes `git show` output through the
+  host console encoding, the same coupling class as R-A23. On a non-UTF-8 console it cannot parse
+  the non-ASCII runtime contract and reports a spurious
+  `historical-evidence-sealed-snapshot-mismatch` that cascades into `commit-evidence-out-of-range`
+  for every sealed historical note. Operators must force a UTF-8 console before running the
+  readiness gates until this is repaired under its own finding ID.
 - Post-merge protocol: ledger revision closing R-E09 and R-J03 plus a dedicated Ready note in the
   same push to `main`, then one full-suite scheduled or dispatched run on `main`.

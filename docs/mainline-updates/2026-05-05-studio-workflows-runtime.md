@@ -3,10 +3,10 @@
 **Date**: 2026-05-05
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
+**Status**: Ready
 **Related Commits**: Wave-3 implementation `b01c36692cbaceec0ac9556b06c444fa4b069fb1`; R0 `bdd27809d82a9f99fc66db0a0db3fe325d53c226`; R1 `e543f6a9818007bac67f1ec942cacc22e577d17a`; RB-1 terminal schema `961df61ceb42dff8f6e9b9e5dc4253e9a6bfb374`; RB-1 template boundary `cb43de50385838888eedd94b48e6c4446e255e5a`; R2 workflow validation `6a53f6601510b58e0907ce14f3a015f6b03aea43`; RB-2 `ec25c073dbf7b04b7670e0923c08a79b792e3da8`; RB-3 `4f757e551ee196bc90e51ef21674c4983eae35ec`; RB-4 `9819e301318230ca0413d44a5bdf3d2a3b3e3ca6`; RB-5 implementation `78c47eb0f3da7e75f3ba79943ea44f55984677a1`; RB-5 evidence `26da9a7412d902f2dfff48df23d04662687f4a9d`; RB-5 closure `44f768a12316cdb008f1fee263e03ed7ce9a8191`; R6 fixture `f2df26e98300c034f7fa03c7831b8f00aa6c470a`; R-D03 `6b749a1f153dc88412714db0ed6d8708170c5936`; R-F04 `e24d958421b4dc90ed04d507f008d7ec2bc3bec3`; R6-A1 `105a09cd02f7d8b4765e49859390908e55bd97d1`; R6-A1 finalization `b3e7c15c2e70aebf3bd40b5a73f24285de507476`; R6-A2 `814cc6169e6d1bf9167ce91249dbd58ac548674d`; R6-A3 `be5fb24fd79a47d8f0db9f61be2a747d06b29088`; R6-A4 `32a58e653cc4b541db88b23ad4b90fd7b81007a5`; R6-A5 trigger contract `5e99ad9569cc0212212a0191193702c25f6af052`; R6-A5 accounting `05fe6f16ec334263bc1432e18ecb4a648a6dc38b`; R6-A2 through A5 finalization `501f4d7e02d17dcf7a9663a5ad60ff5d0d880cdf`; R6-A6 plan `5e9f470857f4958ff3b6198ca5887de3fa2f5d13`; R6-A6 accounting `7910e0e54796fdb79abbc700993bf95327fa2390`; failed Aggregate finalization `0470fc528a93e51160b03c0f19a340ac89582db9`; honesty demotion `c16f2fa02b362569de21e51692a6b9e8d0592f05`; complete-coverage plan `aa6a08e2d75b9eb16a862e9978217d042bdac8c7`; complete-coverage accounting `2d963a72fcd49ced2a7ae8498e3faa3366858946`; complete-coverage finalization `0ee547da6ecc85c848fa9f647dcc548ff66dcd33`; suite-timeout demotion `d8dbdf275858d445087a39b35839566bf87697c7`; bounded-suite plan `77a9db0be48ae4a36188722a5d6a46434685d88a`; report-export honesty demotion `4c5fde387fae49309191fbaf0e6ddb579db7c53b`; report-export access plan `af1cc007841cd31786d35cb53880e309c2584906`; report-export finalization `d0c75c4ed25f79fcecb74c387df00da103049b4c`; elevated-fixture honesty demotion `4ee48a05c40acc10fb88d38902f412608c1c7566`; Section 38 closure plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; R-A23 repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 accounting `00424901aa315d708c88c763ca77f52db3b981e5`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Aggregate
 
 ## Section 38 Closure Baseline Re-entry (2026-07-26)
@@ -37,12 +37,33 @@ discloses that `projects/` and `learning/` are untracked and absent from a publi
 the dedicated Batch note `2026-07-26-owner-closure-baseline-and-delivery-calibration.md` covers
 the batch commits.
 
-This note remains Draft/Open on this accounting candidate. Per Section 38 gate order, the
-official complete governance suite must pass in a canonical environment on this candidate tree
-before a note-only finalization may set this note and the dedicated Batch note to Ready/Closed,
-and any post-finalization deviation still demotes. R-E09 remains `IN_PROGRESS`, R-J03 remains
-`OPEN`, and no push, merge, workflow promotion, PR-thread resolution or post-merge action is
-authorized.
+Per Section 38 gate order, the official complete governance suite ran in a canonical environment
+on accounting candidate `d9b09160ad9ce23f2a47ad43e74bab4e2b840e8d` before this note-only
+finalization:
+
+| Pre-finalization gate | Result |
+|---|---|
+| Official complete suite, canonical pwsh 7.5.4 terminal | 989 total, 0 failures, 0 errors, 0 skipped, 0 inconclusive, 0 not-run in 2644.9 seconds, with a complete NUnit report emitted |
+| Suite command exit code | Not captured separately. `run-governance-tests.ps1` sets Pester `Run.Exit = $true`, so a zero-failure run exits 0; this is an inference from the recorded counts, not an observed value |
+| Suite tree identity | The report records `date="2026-07-26" time="05:49:24"`, which postdates the final batch commit at 05:36:56, and the owner attests a clean worktree throughout. This is a time-window plus attestation identity, not a hash-pinned exact-tree proof |
+| New batch assertions present in report | The R-A23 decoding test, the CI coverage-split assertion and the README disclosure assertion all appear in the emitted NUnit report |
+| Canonical runtime audit | `VALID=true`, 0 errors, 0 warnings |
+| Finding-status ledger | Revision 11, 133 findings, fold 96/1/0/1/35, schema and index consistent; the append-only history comparison belongs to the post-finalization fast gates |
+
+The Section 38 gate order item 3 fast gates run only after this finalization commit exists and had
+not been executed when this section was written: canonical runtime audit, the finding-status
+validator with a committed BaseRef, Batch and Aggregate readiness from `main`, `git diff --check`
+and clean-worktree verification.
+
+This finalization changes only this note, the dedicated 2026-07-26 Batch note and their matching
+`docs/mainline-updates/README.md` index rows. Ready/Closed here means the branch evidence is
+coherent for owner merge review. It does not mark R-E09 or R-J03 complete, does not claim
+`Merged`, and does not itself authorize push, merge, workflow promotion, PR-thread resolution or
+post-merge accounting. R-E09 remains `IN_PROGRESS` and R-J03 remains `OPEN`. The owner-selected
+permanent Wave-3 non-promotion stands: `sdd-pipeline` remains experimental, default-disabled and
+execution-denied. Work stops at the Section 34 merge-authorization checkpoint. Any
+post-finalization gate deviation returns this note and its index row to Draft/Open, and Section 38
+permits at most two such re-entries before the work halts for owner re-scoping.
 
 ## R6-A6 Elevated Validation Honesty Demotion
 
@@ -446,7 +467,11 @@ pwsh ./studio/scripts/powershell/list-workflows.ps1 -Json
 Expected:
 
 - `check-speckit-runtime.ps1`: `VALID=true`, `ERROR_COUNT=0`, `STUDIO_WORKFLOW_REGISTRY_VALID=true`, `STUDIO_WORKFLOW_COUNT>=1`, `STUDIO_WORKFLOW_YAML_AVAILABLE=true`, `REGISTRY_FRESHNESS.fresh=true`, every new path-boundary `scriptInvariants` entry shows `missingRequirements=[]`, both new `workflowInvariants` entries show `missingRequirements=[]`.
-- `run-governance-tests.ps1`: full Pester suite green (244 passing in clean baseline; 1 skipped is the powershell-yaml-detection branch and is correct when the module is installed).
+- `run-governance-tests.ps1`: full Pester suite green. The contemporaneous 2026-05-05 baseline
+  was 244 passing with one skipped powershell-yaml-detection branch. On 2026-07-26 the current
+  branch measured 989 passing with zero non-pass results in a canonical pwsh 7.5.4 terminal with
+  `powershell-yaml` installed, as recorded in the Section 38 finalization evidence above. Counts
+  differ when that optional module is absent.
 - `validate-workflow.ps1`: `VALID=true`, `SCHEMA_VALID=true`.
 - `list-workflows.ps1`: registers `sdd-pipeline`, `valid=true`.
 
