@@ -1,14 +1,14 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.31.0"
+version: "1.32.0"
 date: "2026-07-14"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 language: "zh-TW"
 status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "4c5fde387fae49309191fbaf0e6ddb579db7c53b"
+head_commit: "4ee48a05c40acc10fb88d38902f412608c1c7566"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -230,6 +230,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.29.0 | 2026-07-23 | Aggregate finalization `0470fc5` passed runtime, ledger history and Batch but failed with exactly 80 coverage errors because its Related Commits omitted twelve exact last-touch commits. Honesty demotion `c16f2fa` restored only the Aggregate note and index row to Draft/Open. This re-entry plan authorizes complete commit coverage without changing runtime, tests, ledger, R6 Batch readiness or workflow authorization; see Section 35. |
 | 1.30.0 | 2026-07-23 | Complete-coverage finalization `0ee547d` passes runtime, ledger history, Batch and Aggregate with 0 errors and 0 warnings. The official suite discovers exactly 986 tests and completes multiple large green files, but the 2400-second tool limit expires before Pester emits a final summary; honesty demotion `d8dbdf2` restores the Aggregate note and index row to Draft/Open. This suite-only re-entry raises only the bounded validation timeout to 4500 seconds, not the test or acceptance standard. See Section 36. |
 | 1.31.0 | 2026-07-23 | Bounded-suite finalization `cc957a0` completes all 986 tests in 2945.4 seconds with every non-pass count 0 and unchanged persistent execution policy. Pester then exits `-1` because its NUnit report End step cannot call sandbox-denied `Get-CimInstance`; honesty demotion `4c5fde3` restores the Aggregate note and index row to Draft/Open. This re-entry authorizes only an explicitly approved elevated validation environment for CIM-backed report export, with no runtime, test or acceptance change. See Section 37. |
+| 1.32.0 | 2026-07-26 | Elevated finalization `d0c75c4` produced one real Pester failure: the runtime-audit fixture captured corrupted non-ASCII child output that `ConvertFrom-Json` could not parse; honesty demotion `4ee48a0` restored the Aggregate note and index row to Draft/Open. The owner then reviewed the complete R0 through R6 history and fixed a closure baseline: environment establishment is the goal, the dogfood demo feature and interview packaging are excluded, and `projects/` and `learning/` stay frozen. This plan-only amendment authorizes canonical-environment reproduction diagnosis, a conditional fixture repair, CI timeout and coverage calibration, a closed-list README truthfulness repair, pre-finalization slow gates, a two-re-entry cap, and separate owner authorization nodes for push, for merge and for post-merge accounting; see Section 38. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1655,3 +1656,133 @@ requests and receives explicit tool approval:
 
 This re-entry changes only the process privilege needed by Pester 5.7.1 to write environment
 metadata into its configured NUnit report. It grants no broader delivery or repository authority.
+
+## 38. 2026-07-26 Owner closure baseline and delivery-surface calibration
+
+Elevated report-export finalization `d0c75c4` followed Section 37 with explicit tool approval.
+`Get-CimInstance` succeeded in that environment, but the suite then produced one real Pester
+failure in `studio/tests/check-speckit-runtime.Tests.ps1`: a child bad-state audit behaved
+correctly, yet the fixture-captured output arrived with corrupted non-ASCII text and
+`ConvertFrom-Json` could not parse it. Honesty demotion
+`4ee48a05c40acc10fb88d38902f412608c1c7566` returned the Aggregate note and matching index row to
+Draft/Open. Because the immediately preceding restricted-sandbox run completed all 986 tests with
+zero failures, the defect may live in the test fixture, in environment-specific console encoding,
+or only in the elevated sandbox. That question is unresolved evidence, not an authorized repair
+target by itself.
+
+On 2026-07-26 the owner reviewed the complete R0 through R6 history and fixed a closure baseline
+for this branch. The owner decisions are:
+
+1. The primary goal is the workspace environment itself. Interview-facing packaging is a separate
+   later work stream and is not part of environment establishment.
+2. `projects/` and `learning/` remain frozen, including the 2026-07-22 agent-mirror sync residue
+   in nested consumer worktrees, which is recorded as a known issue only.
+3. The previously discussed end-to-end dogfood demo feature is excluded from the closure baseline.
+   The fresh-fixture E2E journey of Section 15 remains the machine evidence that the canonical
+   workflow can execute.
+4. Terminal acceptance is conditional, not numeric: the ledger must reach 0 `OPEN`, 0 `DECIDED`
+   and 0 `IN_PROGRESS` with a valid append-only history. The projected terminal fold is
+   97 `COMPLETED` and 35 `DISPOSITIONED`, but the projection yields if a new finding is honestly
+   registered on the way.
+
+### Authorized batch scope and ledger IDs
+
+The batch closes R-E09 and R-J03 through real merge and post-merge evidence. The owner explicitly
+rules that the two calibration items below are delivery-surface repairs governed by this dated
+amendment and the dedicated Batch note; they do not silently absorb or reopen any DISPOSITIONED
+finding. If the fixture failure reproduces in a canonical environment, the owner authorizes one
+new finding ID for it in a new append-only ledger revision before the code repair. The file-level
+scope is:
+
+1. This remediation plan (this version-1.32.0 plan-only amendment, committed first).
+2. A read-only reproduction diagnosis of the fixture failure, timeboxed to half a day, executed
+   in a canonical environment: the owner's directly executed pwsh 7 terminal or a GitHub Actions
+   runner. The assistant-managed sandbox is not an acceptance environment. Reproduction changes
+   no repository file.
+3. Conditional on reproduction: repair limited to `studio/tests/check-speckit-runtime.Tests.ps1`,
+   whose script-scoped `Invoke-RuntimeAuditFixture` helper captures the child audit output, with
+   an old-fails/new-passes discriminating test. If the canonical diagnosis proves the root cause
+   lives outside that test file, for example in the child audit script's output encoding, that
+   repair is not authorized here and requires a further dated amendment. Without canonical
+   reproduction, no test or runtime code change is authorized and the dedicated note records the
+   sandbox limitation instead.
+4. `.github/workflows/governance.yml`: remove `-CodeCoverage` from the required Pester step, run
+   coverage only on `schedule` or `workflow_dispatch`, and calibrate `timeout-minutes` to about
+   twice the measured full-suite duration. The diff must not touch any line pinned by the
+   contract's `governance-ci-enforcement` invariant and must not add or materially expand
+   `mustContainAll` assertions, so the R-A13 re-entry trigger stays untripped. Live CI
+   calibration is capped at two iterations; a second red freezes the fallback state of fast
+   blocking gates plus a scheduled non-blocking full suite, and returns the decision to the
+   owner.
+5. `README.md`: a closed-list truthfulness repair only. The consumer-directory description must
+   disclose that `projects/` and `learning/` are untracked by this repository and absent from a
+   public clone, and badge wording must match the CI reality after item 4. No `docInvariant`
+   anchor string may change; `WORKSPACE_STRUCTURE.md` is out of scope for this batch.
+6. Revert-sensitive assertions for items 4 and 5 as plain Pester text checks under
+   `studio/tests/`, without contract changes.
+7. A dedicated Batch mainline note plus its `docs/mainline-updates/README.md` index row covering
+   every commit of this batch, followed by Aggregate finalization whose Related Commits cite
+   every new last-touch commit.
+
+### Gate order, finalization discipline and re-entry cap
+
+Sections 34 through 37 demonstrate that running the complete suite only on the committed
+finalization tree converts environment noise into repeated Ready/Draft churn. This amendment
+moves the slow gates forward and, for this batch, supersedes the committed-finalization-tree
+suite requirement of Section 34 items 8 and 9; every other Section 34 rule stays in force:
+
+1. The official complete governance suite must pass in a canonical environment on the Draft
+   accounting-candidate tree: command exit 0 and a `studio/tests/_artifacts/testResults.xml`
+   whose failures and errors are 0 with a positive total.
+2. The finalization commit may modify only the Aggregate note, the dedicated Batch note state and
+   the matching `docs/mainline-updates/README.md` index rows. Its `git diff --name-only` output
+   is the machine check for that restriction.
+3. After finalization only fast gates run: canonical runtime audit, the finding-status validator
+   with committed BaseRef history, Batch and Aggregate readiness, `git diff --check` and
+   clean-worktree verification.
+4. The demotion duty is unchanged: any post-finalization deviation still returns the affected
+   note and index row to Draft/Open.
+5. Hard cap: this section permits at most two finalization re-entries. A third failure halts the
+   work with every state left honest, and the scope returns to the owner. Every work item carries
+   a contingency budget of roughly twice its estimate; exhausting a budget halts that item the
+   same way instead of extending silently.
+
+### Authorization boundaries
+
+This amendment does not authorize push, merge, force-push, history rewrite, PR-thread resolution
+or post-merge accounting. After every pre-merge gate passes, work stops at the Section 34
+merge-authorization checkpoint. Push together with updating PR #3 requires a separate explicit
+owner instruction. Merge requires another separate owner instruction after the pushed branch has
+independent PR CI evidence. The merge must preserve existing commit ancestry: no squash, no
+rebase, no history rewrite.
+
+### Post-merge protocol
+
+The following protocol is pre-written so the accounting push cannot fail the main-push Aggregate
+gate. Executing it is a third separate authorization node: it requires an explicit owner
+instruction that names this protocol, given at or after the merge authorization. A merge
+instruction that does not mention this protocol authorizes the merge alone:
+
+1. Wait for the merge push's `governance` workflow run to complete before pushing anything else,
+   because the concurrency group cancels in-progress runs on the same ref.
+2. Push one accounting change set to `main` as at least two commits in a single push: first the
+   append-only ledger revision closing R-E09 and R-J03, recording the real merge commit hash
+   inside the ledger record; then a dedicated Ready mainline note with reconciliation Closed
+   whose Related Commits cite the ledger commit. The note may cite only commits inside the push
+   range, so it must not cite the merge commit itself. The push range then carries its own
+   compliant note evidence.
+3. Post-merge acceptance: the finding-status validator run with a committed BaseRef reports
+   `VALID=true`, valid history, one new consecutive revision, and 0 `OPEN`, 0 `DECIDED`,
+   0 `IN_PROGRESS`; the canonical runtime audit reports `VALID=true` with 0 errors and
+   0 warnings on `main`; and one full-suite `workflow_dispatch` or scheduled run on `main`
+   succeeds.
+4. Weekly scheduled health is a non-blocking observation item. A run cancelled by the concurrency
+   group is not a failure; an infrastructure flake may simply be re-run; only a reproducible
+   regression opens new work, and only through the revision-9 re-entry trigger contract.
+5. A voluntary `studio/knowledge-base/learnings.md` entry about the Wave-3 campaign may be added
+   after merge. It must not claim knowledge-capture completion for any project, so the R-I04 and
+   R-I05 triggers stay untripped.
+
+Environment establishment is reached when items 1 through 3 of the post-merge protocol hold. At
+that point Wave-3 stops: no further shared-layer batch starts from this plan, and any later work
+enters only through a DISPOSITIONED re-entry trigger or a new owner-authorized plan.
