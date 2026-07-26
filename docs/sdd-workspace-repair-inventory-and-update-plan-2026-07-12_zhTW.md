@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.41.0"
+version: "1.42.0"
 date: "2026-07-12"
 last_updated: "2026-07-26"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "c0744641fb9c7b5edc81e2776c86e50f22fd85c4"
+head_commit: "db97cfdd7efea007f90515e67af6d55f734d19b5"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -479,6 +479,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.39.0 | 2026-07-26 | Repair `f8d064c81b592e1c42966a68db6325f1685db089` rewrites the fixture capture with an explicit UTF-8 process-output decoder and adds the discriminating test, which fails against the pre-repair helper grafted into a clean worktree and passes against the repaired helper. The owner then verifies both the previously failing bad-state test and the new test green in the same canonical CP950 pwsh 7.5.4 terminal that reproduced the defect. Revision 11 records R-A23 as COMPLETED; the fold becomes 96 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED across 133 findings. CI calibration `742a7fba7cbf088195211f0e35432c4734858b78` and README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb` land as batch-scoped delivery-surface repairs under plan Section 38 without changing any finding status. See Section 48. |
 | 1.40.0 | 2026-07-26 | GitHub Actions run `30199620889` evaluated pushed finalization `758d169` on a clean checkout and reported 988 passed with 1 failed. The shared-layer suite requires nine gitignored consumer-space files to exist, so every prior local acceptance of that test was a false green and the assertion contradicts the consumer-space acceptance rule. After honesty demotion `132a113` and plan amendment `43b9062`, revision 12 registers new Medium R-A24 as OPEN before any repair. Inventory becomes 134 with severity 8/32/55/39 and fold 96 COMPLETED / 2 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED. Revisions 1 through 11 remain immutable. See Section 49. |
 | 1.41.0 | 2026-07-26 | Repair `c0744641fb9c7b5edc81e2776c86e50f22fd85c4` removes the consumer-space existence precondition and adds a consumer-space independence guard in `studio/tests/repository-hygiene.Tests.ps1`. The guard fails against the pre-repair tree, naming all nine offending consumer paths, and passes after the repair. A clean-worktree run holding no `learning/` or `projects/` directory, which reproduces the CI checkout condition, reports 991 passed with 0 failed and an observed exit code of 0 in 2860.5 seconds. Revision 13 records R-A24 as COMPLETED; the fold becomes 97 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED across 134 findings. See Section 50. |
+| 1.42.0 | 2026-07-26 | Pull request #3 merged into `main` as merge commit `db97cfdd7efea007f90515e67af6d55f734d19b5`, preserving full ancestry with parents `c6ee1f1` and `017cfa6`. The pre-merge pull-request run `30203491921` and the post-merge `main` push run `30205330383` each report 991 passed with 0 failed, and the `main` push run also passes the Aggregate mainline-note reconciliation on the merged tree. Revision 14 closes R-E09 and R-J03, the two terminal merge items, against that real merge evidence. The fold becomes 99 COMPLETED / 0 OPEN / 0 DECIDED / 0 IN_PROGRESS / 35 DISPOSITIONED across 134 findings. See Section 51. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -2446,6 +2447,73 @@ any merge, and exactly one finalization re-entry remains.
     "OPEN": 1,
     "DECIDED": 0,
     "IN_PROGRESS": 1,
+    "DISPOSITIONED": 35
+  }
+}
+```
+
+## 51. 2026-07-26 R-E09 and R-J03 post-merge closure
+
+Pull request #3 merged into `main` on 2026-07-26 as merge commit
+`db97cfdd7efea007f90515e67af6d55f734d19b5`. The commit has two parents, `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
+and `017cfa6ce698a26dde84548c52674f894446aab8`, so the branch history is preserved rather than
+squashed or rebased. Every material campaign commit, from the 2026-05-06 Wave-3 implementation
+through the 2026-07-26 R-A24 repair, is an ancestor of `main`.
+
+Two independent GitHub Actions runs supply the evidence that neither the workstation nor the
+assistant sandbox could produce:
+
+| Run | Event | Result |
+|---|---|---|
+| `30203491921` | pull request on `017cfa6` | 991 passed, 0 failed, 0 skipped, 0 inconclusive, 0 not-run in 3029.4 seconds; shared runtime audit and Aggregate mainline-note reconciliation both succeeded |
+| `30205330383` | push on merged `main` at `db97cfd` | 991 passed, 0 failed, 0 skipped, 0 inconclusive, 0 not-run in 3131.3 seconds; the `main` push Aggregate reconciliation succeeded on the merged tree |
+
+R-E09 required real merge accounting rather than a branch-local claim. That evidence now exists:
+the merge commit is real, every Ready note carries concrete hashes, and the Aggregate
+reconciliation passes on the merged tree from `main` itself. R-J03 required `main` to actually
+carry the converged shared layer. `main` advanced from `c6ee1f1`, dated 2026-05-04, to the merge
+commit, and the governance workflow now executes on `main` rather than only on a feature branch.
+Both findings therefore become `COMPLETED` against post-merge evidence.
+
+Revision 14 records only R-E09 and R-J03. Inventory and severity remain 134 and Critical 8,
+High 32, Medium 55 and Low 39. The fold becomes 99 `COMPLETED`, 0 `OPEN`, 0 `DECIDED`,
+0 `IN_PROGRESS` and 35 `DISPOSITIONED`. No finding remains open or in progress; the 35
+`DISPOSITIONED` items stay conditionally deferred under their exact machine-validated re-entry
+triggers, which is a deferral and not an implementation or risk-acceptance claim.
+
+This accounting reaches `main` through its own pull request rather than a direct push. The
+`main-governance` ruleset `18842326` requires a pull request with a strict `audit-and-tests`
+check and permits no bypass actor, so the direct-push shape described in remediation-plan
+Section 38 is not executable. Routing the accounting through a reviewed pull request satisfies the
+same intent more strictly, because both the pull-request gate and the subsequent `main` push gate
+evaluate it. Honouring the enforced protection rather than working around it is the correct
+reading of R-J01.
+
+`sdd-pipeline` remains experimental, default-disabled and execution-denied. Wave-3 is closed.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 14,
+  "recordType": "delta",
+  "recordedDate": "2026-07-26",
+  "ledgerVersion": "1.42.0",
+  "statuses": [
+    {"id":"R-E09","status":"COMPLETED"},
+    {"id":"R-J03","status":"COMPLETED"}
+  ],
+  "inventoryCount": 134,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 55,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 99,
+    "OPEN": 0,
+    "DECIDED": 0,
+    "IN_PROGRESS": 0,
     "DISPOSITIONED": 35
   }
 }
