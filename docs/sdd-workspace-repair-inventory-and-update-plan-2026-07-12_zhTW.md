@@ -2490,9 +2490,9 @@ evaluate it. Honouring the enforced protection rather than working around it is 
 reading of R-J01.
 
 `sdd-pipeline` remains experimental, default-disabled and execution-denied. Closing these two
-findings does not by itself close Wave-3: remediation-plan Section 38 also requires a successful
-full-suite `workflow_dispatch` or scheduled run on `main`, which remains outstanding when this
-revision is recorded.
+findings does not by itself close Wave-3. Remediation-plan Section 38 also requires a successful
+full-suite `workflow_dispatch` or scheduled run on `main`; run `30209630724` satisfied it with
+991 passed and 0 failed, so all three post-merge acceptance items now hold.
 
 ```finding-status-record-v1
 {
