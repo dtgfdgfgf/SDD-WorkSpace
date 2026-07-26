@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace Wave 3 Re-review 後續修復計畫（2026-07-14）"
-version: "1.32.0"
+version: "1.33.0"
 date: "2026-07-14"
 last_updated: "2026-07-26"
 language: "zh-TW"
@@ -8,7 +8,7 @@ status: "plan"
 authority: "informational"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "4ee48a05c40acc10fb88d38902f412608c1c7566"
+head_commit: "132a1139467592d19f978c07a0f0bec52afcf9be"
 source_review: "docs/sdd-workspace-wave-3-governance-review-2026-07-14_zhTW.md"
 open_findings_ledger: "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md"
 scope: "以 2026-07-14 治理 re-review 的 12 條 RVR findings 為輸入，制定可合併回 main 的修復批次。排除 projects/ 與 learning/ consumer 內部 drift；worktree/init/template 等 shared-layer 腳本行為在範圍內。"
@@ -231,6 +231,7 @@ extension state change 使 mirror 失效；不同深度 worktree 建立後 sourc
 | 1.30.0 | 2026-07-23 | Complete-coverage finalization `0ee547d` passes runtime, ledger history, Batch and Aggregate with 0 errors and 0 warnings. The official suite discovers exactly 986 tests and completes multiple large green files, but the 2400-second tool limit expires before Pester emits a final summary; honesty demotion `d8dbdf2` restores the Aggregate note and index row to Draft/Open. This suite-only re-entry raises only the bounded validation timeout to 4500 seconds, not the test or acceptance standard. See Section 36. |
 | 1.31.0 | 2026-07-23 | Bounded-suite finalization `cc957a0` completes all 986 tests in 2945.4 seconds with every non-pass count 0 and unchanged persistent execution policy. Pester then exits `-1` because its NUnit report End step cannot call sandbox-denied `Get-CimInstance`; honesty demotion `4c5fde3` restores the Aggregate note and index row to Draft/Open. This re-entry authorizes only an explicitly approved elevated validation environment for CIM-backed report export, with no runtime, test or acceptance change. See Section 37. |
 | 1.32.0 | 2026-07-26 | Elevated finalization `d0c75c4` produced one real Pester failure: the runtime-audit fixture captured corrupted non-ASCII child output that `ConvertFrom-Json` could not parse; honesty demotion `4ee48a0` restored the Aggregate note and index row to Draft/Open. The owner then reviewed the complete R0 through R6 history and fixed a closure baseline: environment establishment is the goal, the dogfood demo feature and interview packaging are excluded, and `projects/` and `learning/` stay frozen. This plan-only amendment authorizes canonical-environment reproduction diagnosis, a conditional fixture repair, CI timeout and coverage calibration, a closed-list README truthfulness repair, pre-finalization slow gates, a two-re-entry cap, and separate owner authorization nodes for push, for merge and for post-merge accounting; see Section 38. |
+| 1.33.0 | 2026-07-26 | The owner granted all three authorization nodes, so finalization `758d169` was pushed and evaluated by GitHub Actions run `30199620889`. Both delivery-surface calibrations behaved as intended and the Aggregate mainline-note step passed on the runner, but the suite reported 988 passed and 1 failed: the shared-layer suite requires nine gitignored consumer-space files to exist, which is a false green on any workstation holding local consumer state. Honesty demotion `132a113` returned both notes to Draft/Open and consumed the first of two permitted re-entries. This amendment authorizes new finding R-A24, a repair bounded to the offending test plus a consumer-space independence guard, and a single re-finalization; see Section 39. |
 
 ## 7. 2026-07-18 RB-2 ECI Outcome 裁定增補
 
@@ -1786,3 +1787,67 @@ instruction that does not mention this protocol authorizes the merge alone:
 Environment establishment is reached when items 1 through 3 of the post-merge protocol hold. At
 that point Wave-3 stops: no further shared-layer batch starts from this plan, and any later work
 enters only through a DISPOSITIONED re-entry trigger or a new owner-authorized plan.
+
+## 39. 2026-07-26 R-A24 consumer-space suite dependency re-entry
+
+On 2026-07-26 the owner granted all three Section 38 authorization nodes in one instruction.
+Finalization `758d1699f4742ef781d36d1f14753f23e9705dc7` was pushed, pull request #3 was refreshed,
+and GitHub Actions run `30199620889` produced the first independent evidence this branch has ever
+had.
+
+Two questions that the local environment could not answer were settled green. The calibrated job
+finished the suite in 3077 seconds, comfortably inside the new 120-minute timeout, and the
+coverage step was correctly skipped for a pull request. The shared runtime audit and the Aggregate
+mainline-note reconciliation step both succeeded on the runner, which also demonstrates that the
+console-encoding coupling recorded in the 2026-07-26 Batch note follow-ups does not manifest on
+GitHub-hosted runners.
+
+The run reported 988 passed and 1 failed. The failure is a real shared-layer defect, not an
+environment artifact:
+
+- `studio/tests/check-speckit-runtime.Tests.ps1` opens the `rejects an R-G01 governance ledger
+  rollback` test by asserting that nine files under `learning/` and `projects/` exist.
+- `.gitignore` excludes both directories, so `git ls-files` reports zero tracked entries and the
+  files are absent from every fresh clone.
+- The assertion therefore passes only on a workstation that happens to hold local consumer state.
+  Every previous local acceptance of the complete suite, including the 989-passing run on
+  candidate `d9b0916`, was a false green for this test.
+- It also contradicts the Studio Constitution rule that `projects/` and `learning/` are consumer
+  spaces and must not be treated as the shared-layer acceptance surface.
+
+Honesty demotion `132a1139467592d19f978c07a0f0bec52afcf9be` returned both notes and their index
+rows to Draft/Open. This consumes the first of the two finalization re-entries permitted by
+Section 38, leaving exactly one.
+
+### Authorized scope and ledger IDs
+
+The owner authorizes new Medium finding R-A24 for this defect, registered in its own append-only
+ledger revision before any code change. The repair is bounded to:
+
+1. Removing the consumer-space existence precondition from the offending test. The genuine
+   revert-sensitive body of that test, which tampers with the tracked
+   `docs/project-governance-status.md` inside an isolated fixture and requires the audit to fail
+   with `r-g01-project-governance-current-surface`, is preserved unchanged.
+2. Adding a consumer-space independence guard to `studio/tests/repository-hygiene.Tests.ps1`. The
+   guard must fail if any `It` block in the shared-layer suite both asserts path existence and
+   references a consumer-space literal that `git ls-files` reports as untracked. Placing the guard
+   in a different file keeps its own path literals from matching itself.
+3. A ledger revision recording R-A24 as `COMPLETED` after the repair has old-fails/new-passes
+   evidence.
+
+The guard must not flag legitimate synthetic inputs. `studio/tests/pre-commit.Tests.ps1` passes
+`projects/example/...` strings into hook classification logic without asserting that they exist,
+and that usage remains valid.
+
+### Gate order for this re-entry
+
+Section 38 gate order still applies unchanged, with one addition: because a clean checkout is the
+condition that exposed this defect, the re-finalization requires independent GitHub Actions
+evidence rather than a local suite alone. The sequence is: register R-A24, repair with
+discriminating evidence, re-run the local fast gates, re-finalize the two notes, push, and require
+run-level success on the pull request before any merge. If that run fails, the second and final
+re-entry is consumed and the work halts for owner re-scoping.
+
+This amendment does not change the merge, push or post-merge authorization already granted, and it
+does not weaken any gate. R-E09 remains `IN_PROGRESS`, R-J03 remains `OPEN`, and `sdd-pipeline`
+remains experimental, default-disabled and execution-denied.
