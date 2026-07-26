@@ -156,3 +156,43 @@ Describe 'Claude agent seed text output' {
         (Get-FileHash -LiteralPath $generatedPath -Algorithm SHA256).Hash | Should -Be $firstHash
     }
 }
+
+Describe 'shared-layer suite consumer-space independence (R-A24)' {
+    It 'keeps consumer directories out of version control' {
+        foreach ($consumerRoot in @('projects', 'learning')) {
+            $tracked = @(& git -C $WorkspaceRoot -c core.quotepath=false ls-files ("{0}/*" -f $consumerRoot))
+            if ($LASTEXITCODE -ne 0) {
+                throw "Unable to enumerate tracked files under '$consumerRoot'."
+            }
+            $tracked.Count | Should -Be 0 -Because "$consumerRoot is a gitignored consumer space"
+        }
+    }
+
+    It 'never asserts that an untracked consumer-space path exists' {
+        # A shared-layer test that requires consumer state to be present passes only where that
+        # state happens to exist locally and fails on every clean checkout. Synthetic consumer
+        # strings passed into classification logic stay legal: only existence assertions count.
+        $consumerLiteral = [regex]"['`"]((?:projects|learning)/[^'`"]+)['`"]"
+        $offenders = [System.Collections.Generic.List[string]]::new()
+
+        foreach ($suiteFile in (Get-ChildItem -LiteralPath (Join-Path $WorkspaceRoot 'studio/tests') -Filter '*.Tests.ps1')) {
+            $blocks = [regex]::Split(
+                [System.IO.File]::ReadAllText($suiteFile.FullName),
+                '(?m)^\s{4}It\s'
+            )
+            for ($index = 1; $index -lt $blocks.Count; $index++) {
+                $block = $blocks[$index]
+                if ($block -notmatch 'Should\s+-Exist') { continue }
+                foreach ($match in $consumerLiteral.Matches($block)) {
+                    $relativePath = $match.Groups[1].Value
+                    $tracked = @(& git -C $WorkspaceRoot -c core.quotepath=false ls-files $relativePath)
+                    if ($tracked.Count -eq 0) {
+                        $offenders.Add(('{0} -> {1}' -f $suiteFile.Name, $relativePath))
+                    }
+                }
+            }
+        }
+
+        $offenders | Should -BeNullOrEmpty
+    }
+}

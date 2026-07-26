@@ -277,20 +277,9 @@ Describe 'artifact Markdown token classification' {
 
 Describe 'R6-A4 document and configuration truthfulness' {
     It 'rejects an R-G01 governance ledger rollback' {
-        foreach ($relativeNoticePath in @(
-            'learning/codex-smoke-practice-20260307/docs/governance-status.md',
-            'projects/codex-smoke-internal-20260307/docs/governance-status.md',
-            'projects/commercial-line-bot/docs/governance-status.md',
-            'projects/japanese-learning/docs/governance-status.md',
-            'projects/KMS/docs/governance-status.md',
-            'projects/personal_website/yuanxi_personal_site_ready/docs/governance-status.md',
-            'projects/Trading/docs/governance-status.md',
-            'projects/Trading-002-decision-evidence-platform/docs/governance-status.md',
-            'projects/Trading-003-stock-selection-backtest/docs/governance-status.md'
-        )) {
-            Join-Path $WorkspaceRoot $relativeNoticePath | Should -Exist
-        }
-
+        # R-A24: this test previously required nine consumer-space notices under learning/ and
+        # projects/ to exist. Both directories are gitignored, so that precondition passed only
+        # where local consumer state happened to be present and failed on every clean checkout.
         $fixtureRoot = New-RuntimeAuditFixture
         $path = Join-Path $fixtureRoot 'docs/project-governance-status.md'
         $content = [System.IO.File]::ReadAllText($path)
