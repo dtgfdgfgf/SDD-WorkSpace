@@ -65,8 +65,10 @@ Out of scope:
 - No finding remains `OPEN`, `DECIDED` or `IN_PROGRESS`. The 35 `DISPOSITIONED` items stay
   conditionally deferred under their exact machine-validated re-entry triggers, which is a
   deferral and not an implementation or risk-acceptance claim.
-- Wave-3 is closed. No further shared-layer batch starts from the wave-3 remediation plan; later
-  work enters only through a `DISPOSITIONED` re-entry trigger or a new owner-authorized plan.
+- Wave-3 is not yet closed by this note. Remediation-plan Section 38 makes environment
+  establishment conditional on all three post-merge acceptance items, and the third item, a
+  successful full-suite `workflow_dispatch` or scheduled run on `main`, is recorded below as
+  outstanding. Closure is claimed only once that run succeeds, in a separate dated record.
 
 ## Impact Reconciliation
 
@@ -82,8 +84,9 @@ Out of scope:
 - `pwsh ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef main -HeadRef <head> -RequireReady -ReadinessScope Batch -Json`
 - Independent GitHub Actions evidence already recorded above: pull-request run `30203491921` and
   merged-`main` push run `30205330383`, each 991 passed with zero non-pass results.
-- Outstanding after this batch merges: one `workflow_dispatch` full-suite run on `main`, which
-  also exercises the coverage step that no run has executed since the calibration.
+- Outstanding: `workflow_dispatch` run `30209630724`, started on `main` at `db97cfd` on
+  2026-07-26, is the first execution of the coverage step since the timeout calibration. Its
+  result is not part of this note's evidence, and Wave-3 closure waits on it.
 
 ## Merge Notes
 

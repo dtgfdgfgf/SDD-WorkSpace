@@ -2489,7 +2489,10 @@ same intent more strictly, because both the pull-request gate and the subsequent
 evaluate it. Honouring the enforced protection rather than working around it is the correct
 reading of R-J01.
 
-`sdd-pipeline` remains experimental, default-disabled and execution-denied. Wave-3 is closed.
+`sdd-pipeline` remains experimental, default-disabled and execution-denied. Closing these two
+findings does not by itself close Wave-3: remediation-plan Section 38 also requires a successful
+full-suite `workflow_dispatch` or scheduled run on `main`, which remains outstanding when this
+revision is recorded.
 
 ```finding-status-record-v1
 {
