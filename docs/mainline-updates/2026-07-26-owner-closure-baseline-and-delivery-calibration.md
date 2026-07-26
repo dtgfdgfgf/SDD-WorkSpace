@@ -4,7 +4,7 @@
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
 **Status**: Draft
-**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`
+**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`; finalization `758d1699f4742ef781d36d1f14753f23e9705dc7`; honesty demotion `132a1139467592d19f978c07a0f0bec52afcf9be`; R-A24 plan amendment `43b90622c2b39eeac20d9f00c7ab79a9fe72b25e`; R-A24 registration `TBD`; R-A24 repair `TBD`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
 **Reconciliation Status**: Open
 **Validation Scope**: Batch
@@ -26,6 +26,16 @@ are gitignored and absent from any fresh clone.
 
 This note and the Wave-3 umbrella return to Draft/Open with their index rows. This consumes the
 first of the two finalization re-entries permitted by plan Section 38.
+
+Plan amendment `43b90622c2b39eeac20d9f00c7ab79a9fe72b25e` adds Section 39, which authorizes new
+Medium finding R-A24 and bounds the repair to removing the consumer-space existence precondition
+while preserving the genuine R-G01 revert-sensitive fixture body, plus a consumer-space
+independence guard in `studio/tests/repository-hygiene.Tests.ps1`. Ledger revision 12 registers
+R-A24 as `OPEN` before any code change, raising the inventory to 134 with severity 8/32/55/39 and
+fold 96 `COMPLETED` / 2 `OPEN` / 0 `DECIDED` / 1 `IN_PROGRESS` / 35 `DISPOSITIONED`. Because a
+clean checkout is the condition that exposed this defect, Section 39 requires independent GitHub
+Actions success on the pull request before any merge; a local suite alone is not sufficient
+evidence for this re-entry.
 
 ## Summary
 
