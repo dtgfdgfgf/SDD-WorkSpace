@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Stage entry gate for /speckit.analyze.
@@ -7,9 +9,11 @@
     Confirms that the canonical artifact set for analyze is complete: spec.md,
     readiness/readiness-assessment.md, plan.md, and tasks.md must all exist.
     Delegates structural validation to validate-feature-structure.ps1 and
-    scaffolds analysis-checklist.md from studio/templates/sdd-docs/checklist-template.md
-    so the agent has a checklist surface to record findings, including the
-    Intent Drift Check required by constitution §8.
+    identifies the canonical analysis-result.json target and schema consumed
+    by setup-implement.ps1. analysis-checklist.md is scaffolded only as an
+    optional human review surface; it is not implementation authorization.
+    The machine result carries the required Intent Drift Check and intent
+    obligation disposition.
 
     Hard gate (constitution §2 + §8): /speckit.analyze depends on every prior
     stage. Use `-Force` to override the entry gate when investigating an
@@ -28,7 +32,7 @@
     Show this help message.
 
 .NOTES
-    Exit code: 0 analysis-checklist scaffolded, 1 entry-gate failure (unless -Force).
+    Exit code: 0 ready to analyze, 1 entry-gate failure (unless -Force).
 #>
 
 [CmdletBinding()]
@@ -52,22 +56,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        $readinessDir = Join-Path $resolved 'readiness'
-        return [PSCustomObject]@{
-            FEATURE_DIR          = $resolved
-            FEATURE_SPEC         = Join-Path $resolved 'spec.md'
-            READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-            IMPL_PLAN            = Join-Path $resolved 'plan.md'
-            TASKS                = Join-Path $resolved 'tasks.md'
-        }
-    }
-    return Get-FeaturePathsEnv
-}
-
 function Invoke-FeatureStructureValidation {
     param([string]$FeatureDir)
     $script = Join-Path $PSScriptRoot 'validate-feature-structure.ps1'
@@ -77,7 +65,26 @@ function Invoke-FeatureStructureValidation {
     try { return ($raw | ConvertFrom-Json) } catch { return $null }
 }
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+$eciArtifactPaths = [ordered]@{
+    'readiness/eci-trigger.md'                    = $paths.ECI_TRIGGER
+    'readiness/eci/eci-assessment.md'             = Join-Path $paths.ECI_DIR 'eci-assessment.md'
+    'readiness/eci/source-manifest.md'             = Join-Path $paths.ECI_DIR 'source-manifest.md'
+    'readiness/eci/adoption-record.md'             = Join-Path $paths.ECI_DIR 'adoption-record.md'
+    'readiness/eci/authorization-record.md'        = Join-Path $paths.ECI_DIR 'authorization-record.md'
+}
+$readinessStatus = if (Test-Path -LiteralPath $paths.READINESS_ASSESSMENT -PathType Leaf) {
+    Get-MarkdownField -Path $paths.READINESS_ASSESSMENT -Field 'Primary Status'
+} else {
+    $null
+}
+$eciRequired = (
+    $readinessStatus -eq 'ROUTE_TO_ECI' -or
+    @($eciArtifactPaths.Values | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }).Count -gt 0
+)
+
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]
 
@@ -118,6 +125,9 @@ if ($studioRoot) {
 }
 
 $checklistPath = Join-Path $paths.FEATURE_DIR 'analysis-checklist.md'
+$analysisResultPath = Join-Path $paths.FEATURE_DIR 'analysis-result.json'
+$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$analysisResultSchema = Join-Path $trustedStudioRoot 'runtime/analysis-result.schema.json'
 $scaffolded = $false
 $checklistExists = Test-Path -LiteralPath $checklistPath -PathType Leaf
 if ($ready) {
@@ -135,6 +145,7 @@ if ($ready) {
         $scaffolded = $true
         $messages.Add('checklist-template.md not found; created empty file.') | Out-Null
     }
+    $messages.Add('analysis-checklist.md is informational only. Emit the exact analysis-result.json payload required by the canonical schema; the Analyze agent remains read-only and does not persist it.') | Out-Null
 }
 
 $stage = 'analyze'
@@ -145,8 +156,12 @@ $result = [ordered]@{
     FEATURE_DIR          = $paths.FEATURE_DIR
     FEATURE_SPEC         = $paths.FEATURE_SPEC
     READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT
+    ECI_REQUIRED         = $eciRequired
+    ECI_ARTIFACTS        = $eciArtifactPaths
     IMPL_PLAN            = $paths.IMPL_PLAN
     TASKS                = $paths.TASKS
+    ANALYSIS_RESULT      = $analysisResultPath
+    ANALYSIS_RESULT_SCHEMA = $analysisResultSchema
     ANALYSIS_CHECKLIST   = $checklistPath
     SCAFFOLDED           = $scaffolded
     STRUCTURE_VALID      = if ($validation) { $validation.VALID } else { $null }
@@ -160,6 +175,8 @@ if ($Json) {
     Write-Output ("STAGE: {0}" -f $stage)
     Write-Output ("READY: {0}" -f $ready)
     Write-Output ("FEATURE_DIR: {0}" -f $paths.FEATURE_DIR)
+    Write-Output ("ANALYSIS_RESULT: {0}" -f $analysisResultPath)
+    Write-Output ("ANALYSIS_RESULT_SCHEMA: {0}" -f $analysisResultSchema)
     Write-Output ("ANALYSIS_CHECKLIST: {0}" -f $checklistPath)
     Write-Output ("SCAFFOLDED: {0}" -f $scaffolded)
     if ($validation) {

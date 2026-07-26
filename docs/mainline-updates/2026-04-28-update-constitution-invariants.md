@@ -3,9 +3,10 @@
 **Date**: 2026-04-28
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: `TBD`
+**Status**: Merged
+**Related Commits**: `a439c64d1dd14b69cefb92e034f0db35703c551d`
 **Related PR**: `N/A`
+**Reconciliation Status**: Closed
 
 ## Summary
 
@@ -47,18 +48,46 @@ governance gap on a closer reading.
   `update-constitution.ps1`.
 - No migration required. Existing script already satisfies all locked phrases.
 
+## Impact Reconciliation
+
+Historical reconciliation is closed only for recovering the exact introducing commit and confirming
+the three literal contract tokens added to the existing invariant. Current migration-route
+reconciliation belongs to
+`docs/mainline-updates/2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this historical note
+is excluded from current readiness authorization.
+
+## Revalidation (2026-07-20)
+
+Git history identifies `a439c64d1dd14b69cefb92e034f0db35703c551d` as both the introducing and
+last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`289aff90699e41f9d7318fc7b727bdfb9437769db61fcd57714afaa5ca05ac62`.
+
+The historical commit added three literal `mustContainAll` tokens. That detects removal of those
+tokens but does not prove the corresponding behaviors, make the checks semantics-aware, or establish
+that the v1.8.0 governance batch was fully closed. The broader silent-regression and final-closure
+claims are narrowed to literal-token presence only. R-A13 remains open as the independent finding
+for strengthening runtime invariant quality beyond literal presence.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+Any counts or outcomes in it are historical and were not rerun by RB-5 as current acceptance
+evidence. Neither this note nor its historical commit can satisfy current Batch or Aggregate
+readiness, path coverage, `must_update` reconciliation, runtime promotion, or the R6 fresh-fixture
+gate.
+
 ## Validation
 
-- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` -> VALID, 0 errors, 0 warnings
+- `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` reported VALID, 0 errors, and
+  0 warnings.
 - `update-constitution-script` semantic check: `missingRequirements` empty.
 - Change manifests: none required.
 
 ## Merge Notes
 
 - Final follow-up to the v1.8.0 governance batch (`1a8078b`, `ef71fb3`, `8fe7357`).
-- Supersedes the "fully closed" claim in
-  `2026-04-28-adapter-change-routing.md`; the batch is now actually closed.
+- It superseded one earlier closure claim at the time, but it did not prove complete behavioral
+  closure; the dated Revalidation above governs that boundary.
 
 ## Follow-ups
 
-- None.
+- R-A13 remains open for semantics-aware invariant enforcement.

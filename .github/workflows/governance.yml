@@ -1,0 +1,88 @@
+name: governance
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Mondays at 03:17 UTC (11:17 Asia/Taipei); avoid the top-of-hour load peak.
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-and-tests:
+    runs-on: windows-latest
+    # The measured full suite takes about 49 minutes locally without coverage; keep roughly
+    # twice that so hosted-runner variance and the scheduled coverage run fit (plan Section 38).
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install required PowerShell modules
+        shell: pwsh
+        run: |
+          Install-Module Pester -RequiredVersion 5.7.1 -Repository PSGallery -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module powershell-yaml -RequiredVersion 0.4.12 -Repository PSGallery -Force -Scope CurrentUser
+
+      - name: Shared runtime audit (check-speckit-runtime -Json)
+        shell: pwsh
+        run: |
+          ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
+          exit $LASTEXITCODE
+
+      - name: Mainline note and impact reconciliation (pull request)
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+          HEAD_REVISION: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -ReadinessScope Aggregate -Json
+          exit $LASTEXITCODE
+
+      - name: Mainline note and impact reconciliation (main push)
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          BASE_REVISION: ${{ github.event.before }}
+          HEAD_REVISION: ${{ github.sha }}
+        run: |
+          ./studio/scripts/powershell/validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -ReadinessScope Aggregate -Json
+          exit $LASTEXITCODE
+
+      - name: Governance tests (Pester)
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        shell: pwsh
+        run: |
+          ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal
+          exit $LASTEXITCODE
+
+      - name: Governance tests with coverage (schedule and dispatch)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          ./studio/scripts/powershell/run-governance-tests.ps1 -Output Normal -CodeCoverage
+          exit $LASTEXITCODE
+
+      - name: Upload governance test artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: governance-test-artifacts
+          path: studio/tests/_artifacts/
+          if-no-files-found: ignore
+          retention-days: 14

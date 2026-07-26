@@ -8,9 +8,27 @@
 **Date**: 2026-05-01
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Merged
+**Related Commits**: `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
+
+## Revalidation (2026-07-20)
+
+Git history identifies `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6` as both the introducing
+and last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`dec2571ec27be7c8974c742f85478e804b886daa2f0da23a07e020736d8dee90`.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+RB-5 did not rerun those historical counts as current acceptance evidence. Neither this note nor
+its historical commit can satisfy present Batch or Aggregate evidence, path coverage,
+`must_update` reconciliation, runtime promotion, or the R6 fresh-fixture gate.
+
+The prior phrase claiming that `change-manifest-template.md` was wired into a real flow
+overstated an advisory prompt reference. R-G06 later confirmed that no manifest presence
+obligation existed and that no real manifests had been produced. Commit
+`e543f6a9818007bac67f1ec942cacc22e577d17a` retired the change-manifest chain.
 
 ## Summary
 
@@ -21,8 +39,8 @@
 - `tasks-template.md` carries an HTML comment that documents how its phase structure aligns with
   `speckit.tasks.agent.md` (Setup, Foundation, Story Delivery, Polish; Tests are conditional) (M16).
 - `speckit.analyze.agent.md` instructs the analyze agent to emit a one-line "Mainline-Bound
-  Shared-Layer Change Manifest" prompt when shared-layer surfaces are touched, finally wiring
-  `change-manifest-template.md` into a real flow (M17).
+  Shared-Layer Change Manifest" prompt when shared-layer surfaces are touched. This was an
+  advisory reference and did not make manifest presence mandatory (M17).
 - The three downstream Project Structure tables (`studio/QUICKSTART.md` "專案結構",
   `studio/SDD-QUICKSTART-GUIDE.md` §13.1, and `studio/templates/sdd-docs/agent-file-template.md`)
   now point readers to constitution §11 as the master, removing ambiguity about which list is
@@ -45,8 +63,8 @@ The deep review identified eight loose ends that did not fit into Patches 1-8:
 - **M16** — `tasks-template.md` had a phase layout that mirrored the `speckit.tasks.agent.md`
   agent's behavior, but neither side documented the mapping. Tests-phase conditionality was
   invisible to template readers.
-- **M17** — `change-manifest-template.md` shipped with the studio for months but was never
-  referenced by any agent. It existed as a dead asset.
+- **M17** — `change-manifest-template.md` shipped with the studio for months without an agent
+  reference. This batch added an advisory reference but did not establish a required flow.
 - **M18** — Three downstream documents (`QUICKSTART.md`, `SDD-QUICKSTART-GUIDE.md`,
   `agent-file-template.md`) carried abbreviated Project Structure tables. They were *not* wrong,
   but they were not labelled as informational — readers could mistake any of them for the
@@ -94,7 +112,7 @@ Out of scope:
 
 ## Impact
 
-- 189 → 195 tests, 0 failed, 0 skipped.
+- 189 to 195 tests, 0 failed, 0 skipped.
 - `check-speckit-runtime.ps1 -Json` -> `VALID: true`, `ERROR_COUNT: 0`. Five anchor-based invariants verified end-to-end.
 - `generate-impact-registry.ps1 -Compare` -> in-sync.
 - The anchor mechanism is opt-in and additive: existing `mustContainAll` and `mustMatchAll`
@@ -106,6 +124,13 @@ Out of scope:
 - `pwsh ./studio/scripts/powershell/run-governance-tests.ps1` -> 195 passed, 0 failed.
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` -> `VALID: true`.
 - `pwsh ./studio/scripts/powershell/generate-impact-registry.ps1 -Compare` -> in-sync.
+
+## Impact Reconciliation
+
+This historical note is sealed migration evidence only. It is excluded from current
+reconciliation and cannot satisfy current `must_update` routes. Current RB-5 reconciliation is
+owned by `2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this note records no
+present-day update disposition.
 
 ## Merge Notes
 
@@ -125,5 +150,7 @@ Out of scope:
 - Future patch: add an `anchors` documentation section to `studio/SDD-QUICKSTART-GUIDE.md`
   explaining the `<!-- governance-anchor: <id> -->` convention so authors know how to add new
   anchors when they rename or restructure governed sections.
-- Future patch: opt-in agent prompt wiring for the Patch 8 stage entry gates so a `/speckit.<stage>`
-  invocation surfaces the same `BLOCKERS[]` the script would emit.
+- Future patch: opt-in agent prompt wiring for the Patch 8 stage entry gates so a
+  `/speckit.<stage>` invocation surfaces the same `BLOCKERS[]` the script would emit.
+- Historical change-manifest continuation is retired because
+  `e543f6a9818007bac67f1ec942cacc22e577d17a` removed the change-manifest chain.

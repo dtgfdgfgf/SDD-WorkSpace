@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+#Requires -Version 7.0
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
@@ -66,17 +68,10 @@ if ($LASTEXITCODE -ne 0) {
     throw 'git worktree add failed.'
 }
 
-# M8: configure the new worktree's core.hooksPath relative to the worktree root
-# so that commits inside the worktree are governed by the workspace .githooks
-# (independent of whatever path the parent repo had configured).
-$workspaceHooksDir = Join-Path $workspaceRoot '.githooks'
-if (Test-Path -LiteralPath $workspaceHooksDir -PathType Container) {
-    $worktreeHooksPath = [System.IO.Path]::GetRelativePath($targetRoot, $workspaceHooksDir) -replace '\\', '/'
-    & git -C $targetRoot config core.hooksPath $worktreeHooksPath
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Failed to configure core.hooksPath for worktree: $targetRoot"
-    }
-}
+# Configure the depth-specific hooks path in this worktree's config.worktree.
+# A normal `git config core.hooksPath` write would mutate the repository config
+# shared by the source and every linked worktree.
+$worktreeHooks = Set-ProjectWorktreeHooksPath -WorktreeRoot $targetRoot -WorkspaceRoot $workspaceRoot
 
 # Restore shared agent junction parity for both .github/agents and .claude/agents.
 $junctions = @(Initialize-ProjectSharedAgentJunctions -ProjectRoot $targetRoot -WorkspaceRoot $workspaceRoot)
@@ -115,9 +110,8 @@ $result = [ordered]@{
     targetRoot       = $targetRoot
     junctions        = $junctions
     copiedFiles      = $copiedFiles
-    worktreeHooksPath = if (Test-Path -LiteralPath $workspaceHooksDir -PathType Container) {
-        [System.IO.Path]::GetRelativePath($targetRoot, $workspaceHooksDir) -replace '\\', '/'
-    } else { $null }
+    worktreeHooksPath = $worktreeHooks.hooksPath
+    hooksConfigScope  = $worktreeHooks.configScope
 }
 
 if ($Json) {

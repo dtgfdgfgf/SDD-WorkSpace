@@ -1,10 +1,10 @@
-# Workspace Development Guidelines
-
 <!-- Authority: dependent (agent-scoped subset).
      This file is a project-template-oriented agent context. Per constitution Section 10,
      agent-scoped subsets do NOT carry an independent GENERATED GOVERNANCE BOOTSTRAP block;
      they derive from their workspace-level adapter (.github/copilot-instructions.md) and
      MUST NOT contradict it. The canonical Studio Constitution is studio/constitution/constitution.md. -->
+
+# Workspace Development Guidelines
 
 <!--
   STUDIO TEMPLATE v1.1.0

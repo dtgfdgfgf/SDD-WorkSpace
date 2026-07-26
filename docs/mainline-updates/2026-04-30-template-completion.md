@@ -7,9 +7,27 @@
 **Date**: 2026-04-30
 **Source Branch**: `main`
 **Target Branch**: `main`
-**Status**: Ready
-**Related Commits**: TBD
+**Status**: Merged
+**Related Commits**: `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`
 **Related PR**: N/A
+**Reconciliation Status**: Closed
+
+## Revalidation (2026-07-20)
+
+Git history identifies `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6` as both the introducing
+and last-touch commit for this note before immutable migration base
+`de61431ae8f50d66f59157e00e4d239e9b37efdb`. The pre-migration SHA-256 was
+`f4d76ca3a5a653a5a25e7778d608cc66328b57686eb497e42365c3ad7c1a90c5`.
+
+The Validation section below is retained as the contemporaneous report for that historical commit.
+RB-5 did not rerun those historical counts as current acceptance evidence. Neither this note nor
+its historical commit can satisfy present Batch or Aggregate evidence, path coverage,
+`must_update` reconciliation, runtime promotion, or the R6 fresh-fixture gate.
+
+The historical rationale for leaving agent junction contents visible to consumer Git intake was
+later refuted by R-A19. Commit `9819e301318230ca0413d44a5bdf3d2a3b3e3ca6` introduced
+rooted ignores that preserve junction usability without reporting or staging shared bytes. The
+template additions and contract registration remain valid historical changes.
 
 ## Summary
 
@@ -25,7 +43,11 @@ The deep review identified five required artifacts with no template:
 - Constitution Section 13.1 specifies an exact Markdown format for `studio/knowledge-base/learnings.md` entries, but no append-style snippet template existed to make that format reusable.
 - The `speckit.plan` agent expects Phase 1 outputs `research.md`, `data-model.md`, and `quickstart.md`, but none of them had templates. New plan authors had to invent structure each time.
 
-The old `project-init/.gitignore` rule `.claude/agents/` and `.github/agents/` directly contradicted the worktree parity policy (`docs/project-worktree-parity-governance.md`), which lists those junctions as required local bootstrap parity. Patch 5 narrows the ignore to genuinely-local sub-state (`.local/`).
+At that time, the old `project-init/.gitignore` rules for `.claude/agents/` and
+`.github/agents/` were interpreted as contradicting the worktree parity policy, which lists those
+junctions as required local bootstrap parity. Patch 5 narrowed the ignore to `.local/`; R-A19
+later refuted the conclusion that shared junction bytes should remain visible to consumer Git
+intake.
 
 ## Scope
 
@@ -50,13 +72,23 @@ The old `project-init/.gitignore` rule `.claude/agents/` and `.github/agents/` d
 
 - 116 tests still passing.
 - `check-speckit-runtime.ps1 -Json` still `VALID: true`, `ERROR_COUNT: 0`. Audit now verifies the five new templates exist on disk.
-- Newly created Practice / Internal / Client projects via `init-project.ps1` and `init-practice.ps1` will, going forward, see `.claude/agents/` and `.github/agents/` workspace junctions show up in `git status` if they are accidentally local content; the new ignore pattern only silences `.local/` sub-state.
+- At `c6ee1f1fcf2eda0b517e1e8d1518d0332563ffb6`, newly created Practice / Internal /
+  Client projects showed `.claude/agents/` and `.github/agents/` workspace junction content in
+  `git status`; the pattern then silenced only `.local/` sub-state. R-A19 later superseded this
+  intake behavior.
 - Future `/speckit.plan` runs can reference the new research / data-model / quickstart templates instead of inventing structure.
 
 ## Validation
 
 - `pwsh ./studio/scripts/powershell/run-governance-tests.ps1` -> 116 passed, 0 failed.
 - `pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json` -> `VALID: true`, all 28 required templates present.
+
+## Impact Reconciliation
+
+This historical note is sealed migration evidence only. It is excluded from current
+reconciliation and cannot satisfy current `must_update` routes. Current RB-5 reconciliation is
+owned by `2026-07-20-rb-5-agent-authority-process-truthfulness.md`; this note records no
+present-day update disposition.
 
 ## Merge Notes
 

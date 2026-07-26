@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Initialize a new Internal or Client project in the projects/ directory.

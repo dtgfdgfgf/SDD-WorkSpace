@@ -1,6 +1,7 @@
 # Project Governance Status Ledger
 
-**Updated:** 2026-03-23  
+**Updated:** 2026-07-22
+
 **Current Workflow Baseline:** `readiness` / `eci` governance model effective 2026-03-18
 
 ## Purpose
@@ -31,6 +32,23 @@ replacement constitution, or a substitute for project-local context.
 4. Shared runtime authority remains in the workspace governance repo. Project-local notices are
    consumer-facing compatibility hints only.
 
+## Post-2026-03-18 Gate Effects
+
+The 2026-03-18 baseline has since been strengthened without rewriting historical consumer
+artifacts:
+
+1. The mandatory delivery sequence is Specify, Clarify, Readiness, Plan, Tasks, Analyze and
+   Implement.
+2. Readiness must complete before Plan. When Readiness routes work through ECI, an authorized ECI
+   outcome must return through a new Readiness assessment before Plan.
+3. Direct Implement entry is fail-closed unless the feature has the required Readiness evidence,
+   any routed ECI authorization, a machine-readable Analyze result and fulfilled intent
+   obligations.
+4. These stricter gates apply when a consumer begins new governed work. They do not retroactively
+   convert legacy artifacts into current evidence or authorize edits inside consumer repositories.
+5. The Constitution Section 2.1 workspace self-application route is limited to the canonical
+   workspace governance repository. Consumer projects cannot use it as a seven-stage waiver.
+
 ## Inventory
 
 | Project | Repo Path | Management Mode | Governance Status | Baseline / Effective Date | Legacy Scope | Rule For Next Feature | Authority Reference |
@@ -42,6 +60,16 @@ replacement constitution, or a substitute for project-local context.
 | `KMS` | `projects/KMS` | Standalone repo internal project | `Legacy` | Pre-2026-03-18 legacy project | Existing `001-rag-kb-mvp` spec / plan / tasks history predates the shared `readiness` / `eci` gate and has no historical `readiness/` or `readiness/eci/` artifacts. | Any new governed feature or governance refresh should begin under the current workflow baseline and leave historical artifacts intact. | Workspace governance repo remains authoritative; local notice: `projects/KMS/docs/governance-status.md` |
 | `yuanxi_personal_site_ready` | `projects/personal_website/yuanxi_personal_site_ready` | Standalone repo nested under project container | `Legacy` | Pre-2026-03-18 legacy project | Existing website refactor SOP artifacts predate the shared `readiness` / `eci` gate and have no historical `readiness/` or `readiness/eci/` dossier. | Any new governed feature or SOP refresh should start from the current workflow baseline rather than backfilling old steps. | Workspace governance repo remains authoritative; local notice: `projects/personal_website/yuanxi_personal_site_ready/docs/governance-status.md` |
 | `Trading` | `projects/Trading` | Standalone repo client project | `Legacy` | Pre-2026-03-18 legacy feature snapshot | The current `001-yuanta-trading-workspace` snapshot predates the shared `readiness` gate and has no historical `readiness/` or `readiness/eci/` dossier. | Any new scope, plan refresh, or worktree-driven phase increment must start from the current workflow baseline before planning. | Workspace governance repo remains authoritative; local notice: `projects/Trading/docs/governance-status.md` |
+| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Mixed` | Re-entered governed work after 2026-03-18 | Historical `001` work is legacy. Feature `002-decision-evidence-platform` contains post-baseline Readiness and ECI material, but its chronology and current-gate conformance require review before any new delivery claim. | Treat existing artifacts as mixed-generation evidence. Any new scope or refresh must re-enter the current seven-stage workflow and cannot rely on the workspace-only Section 2.1 route. | Workspace governance repo remains authoritative; the project-local notice still says `Legacy` and is not synchronized in this shared-only batch: `projects/Trading-002-decision-evidence-platform/docs/governance-status.md` |
+| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Mixed` | Re-entered governed work after 2026-03-18 | Historical inherited work is legacy. Feature `003-stock-selection-backtest` contains a later Readiness document, but it is retrospective and uses a non-canonical primary status, so it is not current gate evidence. | Treat existing artifacts as mixed-generation evidence. Any new scope or refresh must re-enter the current seven-stage workflow and cannot reuse retrospective Readiness as authorization. | Workspace governance repo remains authoritative; the project-local notice still says `Legacy` and is not synchronized in this shared-only batch: `projects/Trading-003-stock-selection-backtest/docs/governance-status.md` |
+
+## 2026-07-22 Review Evidence
+
+- The central inventory contains nine consumer rows, including Trading-002 and Trading-003.
+- All nine listed project-local `docs/governance-status.md` notice paths were confirmed present;
+  presence does not mean their content is synchronized with this central review.
+- This review changed only the shared ledger. It did not edit `projects/` or `learning/` consumers
+  or claim that either stale Trading notice is current.
 
 ## Review Trigger
 

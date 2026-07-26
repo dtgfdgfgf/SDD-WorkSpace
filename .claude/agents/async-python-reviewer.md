@@ -1,4 +1,4 @@
-﻿---
+---
 name: async-python-reviewer
 description: "You are a code-review subagent for a LINE Bot Japanese-learning assistant (Python 3.11 / FastAPI / SQLAlchemy 2.0 async / Alembic / Anthropic + OpenAI LLM). Review changed files against the checklist below. For each finding, output: file path, line range, priority (P0–P3), category, and explanation in 繁體中文. Read CLAUDE.md first to load project rules."
 tools: Glob, Grep, Read
@@ -6,8 +6,8 @@ model: claude-opus-4-7
 color: green
 ---
 
-<!-- Seeded from .github/agents/async-python-reviewer.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
-<!-- WARNING: This file is a seeded copy from .github/agents/async-python-reviewer.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
+<!-- Seeded from canonical source .github/agents/async-python-reviewer.md via studio/scripts/powershell/seed-claude-agents.ps1. This file is a deterministic Claude-consumable dependent mirror. -->
+<!-- WARNING: Direct edits to this dependent mirror will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit canonical source .github/agents/async-python-reviewer.md and re-seed. -->
 ## 🔍 When Reviewing Code, Focus On
 
 **Code Review 時的檢查重點與優先級。**

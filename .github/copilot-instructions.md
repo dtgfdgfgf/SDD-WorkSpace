@@ -7,7 +7,7 @@ This file is the GitHub Copilot runtime adapter for this project.
 
 **Bootstrap Version:** 1
 **Studio Constitution:** `studio/constitution/constitution.md`
-**Studio Constitution Version:** 1.8.0
+**Studio Constitution Version:** 1.10.0
 **Project Constitution:** `N/A (workspace root)`
 
 This runtime adapter participates in dual-layer constitution governance.
@@ -25,7 +25,8 @@ Hard rules:
 - Studio Constitution has highest authority.
 - Project Constitution can only add stricter rules.
 - Agent context files are adapters, not constitutions.
-- Governed delivery work follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- The canonical workspace governance repository may enter Constitution Section 2.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven.
 - If documents conflict, flag drift instead of silently choosing.
 <!-- END GENERATED GOVERNANCE BOOTSTRAP -->
 
@@ -35,7 +36,6 @@ Hard rules:
 - Keep shared governance additions inside the generated bootstrap block so AGENTS.md and CLAUDE.md can be synchronized.
 
 <!-- MANUAL ADDITIONS START -->
-
 <!-- Authority: dependent runtime adapter for workspace-level Copilot agent context.
      The agent-scoped subset at .github/agents/copilot-instructions.md is a dependent
      document and should derive from this file's guidance, not compete with it. -->
@@ -46,18 +46,20 @@ This workspace is a studio-first Specification-Driven Development (SDD) environm
 engineering practice.
 
 - **Owner:** Solo AI engineer
-- **Current Phase:** Practice (as of 2025-12)
+- **Current Phase:** Practice + Internal (as of 2026-07)
 - **Project Types:** Practice, Internal, Client
 - **Governance Model:** Dual-layer constitutions with centralized studio governance
 
-## Canonical Sources
+## Authority Map
 
 | Path | Role |
 |------|------|
 | `studio/constitution/constitution.md` | Studio-level governance and highest authority |
 | `<project>/.specify/memory/constitution.md` | Project-level canonical constitution when project rules exist |
-| `.github/agents/` | Runtime source for shared SDD agents |
-| `.claude/agents/` | Runtime source for shared Claude agents |
+| `.github/agents/*.agent.md` | Canonical runtime agent definitions |
+| `.github/agents/async-python-reviewer.md` | Explicit canonical non-command agent definition while R-D12 remains unimplemented |
+| `.github/agents/copilot-instructions.md` | Dependent agent-scoped Copilot adapter; excluded from Claude generation |
+| `.claude/agents/` | Deterministic Claude-consumable dependent mirrors generated from the declared canonical GitHub agent inputs above |
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `studio/extensions/` | Canonical shared extension registry and workspace-level extension state |
 | `resources/agent-skill-packs/` | Generated skill mirrors for skill-based agent ecosystems; not canonical source |
@@ -89,7 +91,7 @@ Priority rules:
 
 ## Mandatory Workflow
 
-All delivery work MUST follow this sequence:
+All project and consumer-feature delivery MUST follow this sequence:
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
@@ -101,6 +103,10 @@ All delivery work MUST follow this sequence:
 
 Workflow support:
 
+- Only the contract-designated canonical workspace governance repository may use Constitution
+  Section 2.1 for a shared-layer maintenance batch, and only after every entry prerequisite in that
+  section is proven. The batch remains Draft until every closure prerequisite is proven. This is
+  not available to consumer projects or ordinary feature delivery.
 - `/speckit.discover` is an optional pre-spec aid for messy or incomplete inputs.
 - `/speckit.checklist`, `/speckit.constitution`, and `/speckit.taskstoissues` are auxiliary commands.
 - `/speckit.eci` is the specialized shared runtime command for `ROUTE_TO_ECI` cases. It consumes `readiness/eci-trigger.md`, writes `readiness/eci/*.md`, and then returns control to `/speckit.readiness`.
@@ -224,7 +230,9 @@ Recommended types:
 
 Never:
 
-- Skip an SDD stage
+- Skip an SDD stage during project or consumer-feature delivery
+- Infer permission to use the Constitution Section 2.1 route from a missing project constitution or
+  an `N/A (workspace root)` adapter marker
 - Run `/speckit.plan` without a `READY_FOR_PLAN` readiness assessment
 - Treat `/speckit.eci` as direct authorization for planning without re-running `/speckit.readiness`
 - Treat `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` ECI authorization as sufficient for planning
@@ -238,11 +246,14 @@ Never:
 Always:
 
 - Resolve ambiguity before readiness, planning, or implementation
-- Reference spec, readiness, plan, tasks, and constitutions when making changes
+- For project or consumer-feature delivery, reference spec, readiness, plan, tasks, and
+  constitutions when making changes
+- For a Constitution Section 2.1 batch, reference the owner-authorized dated plan, ledger IDs,
+  discriminating evidence, Batch note, and contract-designated Aggregate obligations
 - Flag document drift and missing updates
 - Preserve the studio-first centralized runtime model
 - Treat generated skill packs as disposable mirrors that must be regenerated from shared runtime sources
-- Treat workspace `/.claude/agents/` as the Claude shared runtime authority; Claude skills installs are a separate layer
+- Treat workspace `/.claude/agents/` as deterministic dependent mirrors generated from `.github/agents/*.agent.md` plus `.github/agents/async-python-reviewer.md`; exclude the dependent `.github/agents/copilot-instructions.md` adapter, and make permanent changes only in the declared canonical inputs
 - Treat `studio/extensions/` as the only shared extension registry authority
 - Treat `docs/project-worktree-parity-governance.md` as the canonical rule when evaluating
   consumer-project derived worktree completeness

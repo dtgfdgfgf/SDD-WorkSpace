@@ -2,20 +2,35 @@
 
 本指南說明 studio-first Spec Kit 工作區的最短上手路徑。
 
+## 環境需求
+
+- PowerShell 7 或更新版本，命令名稱為 `pwsh`
+- `powershell-yaml` 0.4.12（shared runtime audit 與 workflow YAML 驗證）
+- Pester 5.7.1（governance test suite）
+- Git
+- VS Code 與 GitHub Copilot Chat（使用互動式 agent workflow 時）
+
+先執行 `pwsh --version` 確認版本。本工作區的 shared PowerShell 腳本不支援 Windows PowerShell 5.1；以下可執行範例一律明確透過 `pwsh` 呼叫。
+
+```powershell
+pwsh -NoProfile -Command "Install-Module powershell-yaml -RequiredVersion 0.4.12 -Scope CurrentUser -Force"
+pwsh -NoProfile -Command "Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force"
+```
+
 ## 建立新專案
 
 ### Practice
 
 ```powershell
-.\studio\scripts\powershell\init-practice.ps1 -Name "my-demo"
-.\studio\scripts\powershell\init-practice.ps1 -Name "chatbot-demo" -Description "LINE Bot 聊天機器人練習"
+pwsh ./studio/scripts/powershell/init-practice.ps1 -Name "my-demo"
+pwsh ./studio/scripts/powershell/init-practice.ps1 -Name "chatbot-demo" -Description "LINE Bot 聊天機器人練習"
 ```
 
 ### Internal / Client
 
 ```powershell
-.\studio\scripts\powershell\init-project.ps1 -Name "studio-automation" -Type Internal
-.\studio\scripts\powershell\init-project.ps1 -Name "2025-client-x" -Type Client -Description "電商平台開發"
+pwsh ./studio/scripts/powershell/init-project.ps1 -Name "studio-automation" -Type Internal
+pwsh ./studio/scripts/powershell/init-project.ps1 -Name "2025-client-x" -Type Client -Description "電商平台開發"
 ```
 
 新建專案預設會建立成獨立 Git repo，初始化腳本會在 project root 執行 `git init -b main`、設定 `core.hooksPath` 指向 workspace `.githooks`，並產生三個 runtime adapter。初始化不會自動建立 initial commit。
@@ -39,9 +54,11 @@ code projects/studio-automation/studio-automation.code-workspace
 | `claude agents (read-only)` | 唯讀 | workspace Claude runtime agents |
 
 每個專案也會建立 `.github/agents/` junction，來源是 workspace 根目錄的
-`.github/agents/`。這是 runtime source。
+`.github/agents/`。其中 `*.agent.md` 與 `async-python-reviewer.md` 是 canonical inputs，
+`copilot-instructions.md` 是 dependent adapter。
 每個專案也會建立 `.claude/agents/` junction，來源是 workspace 根目錄的 `.claude/agents/`。
-`/.claude/agents/` 是 Claude shared runtime source of truth。Claude skills 與 shared agents runtime 是不同層。
+`/.claude/agents/` 是從宣告的 canonical agent inputs 確定性產生、供 Claude runtime 使用的
+dependent mirror，不是獨立 authority。Claude skills 與 shared agents runtime 是不同層。
 
 ### 專案類型
 
@@ -54,7 +71,7 @@ code projects/studio-automation/studio-automation.code-workspace
 <!-- governance-anchor: quickstart-seven-stage-workflow -->
 ## 七階段工作流程
 
-所有交付工作都必須依序執行：
+所有 project 與 consumer feature 交付都必須依序執行：
 
 1. `/speckit.specify`
 2. `/speckit.clarify`
@@ -66,6 +83,12 @@ code projects/studio-automation/studio-automation.code-workspace
 
 補充規則：
 
+- Studio Constitution 2.1 的等效證據路徑只適用 contract 指定的 canonical workspace
+  governance repo，而且批次必須只維護 shared layer。實作前缺少 owner 授權計畫或
+  ledger IDs 時必須走完整七階段；有效進入後若仍缺判別性 negative tests、canonical
+  audit、完整 suite 或 `Ready`、`Closed` Batch note，則必須維持 `Draft` 與 `NOT READY`。
+- `projects/`、`learning/`、外部 repo 與一般 feature 不得使用此路徑。Batch Ready 也不得
+  取代 contract 指定的 Aggregate note、promotion gate 或 R6 fresh-fixture E2E。
 - `/speckit.discover` 是可選的 pre-spec 輔助步驟。
 - `/speckit.checklist`、`/speckit.constitution`、`/speckit.taskstoissues` 是輔助命令。
 - `/speckit.eci` 是 `ROUTE_TO_ECI` 的專用 shared runtime command，不是固定主流程階段。
@@ -96,14 +119,35 @@ code projects/studio-automation/studio-automation.code-workspace
 - [ ] T001 [P1] [Risk: Low] [Story: Foundation] 建立專案基礎結構
 ```
 
+## Optional: Workflow Runtime（Wave 3）
+
+七階段流程仍以 agent prompt + setup-*.ps1 entry gate 為主流程驅動。`studio/workflows/sdd-pipeline/` 額外提供一份**可選**的編排層，把七階段、readiness 8 種 primary status、ECI 4 種 authorization outcome 寫成單一 yaml workflow，並由 `run-workflow.ps1` 帶 RunState（`<project>/.workflow/runs/<feature>/state.json`，本機暫態、不進 Git）做 halt-and-resume。此編排層目前為 experimental、預設停用，需經 catalog 授權才能執行。
+
+依賴：
+
+```powershell
+pwsh -NoProfile -Command "Install-Module powershell-yaml -RequiredVersion 0.4.12 -Scope CurrentUser -Force"
+```
+
+常用呼叫：
+
+```powershell
+pwsh ./studio/scripts/powershell/list-workflows.ps1 -Json
+pwsh ./studio/scripts/powershell/validate-workflow.ps1 -Id sdd-pipeline -Json
+pwsh ./studio/scripts/powershell/run-workflow.ps1 -Id sdd-pipeline -Feature 001-foo -Json
+pwsh ./studio/scripts/powershell/run-workflow.ps1 -Id sdd-pipeline -Feature 001-foo -Resume -ConfirmGate <gate-id>
+```
+
+引擎是 operator-in-the-loop：`dispatch: agent` step 會 halt 並回 exit 42，由操作者在 agent IDE 跑對應 slash command 產出 `expected_artifact`，再以 `-Resume` 推進。`gate` step halt 並回 exit 43，需 `-ConfirmGate` 或 `-RejectGate`。
+
 ## 常用指令
 
 | 類別 | 指令 | 用途 |
 |------|------|------|
-| 初始化 | `init-practice.ps1 -Name <name>` | 建立 Practice 專案 |
-| 初始化 | `init-project.ps1 -Name <name> -Type Internal` | 建立 Internal 專案 |
-| 初始化 | `init-project.ps1 -Name <name> -Type Client` | 建立 Client 專案 |
-| 初始化 | `setup-hooks.ps1 -ProjectRoot <project-root>` | 為既有 project repo 設定 workspace hooks |
+| 初始化 | `pwsh ./studio/scripts/powershell/init-practice.ps1 -Name <name>` | 建立 Practice 專案 |
+| 初始化 | `pwsh ./studio/scripts/powershell/init-project.ps1 -Name <name> -Type Internal` | 建立 Internal 專案 |
+| 初始化 | `pwsh ./studio/scripts/powershell/init-project.ps1 -Name <name> -Type Client` | 建立 Client 專案 |
+| 初始化 | `pwsh ./studio/scripts/powershell/setup-hooks.ps1 -ProjectRoot <project-root>` | 為既有 project repo 設定 workspace hooks |
 | 主流程 | `/speckit.specify <描述>` | 建立規格 |
 | 主流程 | `/speckit.clarify` | 釐清需求 |
 | 主流程 | `/speckit.readiness` | 進行前規劃 readiness triage |
@@ -201,8 +245,8 @@ Internal / Client 專案完成後：
 ### 如何啟用 Git hooks？
 
 ```powershell
-.\studio\scripts\powershell\setup-hooks.ps1
-.\studio\scripts\powershell\setup-hooks.ps1 -ProjectRoot projects/studio-automation
+pwsh ./studio/scripts/powershell/setup-hooks.ps1
+pwsh ./studio/scripts/powershell/setup-hooks.ps1 -ProjectRoot projects/studio-automation
 ```
 
 不帶 `-ProjectRoot` 時設定 workspace repo；帶 `-ProjectRoot` 時設定指定 project repo。新建專案已由初始化腳本自動設定。
@@ -212,7 +256,7 @@ Internal / Client 專案完成後：
 使用 `check-speckit-runtime.ps1` 作為 shared-layer 的主要驗證腳本：
 
 ```powershell
-.\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
+pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
 ```
 
 shared-layer convergence 的主要驗收方式是 studio runtime audit，不是要求同步治理 consumer project artifacts。

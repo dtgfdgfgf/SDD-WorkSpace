@@ -1,11 +1,11 @@
-﻿---
+---
 name: speckit-constitution
 description: "Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync."
 model: claude-opus-4-7
 ---
 
-<!-- Seeded from .github/agents/speckit.constitution.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
-<!-- WARNING: This file is a seeded copy from .github/agents/speckit.constitution.agent.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
+<!-- Seeded from canonical source .github/agents/speckit.constitution.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. This file is a deterministic Claude-consumable dependent mirror. -->
+<!-- WARNING: Direct edits to this dependent mirror will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit canonical source .github/agents/speckit.constitution.agent.md and re-seed. -->
 
 ## Output Language
 

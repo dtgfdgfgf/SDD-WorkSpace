@@ -73,12 +73,6 @@
         "mode": {
           "type": "string",
           "const": "studio-first"
-        },
-        "minStudioConstitutionVersion": {
-          "type": "string"
-        },
-        "minWorkspaceStructureVersion": {
-          "type": "string"
         }
       }
     },
@@ -99,6 +93,12 @@
           }
         },
         "scripts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "templates": {
           "type": "array",
           "items": {
             "type": "string"

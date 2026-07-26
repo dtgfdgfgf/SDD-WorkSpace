@@ -32,6 +32,12 @@
     "speckit.taskstoissues",
     "speckit.version"
   ],
+  "_githubAgentClosureNote": "Every file in .github/agents is closed by requiredCommands or this explicit non-command allowlist. Undeclared files are audit failures.",
+  "requiredNonCommandGitHubAgentFiles": [
+    "async-python-reviewer.md",
+    "copilot-instructions.md",
+    "spec-kit.agent.md"
+  ],
   "requiredClaudeAgentsNote": "spec-kit-qa-bot.md derives its name from the frontmatter 'name' field in .github/agents/spec-kit.agent.md, not from a filename pattern match",
   "requiredClaudeAgents": [
     "async-python-reviewer.md",
@@ -50,6 +56,85 @@
     "speckit-taskstoissues.md",
     "speckit-version.md"
   ],
+  "agentAuthorityPartition": {
+    "canonicalAgentPattern": ".github/agents/*.agent.md",
+    "expectedPatternInputCount": 14,
+    "canonicalAdditionalFiles": [
+      ".github/agents/async-python-reviewer.md"
+    ],
+    "dependentExcludedFiles": [
+      ".github/agents/copilot-instructions.md"
+    ],
+    "dependentMirrorPattern": ".claude/agents/*.md",
+    "expectedCanonicalInputCount": 15,
+    "expectedDependentMirrorCount": 15
+  },
+  "artifactMarkdownPolicy": {
+    "schemaVersion": 1,
+    "defaultClassification": "out_of_scope",
+    "strictPathPatterns": [
+      "studio/constitution/constitution.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      ".github/agents/copilot-instructions.md",
+      "specs/**/*.md",
+      "studio/templates/sdd-docs/**/*.md",
+      "docs/README.md",
+      "docs/project-governance-status.md",
+      "docs/project-worktree-parity-governance.md",
+      "docs/yuanxi_sdd_pack_strategy_zhTW.md",
+      "docs/sdd-workspace-*.md",
+      "docs/mainline-updates/*.md",
+      "studio/workflows/POLICY.md",
+      "studio/extensions/POLICY.md",
+      "WORKSPACE_STRUCTURE.md"
+    ],
+    "semanticExceptionSources": {
+      "agentPartitionRef": "agentAuthorityPartition",
+      "promptRoot": ".github/prompts",
+      "promptFilesRef": "requiredPromptStubs",
+      "claudeMirrorPartitionRef": "agentAuthorityPartition",
+      "claudeMirrorRoot": ".claude/agents",
+      "claudeMirrorFilesRef": "requiredClaudeAgents"
+    },
+    "strictlyExcludedFromException": [
+      ".github/agents/copilot-instructions.md"
+    ],
+    "semanticSymbolAllowlist": [
+      { "codePoint": "U+2192", "meaning": "flow" },
+      { "codePoint": "U+26A0", "meaning": "risk" },
+      { "codePoint": "U+2705", "meaning": "accepted" },
+      { "codePoint": "U+2713", "meaning": "pass" },
+      { "codePoint": "U+2717", "meaning": "fail" },
+      { "codePoint": "U+274C", "meaning": "invalid" },
+      { "codePoint": "U+1F6AB", "meaning": "prohibited" }
+    ],
+    "legacyNonGrowthAllowances": [
+      {
+        "path": ".github/agents/async-python-reviewer.md",
+        "codePoint": "U+1F50D",
+        "maxOccurrences": 1
+      },
+      {
+        "path": ".claude/agents/async-python-reviewer.md",
+        "codePoint": "U+1F50D",
+        "maxOccurrences": 1
+      }
+    ],
+    "limits": {
+      "maxAllowedSymbolOccurrencesPerFile": 27,
+      "maxDistinctAllowedSymbolsPerFile": 3
+    },
+    "forbiddenTokenClasses": [
+      "emoji-code-point",
+      "unicode-arrow-code-point",
+      "tree-or-box-drawing-code-point",
+      "ascii-box-border-line",
+      "ascii-tree-branch-line",
+      "ascii-flow-diagram-line"
+    ]
+  },
   "requiredPromptStubs": [
     "speckit.analyze.prompt.md",
     "speckit.checklist.prompt.md",
@@ -69,7 +154,6 @@
     "agent-file-template.md",
     "agents-md-template.md",
     "access-setup-checklist-template.md",
-    "change-manifest-template.md",
     "checklist-template.md",
     "claude-md-template.md",
     "copilot-instructions-template.md",
@@ -110,12 +194,13 @@
         "check-speckit-runtime.ps1",
         "shared runtime audit",
         "impact-registry.json",
-        "Change manifest completeness",
         "Impact routing advisory",
         "Agent bootstrap synchronized",
         "sync-agent-bootstrap.ps1",
         "check-agent-bootstrap.ps1",
+        "--find-renames",
         "diff-filter=ACDMR",
+        "recursiveGatePrefix",
         "checkout-index",
         "staged snapshot",
         "Runtime adapter must be staged with its synchronized set",
@@ -128,6 +213,325 @@
     }
   ],
   "docInvariants": [
+    {
+      "id": "r-g01-project-governance-current-surface",
+      "path": "docs/project-governance-status.md",
+      "mustContainAll": [
+        "**Updated:** 2026-07-22",
+        "## Post-2026-03-18 Gate Effects",
+        "| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Mixed` |",
+        "| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Mixed` |",
+        "The Constitution Section 2.1 workspace self-application route is limited to the canonical",
+        "All nine listed project-local `docs/governance-status.md` notice paths were confirmed present"
+      ],
+      "mustNotContainAny": [
+        "**Updated:** 2026-03-23",
+        "| `Trading-002-decision-evidence-platform` | `projects/Trading-002-decision-evidence-platform` | Standalone repo client project | `Legacy` |",
+        "| `Trading-003-stock-selection-backtest` | `projects/Trading-003-stock-selection-backtest` | Standalone repo client project | `Legacy` |"
+      ]
+    },
+    {
+      "id": "r-g03-obstacle-review-superseded-quarantine",
+      "path": "docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_zhTW.md",
+      "mustContainAll": [
+        "status: \"superseded\"",
+        "revalidation_status: \"required-before-reuse\"",
+        "Historical snapshot; superseded for current execution (2026-07-22).",
+        "docs/sdd-workspace-deep-review-2026-07-08_zhTW.md` Section 5.5",
+        "docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md"
+      ]
+    },
+    {
+      "id": "r-g03-obstacle-review-bounded-revalidation",
+      "path": "docs/yuanxi_sdd_pack_implementation_plan_obstacle_review_2026-07-22_zhTW.md",
+      "mustContainAll": [
+        "scope: \"R-G03 B-001 and B-003 CLI fact revalidation only\"",
+        "CLI Version `0.0.22`; displayed Template Version `0.13.3`",
+        "Official v0.13.3 core reference",
+        "The current official v0.13.3 init interface uses `--integration`",
+        "R-F02、R-F03、R-F05"
+      ]
+    },
+    {
+      "id": "r-g04-strategy-baseline-truthfulness",
+      "path": "docs/yuanxi_sdd_pack_strategy_zhTW.md",
+      "mustContainAll": [
+        "baseline_status: \"historical-unverified\"",
+        "baseline_spec_kit: \"v0.8.5\"",
+        "Its compatibility matrix and command examples are historical design inputs, not current",
+        "| 0.1.0 | v0.8.5 | historical-unverified |"
+      ],
+      "mustNotContainAny": [
+        "| 0.1.0 | v0.8.5 | tested |"
+      ]
+    },
+    {
+      "id": "r-h06-historical-six-stage-relocation",
+      "path": "docs/0308upstreams/learning-project-spec-kit-sdd.md",
+      "mustContainAll": [
+        "Historical snapshot (2026-03-08).",
+        "former six-stage assessment",
+        "Current project and consumer delivery uses the seven-stage",
+        "studio/constitution/constitution.md",
+        "# 本工作區 Spec Kit / SDD 流程研究報告（2026-03-08 更新版）"
+      ]
+    },
+    {
+      "id": "r-h06-transition-guide-reference-reconciliation",
+      "path": "docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md",
+      "mustContainAll": [
+        "| `docs/0308upstreams/learning-project-spec-kit-sdd.md` | 2026-03-08 工作區狀態與第二波目標的歷史快照 |",
+        "Local workspace analysis: `docs/0308upstreams/learning-project-spec-kit-sdd.md`"
+      ],
+      "mustNotContainAny": [
+        "| `learning-project-spec-kit-sdd.md` | 描述目前工作區狀態與第二波目標定位 |",
+        "Local workspace analysis: `learning-project-spec-kit-sdd.md`"
+      ]
+    },
+    {
+      "id": "r-h06-remaining-updates-reference-reconciliation",
+      "path": "docs/0308upstreams/spec-kit-upstream-remaining-updates-2026-03-08.md",
+      "mustContainAll": [
+        "[learning-project-spec-kit-sdd.md](./learning-project-spec-kit-sdd.md)"
+      ],
+      "mustNotContainAny": [
+        "[learning-project-spec-kit-sdd.md](C:/Users/user/Workspace/learning-project-spec-kit-sdd.md)"
+      ]
+    },
+    {
+      "id": "r-h09-vscode-settings-truthfulness",
+      "path": ".vscode/settings.json",
+      "mustContainAll": [
+        "\"editor.defaultFormatter\": \"DavidAnson.vscode-markdownlint\""
+      ],
+      "mustNotContainAny": [
+        "\"markdownlint.ignore\"",
+        "\"**/projects/duotify-*/**\"",
+        "\"chat.tools.terminal.autoApprove\""
+      ]
+    },
+    {
+      "id": "workspace-personal-data-ignore",
+      "path": ".gitignore",
+      "mustContainAll": [
+        "# Personal data (never commit)",
+        "履歷/"
+      ]
+    },
+    {
+      "id": "workspace-external-source-intake-ignore",
+      "path": ".gitignore",
+      "mustContainAll": [
+        "# External source intake (never vendor a working checkout)",
+        "resources/github-copilot-configs/"
+      ]
+    },
+    {
+      "id": "workspace-repository-hygiene-ignore",
+      "path": ".gitignore",
+      "mustContainAll": [
+        ".claude/settings.local.json",
+        ".claude/.agent-*-backup/",
+        "/resources/studio-runtime/.extension-transactions/"
+      ]
+    },
+    {
+      "id": "project-template-repository-hygiene-ignore",
+      "path": "studio/templates/project-init/.gitignore",
+      "mustContainAll": [
+        "/packages/",
+        ".claude/settings.local.json",
+        ".claude/.agent-*-backup/",
+        "/.claude/agents/",
+        "/.github/agents/"
+      ]
+    },
+    {
+      "id": "extension-catalog-content-approval-migration",
+      "path": "studio/extensions/catalog.json",
+      "mustContainAll": [
+        "\"version\": \"1.2.0\"",
+        "\"reviewStatus\": \"draft\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"contentSha256\":",
+        "\"approvedContentSha256\": null"
+      ]
+    },
+    {
+      "id": "extension-policy-content-approval-migration",
+      "path": "studio/extensions/POLICY.md",
+      "mustContainAll": [
+        "catalog.json` document format is version `1.2.0`",
+        "approvals without verifiable evidence for the current bytes are",
+        "cleared and returned to draft review, experimental trust, and disabled-by-default state",
+        "`contentSha256` binds the catalog entry to the current extension bytes",
+        "`approvedContentSha256` binds approval evidence to the reviewed bytes",
+        "Retained transaction journals and baselines are local recovery evidence",
+        "must not be staged, committed, or shared"
+      ]
+    },
+    {
+      "id": "repository-gitattributes-policy",
+      "path": ".gitattributes",
+      "mustContainAll": [
+        "* text=auto",
+        "*.ps1 text eol=lf",
+        "*.md text eol=lf",
+        "*.json text eol=lf",
+        "*.png binary"
+      ]
+    },
+    {
+      "id": "project-template-gitattributes-policy",
+      "path": "studio/templates/project-init/.gitattributes",
+      "mustContainAll": [
+        "* text=auto",
+        "*.ps1 text eol=lf",
+        "*.md text eol=lf",
+        "*.json text eol=lf",
+        "*.png binary"
+      ]
+    },
+    {
+      "id": "repository-editorconfig-policy",
+      "path": ".editorconfig",
+      "mustContainAll": [
+        "root = true",
+        "charset = utf-8",
+        "end_of_line = lf",
+        "insert_final_newline = true"
+      ]
+    },
+    {
+      "id": "project-template-editorconfig-policy",
+      "path": "studio/templates/project-init/.editorconfig",
+      "mustContainAll": [
+        "root = true",
+        "charset = utf-8",
+        "end_of_line = lf",
+        "insert_final_newline = true"
+      ]
+    },
+    {
+      "id": "project-template-personal-data-ignore",
+      "path": "studio/templates/project-init/.gitignore",
+      "mustContainAll": [
+        "# Personal data (never commit)",
+        "履歷/"
+      ]
+    },
+    {
+      "id": "repository-mit-license",
+      "path": "LICENSE",
+      "mustContainAll": [
+        "MIT License",
+        "Permission is hereby granted, free of charge",
+        "THE SOFTWARE IS PROVIDED \"AS IS\""
+      ]
+    },
+    {
+      "id": "repository-third-party-provenance",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "mustContainAll": [
+        "github/spec-kit",
+        "Copyright GitHub, Inc.",
+        "Removed Historical Snapshot: doggy8088/github-copilot-configs",
+        "not covered by this repository's MIT License",
+        "Runtime and CI Dependencies Not Bundled Here"
+      ]
+    },
+    {
+      "id": "readme-license-boundary",
+      "path": "README.md",
+      "mustContainAll": [
+        "## 授權 / License",
+        "THIRD_PARTY_NOTICES.md",
+        "LICENSE",
+        "only in older Git history"
+      ]
+    },
+    {
+      "id": "readme-powershell-and-text-policy",
+      "path": "README.md",
+      "mustContainAll": [
+        "PowerShell 7 或更新版本，命令名稱為 `pwsh`",
+        "powershell-yaml` 0.4.12",
+        "Pester 5.7.1",
+        "UTF-8 without BOM and LF line endings",
+        "`.gitattributes`",
+        "`.editorconfig`"
+      ]
+    },
+    {
+      "id": "quickstart-powershell-runtime",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "PowerShell 7 或更新版本，命令名稱為 `pwsh`",
+        "powershell-yaml` 0.4.12",
+        "Pester 5.7.1",
+        "pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json"
+      ]
+    },
+    {
+      "id": "sdd-guide-powershell-runtime",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "| PowerShell | 7 或更新版本；命令名稱為 `pwsh` |",
+        "| powershell-yaml | 0.4.12 |",
+        "| Pester | 5.7.1 |",
+        "pwsh --version",
+        "pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-catalog-demotion",
+      "path": "studio/workflows/catalog.json",
+      "mustContainAll": [
+        "\"version\": \"1.1.0\"",
+        "\"id\": \"sdd-pipeline\",\n      \"version\": \"1.1.0\"",
+        "\"reviewStatus\": \"experimental\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"approvedBy\": null",
+        "\"approvedAt\": null",
+        "\"workflowSha256\": null",
+        "\"stepTypesUsed\": [\"command\", \"gate\", \"if\", \"switch\"]",
+        "not default-enabled, and execution-denied"
+      ]
+    },
+    {
+      "id": "workflow-catalog-approval-digest-schema",
+      "path": "studio/workflows/catalog.schema.json",
+      "mustContainAll": [
+        "\"workflowSha256\"",
+        "\"pattern\": \"^[a-f0-9]{64}$\"",
+        "\"enum\": [\"approved\", \"deprecated\"]",
+        "\"type\": \"string\""
+      ]
+    },
+    {
+      "id": "sdd-pipeline-four-value-routing-doc",
+      "path": "studio/workflows/sdd-pipeline/docs/README.md",
+      "mustContainAll": [
+        "ECI authorization: all 4 outcomes",
+        "the three bounded outcomes run a distinct second Readiness assessment",
+        "`NOT_READY` fails closed before re-entry or Plan",
+        "experimental",
+        "run-workflow.ps1 -Id sdd-pipeline` is denied until it is re-promoted"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-manifest-four-value-routing",
+      "path": "studio/workflows/sdd-pipeline/manifest.json",
+      "mustContainAll": [
+        "\"version\": \"1.1.0\"",
+        "four-value ECI authorization",
+        "three bounded outcomes re-enter Readiness",
+        "NOT_READY fails closed",
+        "\"eci-authorization-re-entry\""
+      ]
+    },
     {
       "id": "readme-seven-stage-sequence",
       "path": "README.md",
@@ -153,9 +557,15 @@
       "id": "readme-claude-shared-runtime",
       "path": "README.md",
       "mustContainAll": [
+        "`.github/agents/*.agent.md`、`.github/agents/async-python-reviewer.md` 與 `.github/prompts/` 是共享 runtime 的 canonical inputs",
+        "`.github/agents/copilot-instructions.md` 是 dependent adapter，不是 Claude generator input",
+        "`.claude/agents/` 是由上述 canonical agent inputs 確定性產生、供 Claude runtime 使用的 dependent mirror，不是獨立權威來源",
+        "都不取代上述 canonical agent inputs"
+      ],
+      "mustNotContainAny": [
+        "`.github/agents/` 與 `.github/prompts/` 是 Copilot runtime source of truth",
         "`.claude/agents/` 是 Claude shared runtime source of truth",
-        "`<project>/.claude/agents` junction",
-        "Claude skills 與 `resources/agent-skill-packs/` 都屬於 install/export layer，不是 `/.claude/agents/` 的權威來源"
+        "Runtime source of truth: `.github/agents/`、`.github/prompts/`"
       ]
     },
     {
@@ -196,9 +606,20 @@
       "id": "workspace-structure-claude-runtime",
       "path": "WORKSPACE_STRUCTURE.md",
       "mustContainAll": [
-        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "| `.github/agents/` | Mixed-authority agent surface: declared canonical definitions plus one dependent Copilot adapter |",
+        "| `.claude/agents/` | Deterministic dependent mirrors generated from `.github/agents/` for Claude runtime consumption |",
         "| `.claude/agents/` | Junction to workspace `.claude/agents/` |",
-        "Project-local Claude agents are not supported in this workspace model."
+        "The canonical runtime sources are:",
+        "- `.github/agents/*.agent.md`",
+        "- `.github/agents/async-python-reviewer.md`",
+        "`.github/agents/copilot-instructions.md` is a dependent adapter and is excluded from Claude",
+        "dependent mirrors used directly"
+      ],
+      "mustNotContainAny": [
+        "| `.github/agents/` | Runtime source for shared SDD agents |",
+        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "The runtime source of truth is:",
+        "Agent definitions live in `.github/agents/` (source of truth) and `.claude/agents/` (seeded copy with Claude-specific format)."
       ]
     },
     {
@@ -225,6 +646,117 @@
         "Shared-layer convergence MUST be validated against studio runtime artifacts, templates, docs, hooks, and shared scripts.",
         "`projects/` and `learning/` are consumer spaces and MUST NOT be treated as the default acceptance surface for shared-layer convergence.",
         "The primary machine-verifiable shared-layer audit entrypoint is `studio/scripts/powershell/check-speckit-runtime.ps1 -Json`."
+      ]
+    },
+    {
+      "id": "constitution-canonical-workspace-self-application",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "## 2.1 Canonical Workspace Governance Self-Application",
+        "`mainlineReadiness.repositorySlug` canonical workspace identity",
+        "limited to shared-layer governance",
+        "does not deliver behavior for a consumer project",
+        "dated, owner-authorized remediation plan",
+        "ledger IDs before",
+        "every entry prerequisite",
+        "After entry, the batch MUST remain `Draft` and `NOT READY`",
+        "every closure prerequisite",
+        "discriminating negative test that fails against the pre-batch implementation",
+        "canonical shared-runtime audit reports zero errors and zero warnings",
+        "complete governance",
+        "suite passes without reducing the baseline",
+        "dedicated mainline update note is `Ready`",
+        "has `Reconciliation Status: Closed`",
+        "not a stage waiver",
+        "proves only the coherent batch",
+        "MUST NOT make the branch merge-ready",
+        "replace a contract-designated aggregate note",
+        "fresh-fixture seven-stage evidence",
+        "MUST NOT be treated as",
+        "Work under `projects/`,",
+        "`learning/`, any external repository, and",
+        "During project or consumer-feature implementation:",
+        "During a valid Section 2.1 self-application batch",
+        "For project and consumer-feature delivery, AI MUST follow spec/readiness/eci/plan/tasks",
+        "For a Section 2.1 batch, AI MUST follow the owner-authorized remediation plan",
+        "Each project and consumer-feature delivery surface MUST contain the following base paths."
+      ]
+    },
+    {
+      "id": "readme-canonical-workspace-self-application",
+      "path": "README.md",
+      "mustContainAll": [
+        "所有 project 與 consumer feature 的正式交付都遵循固定順序",
+        "只有 contract 指定的 canonical workspace governance repo",
+        "才可在實作前以 owner 授權的日期化計畫與 ledger IDs",
+        "進入後必須維持 `Draft` 與 `NOT READY`",
+        "這不是跳階權限",
+        "不適用 `projects/`、`learning/`、外部 repo 或",
+        "Batch 完成不代表 Aggregate 可合併",
+        "R6 fresh-fixture E2E"
+      ]
+    },
+    {
+      "id": "quickstart-canonical-workspace-self-application",
+      "path": "studio/QUICKSTART.md",
+      "mustContainAll": [
+        "所有 project 與 consumer feature 交付都必須依序執行",
+        "Studio Constitution 2.1 的等效證據路徑只適用 contract 指定的 canonical workspace",
+        "governance repo，而且批次必須只維護 shared layer。",
+        "實作前缺少 owner 授權計畫或",
+        "必須維持 `Draft` 與 `NOT READY`",
+        "`projects/`、`learning/`、外部 repo 與一般 feature 不得使用此路徑",
+        "取代 contract 指定的 Aggregate note",
+        "R6 fresh-fixture E2E"
+      ]
+    },
+    {
+      "id": "sdd-guide-canonical-workspace-self-application",
+      "path": "studio/SDD-QUICKSTART-GUIDE.md",
+      "mustContainAll": [
+        "project 與 consumer feature 的每個階段必須完成後才能進入下一階段",
+        "canonical workspace governance repo 的等效證據路徑",
+        "entry prerequisites",
+        "等 closure",
+        "prerequisites 全部成立",
+        "此路徑不是七階段 waiver",
+        "`projects/`、`learning/`、外部 repo 與",
+        "一般 feature 一律維持完整七階段",
+        "Batch Ready 不能取代 contract 指定的 Aggregate note"
+      ]
+    },
+    {
+      "id": "copilot-canonical-workspace-self-application",
+      "path": ".github/copilot-instructions.md",
+      "mustContainAll": [
+        "All project and consumer-feature delivery MUST follow this sequence:",
+        "Only the contract-designated canonical workspace governance repository may use Constitution",
+        "Section 2.1 for a shared-layer maintenance batch",
+        "only after every entry prerequisite in that",
+        "The batch remains Draft until every closure prerequisite is proven.",
+        "not available to consumer projects or ordinary feature delivery.",
+        "Infer permission to use the Constitution Section 2.1 route from a missing project constitution",
+        "For a Constitution Section 2.1 batch, reference the owner-authorized dated plan"
+      ]
+    },
+    {
+      "id": "historical-mainline-evidence-schema",
+      "path": "studio/runtime/mainline-note-historical-evidence.schema.json",
+      "mustContainAll": [
+        "\"additionalProperties\": false",
+        "\"migrationCommit\"",
+        "\"records\"",
+        "\"const\": \"de61431ae8f50d66f59157e00e4d239e9b37efdb\"",
+        "^docs/mainline-updates/"
+      ]
+    },
+    {
+      "id": "historical-mainline-evidence-record",
+      "path": "studio/runtime/mainline-note-historical-evidence.json",
+      "mustContainAll": [
+        "\"schemaVersion\": 1",
+        "\"migrationCommit\":",
+        "\"records\":"
       ]
     },
     {
@@ -269,6 +801,137 @@
       ]
     },
     {
+      "id": "constitution-finding-status-scoped-authority",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "finding-status-record-v1",
+        "finding_status",
+        "source_of_truth",
+        "remains an `informational` document by default",
+        "canonical opening envelope is exactly three backticks",
+        "invalid authority envelope and MUST fail closed",
+        "strictly consecutive",
+        "BaseRef"
+      ]
+    },
+    {
+      "id": "constitution-agent-authority-partition",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "`.github/agents/*.agent.md` and the explicit `.github/agents/async-python-reviewer.md` file",
+        "`.github/agents/copilot-instructions.md` is a dependent adapter and MUST be excluded",
+        "`.claude/agents/*.md` files are dependent runtime mirrors, not a new",
+        "authority source"
+      ]
+    },
+    {
+      "id": "constitution-current-phase-review",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "**Current Phase:** Practice + Internal (as of 2026-07)"
+      ],
+      "mustNotContainAny": [
+        "**Current Phase:** Practice + Internal (as of 2026-04)"
+      ]
+    },
+    {
+      "id": "copilot-adapter-current-phase-review",
+      "path": ".github/copilot-instructions.md",
+      "mustContainAll": [
+        "- **Current Phase:** Practice + Internal (as of 2026-07)"
+      ],
+      "mustNotContainAny": [
+        "- **Current Phase:** Practice (as of 2025-12)"
+      ]
+    },
+    {
+      "id": "constitution-artifact-markdown-formatting",
+      "path": "studio/constitution/constitution.md",
+      "mustContainAll": [
+        "Formatting scope MUST be determined from the artifact path and type",
+        "MUST NOT contain emoji, Unicode",
+        "arrow glyphs, tree-drawing glyphs, ASCII art, or box diagrams",
+        "Contract-declared runtime prompt sources under `.github/agents/` and `.github/prompts/`",
+        "deterministic Claude mirrors under `.claude/agents/`",
+        "This narrow exception does not apply to adapter or instruction documents"
+      ],
+      "mustNotContainAny": [
+        "All AI-generated `.md` files MUST follow these formatting rules:"
+      ]
+    },
+    {
+      "id": "finding-status-ledger-authority-surface",
+      "path": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
+      "mustContainAll": [
+        "authority: \"informational\"",
+        "finding_status_authority: \"source_of_truth\"",
+        "finding_status_selector: \"finding-status-record-v1\"",
+        "finding_status_schema: \"studio/runtime/finding-status-record.schema.json\"",
+        "finding_status_validator: \"studio/scripts/powershell/validate-finding-status-ledger.ps1\"",
+        "finding_status_index: \"docs/README.md\"",
+        "exactly three backticks followed immediately by the exact `finding-status-record-v1` info string",
+        "invalid authority envelope and fails closed",
+        "```finding-status-record-v1"
+      ]
+    },
+    {
+      "id": "finding-status-dependent-index",
+      "path": "docs/README.md",
+      "mustContainAll": [
+        "finding-status-index-v1",
+        "finding-status-record-v1",
+        "finding_status",
+        "source_of_truth"
+      ]
+    },
+    {
+      "id": "readme-workflow-runtime-truthfulness",
+      "path": "README.md",
+      "mustContainAll": [
+        "讀取 catalog/state，列出登錄項目、有效 enabled state、execution authorization 與 validation errors",
+        "解析 `workflow.yml`、依 workflow schema 驗證，並確認 manifest entry points 存在",
+        "更新已登錄 workflow 的 state；非 approved/deprecated 項目不得啟用，execution 仍另做完整授權檢查",
+        "經 catalog/state/manifest/digest fail-closed 授權後執行；目前 `sdd-pipeline` 仍被拒絕，等待 R6 promotion gates"
+      ]
+    },
+    {
+      "id": "readme-workflow-runtime-surfaces",
+      "path": "README.md",
+      "mustContainAll": [
+        "- `studio/workflows/` 是共享 workflow runtime；內建 `sdd-pipeline` 目前維持 experimental、預設停用且禁止執行",
+        "| `studio/workflows/` | workspace 級 workflow schemas、catalog、state、policy 與 workflow definitions |"
+      ]
+    },
+    {
+      "id": "readme-upstream-guide-paths",
+      "path": "README.md",
+      "mustContainAll": [
+        "`docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md`",
+        "`docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`"
+      ],
+      "mustNotContainAny": [
+        "`spec-kit-upstream-wave2-transition-guide.md`",
+        "`spec-kit-studio-first-upstream-usage-guide-2026-03-08.md`"
+      ]
+    },
+    {
+      "id": "workspace-structure-current-surface",
+      "path": "WORKSPACE_STRUCTURE.md",
+      "mustContainAll": [
+        "**Version:** 1.10.0",
+        "**Updated:** 2026-07-22",
+        "| `.githooks/` | Shared machine-enforced Git hooks used by the workspace and consumer repositories |",
+        "| `.vscode/` | Workspace-level editor tasks and settings |",
+        "| `docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |",
+        "| 1.10.0 | 2026-07-22 | Reconcile canonical agent sources with generated Claude mirrors, document root hooks and editor configuration, and repair the Wave 2 guide path |"
+      ],
+      "mustNotContainAny": [
+        "**Version:** 1.9.0",
+        "**Updated:** 2026-07-20",
+        "| `spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |"
+      ]
+    },
+    {
       "id": "mainline-update-index",
       "path": "docs/mainline-updates/README.md",
       "mustContainAll": [
@@ -282,7 +945,14 @@
       "path": ".github/copilot-instructions.md",
       "mustContainAll": [
         "For shared-layer convergence work, use `studio/scripts/powershell/check-speckit-runtime.ps1 -Json` as the primary audit entrypoint.",
-        "Treat `projects/` and `learning/` as consumer spaces, not as the default acceptance surface for shared runtime convergence."
+        "Treat `projects/` and `learning/` as consumer spaces, not as the default acceptance surface for shared runtime convergence.",
+        "Deterministic Claude-consumable dependent mirrors generated from the declared canonical GitHub agent inputs above",
+        "permanent changes only in the declared canonical inputs"
+      ],
+      "mustNotContainAny": [
+        "| `.github/agents/` | Runtime source for shared SDD agents |",
+        "| `.claude/agents/` | Runtime source for shared Claude agents |",
+        "Treat workspace `/.claude/agents/` as the Claude shared runtime authority"
       ]
     },
     {
@@ -297,9 +967,16 @@
       "id": "quickstart-claude-runtime",
       "path": "studio/QUICKSTART.md",
       "mustContainAll": [
+        "其中 `*.agent.md` 與 `async-python-reviewer.md` 是 canonical inputs",
+        "`copilot-instructions.md` 是 dependent adapter",
         "每個專案也會建立 `.claude/agents/` junction，來源是 workspace 根目錄的 `.claude/agents/`。",
-        "`/.claude/agents/` 是 Claude shared runtime source of truth",
+        "`/.claude/agents/` 是從宣告的 canonical agent inputs 確定性產生、供 Claude runtime 使用的",
+        "mirror，不是獨立 authority",
         "Claude skills 與 shared agents runtime 是不同層"
+      ],
+      "mustNotContainAny": [
+        "`.github/agents/`。這是 runtime source。",
+        "`/.claude/agents/` 是 Claude shared runtime source of truth"
       ]
     },
     {
@@ -324,9 +1001,17 @@
       "id": "sdd-guide-claude-runtime-boundary",
       "path": "studio/SDD-QUICKSTART-GUIDE.md",
       "mustContainAll": [
-        "`.claude/agents/` 是 shared Claude runtime authority",
-        "`<project>/.claude/agents` 是 direct junction consumption path",
+        "`.claude/agents/` 是從 `.github/agents/*.agent.md` 與",
+        "`.github/agents/async-python-reviewer.md` 確定性產生的 dependent mirror",
+        "`<project>/.claude/agents` 是 Claude runtime 的 direct junction consumption path",
+        "而不是另一個",
+        "authority source",
+        "dependent `.github/agents/copilot-instructions.md` 不會進入 generator",
         "Claude skills install root 與 workspace shared agents runtime 是不同層"
+      ],
+      "mustNotContainAny": [
+        "`.claude/agents/` 是 shared Claude runtime authority",
+        "| Shared Claude Runtime | `.claude/agents/` | workspace 級 Claude shared runtime authority |"
       ]
     },
     {
@@ -362,6 +1047,24 @@
   ],
   "agentInvariants": [
     {
+      "id": "specify-agent-clarification-truthfulness",
+      "path": ".github/agents/speckit.specify.agent.md",
+      "mustContainAll": [
+        "Every material marker MUST remain in the specification and MUST be presented for user resolution; do not cap, discard, or answer any marker by guessing.",
+        "For each clarification needed, present options to user in this format:",
+        "Number every question sequentially (Q1, Q2, Q3, and so on)",
+        "Items marked incomplete require spec updates before `/speckit.clarify`; Specify does not route directly to `/speckit.readiness`",
+        "`/speckit.clarify` is the only next-phase handoff from Specify; do not route directly to `/speckit.readiness`."
+      ]
+    },
+    {
+      "id": "spec-kit-claude-least-privilege-tools",
+      "path": ".github/agents/spec-kit.agent.md",
+      "mustContainAll": [
+        "claude-tools: ['Read', 'Glob', 'Grep', 'WebFetch']"
+      ]
+    },
+    {
       "id": "readiness-agent-semantics",
       "path": ".github/agents/speckit.readiness.agent.md",
       "mustContainAll": [
@@ -379,33 +1082,59 @@
         "If any proposed drop lacks explicit owner signoff reference, route to `ROUTE_TO_DECISION` instead of normalizing the drop.",
         "`eci-trigger.md` is the mandatory intake seed for `/speckit.eci`.",
         "If `Authorization Outcome = READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY`, choose the next blocker required to upgrade authorization (usually validation, access, or a real owner decision) instead of repeating `ROUTE_TO_ECI`.",
-        "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope."
+        "Use `ROUTE_TO_ECI` again only when the dossier is missing, stale, misrouted, contradictory, or no longer matches current scope.",
+        "write exactly one `ECI Re-entry Status` and exactly one `ECI Evidence SHA-256`",
+        "validate-feature-structure.ps1 -FeatureDir \"<FEATURE_DIR>\" -RequireEciReentry -Json",
+        "ECI_ACTUAL_EVIDENCE_SHA256",
+        "4-byte big-endian length",
+        "8-byte big-endian length",
+        "All five evidence files, including `eci-trigger.md`, must exist and be non-empty"
       ]
     },
     {
       "id": "eci-agent-semantics",
       "path": ".github/agents/speckit.eci.agent.md",
       "mustContainAll": [
-        "`READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`",
-        "`ECI_TRIGGER = READINESS_DIR/eci-trigger.md`",
-        "`Primary Status` is anything other than `ROUTE_TO_ECI`",
+        "### Non-bypassable first action",
+        "Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any",
+        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -FeatureDir \"<path>\" -Json",
+        "`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`",
+        "There is no operator-confirmation or force bypass.",
+        "Parse `READY`, `FEATURE_DIR`, `FEATURE_SPEC`, `READINESS_ASSESSMENT`,",
+        "Abort if the gate does not prove the exact `ROUTE_TO_ECI`, `PENDING`,",
+        "Treat every path returned by the gate as authoritative for this invocation;",
         "`eci-assessment.md`",
         "`source-manifest.md`",
         "`adoption-record.md`",
         "`authorization-record.md`",
         "### ECI Level",
         "### Authorization Outcome",
-        "Always recommend `/speckit.readiness` as the next command.",
+        "Always recommend `/speckit.readiness -FeatureDir \"<FEATURE_DIR>\"` as the next command.",
         "Never recommend `/speckit.plan` directly from `/speckit.eci`."
+      ]
+    },
+    {
+      "id": "eci-claude-first-action-gate",
+      "path": ".claude/agents/speckit-eci.md",
+      "mustContainAll": [
+        "### Non-bypassable first action",
+        "Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any",
+        "pwsh ./studio/scripts/powershell/setup-eci.ps1 -FeatureDir \"<path>\" -Json",
+        "`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`",
+        "There is no operator-confirmation or force bypass."
       ]
     },
     {
       "id": "plan-agent-readiness-gate",
       "path": ".github/agents/speckit.plan.agent.md",
       "mustContainAll": [
-        "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness`",
+        "If `READINESS_ASSESSMENT` does not exist: ERROR and instruct the user to run `/speckit.readiness -FeatureDir \"<FEATURE_DIR>\"`",
         "If `Primary Status` is anything other than `READY_FOR_PLAN`: ERROR",
         "If it is anything other than `READY_FOR_MAINLINE_IMPLEMENTATION`: ERROR",
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
+        "setup-plan.ps1 -FeatureDir \"<FEATURE_DIR>\" -Json",
+        "Confirm that `SPECS_DIR` equals the `FEATURE_DIR` selected in step 1",
         "ERROR if `authorization-record.md` exists but does not authorize `READY_FOR_MAINLINE_IMPLEMENTATION`",
         "Load `Planability Resolved`, `Intent Ledger Requirement`, and `Intent Ledger Path`",
         "Fill `Intent Recovery Obligations` from `intent-ledger.md` when required",
@@ -424,7 +1153,170 @@
         "Plan/tasks assumptions that violate ECI `Allowed Implementation Scope`, `Explicit Prohibitions`, or adoption boundary",
         "#### E. Intent Drift Check",
         "From README.md (if present):",
-        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, missing required `intent-ledger.md`, dropped-without-signoff, truthfulness drift that over-claims shipped coverage, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality"
+        "**CRITICAL**: Violates constitution MUST, missing `readiness-assessment.md`, any non-`READY_FOR_PLAN` readiness state contradicted by plan/tasks existence, readiness prohibitions ignored, missing required `intent-ledger.md`, dropped-without-signoff, truthfulness drift that over-claims shipped coverage, ECI authorization or adoption boundary contradicted by plan/tasks, or requirement with zero coverage that blocks baseline functionality",
+        "`analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`.",
+        "### 6.1 Emit the Deterministic Machine Result",
+        "Do not write the file yourself.",
+        "`outcome` is `IMPLEMENTATION_READY` only when readiness is `READY_FOR_PLAN`",
+        "`eciRequired` is `true` when `readiness/eci-trigger.md` or any of the four canonical ECI dossier",
+        "five ECI hash properties MUST be JSON `null`.",
+        "For `tasks.md`, hash task definitions rather than progress",
+        "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)",
+        "`intentObligations.status` is `NOT_REQUIRED`",
+        "When it exists, emit one item per ledger row",
+        "The operator or workflow orchestration, not this agent, persists that exact JSON"
+      ]
+    },
+    {
+      "id": "implement-agent-first-action-gate",
+      "path": ".github/agents/speckit.implement.agent.md",
+      "mustContainAll": [
+        "## Outline\n\n1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.**",
+        "pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json",
+        "If the process exits non-zero, `READY` is not exactly `true`, output is missing/invalid, or any blocker is present, STOP",
+        "this gate has no `-Force` bypass"
+      ]
+    },
+    {
+      "id": "implement-claude-first-action-gate",
+      "path": ".claude/agents/speckit-implement.md",
+      "mustContainAll": [
+        "## Outline\n\n1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.**",
+        "pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json",
+        "this gate has no `-Force` bypass"
+      ]
+    },
+    {
+      "id": "implement-agent-task-parallelism-semantics",
+      "path": ".github/agents/speckit.implement.agent.md",
+      "mustContainAll": [
+        "Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines",
+        "Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.",
+        "only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together",
+        "For tasks explicitly declared parallel by `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata, continue with successful tasks and report failed ones"
+      ],
+      "mustMatchAll": [
+        "(?s)\\A(?!.*parallel markers \\[P\\])(?!.*parallel tasks \\[P\\] can run together)(?!.*For parallel tasks \\[P\\])(?!.*any non-parallel task fails).*\\z"
+      ]
+    },
+    {
+      "id": "implement-claude-task-parallelism-semantics",
+      "path": ".claude/agents/speckit-implement.md",
+      "mustContainAll": [
+        "Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines",
+        "Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.",
+        "only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together",
+        "For tasks explicitly declared parallel by `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata, continue with successful tasks and report failed ones"
+      ],
+      "mustMatchAll": [
+        "(?s)\\A(?!.*parallel markers \\[P\\])(?!.*parallel tasks \\[P\\] can run together)(?!.*For parallel tasks \\[P\\])(?!.*any non-parallel task fails).*\\z"
+      ]
+    },
+    {
+      "id": "analyze-claude-machine-result",
+      "path": ".claude/agents/speckit-analyze.md",
+      "mustContainAll": [
+        "`analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`.",
+        "### 6.1 Emit the Deterministic Machine Result",
+        "Do not write the file yourself.",
+        "`eciRequired` is `true` when `readiness/eci-trigger.md` or any of the four canonical ECI dossier",
+        "five ECI hash properties MUST be JSON `null`.",
+        "For `tasks.md`, hash task definitions rather than progress",
+        "(?m)^(- )\\[(?: |x|X)\\](\\s+T\\d{3}\\b)"
+      ]
+    },
+    {
+      "id": "specify-agent-named-feature-handoff",
+      "path": ".github/agents/speckit.specify.agent.md",
+      "mustContainAll": [
+        "/speckit.clarify -FeatureDir \"<FEATURE_DIR>\"",
+        "where `FEATURE_DIR` is the directory containing `SPEC_FILE`"
+      ]
+    },
+    {
+      "id": "clarify-agent-named-feature-context",
+      "path": ".github/agents/speckit.clarify.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
+        "/speckit.clarify -FeatureDir \"<FEATURE_DIR>\"` again later",
+        "/speckit.readiness -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "readiness-agent-named-feature-context",
+      "path": ".github/agents/speckit.readiness.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -PathsOnly",
+        "/speckit.clarify -FeatureDir \"<FEATURE_DIR>\"` first",
+        "/speckit.eci -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "eci-agent-named-feature-context",
+      "path": ".github/agents/speckit.eci.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "setup-eci.ps1 -FeatureDir \"<path>\" -Json",
+        "setup-eci.ps1 -FeatureDir \"<path>\" -Json` entry gate described above as the first action, applying the explicit-input rule above",
+        "direct the operator back to `/speckit.readiness -FeatureDir \"<FEATURE_DIR>\"`",
+        "/speckit.readiness -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "plan-agent-named-feature-context",
+      "path": ".github/agents/speckit.plan.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "setup-plan.ps1 -FeatureDir \"<FEATURE_DIR>\" -Json",
+        "update-agent-context.ps1 -FeatureDir \"<FEATURE_DIR>\" -AgentType copilot",
+        "Create a checklist for the following domain with -FeatureDir <FEATURE_DIR>.",
+        "/speckit.tasks -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "tasks-agent-named-feature-context",
+      "path": ".github/agents/speckit.tasks.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json",
+        "/speckit.analyze -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "analyze-agent-named-feature-context",
+      "path": ".github/agents/speckit.analyze.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -RequireTasks -IncludeTasks",
+        "/speckit.analyze -FeatureDir \"<FEATURE_DIR>\"",
+        "/speckit.implement -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "implement-agent-named-feature-context",
+      "path": ".github/agents/speckit.implement.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "setup-implement.ps1 -FeatureDir <path> -Json",
+        "/speckit.tasks -FeatureDir \"<FEATURE_DIR>\""
+      ]
+    },
+    {
+      "id": "checklist-agent-named-feature-context",
+      "path": ".github/agents/speckit.checklist.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json"
+      ]
+    },
+    {
+      "id": "taskstoissues-agent-named-feature-context",
+      "path": ".github/agents/speckit.taskstoissues.agent.md",
+      "mustContainAll": [
+        "When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative",
+        "check-prerequisites.ps1 -FeatureDir <path> -Json -RequireTasks -IncludeTasks"
       ]
     }
   ],
@@ -438,6 +1330,14 @@
         "## Planability vs Intent Obligations",
         "**Intent Ledger Requirement**: Not Required / Create `intent-ledger.md` / Update `intent-ledger.md`",
         "**Intent Ledger Path**: `specs/<feature>/intent-ledger.md` / N/A",
+        "**ECI Re-entry Status**: `NOT_REQUIRED | PENDING | COMPLETE`",
+        "**ECI Evidence SHA-256**: `N/A | <lowercase 64-character digest>`",
+        "validate-feature-structure.ps1 -FeatureDir specs/<feature> -RequireEciReentry -Json",
+        "ECI_ACTUAL_EVIDENCE_SHA256",
+        "4-byte big-endian length",
+        "8-byte",
+        "`eci-trigger.md`,",
+        "`eci/authorization-record.md`. All five files must exist and be non-empty.",
         "If this is a post-ECI rerun, distinguish what is already governed from what still blocks planning",
         "If this is a post-ECI rerun, explain why external capability governance is no longer the primary blocker or why it still is"
       ]
@@ -465,32 +1365,29 @@
       ]
     },
     {
+      "id": "analysis-checklist-informational-only",
+      "path": "studio/templates/sdd-docs/checklist-template.md",
+      "mustContainAll": [
+        "## Analyze Review Notes",
+        "Human-facing review aid only. This checklist does not authorize /speckit.implement.",
+        "Machine authorization comes exclusively from a schema-valid analysis-result.json",
+        "**Review Status**: DRAFT"
+      ]
+    },
+    {
       "id": "mainline-update-note-template-semantics",
       "path": "studio/templates/sdd-docs/mainline-update-note-template.md",
       "mustContainAll": [
         "Create under docs/mainline-updates/YYYY-MM-DD-short-topic.md",
         "**Target Branch**: `main`",
+        "**Reconciliation Status**: Open / Closed",
         "## Summary",
+        "## Impact Reconciliation",
         "## Validation",
         "## Merge Notes",
-        "Change manifests:"
-      ]
-    },
-    {
-      "id": "change-manifest-template-semantics",
-      "path": "studio/templates/sdd-docs/change-manifest-template.md",
-      "mustContainAll": [
-        "**Change Type**:",
-        "**Origin Document**:",
-        "**Status**: open | propagating | closed",
-        "## Impact Assessment",
-        "must_update",
-        "must_review",
-        "maybe_review",
-        "reference",
-        "## Propagation Order",
-        "## Completion Criteria",
-        "studio/runtime/impact-registry.json"
+        "validate-mainline-notes.ps1",
+        "-ReadinessScope Batch",
+        "Reopened: when later evidence refutes a material Ready or Merged claim"
       ]
     },
     {
@@ -571,6 +1468,18 @@
   ],
   "scriptInvariants": [
     {
+      "id": "r6-a4-document-configuration-reversion-tests",
+      "path": "studio/tests/check-speckit-runtime.Tests.ps1",
+      "mustContainAll": [
+        "Describe 'R6-A4 document and configuration truthfulness'",
+        "rejects an R-G01 governance ledger rollback",
+        "rejects an R-G03 superseded-review rollback",
+        "rejects an R-G04 compatibility or formatting rollback",
+        "rejects an R-H06 relocation or reference rollback",
+        "rejects an R-H09 VS Code settings rollback"
+      ]
+    },
+    {
       "id": "sync-agent-bootstrap-script",
       "path": "studio/scripts/powershell/sync-agent-bootstrap.ps1",
       "mustContainAll": [
@@ -579,7 +1488,12 @@
         "CLAUDE.md",
         ".github/copilot-instructions.md",
         "-From",
-        "-StudioConstitutionVersion"
+        "-StudioConstitutionVersion",
+        "Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement.",
+        "The canonical workspace governance repository may enter Constitution Section 2.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven.",
+        "governance-anchor: agents-tool-notes",
+        "governance-anchor: claude-direct-imports",
+        "governance-anchor: claude-tool-notes"
       ]
     },
     {
@@ -591,7 +1505,286 @@
         "AGENTS.md",
         "CLAUDE.md",
         ".github/copilot-instructions.md",
-        "@path import"
+        "@path import",
+        "Authority: dependent (agent-scoped subset)",
+        "agent-scoped-subset-bootstrap-forbidden",
+        "agent-scoped-subset-parent-reference-missing"
+      ]
+    },
+    {
+      "id": "finding-status-record-schema",
+      "path": "studio/runtime/finding-status-record.schema.json",
+      "mustContainAll": [
+        "\"additionalProperties\": false",
+        "\"pattern\": \"^R-[A-Z][0-9]{2,}$\"",
+        "\"IN_PROGRESS\"",
+        "\"DISPOSITIONED\"",
+        "\"reentryTrigger\"",
+        "\"const\": \"DISPOSITIONED\"",
+        "\"pattern\": \"\\\\S\"",
+        "\"allOf\"",
+        "\"else\""
+      ]
+    },
+    {
+      "id": "validate-finding-status-ledger",
+      "path": "studio/scripts/powershell/validate-finding-status-ledger.ps1",
+      "mustContainAll": [
+        "finding-status-record-v1",
+        "Test-Json",
+        "Test-GovernedFrontmatterKeys",
+        "Test-FindingStatusSchemaContract",
+        "$schemaKeys.Count -ne $contractKeys.Count",
+        "Test-FindingStatusRecordContract",
+        "inventory-severity-conflict",
+        "status-revision-sequence",
+        "status-snapshot-incomplete",
+        "status-record-date-invalid",
+        "status-record-envelope-invalid",
+        "$rawInfo -ceq $selector",
+        "Get-InventoryDefinitionEvents",
+        "definitions visible before that record",
+        "inventory-status-set-mismatch",
+        "status-index-mismatch",
+        "status-history-rewritten",
+        "merge-base --is-ancestor",
+        "HISTORY_VALID",
+        "$authorizedDispositionTriggerGroups",
+        "$authorizedDispositionTriggers.Count -ne 35",
+        "Get-DispositionTriggerPolicySha256",
+        "6c1e442d4d9b6f5be5360cffb537dbe1fa6ccaa33783f701376409ca5e007262",
+        "[System.StringComparison]::Ordinal",
+        "status-disposition-policy-invalid",
+        "status-disposition-trigger-missing",
+        "status-disposition-trigger-type",
+        "status-disposition-trigger-blank",
+        "status-disposition-trigger-duplicate",
+        "status-disposition-trigger-mismatch",
+        "status-disposition-id-unapproved",
+        "status-reentry-trigger-forbidden"
+      ]
+    },
+    {
+      "id": "finding-status-disposition-trigger-tests",
+      "path": "studio/tests/validate-finding-status-ledger.Tests.ps1",
+      "mustContainAll": [
+        "accepts all 35 exact ID-to-trigger mappings and preserves triggerless revision-1 history",
+        "rejects a triggerless disposition that the legacy two-key contract accepted",
+        "rejects a non-string disposition trigger",
+        "rejects an empty or whitespace-only disposition trigger",
+        "rejects a generic or near-exact disposition trigger",
+        "rejects two authorized triggers swapped between their finding IDs",
+        "rejects an unapproved finding ID carrying an authorized trigger",
+        "rejects reentryTrigger on a non-disposition status",
+        "rejects duplicate reentryTrigger JSON properties instead of accepting the last value",
+        "returns structured denial for malformed status entries without strict-mode crashes"
+      ]
+    },
+    {
+      "id": "finding-status-disposition-runtime-reversion-tests",
+      "path": "studio/tests/check-speckit-runtime.Tests.ps1",
+      "mustContainAll": [
+        "rejects an ordinal disposition trigger mapping swap even when all literals remain present",
+        "rejects removal of the conditional disposition trigger schema through runtime invariants",
+        "status-disposition-policy-invalid",
+        "finding-status-record-schema",
+        "status-schema-contract"
+      ]
+    },
+    {
+      "id": "impact-registry-agent-authority-partition",
+      "path": "studio/scripts/powershell/generate-impact-registry.ps1",
+      "mustContainAll": [
+        ".github/agents/*.agent.md",
+        "Fourteen canonical shared agent inputs selected by the .agent.md suffix",
+        ".github/agents/async-python-reviewer.md",
+        "Canonical non-command shared agent input included by the Claude generator",
+        ".github/agents/copilot-instructions.md",
+        "Agent-scoped dependent adapter excluded from Claude generation inputs",
+        ".claude/agents/*.md",
+        "Fifteen deterministic Claude-consumable mirrors generated from canonical agent inputs"
+      ]
+    },
+    {
+      "id": "validate-mainline-notes-gate",
+      "path": "studio/scripts/powershell/validate-mainline-notes.ps1",
+      "mustContainAll": [
+        "mainline-note-validation-baseline.json",
+        "validate-finding-status-ledger.ps1",
+        "finding-status-ledger",
+        "BaseReference",
+        "HeadReference",
+        "finding-status-ledger-output-invalid",
+        "finding-status-ledger-policy",
+        "$result.FINDING_COUNT -is [long]",
+        "$result.LATEST_REVISION -is [long]",
+        "$result.HISTORY_CHECKED -is [bool]",
+        "$result.HISTORY_CHECKED -eq $true",
+        "$policy[$policyKey] -isnot [string]",
+        "$policy.allowedStatuses[$index] -isnot [string]",
+        "$result.WARNING_COUNT -eq @($result.WARNINGS).Count",
+        "requiredResultKeys",
+        "shapeKeysPresent",
+        "Reconciliation Status: Closed",
+        "--name-status",
+        "--find-renames",
+        "ReadinessScope",
+        "-RequireReady requires -BaseRef",
+        "Get-VisibleMarkdownSurface",
+        "rawHtmlEndPattern",
+        "configuredRepositorySlug",
+        "commit-evidence-object-invalid",
+        "commit-evidence-out-of-range",
+        "commit-evidence-git-context-required",
+        "pr-evidence-repository-mismatch",
+        "note-metadata-count",
+        "required-section-missing",
+        "branch-evidence-coverage-missing",
+        "aggregate-note-not-ready",
+        "aggregate-note-policy-missing",
+        "mainlineReadiness",
+        "reconciliation-section-missing",
+        "reconciliation-section-malformed",
+        "legacy-baseline-note-changed",
+        "historicalEvidenceMigration",
+        "historical-evidence-transition",
+        "historical-evidence-record-set-mismatch",
+        "historical-evidence-authority-surface-dirty",
+        "historical-evidence-note-surface-dirty",
+        "historical-evidence-related-commits-mismatch",
+        "historical-evidence-migration-scope",
+        "historical-evidence-seal-mismatch",
+        "historical-evidence-sealed-snapshot-mismatch",
+        "historical-evidence-snapshot-missing",
+        "Get-FirstHistoricalEvidenceSealSnapshot",
+        "Get-HistoricalEvidenceFrameworkOrigin",
+        "Get-GitPathAdditionCommits",
+        "Read-ExactLegacyBaselineAtCommit",
+        "$regexBody = $regexBody -replace '/\\\\\\*\\\\\\*/', '/(?:[^/]+/)*'",
+        "exact production legacy metadata shape",
+        "$document.Count -eq 5",
+        "$document.purpose -is [string]",
+        "$document.created -is [string]",
+        "$document.removalBatch -is [string]",
+        "--diff-filter=A",
+        "immutable first-add",
+        "pending",
+        "sealed",
+        "ExpectedBatchBase",
+        "expectedRecordCount",
+        "migrationCommit",
+        "evidenceSha256",
+        "mainline-note-historical-evidence.json",
+        "mainline-note-historical-evidence.schema.json",
+        "docs/mainline-updates/README.md",
+        "must-update-target-missing",
+        "must-update-reconciliation-missing",
+        "must_update requires disposition updated with concrete evidence"
+      ]
+    },
+    {
+      "id": "shared-runtime-audit-fail-closed",
+      "path": "studio/scripts/powershell/check-speckit-runtime.ps1",
+      "mustContainAll": [
+        "powershell-yaml-missing",
+        "validate-finding-status-ledger.ps1",
+        "finding-status-ledger",
+        "FINDING_STATUS_LEDGER_VALID",
+        "Invoke-JsonScriptDetailed -ScriptPath $findingStatusLedgerScript",
+        "$findingStatusResult.VALID -eq $true",
+        "$findingStatusResult.FINDING_COUNT -is [long]",
+        "$findingStatusResult.LATEST_REVISION -is [long]",
+        "findingStatusResultIsObject",
+        "Contains('VALID')",
+        "Test-ExactDictionaryKeys",
+        "Test-ExactStringArray",
+        "MustNotContainAny",
+        "errorCountMatchesArray",
+        "warningCountMatchesArray",
+        "artifactMarkdownPolicy",
+        "artifact-markdown-policy-invalid",
+        "artifact-markdown-path-unresolved",
+        "artifact-markdown-prohibited-content",
+        "semantic-symbol-occurrence-limit",
+        "semantic-symbol-distinct-limit",
+        "legacy-symbol-growth",
+        "ARTIFACT_MARKDOWN_POLICY_VALID",
+        "ARTIFACT_MARKDOWN_CHECKS",
+        "agent-authority-partition-invalid",
+        "agent-authority-source-set-mismatch",
+        "dependent-mirror-set-mismatch",
+        "AGENT_AUTHORITY_PARTITION_VALID",
+        "workflow-registry-invalid",
+        "required-command-layering-mismatch",
+        "required-shared-gate-path-missing",
+        "required-mainline-readiness-policy-missing",
+        "requiredNonCommandGitHubAgentFiles",
+        "validate-mainline-notes.ps1",
+        "MAINLINE_NOTE_VALID",
+        "seed-claude-agents.ps1",
+        "'-Verify'",
+        "claude-agent-mirror-parity",
+        "CLAUDE_AGENT_PARITY_VALID",
+        "$claudeParityResult.VALID -is [bool]",
+        "$claudeParityResult.VALID -eq $true",
+        "$claudeParityResult.ERROR_COUNT -is [long]",
+        "$claudeParityResult.ERROR_COUNT -eq 0",
+        "$claudeParityResult.ERRORS -is [array]",
+        "@($claudeParityResult.ERRORS).Count -eq 0",
+        "validFieldIsBoolean",
+        "errorCountIsInteger",
+        "errorsIsArray"
+      ]
+    },
+    {
+      "id": "run-governance-tests-coverage",
+      "path": "studio/scripts/powershell/run-governance-tests.ps1",
+      "mustContainAll": [
+        "[switch]$CodeCoverage",
+        "CodeCoverage.OutputFormat = 'Cobertura'",
+        "codeCoverage.xml",
+        "Run.Exit = $true",
+        "Import-Module Pester -RequiredVersion 5.7.1"
+      ]
+    },
+    {
+      "id": "r6-fresh-fixture-e2e",
+      "path": "studio/tests/r6-fresh-fixture-e2e.Tests.ps1",
+      "mustContainAll": [
+        "R6_FRESH_FIXTURE_CANONICAL_REGISTRY_DENIED",
+        "R6_FRESH_FIXTURE_DRYRUN_ISOLATED",
+        "R6_FRESH_FIXTURE_WORKFLOW_MUTATION_DENIED",
+        "R6_FRESH_FIXTURE_NON_READY_REJECTED",
+        "R6_FRESH_FIXTURE_RESTART_ARCHIVED",
+        "R6_FRESH_FIXTURE_ECI_REENTRY_COMPLETE",
+        "R6_FRESH_FIXTURE_ANALYZE_CRITICAL_BLOCKED",
+        "R6_FRESH_FIXTURE_PARTIAL_IMPLEMENT_BLOCKED",
+        "R6_FRESH_FIXTURE_TERMINAL_SUCCESS",
+        "approval digest mismatch",
+        "state.json.*.restarted.json",
+        "baseline_task_ids",
+        "Get-R6EciEvidenceDigest",
+        "R6-CRITICAL-001",
+        "Get-R6WorkflowInventory",
+        "Get-R6ProtectedGitSurface"
+      ]
+    },
+    {
+      "id": "governance-ci-enforcement",
+      "path": ".github/workflows/governance.yml",
+      "mustContainAll": [
+        "audit-and-tests:",
+        "pull_request:",
+        "schedule:",
+        "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "Install-Module Pester -RequiredVersion 5.7.1",
+        "Install-Module powershell-yaml -RequiredVersion 0.4.12",
+        "validate-mainline-notes.ps1 -BaseRef $env:BASE_REVISION -HeadRef $env:HEAD_REVISION -RequireReady -ReadinessScope Aggregate -Json"
+      ],
+      "mustMatchAll": [
+        "(?s)Mainline note and impact reconciliation \\(pull request\\).*?github\\.event_name == 'pull_request'.*?validate-mainline-notes\\.ps1.*?-RequireReady.*?-ReadinessScope Aggregate",
+        "(?s)Mainline note and impact reconciliation \\(main push\\).*?github\\.event_name == 'push'.*?validate-mainline-notes\\.ps1.*?-RequireReady.*?-ReadinessScope Aggregate"
       ]
     },
     {
@@ -617,18 +1810,127 @@
         "# Get feature paths only (used by clarify/readiness/eci/plan gate logic)",
         "INTENT_LEDGER        = $paths.INTENT_LEDGER",
         "READINESS_ASSESSMENT = $paths.READINESS_ASSESSMENT",
-        "REPO_ROOT            = $paths.REPO_ROOT"
+        "REPO_ROOT            = $paths.REPO_ROOT",
+        "[string]$FeatureDir",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "if (-not $FeatureDir -and -not (Test-FeatureBranch"
       ]
     },
     {
       "id": "common-feature-paths-intent-ledger-awareness",
       "path": "studio/scripts/powershell/common.ps1",
       "mustContainAll": [
-        "INTENT_LEDGER        = Join-Path $featureDir 'intent-ledger.md'",
+        "function Resolve-FeatureContext",
+        "Get-CurrentBranch -ProjectRoot $repoRoot",
+        "Test-HasGit -ProjectRoot $repoRoot",
+        "Resolve-AbsolutePath -Path $candidate -BaseDir $repoRoot",
+        "$specsRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'specs'))",
+        "if (Test-Path -LiteralPath $specsRoot)",
+        "$featureParent.Equals($specsRoot, [System.StringComparison]::OrdinalIgnoreCase)",
+        "Resolve-ExistingPathInsideRoot -Root $repoRoot -Candidate $specsRoot",
+        "Resolve-ExistingPathInsideRoot -Root $specsRoot -Candidate $resolvedFeatureDir",
+        "function Assert-NoReparsePointInTree",
+        "Assert-NoReparsePointInTree -Root $resolvedFeatureDir",
+        "FEATURE_ID           = $featureId",
+        "INTENT_LEDGER        = Join-Path $resolvedFeatureDir 'intent-ledger.md'",
         "READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'",
         "ECI_DIR              = $eciDir",
+        "ANALYSIS_RESULT      = Join-Path $resolvedFeatureDir 'analysis-result.json'",
         "Initialize-ProjectGitRepository",
         "core.hooksPath"
+      ],
+      "mustMatchAll": [
+        "(?s)\\$specsRoot = .*?Resolve-ExistingPathInsideRoot -Root \\$repoRoot -Candidate \\$specsRoot.*?\\$currentBranch = Get-CurrentBranch -ProjectRoot \\$repoRoot"
+      ]
+    },
+    {
+      "id": "common-governed-text-writer",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Write-Utf8NoBomLfFile",
+        "ConvertTo-LfText",
+        "UTF8Encoding]::new($false, $true)",
+        "Write-Utf8NoBomLfFile -Path $constitutionPath",
+        "Write-Utf8NoBomLfFile -Path $workspaceFile"
+      ]
+    },
+    {
+      "id": "common-workflow-registry-authorization",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Test-StrictBooleanValue",
+        "return ($Value -is [bool])",
+        "function Read-WorkflowRegistryDocument",
+        "[Parameter(Mandatory = $true)] [string]$TrustedSchemaPath",
+        "$schemaValid = Test-Json -Json $raw -Schema $schema -ErrorAction Stop",
+        "Get-FileHash -LiteralPath $SchemaPath -Algorithm SHA256",
+        "Get-FileHash -LiteralPath $TrustedSchemaPath -Algorithm SHA256",
+        "if ($schemaHash -cne $trustedSchemaHash)",
+        "schema identity mismatch",
+        "function Get-WorkflowRegistrySnapshot",
+        "catalog.schema.json",
+        "state.schema.json",
+        "$trustedWorkflowsRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../workflows'))",
+        "Required $Label file missing: $Path",
+        "$stateValidation = Read-WorkflowRegistryDocument",
+        "-Path $statePath",
+        "$errors += @($stateValidation.ERRORS)",
+        "if (-not (Test-StrictBooleanValue -Value $stateEntry['enabled']))",
+        "if (-not (Test-StrictBooleanValue -Value $entry['defaultEnabled']))",
+        "function Get-WorkflowContentSha256",
+        "Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop",
+        "function Read-WorkflowManifestIdentity",
+        "[Parameter(Mandatory = $true)] [string]$ExpectedId",
+        "[Parameter(Mandatory = $true)] [string]$ExpectedVersion",
+        "Workflow identity mismatch for manifest",
+        "$retiredCompatibilityKeys",
+        "Where-Object { $_ -ieq 'minStudioConstitutionVersion' }",
+        "$unsupportedCompatibilityKeys",
+        "Where-Object { $_ -cne 'mode' }",
+        "$compatibilityKeys -ccontains 'mode'",
+        "$rawMode -isnot [string]",
+        "compatibility mode must be the exact string 'studio-first'",
+        "Assert-PathInsideRoot",
+        "-Root $workflowsRoot",
+        "-Candidate $sourceRoot",
+        "Workflow sourcePath escapes workflows root",
+        "function Resolve-ExistingPathThroughReparsePoints",
+        "$target = $item.ResolveLinkTarget($false)",
+        "function Resolve-ExistingPathInsideRoot",
+        "$physicalRoot = Resolve-ExistingPathThroughReparsePoints -Path $lexicalRoot",
+        "outside physical root",
+        "$sourceRoot = Resolve-ExistingPathInsideRoot",
+        "$workflowPath = Resolve-ExistingPathInsideRoot",
+        "$manifestPath = Resolve-ExistingPathInsideRoot",
+        "function Get-EciRequirementMarkerContext",
+        "FEATURE_RELATIVE_PATH = $featureContext.FEATURE_RELATIVE_PATH",
+        "function Read-EciRequirementMarker",
+        "[System.Text.Json.JsonDocument]::Parse($rawJson)",
+        "feature_path identity must exactly match",
+        "eci_required must be the JSON Boolean true",
+        "function Initialize-EciRequirementMarker",
+        "[System.IO.FileMode]::CreateNew",
+        "$stream.Flush($true)",
+        "[System.IO.File]::Move($tempPath, $context.MARKER_PATH, $false)",
+        "$reviewStatus -in @('approved', 'deprecated')",
+        "requires a lowercase workflowSha256 approval digest",
+        "Workflow approval digest mismatch",
+        "function Get-DeprecatedWorkflowEnablementDecision",
+        "Test-StrictBooleanValue -Value $enabledValue",
+        "[string]$source -cnotin @('default', 'manual')",
+        "Deprecated workflow '$Id' cannot be newly enabled because no existing state entry is present",
+        "enablement requires an existing JSON Boolean enabled=true state",
+        "enablement requires pinnedVersion '$ExpectedVersion'",
+        "state source must be 'default' or 'manual'",
+        "DEPRECATED_ENABLE_NOOP_ELIGIBLE",
+        "DEPRECATED_ENABLE_ERRORS",
+        "WORKFLOW_PATH",
+        "WORKFLOW_SHA256",
+        "ACTUAL_WORKFLOW_SHA256",
+        "WORKFLOW_DIGEST_MATCH",
+        "MANIFEST_IDENTITY_MATCH",
+        "function Get-WorkflowExecutionAuthorization",
+        "AUTHORIZED   = ($errors.Count -eq 0)"
       ]
     },
     {
@@ -639,6 +1941,27 @@
         "core.hooksPath",
         "GetRelativePath",
         "workspace .githooks"
+      ]
+    },
+    {
+      "id": "pre-commit-personal-data-path-gate",
+      "path": ".githooks/pre-commit.ps1",
+      "mustContainAll": [
+        "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)",
+        "Get-ProtectedPersonalDataPaths",
+        "Staged paths under a directory named '履歷' are not allowed",
+        "$stagedFiles",
+        "Unable to evaluate staged paths safely.",
+        "exit 1"
+      ]
+    },
+    {
+      "id": "pre-commit-removed-project-adapter-guard",
+      "path": ".githooks/pre-commit.ps1",
+      "mustContainAll": [
+        "Test-ShouldValidateAgentBootstrapProjectRoot",
+        "Test-Path -LiteralPath $ProjectRoot -PathType Container",
+        "if (-not (Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $projectRoot)) { continue }"
       ]
     },
     {
@@ -671,6 +1994,370 @@
       ]
     },
     {
+      "id": "common-worktree-local-hooks",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Set-ProjectWorktreeHooksPath",
+        "config --local extensions.worktreeConfig true",
+        "config --worktree core.hooksPath",
+        "config --worktree --get core.hooksPath",
+        "configScope  = 'worktree'"
+      ]
+    },
+    {
+      "id": "extension-policy-deprecated-and-source-truthfulness",
+      "path": "studio/extensions/POLICY.md",
+      "mustContainAll": [
+        "State ledger sources are limited to `default` and `manual`",
+        "cannot be newly enabled",
+        "byte-preserving no-op",
+        "exact current extension version",
+        "Catalog and state changes are local-only; no remote registry producer is supported."
+      ],
+      "mustNotContainAny": [
+        "`sync`"
+      ]
+    },
+    {
+      "id": "workflow-policy-deprecated-and-source-truthfulness",
+      "path": "studio/workflows/POLICY.md",
+      "mustContainAll": [
+        "it cannot be newly enabled",
+        "byte-preserving no-op",
+        "pinned to the current catalog version",
+        "State provenance: registry state accepts only `default` and `manual`",
+        "Catalog and state changes are local-only; no remote registry producer is supported."
+      ],
+      "mustNotContainAny": [
+        "`sync`"
+      ]
+    },
+    {
+      "id": "workflow-state-mutator-deprecated-noop",
+      "path": "studio/scripts/powershell/set-workflow-state.ps1",
+      "mustContainAll": [
+        "Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot",
+        "Workflow registry is invalid; refusing state mutation",
+        "$workflow.DEPRECATED_ENABLE_NOOP_ELIGIBLE -ne $true",
+        "Deprecated workflow cannot be newly enabled",
+        "CHANGED        = $false",
+        "NO_OP          = $true",
+        "Workflow state unchanged"
+      ]
+    },
+    {
+      "id": "workflow-lifecycle-discriminating-tests",
+      "path": "studio/tests/workflow-runner-authorization.Tests.ps1",
+      "mustContainAll": [
+        "retired workflow compatibility field reintroduction",
+        "case-variant retired workflow compatibility field reintroduction",
+        "unknown workflow compatibility field",
+        "catalog policy reintroduces sync provenance",
+        "state uses null provenance",
+        "state uses wrong-type provenance",
+        "denies a deprecated enable request with <Name> state in the mutator",
+        "keeps missing or disabled deprecated state valid for listing but execution-denied",
+        "denies an enabled deprecated workflow with a null or stale pin in listing and runner",
+        "permits only an already-enabled same-pin deprecated no-op and preserves state bytes"
+      ]
+    },
+    {
+      "id": "workflow-lifecycle-non-promotion-tests",
+      "path": "studio/tests/workflow-schema.Tests.ps1",
+      "mustContainAll": [
+        "retires the unenforced workflow compatibility version field without promoting sdd-pipeline",
+        "limits workflow state provenance to default and manual across catalog and schemas",
+        "$entry.reviewStatus | Should -BeExactly 'experimental'",
+        "$entry.trustLevel | Should -BeExactly 'experimental'",
+        "$entry.defaultEnabled | Should -BeFalse",
+        "$entry.workflowSha256 | Should -BeNullOrEmpty"
+      ]
+    },
+    {
+      "id": "r6-a3-runtime-contract-reversion-tests",
+      "path": "studio/tests/check-speckit-runtime.Tests.ps1",
+      "mustContainAll": [
+        "fails when retired extension compatibility fields are reintroduced",
+        "fails when retired workflow compatibility fields are reintroduced",
+        "fails when the retired extension sync source is restored in shared parsing",
+        "fails when the retired workflow sync source is restored in the catalog schema"
+      ]
+    },
+    {
+      "id": "extension-manifest-compatibility-field-retirement",
+      "path": "studio/extensions/manifest.schema.json",
+      "mustContainAll": [
+        "\"required\": [\"mode\"]",
+        "\"const\": \"studio-first\""
+      ],
+      "mustNotContainAny": [
+        "minStudioConstitutionVersion",
+        "minWorkspaceStructureVersion"
+      ]
+    },
+    {
+      "id": "extension-smoke-compatibility-field-retirement",
+      "path": "studio/extensions/extension-smoke/manifest.json",
+      "mustContainAll": [
+        "\"mode\": \"studio-first\""
+      ],
+      "mustNotContainAny": [
+        "minStudioConstitutionVersion",
+        "minWorkspaceStructureVersion"
+      ]
+    },
+    {
+      "id": "extension-state-source-retirement",
+      "path": "studio/extensions/catalog.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "extension-state-ledger-source-retirement",
+      "path": "studio/extensions/state.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "extension-catalog-source-retirement",
+      "path": "studio/extensions/catalog.json",
+      "mustContainAll": [
+        "\"reviewStatus\": \"draft\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"stateSources\": [\n      \"default\",\n      \"manual\"\n    ]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "extension-shared-state-source-retirement",
+      "path": "studio/scripts/powershell/common.ps1",
+      "mustContainAll": [
+        "function Get-ExtensionStateSources",
+        "return @('default', 'manual')"
+      ],
+      "mustNotContainAny": [
+        "return @('default', 'manual', 'sync')"
+      ]
+    },
+    {
+      "id": "extension-registry-schema-path-and-transaction-helpers",
+      "path": "studio/scripts/powershell/extension-registry-common.ps1",
+      "mustContainAll": [
+        "function Test-ExtensionJsonDocument",
+        "Test-Json -Json $raw -Schema $schema -ErrorAction Stop",
+        "function Assert-ExtensionTreeHasNoReparsePoints",
+        "$rootItem = Get-Item -LiteralPath $Root",
+        "function Resolve-ExtensionEntryPoint",
+        "Assert-PathInsideRoot -Root $scopeRoot",
+        "Resolve-ExistingPathInsideRoot -Root $scopeRoot",
+        "function Get-ExtensionContentSha256",
+        "$pathToken = [Convert]::ToBase64String",
+        "function Assert-ExtensionOutputInsideWorkspace",
+        "$physicalOutput",
+        "$physicalProtected",
+        "function New-ExtensionTransactionDirectory",
+        "function Write-ExtensionTransactionRecoveryJournal",
+        ".recovery.json.",
+        "[System.IO.File]::Move($temporaryPath, $journalPath, $true)",
+        "function Save-ExtensionTransactionFileBaseline",
+        ".sha256",
+        "function Restore-ExtensionTransactionFileBaseline",
+        "[System.IO.File]::Move($temporaryPath, $sourcePath, $true)",
+        "Extension transaction restore verification failed",
+        "function Move-ExtensionMirrorToTransaction",
+        "function Restore-ExtensionMirrorFromTransaction"
+      ]
+    },
+    {
+      "id": "extension-registry-schema-and-approval-validation",
+      "path": "studio/scripts/powershell/validate-extension-registry.ps1",
+      "mustContainAll": [
+        "Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_CATALOG_PATH",
+        "Test-ExtensionJsonDocument -Path $paths.EXTENSIONS_STATE_PATH",
+        "Test-ExtensionJsonDocument -Path $manifestPath",
+        "Resolve-ExistingPathInsideRoot -Root $paths.EXTENSIONS_ROOT",
+        "Get-ExtensionContentSha256",
+        "approvedBy, approvedAt, and approvedContentSha256 must be set or cleared together",
+        "Catalog contentSha256 does not match actual extension bytes",
+        "Content-bound approval is stale",
+        "$hasStrictEnabledState",
+        "$stateEntry.enabled -is [bool]",
+        "$stateEntry.pinnedVersion -is [string]",
+        "Deprecated extension '$extensionId' may remain enabled only at exact pinnedVersion"
+      ],
+      "mustNotContainAny": [
+        "[bool]$stateEntry.enabled",
+        "[bool]$catalogEntry.defaultEnabled"
+      ]
+    },
+    {
+      "id": "add-extension-validated-transaction",
+      "path": "studio/scripts/powershell/add-extension.ps1",
+      "mustContainAll": [
+        "Extension source manifest is invalid before mutation",
+        "Resolve-ExtensionEntryPoint",
+        "Test-ExtensionJsonValue",
+        "reviewStatus   = 'draft'",
+        "trustLevel     = 'experimental'",
+        "approvedContentSha256 = $null",
+        "Save-ExtensionTransactionFileBaseline",
+        "$catalogMutationAttempted = $true",
+        "$stateMutationAttempted = $true",
+        "Restore-ExtensionTransactionFileBaseline",
+        "Restore-ExtensionMirrorFromTransaction",
+        "$rollbackErrors.Count -eq 0",
+        "Recovery evidence retained at:",
+        "Extension add/replace failed:"
+      ]
+    },
+    {
+      "id": "export-extensions-bounded-transaction",
+      "path": "studio/scripts/powershell/export-extensions.ps1",
+      "mustContainAll": [
+        "Assert-ExtensionOutputInsideWorkspace",
+        "Assert-ExtensionTreeHasNoReparsePoints",
+        "Resolve-ExtensionEntryPoint",
+        "Extension export target escapes declared scope",
+        "Extension export target escapes final declared scope",
+        "$stagingDir",
+        "$backupDir",
+        "$outputPromoted = $true",
+        "Extension export failed:",
+        "Export succeeded, but obsolete backup cleanup failed",
+        "CLEANUP_WARNING"
+      ]
+    },
+    {
+      "id": "extension-state-mirror-transaction",
+      "path": "studio/scripts/powershell/set-extension-state.ps1",
+      "mustContainAll": [
+        "Extension registry is invalid; refusing state mutation",
+        "Test-ExtensionJsonDocument",
+        "Save-ExtensionTransactionFileBaseline",
+        "$stateMutationAttempted = $true",
+        "Restore-ExtensionTransactionFileBaseline",
+        "Move-ExtensionMirrorToTransaction",
+        "Restore-ExtensionMirrorFromTransaction",
+        "$rollbackErrors.Count -eq 0",
+        "Recovery evidence retained at:",
+        "MIRROR_INVALIDATED",
+        "Deprecated extension '$Id' cannot be newly enabled or repinned",
+        "$existingState.enabled -is [bool]",
+        "$existingState.pinnedVersion -is [string]",
+        "NO_OP              = $true",
+        "MIRROR_INVALIDATED = $false"
+      ]
+    },
+    {
+      "id": "remove-extension-validated-transaction",
+      "path": "studio/scripts/powershell/remove-extension.ps1",
+      "mustContainAll": [
+        "Extension registry is invalid before removal",
+        "Test-ExtensionJsonValue",
+        "Save-ExtensionTransactionFileBaseline",
+        "$catalogMutationAttempted = $true",
+        "$stateMutationAttempted = $true",
+        "Restore-ExtensionTransactionFileBaseline",
+        "Move-ExtensionMirrorToTransaction",
+        "Restore-ExtensionMirrorFromTransaction",
+        "$rollbackErrors.Count -eq 0",
+        "Recovery evidence retained at:",
+        "MIRROR_INVALIDATED"
+      ]
+    },
+    {
+      "id": "extension-lifecycle-discriminating-tests",
+      "path": "studio/tests/extension-lifecycle.Tests.ps1",
+      "mustContainAll": [
+        "applies all three JSON schemas before accepting registry or manifest data",
+        "rejects normalized cross-scope entry points before any mutation",
+        "rejects an extension root directory that is a junction to external authority",
+        "rolls back catalog target and state when the second replacement write fails",
+        "retains hash-bound recovery evidence when state rollback cannot write its baseline",
+        "keeps retained transaction evidence out of root git status and git add",
+        "restores a transaction baseline through verified same-directory atomic replacement",
+        "detects byte replacement after approval even when manifest identity is unchanged",
+        "denies a workspace alias whose physical output overlaps the extension authority root",
+        "exercises add approve enable export disable re-enable export and remove lifecycle",
+        "rejects reintroduction of either retired compatibility version field",
+        "rejects sync in both catalog policy and state sources",
+        "denies deprecated enablement from <Name>",
+        "a null provenance source",
+        "a wrong-type provenance source",
+        "treats an already-enabled same-pin deprecated request as a byte-preserving no-op"
+      ]
+    },
+    {
+      "id": "upgrade-runtime-transaction-boundary",
+      "path": "studio/scripts/powershell/upgrade-studio-runtime.ps1",
+      "mustContainAll": [
+        "function Assert-UpgradePathPhysicalContainment",
+        "Resolve-ExistingPathInsideRoot",
+        "function Disable-StagedRuntimeMirror",
+        "function Get-UpgradeCandidateHashManifest",
+        "function Assert-UpgradeCandidateManifestUnchanged",
+        "function Get-TrustedUpgradeAuthorityManifest",
+        "function Assert-TrustedUpgradeAuthorityUnchanged",
+        "function New-TrustedUpgradeAuditBundle",
+        "function Invoke-UpgradeTrustedCandidateVerification",
+        "runtimeCheckPhase = 'trusted-staging'",
+        "$env:SDD_STUDIO_ROOT",
+        "$AuditResult.OUTPUT.VALID -is [bool]",
+        "$AuditResult.OUTPUT.ERROR_COUNT -is [long]",
+        "$AuditResult.OUTPUT.WARNING_COUNT -is [long]",
+        "function New-UpgradeBaseline",
+        "function Write-UpgradeTransactionJournal",
+        "[System.IO.File]::Move($temporaryPath, $Path, $true)",
+        "function Assert-UpgradeBaselineIntegrity",
+        "function Publish-UpgradeFileAtomically",
+        "ExpectedSha256",
+        "function Restore-UpgradeTargets",
+        "-ExpectedSha256 ([string]$record.hash)",
+        "Canonical runtime rollback completed and was verified",
+        "$preserveTransactionEvidence = $true",
+        "Recovery evidence retained at:",
+        "runtimeMirror = if ($invalidateRuntimeMirror) { 'invalidated' }"
+      ]
+    },
+    {
+      "id": "upgrade-runtime-transaction-tests",
+      "path": "studio/tests/upgrade-studio-runtime.Tests.ps1",
+      "mustContainAll": [
+        "rejects a canonical target parent junction before touching its outside sentinel",
+        "rejects a snapshot source junction that resolves outside the snapshot root",
+        "denies a string false audit verdict instead of coercing it to true",
+        "denies a wrong-type ERROR_COUNT from the trusted audit",
+        "denies a null WARNING_COUNT from the trusted audit",
+        "denies a self-approving candidate checker with the frozen trusted checker",
+        "denies a self-approving candidate audit dependency using the frozen dependency closure",
+        "never executes a candidate checker that writes an absolute canonical path",
+        "never lets candidate code tamper with trusted authority or baseline siblings",
+        "never executes candidate version or export smoke scripts",
+        "rolls back an earlier promoted file after a later apply failure and permits a clean retry",
+        "retains a durable transaction journal when rollback verification fails"
+      ]
+    },
+    {
+      "id": "upgrade-runtime-operator-guidance",
+      "path": "docs/0308upstreams/spec-kit-studio-first-upstream-usage-guide-2026-03-08.md",
+      "mustContainAll": [
+        "只使用交易開始前凍結的 trusted audit bundle",
+        "candidate 內的 checker、版本與 export smoke 腳本不會在交易內執行",
+        "該鏈仍由 finding R-F04 追蹤"
+      ]
+    },
+    {
       "id": "create-new-feature-consumer-git-boundary",
       "path": "studio/scripts/powershell/create-new-feature.ps1",
       "mustContainAll": [
@@ -684,10 +2371,51 @@
       "path": "studio/scripts/powershell/setup-plan.ps1",
       "mustContainAll": [
         "Assert-ReadyForPlan",
+        "Invoke-FeatureStructureValidation",
+        "validate-feature-structure.ps1",
+        "READINESS_PRIMARY_STATUS",
+        "$primaryStatus = [string]$validation.READINESS_PRIMARY_STATUS",
+        "ECI_REQUIRED",
+        "if ($validation.ECI_REQUIRED -eq $true)",
+        "ECI_REENTRY_STATUS",
+        "$eciReentryStatus = [string]$validation.ECI_REENTRY_STATUS",
+        "ECI_AUTHORIZATION_OUTCOME",
+        "$authorizationOutcome = [string]$validation.ECI_AUTHORIZATION_OUTCOME",
         "READY_FOR_PLAN",
         "Intent Ledger Requirement",
         "Authorization Outcome",
         "READY_FOR_MAINLINE_IMPLEMENTATION"
+      ]
+    },
+    {
+      "id": "setup-eci-non-bypassable-requirement-latch",
+      "path": "studio/scripts/powershell/setup-eci.ps1",
+      "mustContainAll": [
+        "#Requires -Version 7.0",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "Invoke-EciIntakeValidation",
+        "validate-feature-structure.ps1",
+        "-DeferEciDossier",
+        "$validation.READINESS_PRIMARY_STATUS -isnot [string]",
+        "'ROUTE_TO_ECI'",
+        "$validation.ECI_REENTRY_STATUS -isnot [string]",
+        "'PENDING'",
+        "$validation.ECI_REQUIRED -isnot [bool]",
+        "Initialize-EciRequirementMarker",
+        "ECI_REQUIREMENT_PATH",
+        "ECI_REQUIREMENT_LATCHED",
+        "There is no Force bypass."
+      ]
+    },
+    {
+      "id": "setup-plan-explicit-feature-context",
+      "path": "studio/scripts/powershell/setup-plan.ps1",
+      "mustContainAll": [
+        "[string]$FeatureDir",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "if (-not $FeatureDir -and -not (Test-FeatureBranch",
+        "$paths.REPO_ROOT",
+        "$paths.FEATURE_DIR"
       ]
     },
     {
@@ -696,7 +2424,27 @@
       "mustContainAll": [
         ".claude/agents",
         "copilot-instructions.md",
-        "Claude shared runtime authority after generation"
+        "Seeded from canonical source",
+        "deterministic Claude-consumable dependent mirror",
+        "edit canonical source",
+        "UTF8Encoding]::new($false, $true)",
+        "WriteAllText",
+        "-join \"`n\"",
+        "[switch]$Verify",
+        "Convert-ToNormalizedAgentText",
+        "sourceToolsDeclared",
+        "$lines.Add('tools: []')",
+        "claude-agent-content-drift",
+        "unsupported-tool-mapping",
+        "an explicit claude-tools field cannot mask an unknown source permission",
+        "approvedNonPortableToolMap",
+        "explicit-tool-permission-broadening",
+        "claude-tools-permission-broadening",
+        "frontmatter-list-invalid",
+        "Get-ChildItem -LiteralPath $OutputDir -Force -Recurse",
+        "[System.IO.Path]::GetRelativePath",
+        "claude-agent-mirror-unexpected-directory",
+        "Test-ClaudeAgentParity"
       ]
     },
     {
@@ -704,11 +2452,13 @@
       "path": "studio/scripts/powershell/new-project-worktree.ps1",
       "mustContainAll": [
         "Initialize-ProjectSharedAgentJunctions",
+        "Set-ProjectWorktreeHooksPath",
         ".claude/agents",
         ".github/copilot-instructions.md",
         "CLAUDE.md",
         ".code-workspace",
         "core.hooksPath",
+        "hooksConfigScope",
         "ValidateScript"
       ]
     },
@@ -718,11 +2468,58 @@
       "mustContainAll": [
         "FeatureDir",
         "WarningsAsErrors",
+        "RequireEciDossier",
+        "RequireEciReentry",
+        "DeferEciDossier",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "-ProjectRoot $featureContext.REPO_ROOT",
+        "feature-context-invalid",
+        "function Get-ExactlyOneMarkdownEnum",
+        "function Get-ExactlyOneMarkdownField",
+        "$matches.Count -ne 1",
+        "-Field 'ECI Re-entry Status'",
+        "-Field 'ECI Evidence SHA-256'",
+        "function Get-EciEvidenceSha256",
+        "Read-EciRequirementMarker",
+        "$canDeferInitialEciIntake",
+        "eci-requirement-marker-invalid",
+        "eci-requirement-marker-missing",
+        "eci-requirement-latched-not-required",
+        "eci-requirement-latched-digest-na",
+        "$eciEvidenceRelativePaths = @(",
+        "'eci-trigger.md',",
+        "'eci/eci-assessment.md',",
+        "'eci/source-manifest.md',",
+        "'eci/adoption-record.md',",
+        "'eci/authorization-record.md'",
+        "[System.BitConverter]::GetBytes([uint32]$pathBytes.Length)",
+        "[System.BitConverter]::GetBytes([uint64]$contentBytes.LongLength)",
+        "$hasher.AppendData($pathLengthBytes)",
+        "$hasher.AppendData($contentLengthBytes)",
+        "ECI_ACTUAL_EVIDENCE_SHA256",
+        "$eciReentryStatus -in @('PENDING', 'COMPLETE')",
+        "$eciReentryStatus -eq 'NOT_REQUIRED'",
+        "$eciReentryStatus -eq 'PENDING'",
+        "$eciReentryStatus -eq 'COMPLETE'",
+        "eci-evidence-sha256-mismatch",
         "readiness-assessment.md",
         "intent-ledger.md",
         "ROUTE_TO_ECI",
         "tasks-no-canonical-line",
-        "Get-MarkdownField"
+        "Get-MarkdownField",
+        "readiness-dir-missing",
+        "eci-dir-missing",
+        "Triggered ECI governance requires readiness/eci/$name.",
+        "eci-authorization-outcome-invalid",
+        "eci-reentry-not-authorized",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "READY_FOR_SPIKE_ONLY",
+        "READY_FOR_SANDBOX_ONLY",
+        "NOT_READY",
+        "READINESS_PRIMARY_STATUS",
+        "ECI_REQUIREMENT_PATH",
+        "ECI_REQUIREMENT_LATCHED",
+        "ECI_AUTHORIZATION_OUTCOME"
       ]
     },
     {
@@ -751,6 +2548,7 @@
       "id": "setup-clarify-spec-gate",
       "path": "studio/scripts/powershell/setup-clarify.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "Get-NeedsClarificationMarkers",
         "spec.md is required",
         "STAGE",
@@ -762,6 +2560,7 @@
       "id": "setup-readiness-clarify-gate",
       "path": "studio/scripts/powershell/setup-readiness.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "readiness-assessment-template.md",
         "[NEEDS CLARIFICATION]",
         "ECI_DIR",
@@ -773,6 +2572,7 @@
       "id": "setup-tasks-plan-gate",
       "path": "studio/scripts/powershell/setup-tasks.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "tasks-template.md",
         "plan.md is required",
         "no Version field",
@@ -784,56 +2584,638 @@
       "id": "setup-analyze-prerequisites",
       "path": "studio/scripts/powershell/setup-analyze.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "checklist-template.md",
         "validate-feature-structure.ps1",
-        "Intent Drift Check",
+        "analysis-result.json",
+        "runtime/analysis-result.schema.json",
+        "analysis-checklist.md is informational only",
+        "$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))",
+        "ANALYSIS_RESULT_SCHEMA",
         "ANALYSIS_CHECKLIST",
+        "ECI_REQUIRED",
+        "ECI_ARTIFACTS",
         "Force"
       ]
     },
     {
-      "id": "setup-implement-tasks-gate",
+      "id": "setup-implement-non-bypassable-gate",
       "path": "studio/scripts/powershell/setup-implement.ps1",
       "mustContainAll": [
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
         "Get-PendingTasks",
         "Get-UnresolvedCriticalFindings",
         "validate-feature-structure.ps1",
+        "readiness/readiness-assessment.md",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "Get-AnalyzeCompletionState",
+        "Test-Json -Json $raw -Schema $schema -ErrorAction Stop",
+        "[switch]$CompletionValidation",
+        "Get-ArtifactBindingHash",
+        "NormalizeTaskCheckboxes",
+        "Test-AnalyzeArtifactBindings",
+        "$recordedEciRequired = $analyzeCompletion.Data['eciRequired'] -eq $true",
+        "ECI governance cannot be added or removed without re-running /speckit.analyze",
+        "analysis-result.json records required ECI evidence",
+        "readiness/eci/authorization-record.md",
+        "Get-IntentLedgerEntries",
+        "intent-ledger.md header must contain the canonical nine columns in canonical order",
+        "requires a concrete reentry_trigger for deferred intent",
+        "$trustedStudioRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))",
+        "intentObligations",
+        "does not account for its intent obligations",
+        "does not account exactly once for intent obligation",
+        "returned no machine-readable result",
+        "validate-feature-structure.ps1 exited with code $validatorExitCode",
+        "The former `-Force` bypass is intentionally not accepted.",
+        "FORCED                = $false",
         "PENDING_TASKS",
-        "SELECTED_TASK",
-        "Force"
+        "SELECTED_TASK"
+      ]
+    },
+    {
+      "id": "analyze-result-schema-contract",
+      "path": "studio/runtime/analysis-result.schema.json",
+      "mustContainAll": [
+        "\"additionalProperties\": false",
+        "\"const\": \"1.0.0\"",
+        "\"IMPLEMENTATION_READY\"",
+        "\"artifactHashes\"",
+        "\"readiness/readiness-assessment.md\"",
+        "\"eciRequired\"",
+        "\"readiness/eci-trigger.md\"",
+        "\"readiness/eci/eci-assessment.md\"",
+        "\"readiness/eci/source-manifest.md\"",
+        "\"readiness/eci/adoption-record.md\"",
+        "\"readiness/eci/authorization-record.md\"",
+        "\"criticalFindings\"",
+        "\"intentDriftCheck\"",
+        "\"intentObligations\"",
+        "\"pattern\": \"^[a-f0-9]{64}$\""
+      ]
+    },
+    {
+      "id": "create-new-feature-path-boundary",
+      "path": "studio/scripts/powershell/create-new-feature.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$specsDir",
+        "$featureDir",
+        "$specFile"
+      ]
+    },
+    {
+      "id": "setup-plan-path-boundary",
+      "path": "studio/scripts/powershell/setup-plan.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$paths.REPO_ROOT",
+        "$paths.FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "setup-readiness-path-boundary",
+      "path": "studio/scripts/powershell/setup-readiness.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
+        "$paths.READINESS_DIR"
+      ]
+    },
+    {
+      "id": "setup-tasks-path-boundary",
+      "path": "studio/scripts/powershell/setup-tasks.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
+        "$paths.TASKS"
+      ]
+    },
+    {
+      "id": "setup-analyze-path-boundary",
+      "path": "studio/scripts/powershell/setup-analyze.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
+        "$paths.FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "setup-implement-path-boundary",
+      "path": "studio/scripts/powershell/setup-implement.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$paths.REPO_ROOT",
+        "$paths.ANALYSIS_CHECKLIST"
+      ]
+    },
+    {
+      "id": "update-agent-context-path-boundary",
+      "path": "studio/scripts/powershell/update-agent-context.ps1",
+      "mustContainAll": [
+        "[string]$FeatureDir",
+        "Resolve-FeatureContext -FeatureDir $FeatureDir",
+        "$CURRENT_BRANCH = $envData.FEATURE_ID",
+        "Assert-PathInsideRoot",
+        "$REPO_ROOT",
+        "$envData.FEATURE_DIR"
+      ]
+    },
+    {
+      "id": "sync-agent-bootstrap-path-boundary",
+      "path": "studio/scripts/powershell/sync-agent-bootstrap.ps1",
+      "mustContainAll": [
+        "Assert-PathInsideRoot",
+        "$context.ProjectRoot",
+        "adapter path escapes project root"
+      ]
+    },
+    {
+      "id": "add-extension-path-boundary",
+      "path": "studio/scripts/powershell/add-extension.ps1",
+      "mustContainAll": [
+        "^[a-z0-9][a-z0-9-]{1,63}$",
+        "Assert-PathInsideRoot",
+        "Extension target escapes extensions root"
+      ]
+    },
+    {
+      "id": "remove-extension-path-boundary",
+      "path": "studio/scripts/powershell/remove-extension.ps1",
+      "mustContainAll": [
+        "^[a-z0-9][a-z0-9-]{1,63}$",
+        "Assert-PathInsideRoot",
+        "Extension target escapes extensions root"
+      ]
+    },
+    {
+      "id": "workflow-engine-step-types",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "Invoke-CommandStep",
+        "Invoke-GateStep",
+        "Invoke-IfStep",
+        "Invoke-SwitchStep",
+        "Assert-PathInsideRoot",
+        "schema_version",
+        "RunState"
+      ]
+    },
+    {
+      "id": "workflow-command-project-root-cwd",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "Invoke-CommandStep",
+        "-WorkingDirectory $ProjectRoot",
+        "& pwsh -NoProfile -WorkingDirectory $ProjectRoot -File $scriptPath @argv"
+      ]
+    },
+    {
+      "id": "workflow-engine-feature-input-guard",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "$effectiveInputs = @{ feature = $Feature }",
+        "if ($k -eq 'feature') { continue }",
+        "Operator inputs may not override 'feature'",
+        "Resume mismatch: state inputs.feature=$stateFeature, requested=$Feature"
+      ]
+    },
+    {
+      "id": "workflow-engine-completion-integrity",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "Get-ArtifactFingerprint",
+        "agent_baseline",
+        "completed_steps",
+        "skipped-completed",
+        "Invoke-ArtifactExtraction"
+      ]
+    },
+    {
+      "id": "run-workflow-cli-surface",
+      "path": "studio/scripts/powershell/run-workflow.ps1",
+      "mustContainAll": [
+        "-Id",
+        "-Feature",
+        "-Resume",
+        "-Restart",
+        "-ConfirmGate",
+        "-AcceptAgent"
+      ]
+    },
+    {
+      "id": "run-workflow-runner-authorization",
+      "path": "studio/scripts/powershell/run-workflow.ps1",
+      "mustContainAll": [
+        "Deny-WorkflowRun",
+        "Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot",
+        "Get-WorkflowExecutionAuthorization -Registry $registry -Id $Id",
+        "if (-not $authorization.AUTHORIZED)",
+        "Workflow registry authorization denied",
+        "$catalogEntry = $authorization.ENTRY.CATALOG_ENTRY",
+        "Workflow identity mismatch",
+        "$workflowYaml = [string]$authorization.ENTRY.WORKFLOW_PATH",
+        "Workflow registry authorization did not resolve workflow.yml",
+        "-Candidate $workflowYaml",
+        "-ExpectedWorkflowId $Id",
+        "-ExpectedWorkflowSha256 ([string]$authorization.ENTRY.WORKFLOW_SHA256)",
+        "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path"
+      ]
+    },
+    {
+      "id": "workflow-engine-gate-fail-closed",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "$GateActions.ContainsKey($gateId) -and $existing -and $existing.status -eq 'pending'",
+        "Gate rejected with no on_reject branch",
+        "return @{ Status = 'rejected' }",
+        "if ($r.Status -in 'awaiting_agent', 'awaiting_gate', 'rejected', 'failed') { return $r }",
+        "Cannot resume a $($runState.status) run. Use -Restart to archive the RunState and start over."
+      ]
+    },
+    {
+      "id": "workflow-engine-terminal-postcondition",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Get-CanonicalTaskInventory",
+        "function Get-StepPostconditionBaselinePath",
+        "function Read-StepPostconditionBaseline",
+        "function New-StepPostconditionBaseline",
+        "function Initialize-StepPostconditionBaseline",
+        "$stepVars['baseline_task_ids'] =",
+        "$stepVars['baseline_sidecar'] = $sidecarPath",
+        "terminal baseline sidecar already exists; atomic no-overwrite-at-creation policy refuses replacement",
+        "RunState baseline cache does not match the engine-created local sidecar",
+        "terminal baseline sidecar identity mismatch",
+        "Initialize-StepPostconditionBaseline -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot",
+        "baseline canonical task inventory is missing from RunState; restart the run",
+        "baseline task ID(s) missing or non-canonical",
+        "baseline task ID(s) remain unchecked",
+        "function Test-TerminalCompletionValidation",
+        "$completionValidationFailure = Test-TerminalCompletionValidation -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot -WorkspaceRoot $WorkspaceRoot",
+        "terminal completion validation failed: script exited with code $exitCode",
+        "result is missing Boolean READY",
+        "function Test-StepPostcondition",
+        "no-pending-tasks",
+        "$accepted = ($acceptRequested -and -not $terminal)",
+        "$postconditionFailure = Test-StepPostcondition -Step $Step -RunState $RunState -ProjectRoot $ProjectRoot",
+        "($terminal -and $hasPostcondition -and $current.exists -and -not $current.empty)",
+        "-AcceptAgent is disabled for terminal step"
+      ]
+    },
+    {
+      "id": "workflow-engine-runstate-hygiene",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "$stateDir = Join-Path (Join-Path (Join-Path $ProjectRoot '.workflow') 'runs') $Feature",
+        "state.dryrun.json",
+        "Duplicate step id(s) in workflow",
+        "Use -Resume to continue or -Restart to archive it and start over.",
+        "function Add-RunStateHistoryOnce",
+        "Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome 'skipped-completed'",
+        "Add-RunStateHistoryOnce -RunState $RunState -Step $Step -Outcome \"matched-case:$matched\""
+      ]
+    },
+    {
+      "id": "workflow-engine-restart-archive-no-overwrite",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Move-RunStateToRestartArchive",
+        "[DateTimeOffset]$ArchiveTime = [DateTimeOffset]::Now",
+        "[guid]$ArchiveNonce = [guid]::NewGuid()",
+        "$archivePath = \"$Path.$archiveStamp.$($ArchiveNonce.ToString('N')).restarted.json\"",
+        "[System.IO.File]::Move($Path, $archivePath, $false)",
+        "Restart archive move refused without overwriting an existing archive",
+        "[void](Move-RunStateToRestartArchive -Path $resumeReadPath)"
+      ]
+    },
+    {
+      "id": "workflow-engine-validator-revalidation-policy",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Assert-WorkflowRevalidationPolicy",
+        "Comparisons:  ==, != (written directly in condition, outside {{ }}).",
+        "Workflow condition operators must use the engine expression grammar directly; do not wrap a comparison or Boolean expression in {{ }}.",
+        "Workflow condition resolved to an empty expression.",
+        "$validatorScript = 'studio/scripts/powershell/validate-feature-structure.ps1'",
+        "$step.revalidate_on_resume -isnot [bool]",
+        "[string]$step.script -cne $validatorScript",
+        "exactly one -Json argument",
+        "Assert-WorkflowRevalidationPolicy -Steps $workflow.steps",
+        "[void]$RunState.vars.steps[$Step.id].Remove('json')",
+        "$captured -isnot [System.Collections.IDictionary]",
+        "$captured['VALID'] -isnot [bool]",
+        "revalidation result is missing Boolean VALID=true",
+        "-not $revalidateOnResume",
+        "it must replace its captured decision payload with current filesystem evidence"
+      ]
+    },
+    {
+      "id": "workflow-engine-executed-identity-binding",
+      "path": "studio/scripts/powershell/workflow-engine.ps1",
+      "mustContainAll": [
+        "function Read-WorkflowYamlSnapshot",
+        "[System.IO.File]::ReadAllBytes($Path)",
+        "[System.Security.Cryptography.SHA256]::HashData($bytes)",
+        "[Parameter(Mandatory)] [string]$ExpectedWorkflowId",
+        "[ValidatePattern('^[a-f0-9]{64}$')]",
+        "[string]$ExpectedWorkflowSha256",
+        "$actualWorkflowSha256 -cne $ExpectedWorkflowSha256",
+        "the approved catalog workflowSha256",
+        "workflow_sha256",
+        "state workflow_version",
+        "state workflow_sha256 is missing or invalid",
+        "The workflow graph changed; use -Restart after explicit re-approval.",
+        "-WorkflowSha256 $ExpectedWorkflowSha256"
+      ]
+    },
+    {
+      "id": "workflow-policy-runstate-transient",
+      "path": "studio/workflows/POLICY.md",
+      "mustContainAll": [
+        "Per-project `.workflow/runs/<feature>/state.json`",
+        "engine-created local `.workflow/runs/<feature>/baselines/<run-id>/<step-id>.json` sidecars written with atomic no-overwrite-at-creation semantics",
+        "does not authenticate provenance or resist coordinated replacement by the same local principal",
+        "broader RunState authenticity boundary remains open under R-B23",
+        "Per-feature `.workflow/runs/<feature>/eci-requirement.json`",
+        "strict identity-bound Boolean latch",
+        "atomic no-overwrite publication",
+        "does not authenticate the readiness or dossier contents",
+        "coordinated deletion or forgery of the marker and governed evidence remains open under R-B23",
+        "cache-mismatched terminal baseline sidecar fails closed",
+        "never intended for Git",
+        "starting a run never creates anything under `specs/`",
+        "approved raw-byte SHA-256",
+        "A content change invalidates the existing approval",
+        "Resume compares RunState workflow id, version, and SHA-256",
+        "After explicit re-approval, the operator must use `-Restart`",
+        "Each archive uses a collision-resistant UTC-millisecond-and-nonce name and an atomic no-overwrite move",
+        "Restart archives and terminal baseline sidecars use atomic no-overwrite moves",
+        "restart archive names include UTC milliseconds plus a GUID nonce",
+        "`revalidate_on_resume: true`",
+        "Each replay removes the prior capture before dispatch and requires a JSON object with Boolean `VALID=true`"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-analyze-machine-result",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  - id: stage-analyze\n    type: command\n    dispatch: agent\n    agent_command: /speckit.analyze\n    expected_artifact: \"specs/{{ inputs.feature }}/analysis-result.json\"",
+        "save its exact schema-valid machine-result JSON unchanged",
+        "analysis-checklist.md is informational only"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-implement-terminal",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  - id: stage-implement\n    type: command\n    dispatch: agent\n    agent_command: /speckit.implement\n    expected_artifact: \"specs/{{ inputs.feature }}/tasks.md\"\n    terminal: true\n    postcondition:\n      type: no-pending-tasks\n      file: \"specs/{{ inputs.feature }}/tasks.md\"",
+        "    completion_validation:\n      script: studio/scripts/powershell/setup-implement.ps1\n      args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-CompletionValidation\", \"-Json\"]"
+      ]
+    },
+    {
+      "id": "workflow-manifest-terminal-completion-validation",
+      "path": "studio/workflows/manifest.schema.json",
+      "mustContainAll": [
+        "\"completion_validation\"",
+        "\"required\": [\"script\", \"args\"]",
+        "\"if\": { \"required\": [\"completion_validation\"] }",
+        "\"terminal\": { \"const\": true }",
+        "\"required\": [\"dispatch\", \"terminal\", \"postcondition\"]",
+        "\"revalidate_on_resume\": {\n          \"type\": \"boolean\",\n          \"const\": true\n        }",
+        "\"if\": { \"required\": [\"revalidate_on_resume\"] }",
+        "\"const\": \"studio/scripts/powershell/validate-feature-structure.ps1\"",
+        "\"contains\": { \"const\": \"-Json\" }",
+        "\"maxContains\": 1"
+      ]
+    },
+    {
+      "id": "validate-workflow-schema-binding",
+      "path": "studio/scripts/powershell/validate-workflow.ps1",
+      "mustContainAll": [
+        "manifest.schema.json",
+        "powershell-yaml",
+        "manifest entryPoint does not exist"
+      ]
+    },
+    {
+      "id": "list-workflows-registry-validation",
+      "path": "studio/scripts/powershell/list-workflows.ps1",
+      "mustContainAll": [
+        "$registry = Get-WorkflowRegistrySnapshot -StudioRoot $studioRoot",
+        "$authorization = Get-WorkflowExecutionAuthorization -Registry $registry -Id ([string]$entry.ID)",
+        "executionAuthorized = $authorization.AUTHORIZED",
+        "authorizationErrors = @($authorization.ERRORS)",
+        "workflowPath        = $entry.WORKFLOW_PATH",
+        "workflowSha256      = $entry.WORKFLOW_SHA256",
+        "actualWorkflowSha256 = $entry.ACTUAL_WORKFLOW_SHA256",
+        "workflowDigestMatches = $entry.WORKFLOW_DIGEST_MATCH",
+        "manifestId          = $entry.MANIFEST_ID",
+        "manifestVersion     = $entry.MANIFEST_VERSION",
+        "manifestIdentityMatches = $entry.MANIFEST_IDENTITY_MATCH",
+        "VALID         = ($errors.Count -eq 0)"
       ]
     }
   ],
+  "workflowInvariants": [
+    {
+      "id": "sdd-pipeline-compatibility-field-retirement",
+      "path": "studio/workflows/sdd-pipeline/manifest.json",
+      "mustContainAll": [
+        "\"mode\": \"studio-first\""
+      ],
+      "mustNotContainAny": [
+        "minStudioConstitutionVersion"
+      ]
+    },
+    {
+      "id": "workflow-catalog-state-source-retirement",
+      "path": "studio/workflows/catalog.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "workflow-state-ledger-source-retirement",
+      "path": "studio/workflows/state.schema.json",
+      "mustContainAll": [
+        "\"enum\": [\"default\", \"manual\"]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "workflow-catalog-source-retirement-and-non-promotion",
+      "path": "studio/workflows/catalog.json",
+      "mustContainAll": [
+        "\"reviewStatus\": \"experimental\"",
+        "\"trustLevel\": \"experimental\"",
+        "\"defaultEnabled\": false",
+        "\"workflowSha256\": null",
+        "\"stateSources\": [\n      \"default\",\n      \"manual\"\n    ]"
+      ],
+      "mustNotContainAny": [
+        "\"sync\""
+      ]
+    },
+    {
+      "id": "sdd-pipeline-readiness-statuses",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "READY_FOR_PLAN",
+        "ROUTE_TO_ECI",
+        "ROUTE_TO_REPO_CONTEXT",
+        "ROUTE_TO_DECISION",
+        "ROUTE_TO_VALIDATION",
+        "ROUTE_TO_ACCESS",
+        "EXPLORATORY_ONLY",
+        "NOT_READY",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "READY_FOR_SANDBOX_ONLY",
+        "READY_FOR_SPIKE_ONLY"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-stage-coverage",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "/speckit.specify",
+        "/speckit.clarify",
+        "/speckit.readiness",
+        "/speckit.plan",
+        "/speckit.tasks",
+        "/speckit.analyze",
+        "/speckit.implement",
+        "/speckit.eci"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-named-feature-context",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  - id: stage-plan-prep\n    type: command\n    dispatch: script\n    script: studio/scripts/powershell/setup-plan.ps1\n    args: [\"-FeatureDir\", \"specs/{{ inputs.feature }}\", \"-Json\"]",
+        "operator_message: \"Run /speckit.clarify -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.readiness -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.eci -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Re-run /speckit.readiness -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.plan -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.tasks -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.analyze -FeatureDir specs/{{ inputs.feature }}",
+        "operator_message: \"Run /speckit.implement -FeatureDir specs/{{ inputs.feature }}"
+      ]
+    },
+    {
+      "id": "sdd-pipeline-eci-dossier-reentry-routing",
+      "path": "studio/workflows/sdd-pipeline/workflow.yml",
+      "mustContainAll": [
+        "  version: \"1.1.0\"",
+        "stage-readiness-routing-validation",
+        "-DeferEciDossier",
+        "revalidate_on_resume: true",
+        "branch-readiness-eci",
+        "condition: \"vars.steps.stage-readiness-routing-validation.json.READINESS_PRIMARY_STATUS == 'ROUTE_TO_ECI'\"",
+        "stage-eci-entry-gate",
+        "script: studio/scripts/powershell/setup-eci.ps1",
+        "stage-eci-dossier-validation",
+        "subject: \"{{ vars.steps.stage-eci-dossier-validation.json.ECI_AUTHORIZATION_OUTCOME | default('NOT_READY') }}\"",
+        "branch-eci-authorization",
+        "READY_FOR_MAINLINE_IMPLEMENTATION",
+        "READY_FOR_SANDBOX_ONLY",
+        "READY_FOR_SPIKE_ONLY",
+        "NOT_READY",
+        "validate-eci-mainline-reentry",
+        "validate-eci-sandbox-reentry",
+        "validate-eci-spike-reentry",
+        "deny-eci-not-ready-reentry",
+        "-RequireEciReentry",
+        "stage-readiness-reentry",
+        "stage-readiness-reentry-validation",
+        "-RequireEciDossier",
+        "stage-latest-readiness-routing-validation",
+        "subject: \"{{ vars.steps.stage-latest-readiness-routing-validation.json.READINESS_PRIMARY_STATUS | default('NOT_READY') }}\"",
+        "route-eci-repeat-halt",
+        "branch-readiness-status"
+      ]
+    }
+  ],
+  "findingStatusLedger": {
+    "path": "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
+    "documentAuthority": "informational",
+    "scope": "finding_status",
+    "scopeAuthority": "source_of_truth",
+    "selector": "finding-status-record-v1",
+    "fenceMarker": "```",
+    "schemaPath": "studio/runtime/finding-status-record.schema.json",
+    "validatorPath": "studio/scripts/powershell/validate-finding-status-ledger.ps1",
+    "indexPath": "docs/README.md",
+    "allowedStatuses": [
+      "COMPLETED",
+      "OPEN",
+      "DECIDED",
+      "IN_PROGRESS",
+      "DISPOSITIONED"
+    ]
+  },
+  "mainlineReadiness": {
+    "repositorySlug": "dtgfdgfgf/sdd-workspace",
+    "aggregateNotePaths": [
+      "docs/mainline-updates/2026-05-05-studio-workflows-runtime.md"
+    ],
+    "historicalEvidenceMigration": {
+      "state": "sealed",
+      "batchBase": "de61431ae8f50d66f59157e00e4d239e9b37efdb",
+      "expectedRecordCount": 18,
+      "migrationCommit": "78c47eb0f3da7e75f3ba79943ea44f55984677a1",
+      "evidenceSha256": "1cbb98f6edea8e096501112fac7196f84524ffdd9e6b69e63dc5b859d29d7a5e",
+      "evidencePath": "studio/runtime/mainline-note-historical-evidence.json",
+      "schemaPath": "studio/runtime/mainline-note-historical-evidence.schema.json",
+      "legacyBaselinePath": "studio/runtime/mainline-note-validation-baseline.json"
+    }
+  },
   "sharedGatePaths": [
     "AGENTS.md",
     "CLAUDE.md",
+    ".gitattributes",
+    ".editorconfig",
+    ".gitignore",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     ".github/agents/",
     ".claude/agents/",
     ".github/prompts/",
+    ".github/workflows/governance.yml",
     ".github/copilot-instructions.md",
-    ".githooks/pre-commit",
-    ".githooks/pre-commit.ps1",
+    ".githooks/**",
     "studio/constitution/",
     "studio/runtime/shared-runtime-contract.json",
+    "studio/runtime/analysis-result.schema.json",
+    "studio/runtime/finding-status-record.schema.json",
+    "studio/runtime/mainline-note-historical-evidence.json",
+    "studio/runtime/mainline-note-historical-evidence.schema.json",
+    "studio/runtime/mainline-note-validation-baseline.json",
+    "studio/extensions/**",
+    "studio/templates/project-init/.gitignore",
+    "studio/templates/project-init/.gitattributes",
+    "studio/templates/project-init/.editorconfig",
     "studio/templates/project-init/README.md",
     "studio/templates/sdd-docs/",
     "studio/QUICKSTART.md",
     "studio/SDD-QUICKSTART-GUIDE.md",
     "WORKSPACE_STRUCTURE.md",
     "README.md",
+    "docs/README.md",
+    "docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md",
     "docs/mainline-updates/",
-    "studio/scripts/powershell/common.ps1",
-    "studio/scripts/powershell/check-prerequisites.ps1",
-    "studio/scripts/powershell/check-speckit-runtime.ps1",
-    "studio/scripts/powershell/sync-agent-bootstrap.ps1",
-    "studio/scripts/powershell/check-agent-bootstrap.ps1",
-    "studio/scripts/powershell/update-constitution.ps1",
-    "studio/scripts/powershell/seed-claude-agents.ps1",
-    "studio/scripts/powershell/new-project-worktree.ps1",
-    "studio/scripts/powershell/setup-hooks.ps1",
-    "studio/scripts/powershell/upgrade-studio-runtime.ps1",
-    "studio/scripts/powershell/generate-impact-registry.ps1",
+    "studio/scripts/powershell/**",
     "studio/runtime/impact-registry.json",
-    "docs/change-manifests/"
+    "studio/workflows/"
   ]
 }

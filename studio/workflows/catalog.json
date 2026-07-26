@@ -1,0 +1,42 @@
+{
+  "version": "1.1.0",
+  "updated": "2026-07-22T00:00:00+08:00",
+  "policy": {
+    "mode": "studio-first",
+    "curatedOnly": true,
+    "autoEnableNewWorkflows": false,
+    "reviewStatuses": [
+      "draft",
+      "approved",
+      "experimental",
+      "deprecated",
+      "rejected"
+    ],
+    "trustLevels": [
+      "core",
+      "curated",
+      "experimental"
+    ],
+    "stateSources": [
+      "default",
+      "manual"
+    ]
+  },
+  "workflows": [
+    {
+      "id": "sdd-pipeline",
+      "version": "1.1.0",
+      "title": "SDD Seven-Stage Pipeline",
+      "sourcePath": "workflows/sdd-pipeline",
+      "reviewStatus": "experimental",
+      "trustLevel": "experimental",
+      "defaultEnabled": false,
+      "owner": "studio",
+      "approvedBy": null,
+      "approvedAt": null,
+      "workflowSha256": null,
+      "stepTypesUsed": ["command", "gate", "if", "switch"],
+      "notes": "Catalog and listing remain demoted pending closure of Wave-3 remediation batches and fresh-fixture promotion gates. This workflow is experimental, not approved, not default-enabled, and execution-denied."
+    }
+  ]
+}

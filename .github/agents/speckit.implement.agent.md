@@ -16,9 +16,14 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context and pass it to the non-bypassable entry gate. Preserve the returned absolute
+`FEATURE_DIR` for the entire implementation run. Do not rebind from the branch, environment, or
+free-form user text.
+
 ## Outline
 
-1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` from repo root and parse FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Run the non-bypassable Implement entry gate before reading implementation artifacts, checking optional checklists, or changing any file.** From the repo root, run `pwsh ./studio/scripts/powershell/setup-implement.ps1 -Json`, or `pwsh ./studio/scripts/powershell/setup-implement.ps1 -FeatureDir <path> -Json` when the named option is present. Parse `FEATURE_DIR`, `IMPL_PLAN`, `TASKS`, `READINESS_STATUS`, `ECI_REQUIRED`, `ANALYSIS_RESULT`, `ANALYZE_STATE`, and `BLOCKERS`. If the process exits non-zero, `READY` is not exactly `true`, output is missing/invalid, or any blocker is present, STOP and report the blocker verbatim. Do not continue on operator confirmation: this gate has no `-Force` bypass. All returned paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
    - Scan all checklist files in the checklists/ directory
@@ -105,13 +110,14 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 5. Parse tasks.md structure and extract:
    - **Task phases**: Setup, Tests, Core, Integration, Polish
-   - **Task dependencies**: Sequential vs parallel execution rules
-   - **Task details**: ID, description, file paths, parallel markers [P]
+   - **Task dependencies and parallelism**: Read `Dependencies`, `Parallel Execution Examples`, and any `Parallel with: T0xx, T0yy` follow-up lines
+   - **Task details**: ID, description, file paths, priority `[P#]`, risk, and story metadata
+   - **Priority is not parallelism**: Do not infer parallel execution from `[P]` or `[P#]` checklist tokens. `[P#]` is delivery priority; inline `[P]` is invalid.
    - **Execution flow**: Order and dependency requirements
 
 6. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
-   - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
+   - **Respect dependencies**: Run tasks in dependency order; only tasks explicitly declared parallel by the separate dependency/parallelism metadata can run together
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
@@ -125,8 +131,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 8. Progress tracking and error handling:
    - Report progress after each completed task
-   - Halt execution if any non-parallel task fails
-   - For parallel tasks [P], continue with successful tasks, report failed ones
+   - Halt execution if any task without explicit parallel metadata fails
+   - For tasks explicitly declared parallel by `Dependencies`, `Parallel Execution Examples`, or `Parallel with:` metadata, continue with successful tasks and report failed ones
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
@@ -138,4 +144,4 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
 
-Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks -FeatureDir "<FEATURE_DIR>"` first to regenerate the task list.

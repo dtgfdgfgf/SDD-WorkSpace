@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+#Requires -Version 7.0
+
 # Consolidated prerequisite checking script (PowerShell)
 #
 # This script provides unified prerequisite checking for Spec-Driven Development workflow.
@@ -8,6 +10,7 @@
 # Usage: ./check-prerequisites.ps1 [OPTIONS]
 #
 # OPTIONS:
+#   -FeatureDir <path>  Override the branch-derived feature directory
 #   -Json               Output in JSON format
 #   -RequireTasks       Require tasks.md to exist (for implementation phase)
 #   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
@@ -16,6 +19,7 @@
 
 [CmdletBinding()]
 param(
+    [string]$FeatureDir,
     [switch]$Json,
     [switch]$RequireTasks,
     [switch]$IncludeTasks,
@@ -33,6 +37,7 @@ Usage: check-prerequisites.ps1 [OPTIONS]
 Consolidated prerequisite checking for Spec-Driven Development workflow.
 
 OPTIONS:
+  -FeatureDir <path>  Override feature directory (resolved from project root)
   -Json               Output in JSON format
   -RequireTasks       Require tasks.md to exist (for implementation phase)
   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
@@ -49,6 +54,9 @@ EXAMPLES:
   # Get feature paths only (used by clarify/readiness/eci/plan gate logic)
   .\check-prerequisites.ps1 -PathsOnly
 
+  # Bind path discovery to an explicit workflow feature
+  .\check-prerequisites.ps1 -FeatureDir specs/001-feature -Json -PathsOnly
+
 "@
     exit 0
 }
@@ -56,10 +64,14 @@ EXAMPLES:
 # Source common functions
 . "$PSScriptRoot/common.ps1"
 
-# Get feature paths and validate branch
-$paths = Get-FeaturePathsEnv
+# Get feature paths and validate branch. Explicit workflow context intentionally
+# takes precedence over a different current branch or SPECIFY_FEATURE value.
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.IMPL_PLAN -MessagePrefix 'IMPL_PLAN escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
 
-if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) { 
+if (-not $FeatureDir -and -not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
     exit 1 
 }
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Pre-commit hook for SDD document validation and commit message format checking.
@@ -10,8 +12,8 @@
     3. plan.md files contain required sections
     4. tasks.md files follow checklist format
     5. Commit messages follow Conventional Commits format
-    6. Change manifest completeness advisory (warning only)
-    7. Impact routing advisory via impact-registry.json (warning only)
+    6. Impact routing advisory via impact-registry.json (warning only)
+    7. Staged paths do not enter a protected personal-data directory
 
 .NOTES
     To enable: git config core.hooksPath .githooks
@@ -20,6 +22,19 @@
 
 $ErrorActionPreference = 'Continue'
 $script:hasErrors = $false
+
+# Git emits raw UTF-8 bytes on stdout. Force UTF-8 decoding: when the inherited console
+# codepage is not UTF-8 (e.g. zh-TW CP950), the default [Console]::OutputEncoding garbles
+# non-ASCII staged paths such as 履歷/ into deterministic mojibake, which silently
+# fail-opens the personal-data path gate below.
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+} catch {
+    Write-Host '[ERROR] Unable to force UTF-8 decoding of git output; staged paths cannot be evaluated safely.' -ForegroundColor Red
+    exit 1
+}
+
 $script:workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $script:repoRoot = (& git rev-parse --show-toplevel 2>$null)
 if ($LASTEXITCODE -ne 0 -or -not $script:repoRoot) {
@@ -62,6 +77,19 @@ function Convert-ToRepoRelativePath {
     return ($Path -replace '\\', '/') -replace '^\.\/', ''
 }
 
+function Get-ProtectedPersonalDataPaths {
+    param([string[]]$Paths)
+
+    $matches = foreach ($path in @($Paths)) {
+        $normalizedPath = Convert-ToRepoRelativePath -Path $path
+        if ($normalizedPath -match '(^|/)履歷(/|$)') {
+            $normalizedPath
+        }
+    }
+
+    return @($matches | Sort-Object -Unique)
+}
+
 function Get-SharedGatePaths {
     if (-not (Test-Path -LiteralPath $script:sharedRuntimeContractPath)) {
         return @()
@@ -84,7 +112,15 @@ function Test-IsSharedGateHit {
 
     $normalizedPath = Convert-ToRepoRelativePath -Path $Path
     foreach ($gatePath in $GatePaths) {
-        if ($gatePath.EndsWith('/')) {
+        if ($gatePath.EndsWith('/**', [System.StringComparison]::Ordinal)) {
+            $recursiveGatePrefix = $gatePath.Substring(0, $gatePath.Length - 2)
+            if (
+                $normalizedPath.Length -gt $recursiveGatePrefix.Length -and
+                $normalizedPath.StartsWith($recursiveGatePrefix, [System.StringComparison]::OrdinalIgnoreCase)
+            ) {
+                return $true
+            }
+        } elseif ($gatePath.EndsWith('/')) {
             if ($normalizedPath.StartsWith($gatePath, [System.StringComparison]::OrdinalIgnoreCase)) {
                 return $true
             }
@@ -158,7 +194,7 @@ function ConvertFrom-GitNameStatusZ {
 }
 
 function Get-StagedChanges {
-    $raw = & git -C $script:repoRoot diff --cached --name-status -z --diff-filter=ACDMR 2>$null
+    $raw = & git -C $script:repoRoot diff --cached --name-status --find-renames -z --diff-filter=ACDMR 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-HookError 'Unable to read staged changes from Git index.'
         return @()
@@ -355,6 +391,16 @@ function Get-AgentBootstrapProjectRootForPath {
     }
 
     return $null
+}
+
+function Test-ShouldValidateAgentBootstrapProjectRoot {
+    param([string]$ProjectRoot)
+
+    if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+        return $false
+    }
+
+    return (Test-Path -LiteralPath $ProjectRoot -PathType Container)
 }
 
 function Invoke-AgentBootstrapJsonTool {
@@ -899,48 +945,17 @@ function Get-ChangeTypesFromPaths {
     return $matchedTypes
 }
 
-function Get-ManifestPendingItems {
-    param([string]$Content)
-
-    $result = @{
-        Status            = 'unknown'
-        PendingMustUpdate = @()
-        PendingMustReview = @()
-    }
-
-    if ($Content -match '\*\*Status\*\*:\s*([\w-]+)') {
-        $result.Status = $Matches[1].ToLower()
-    }
-
-    # Parse impact assessment table rows
-    # Format: | Document | Authority | Impact Level | Status | Notes |
-    $rowPattern = '(?m)^\|\s*([^|]+?)\s*\|\s*[^|]+?\s*\|\s*(must_update|must_review)\s*\|\s*(pending|done|skipped)\s*\|'
-    $tableMatches = [regex]::Matches($Content, $rowPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-    foreach ($m in $tableMatches) {
-        $doc = $m.Groups[1].Value.Trim()
-        $impact = $m.Groups[2].Value.Trim().ToLower()
-        $status = $m.Groups[3].Value.Trim().ToLower()
-
-        if ($status -eq 'pending') {
-            if ($impact -eq 'must_update') {
-                $result.PendingMustUpdate += $doc
-            } elseif ($impact -eq 'must_review') {
-                $result.PendingMustReview += $doc
-            }
-        }
-    }
-
-    return $result
-}
-
 # ========================================
 # Get staged files
 # ========================================
-$stagedChanges = Get-StagedChanges
+$stagedChanges = @(Get-StagedChanges)
 $stagedFiles = Get-StagedActivePaths -Changes $stagedChanges
 $stagedTouchedFiles = Get-StagedTouchedPaths -Changes $stagedChanges
-if (-not $stagedChanges) {
+if ($script:hasErrors) {
+    Write-Host '[ERROR] Unable to evaluate staged paths safely.' -ForegroundColor Red
+    exit 1
+}
+if ($stagedChanges.Count -eq 0) {
     Write-HookInfo 'No staged files to validate'
     exit 0
 }
@@ -950,6 +965,14 @@ Write-Host '========================================' -ForegroundColor Cyan
 Write-Host '  SDD Pre-Commit Validation' -ForegroundColor Cyan
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
+
+$protectedPersonalDataPaths = @(Get-ProtectedPersonalDataPaths -Paths $stagedFiles)
+if ($protectedPersonalDataPaths.Count -gt 0) {
+    Write-Host "[ERROR] Staged paths under a directory named '履歷' are not allowed. Keep personal data outside Git repositories." -ForegroundColor Red
+    Write-Host "  Protected path matches: $($protectedPersonalDataPaths.Count)" -ForegroundColor Red
+    Write-Host ''
+    exit 1
+}
 
 $sharedGatePaths = Get-SharedGatePaths
 $sharedLayerFiles = @()
@@ -1008,7 +1031,7 @@ if ($adapterFiles.Count -gt 0) {
     $adapterGroups = @{}
     foreach ($adapterFile in $adapterFiles) {
         $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $adapterFile
-        if (-not $projectRoot) { continue }
+        if (-not (Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $projectRoot)) { continue }
         if (-not $adapterGroups.ContainsKey($projectRoot)) {
             $adapterGroups[$projectRoot] = @()
         }
@@ -1028,50 +1051,13 @@ if ($projectConstitutionFiles.Count -gt 0) {
     $projectRoots = @{}
     foreach ($projectConstitutionFile in $projectConstitutionFiles) {
         $projectRoot = Get-AgentBootstrapProjectRootForPath -Path $projectConstitutionFile
-        if ($projectRoot) { $projectRoots[$projectRoot] = $true }
+        if (Test-ShouldValidateAgentBootstrapProjectRoot -ProjectRoot $projectRoot) {
+            $projectRoots[$projectRoot] = $true
+        }
     }
 
     foreach ($projectRoot in $projectRoots.Keys) {
         Test-StagedAgentBootstrapForProject -ProjectRoot $projectRoot -Changes $stagedChanges -RequireAllAdaptersStaged
-    }
-    Write-Host ''
-}
-
-# ========================================
-# Change manifest completeness (advisory)
-# ========================================
-$manifestFiles = @($stagedFiles | Where-Object {
-    $_ -match '(?:specs/[^/]+/change-manifests|docs/change-manifests)/.*\.md$'
-})
-
-if ($manifestFiles.Count -gt 0) {
-    Write-HookInfo 'Checking change manifest completeness...'
-
-    foreach ($file in $manifestFiles) {
-        $content = Get-StagedFileContent -Path $file
-        if (-not $content) { continue }
-
-        $parsed = Get-ManifestPendingItems -Content $content
-
-        if ($parsed.Status -in @('open', 'propagating')) {
-            if ($parsed.PendingMustUpdate.Count -gt 0) {
-                Write-HookWarning "[$file] Open manifest has $($parsed.PendingMustUpdate.Count) pending must_update:"
-                foreach ($doc in $parsed.PendingMustUpdate) {
-                    Write-Host "    - $doc" -ForegroundColor Yellow
-                }
-            }
-            if ($parsed.PendingMustReview.Count -gt 0) {
-                Write-HookInfo "[$file] Open manifest has $($parsed.PendingMustReview.Count) pending must_review"
-            }
-        }
-
-        if ($parsed.Status -eq 'closed' -and ($parsed.PendingMustUpdate.Count -gt 0 -or $parsed.PendingMustReview.Count -gt 0)) {
-            Write-HookWarning "[$file] Manifest marked closed but has pending items"
-        }
-
-        if ($parsed.PendingMustUpdate.Count -eq 0 -and $parsed.PendingMustReview.Count -eq 0 -and $parsed.Status -ne 'unknown') {
-            Write-HookSuccess "[$file] Change manifest complete"
-        }
     }
     Write-Host ''
 }

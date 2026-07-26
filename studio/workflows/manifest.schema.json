@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/studio/workflows/manifest.schema.json",
+  "title": "Studio Workflow Definition (workflow.yml)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workflow", "steps"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "version", "integration"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "integration": {
+          "type": "string",
+          "enum": ["studio-first", "claude-code", "copilot", "codex"]
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["string", "boolean", "feature-id"]
+          },
+          "required": {
+            "type": "boolean",
+            "default": true
+          },
+          "default": {},
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "oneOf": [
+        { "$ref": "#/$defs/commandStep" },
+        { "$ref": "#/$defs/gateStep" },
+        { "$ref": "#/$defs/ifStep" },
+        { "$ref": "#/$defs/switchStep" }
+      ]
+    },
+    "stepIdentifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"
+    },
+    "commandStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "dispatch"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stepIdentifier" },
+        "type": { "const": "command" },
+        "name": { "type": "string" },
+        "dispatch": { "type": "string", "enum": ["script", "agent"] },
+        "script": { "type": "string" },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "expected_exit_code": { "type": "integer", "default": 0 },
+        "revalidate_on_resume": {
+          "type": "boolean",
+          "const": true
+        },
+        "capture": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stdout": { "type": "boolean" },
+            "stderr": { "type": "boolean" },
+            "json": { "type": "boolean" }
+          }
+        },
+        "agent_command": { "type": "string" },
+        "expected_artifact": { "type": "string" },
+        "operator_message": { "type": "string" },
+        "terminal": { "type": "boolean", "default": false },
+        "postcondition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "file"],
+          "properties": {
+            "type": { "type": "string", "enum": ["no-pending-tasks"] },
+            "file": { "type": "string", "minLength": 1 }
+          }
+        },
+        "completion_validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["script", "args"],
+          "properties": {
+            "script": { "type": "string", "minLength": 1 },
+            "args": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "extract": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["var", "field"],
+            "properties": {
+              "var": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]{0,63}$" },
+              "field": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "dispatch": { "const": "script" } }, "required": ["dispatch"] },
+          "then": {
+            "required": ["script"],
+            "not": { "anyOf": [{ "required": ["terminal"] }, { "required": ["postcondition"] }] }
+          }
+        },
+        {
+          "if": { "properties": { "dispatch": { "const": "agent" } }, "required": ["dispatch"] },
+          "then": { "required": ["agent_command", "expected_artifact"] }
+        },
+        {
+          "if": { "required": ["completion_validation"] },
+          "then": {
+            "properties": {
+              "dispatch": { "const": "agent" },
+              "terminal": { "const": true }
+            },
+            "required": ["dispatch", "terminal", "postcondition"]
+          }
+        },
+        {
+          "if": { "required": ["revalidate_on_resume"] },
+          "then": {
+            "required": ["script", "args", "capture"],
+            "properties": {
+              "dispatch": { "const": "script" },
+              "script": {
+                "const": "studio/scripts/powershell/validate-feature-structure.ps1"
+              },
+              "args": {
+                "contains": { "const": "-Json" },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              "expected_exit_code": { "const": 0 },
+              "capture": {
+                "required": ["json"],
+                "properties": {
+                  "json": { "const": true }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "gateStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "prompt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stepIdentifier" },
+        "type": { "const": "gate" },
+        "name": { "type": "string" },
+        "prompt": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "on_reject": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        }
+      }
+    },
+    "ifStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "condition", "then"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stepIdentifier" },
+        "type": { "const": "if" },
+        "name": { "type": "string" },
+        "condition": { "type": "string" },
+        "then": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "else": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        }
+      }
+    },
+    "switchStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "subject", "cases"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stepIdentifier" },
+        "type": { "const": "switch" },
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "cases": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/step" }
+          }
+        },
+        "default": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        }
+      }
+    }
+  }
+}

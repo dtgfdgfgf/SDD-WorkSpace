@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/studio/runtime/analysis-result.schema.json",
+  "title": "Speckit Analyze Machine Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "featureId",
+    "outcome",
+    "eciRequired",
+    "artifactHashes",
+    "criticalFindings",
+    "intentDriftCheck",
+    "intentObligations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "featureId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "IMPLEMENTATION_READY",
+        "BLOCKED"
+      ]
+    },
+    "eciRequired": {
+      "type": "boolean",
+      "description": "Durable Analyze-time record that ECI governance was required for this feature."
+    },
+    "artifactHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "spec.md",
+        "readiness/readiness-assessment.md",
+        "readiness/eci-trigger.md",
+        "readiness/eci/eci-assessment.md",
+        "readiness/eci/source-manifest.md",
+        "readiness/eci/adoption-record.md",
+        "readiness/eci/authorization-record.md",
+        "intent-ledger.md",
+        "plan.md",
+        "tasks.md"
+      ],
+      "properties": {
+        "spec.md": {
+          "$ref": "#/$defs/sha256"
+        },
+        "readiness/readiness-assessment.md": {
+          "$ref": "#/$defs/sha256"
+        },
+        "readiness/eci-trigger.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/eci-assessment.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/source-manifest.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/adoption-record.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "readiness/eci/authorization-record.md": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "intent-ledger.md": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan.md": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tasks.md": {
+          "description": "SHA-256 of tasks.md after canonical T### checkbox states are normalized to [ ].",
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "criticalFindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "summary",
+          "resolution"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "RESOLVED"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "resolution": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "intentDriftCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "intentObligations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "items"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_REQUIRED",
+            "ACCOUNTED",
+            "BLOCKED"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceIntentItem",
+              "classification",
+              "status",
+              "evidence"
+            ],
+            "properties": {
+              "sourceIntentItem": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "classification": {
+                "type": "string",
+                "enum": [
+                  "represented_by_substitute",
+                  "deferred",
+                  "dropped_with_owner_signoff"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACCOUNTED",
+                  "BLOCKING"
+                ]
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eciRequired": { "const": true }
+        },
+        "required": ["eciRequired"]
+      },
+      "then": {
+        "properties": {
+          "artifactHashes": {
+            "properties": {
+              "readiness/eci-trigger.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/eci-assessment.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/source-manifest.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/adoption-record.md": { "$ref": "#/$defs/sha256" },
+              "readiness/eci/authorization-record.md": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "artifactHashes": {
+            "properties": {
+              "readiness/eci-trigger.md": { "type": "null" },
+              "readiness/eci/eci-assessment.md": { "type": "null" },
+              "readiness/eci/source-manifest.md": { "type": "null" },
+              "readiness/eci/adoption-record.md": { "type": "null" },
+              "readiness/eci/authorization-record.md": { "type": "null" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

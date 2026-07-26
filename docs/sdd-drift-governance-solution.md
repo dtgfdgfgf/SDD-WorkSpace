@@ -1,5 +1,8 @@
 # SDD Drift Governance Solution
 
+> Historical design record. The change-manifest portions were superseded by R-G06 on 2026-07-13.
+> Current merge reconciliation lives in `docs/mainline-updates/` and is enforced by Governance CI.
+
 **Status:** Working Note
 **Created:** 2026-04-10
 **Depends On:** `docs/sdd-drift-governance-core-logic.md`

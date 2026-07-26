@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Generates studio/runtime/impact-registry.json from built-in rules and local drift-governance metadata.
@@ -74,14 +76,16 @@ $builtinDocumentAuthority = @(
     @{ path = 'studio/constitution/constitution.md';       authority = 'source_of_truth'; domain = 'governance';           description = 'Highest governance authority for all projects and workflows' }
     @{ path = 'studio/runtime/shared-runtime-contract.json'; authority = 'source_of_truth'; domain = 'runtime_verification'; description = 'Machine-verifiable invariants for all governance requirements' }
     @{ path = 'studio/runtime/impact-registry.json';       authority = 'source_of_truth'; domain = 'routing';              description = 'Change-to-document conditional impact routing rules' }
-    @{ path = '.github/agents/*.agent.md';                 authority = 'source_of_truth'; domain = 'agent_runtime';        description = 'Copilot agent definitions, canonical source for agent behavior' }
+    @{ path = '.github/agents/*.agent.md';                 authority = 'source_of_truth'; domain = 'agent_runtime';        description = 'Fourteen canonical shared agent inputs selected by the .agent.md suffix' }
+    @{ path = '.github/agents/async-python-reviewer.md';   authority = 'source_of_truth'; domain = 'agent_runtime';        description = 'Canonical non-command shared agent input included by the Claude generator' }
     @{ path = 'studio/templates/sdd-docs/*.md';            authority = 'source_of_truth'; domain = 'templates';            description = 'Canonical document templates for SDD workflow' }
     @{ path = '.githooks/pre-commit.ps1';                  authority = 'source_of_truth'; domain = 'hooks';                description = 'Commit-time validation logic' }
     @{ path = 'studio/scripts/powershell/*.ps1';           authority = 'source_of_truth'; domain = 'scripts';              description = 'Studio automation and runtime verification' }
     @{ path = 'specs/<feature>/spec.md';                   authority = 'source_of_truth'; domain = 'feature';              description = 'Feature requirements, per-feature source of truth' }
     @{ path = 'specs/<feature>/readiness/**/*.md';         authority = 'source_of_truth'; domain = 'feature';              description = 'Readiness and ECI governance artifacts, per-feature' }
     @{ path = 'docs/project-worktree-parity-governance.md'; authority = 'source_of_truth'; domain = 'governance';          description = 'Worktree parity obligations for derived worktrees' }
-    @{ path = '.claude/agents/*.md';                       authority = 'dependent';       domain = 'agent_runtime';        description = 'Claude agent definitions, seeded from .github/agents/' }
+    @{ path = '.github/agents/copilot-instructions.md';    authority = 'dependent';       domain = 'agent_context';        description = 'Agent-scoped dependent adapter excluded from Claude generation inputs' }
+    @{ path = '.claude/agents/*.md';                       authority = 'dependent';       domain = 'agent_runtime';        description = 'Fifteen deterministic Claude-consumable mirrors generated from canonical agent inputs' }
     @{ path = 'AGENTS.md';                                  authority = 'dependent';       domain = 'agent_context';        description = 'Codex and Copilot CLI runtime adapter, reflects constitution rules' }
     @{ path = 'CLAUDE.md';                                  authority = 'dependent';       domain = 'agent_context';        description = 'Claude Code runtime adapter, reflects constitution rules' }
     @{ path = '.github/copilot-instructions.md';           authority = 'dependent';       domain = 'agent_context';        description = 'Copilot project context, reflects constitution rules' }
@@ -92,6 +96,21 @@ $builtinDocumentAuthority = @(
     @{ path = 'WORKSPACE_STRUCTURE.md';                    authority = 'informational';   domain = 'structure';            description = 'Architecture documentation, must reflect current directory layout' }
     @{ path = 'studio/QUICKSTART.md';                      authority = 'informational';   domain = 'onboarding';           description = 'Chinese-language quickstart onboarding guide' }
     @{ path = 'studio/SDD-QUICKSTART-GUIDE.md';            authority = 'informational';   domain = 'onboarding';           description = 'Comprehensive SDD methodology guide' }
+    @{
+        path = 'docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md'
+        authority = 'informational'
+        domain = 'finding_inventory'
+        description = 'Repair inventory and narrative history; only the declared finding_status scope is authoritative'
+        authorityScopes = @(
+            @{
+                name = 'finding_status'
+                selector = 'finding-status-record-v1'
+                authority = 'source_of_truth'
+                schemaPath = 'studio/runtime/finding-status-record.schema.json'
+                validatorPath = 'studio/scripts/powershell/validate-finding-status-ledger.ps1'
+            }
+        )
+    }
     @{ path = 'docs/mainline-updates/*.md';                authority = 'informational';   domain = 'change_tracking';      description = 'Merge explanation notes and index' }
 )
 
@@ -135,8 +154,8 @@ $builtinImpactRouting = @(
     }
     @{
         changeType  = 'agent_change'
-        trigger     = '.github/agents/*.agent.md'
-        description = 'Any change to Copilot runtime agent definitions'
+        trigger     = '.github/agents/*.agent.md|.github/agents/async-python-reviewer.md'
+        description = 'Any change to one of the fifteen canonical shared agent inputs'
         rules       = @(
             @{ target = 'studio/runtime/shared-runtime-contract.json'; impact = 'must_review'; reason = 'Agent invariants may need updated mustContainAll entries' }
             @{ target = '.claude/agents/*.md';                         impact = 'must_update'; reason = 'Claude mirrors must stay in sync with Copilot source' }
@@ -170,8 +189,23 @@ $builtinImpactRouting = @(
         trigger     = 'studio/scripts/powershell/*.ps1'
         description = 'Any change to studio PowerShell automation scripts'
         rules       = @(
-            @{ target = 'studio/runtime/shared-runtime-contract.json'; impact = 'must_review'; reason = 'Script invariants may need updated entries' }
-            @{ target = '.githooks/pre-commit.ps1';                    impact = 'maybe_review'; reason = 'Pre-commit invokes check-speckit-runtime.ps1' }
+            @{ target = 'studio/runtime/shared-runtime-contract.json';      impact = 'must_review'; reason = 'Script invariants may need updated entries' }
+            @{ target = '.githooks/pre-commit.ps1';                         impact = 'maybe_review'; reason = 'Pre-commit invokes check-speckit-runtime.ps1' }
+            @{ target = 'studio/tests/path-traversal-hardening.Tests.ps1';  impact = 'must_review'; reason = 'Path-boundary script invariants must be covered by regression tests' }
+        )
+    }
+    @{
+        changeType  = 'workflow_change'
+        trigger     = 'studio/workflows/'
+        description = 'Any change to studio workflow definitions, catalog, state, schemas, or per-workflow assets'
+        rules       = @(
+            @{ target = 'studio/runtime/shared-runtime-contract.json';                  impact = 'must_review';  reason = 'workflowInvariants may need new or updated entries' }
+            @{ target = 'studio/scripts/powershell/workflow-engine.ps1';                impact = 'must_review';  reason = 'Engine may need updates to handle new step shapes' }
+            @{ target = 'studio/scripts/powershell/validate-workflow.ps1';              impact = 'must_review';  reason = 'Validator must accept any new or changed schema fields' }
+            @{ target = 'studio/tests/sdd-pipeline.Tests.ps1';                          impact = 'must_review';  reason = 'First built-in workflow must remain schema-valid and cover required statuses' }
+            @{ target = 'studio/tests/workflow-schema.Tests.ps1';                       impact = 'must_review';  reason = 'Schema fixtures may need updates' }
+            @{ target = 'WORKSPACE_STRUCTURE.md';                                       impact = 'maybe_review'; reason = 'Workspace structure may reference workflow surface' }
+            @{ target = 'studio/QUICKSTART.md';                                         impact = 'maybe_review'; reason = 'Quickstart may reference workflow runtime' }
         )
     }
     @{
@@ -231,6 +265,15 @@ $builtinImpactRouting = @(
             @{ target = 'studio/runtime/shared-runtime-contract.json';            impact = 'maybe_review'; reason = 'Adapter edits may affect bootstrap-related invariants' }
             @{ target = 'studio/scripts/powershell/sync-agent-bootstrap.ps1';     impact = 'reference' }
             @{ target = 'studio/scripts/powershell/check-agent-bootstrap.ps1';    impact = 'reference' }
+        )
+    }
+    @{
+        changeType  = 'finding_status_ledger_change'
+        trigger     = 'docs/sdd-workspace-repair-inventory-and-update-plan-2026-07-12_zhTW.md'
+        description = 'Changes to the repair ledger status authority or its informational narrative'
+        rules       = @(
+            @{ target = 'docs/README.md'; impact = 'must_update'; reason = 'The dependent finding-status index must match the latest authoritative fold' }
+            @{ target = 'studio/runtime/shared-runtime-contract.json'; impact = 'must_review'; reason = 'Scoped authority structure and validator routing must remain contract-bound' }
         )
     }
     @{
@@ -374,6 +417,18 @@ function Build-Registry {
             description = $entry.description
         }
 
+        if ($entry.authorityScopes) {
+            $item.authorityScopes = @($entry.authorityScopes | ForEach-Object {
+                [ordered]@{
+                    name = $_.name
+                    selector = $_.selector
+                    authority = $_.authority
+                    schemaPath = $_.schemaPath
+                    validatorPath = $_.validatorPath
+                }
+            })
+        }
+
         # Check if any override matches this path exactly
         if ($Overrides.Contains($entry.path)) {
             $meta = $Overrides[$entry.path]
@@ -438,8 +493,9 @@ function Build-Registry {
 function ConvertTo-RegistryJson {
     param([object]$Registry)
 
-    # Use ConvertTo-Json with sufficient depth
-    return $Registry | ConvertTo-Json -Depth 10
+    # ConvertTo-Json follows the host platform's newline convention. Normalize the
+    # generated source to LF so repeated writes are byte-stable on every platform.
+    return (($Registry | ConvertTo-Json -Depth 10) -replace "`r`n?", "`n")
 }
 
 # ============================================================

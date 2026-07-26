@@ -1,11 +1,11 @@
-﻿---
+---
 name: speckit-eci
 description: "Govern external capability adoption after readiness routes a feature to ECI, classify the ECI level, and emit the dossier artifacts required for safe readiness re-entry."
 model: claude-opus-4-7
 ---
 
-<!-- Seeded from .github/agents/speckit.eci.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
-<!-- WARNING: This file is a seeded copy from .github/agents/speckit.eci.agent.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
+<!-- Seeded from canonical source .github/agents/speckit.eci.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. This file is a deterministic Claude-consumable dependent mirror. -->
+<!-- WARNING: Direct edits to this dependent mirror will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit canonical source .github/agents/speckit.eci.agent.md and re-seed. -->
 
 ## Output Language
 
@@ -20,6 +20,11 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 Treat `$ARGUMENTS` as optional operator context, focus area, or additional notes for this ECI run.
+
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the non-bypassable entry gate, then preserve the returned absolute
+`FEATURE_DIR` in every next-stage command and handoff. Do not rebind from the branch, environment,
+or free-form user text.
 
 ---
 
@@ -41,6 +46,24 @@ Its job is to answer:
 
 ## Required Behavior
 
+### Non-bypassable first action
+
+Before reading `spec.md`, Readiness, the ECI trigger, constitutions, or any
+existing dossier content, run this gate once from the project root:
+
+```powershell
+pwsh ./studio/scripts/powershell/setup-eci.ps1 -FeatureDir "<path>" -Json
+```
+
+Omit `-FeatureDir` only when the user did not supply an explicit feature
+context. Parse `READY`, `FEATURE_DIR`, `FEATURE_SPEC`, `READINESS_ASSESSMENT`,
+`ECI_TRIGGER`, `ECI_DIR`, `ECI_REQUIREMENT_PATH`,
+`ECI_REQUIREMENT_LATCHED`, `STUDIO_ROOT`, `CONSTITUTIONS`, and `BLOCKERS`.
+If the process exits non-zero, `READY` is not exactly Boolean `true`, the
+result is missing or invalid, any blocker exists, or
+`ECI_REQUIREMENT_LATCHED` is not exactly Boolean `true`, stop and report the
+blocker. There is no operator-confirmation or force bypass.
+
 ### What this agent MUST do
 
 1. Validate that the current feature was explicitly routed here by `/speckit.readiness`.
@@ -49,7 +72,7 @@ Its job is to answer:
 4. Write the full ECI dossier under `FEATURE_DIR/readiness/eci/`.
 5. Make source basis, adoption boundary, packaging stance, and authorization constraints explicit.
 6. Make readiness re-entry expectations explicit: what is now governed, what blocker is most likely next, and what changes would require another ECI run.
-7. Recommend re-running `/speckit.readiness` after dossier completion.
+7. Recommend re-running `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` after dossier completion.
 
 ### What this agent MUST NOT do
 
@@ -92,28 +115,26 @@ If the trigger is stale, misrouted, or does not actually describe an external ca
 - `ECI Level = NO_ECI`
 - `Authorization Outcome = NOT_READY`
 
-and send the feature back to `/speckit.readiness`.
+and send the feature back to `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 
 ---
 
 ## Execution Steps
 
-1. Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly` from repo root **once**.
+1. Run the non-bypassable `setup-eci.ps1 -FeatureDir "<path>" -Json` entry gate described above as the first action, applying the explicit-input rule above.
 2. Parse:
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
+   - `READINESS_ASSESSMENT`
+   - `ECI_TRIGGER`
+   - `ECI_DIR`
+   - `ECI_REQUIREMENT_PATH`
    - `STUDIO_ROOT`
    - `CONSTITUTIONS`
-3. Derive:
-   - `READINESS_DIR = FEATURE_DIR/readiness`
-   - `READINESS_ASSESSMENT = READINESS_DIR/readiness-assessment.md`
-   - `ECI_TRIGGER = READINESS_DIR/eci-trigger.md`
-   - `ECI_DIR = READINESS_DIR/eci`
-4. Abort with an error if:
-   - `READINESS_ASSESSMENT` is missing
-   - `ECI_TRIGGER` is missing
-   - `Primary Status` is absent or ambiguous
-   - `Primary Status` is anything other than `ROUTE_TO_ECI`
+3. Abort if the gate does not prove the exact `ROUTE_TO_ECI`, `PENDING`,
+   `ECI_REQUIRED=true`, and latched-marker intake state.
+4. Treat every path returned by the gate as authoritative for this invocation;
+   do not derive a second feature context independently.
 5. Load:
    - current `spec.md`
    - `readiness-assessment.md`
@@ -129,7 +150,7 @@ and send the feature back to `/speckit.readiness`.
 7. Select exactly one ECI Level and one Authorization Outcome.
 8. Write all four dossier files under `FEATURE_DIR/readiness/eci/`.
 9. In every `Return To Readiness` section, name the conditions that readiness should inspect next and the likely next blocker if planning is still not authorized.
-10. Report completion and recommend re-running `/speckit.readiness`.
+10. Report completion and recommend re-running `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 
 ---
 
@@ -331,13 +352,13 @@ Multiple capabilities must be handled through a single feature-level dossier wit
 
 - Always write all four dossier files.
 - Always keep `eci-trigger.md` as the upstream intake seed; do not overwrite its role with the dossier.
-- Always recommend `/speckit.readiness` as the next command.
+- Always recommend `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` as the next command.
 - Never recommend `/speckit.plan` directly from `/speckit.eci`.
 - Never imply that `READY_FOR_SANDBOX_ONLY` or `READY_FOR_SPIKE_ONLY` is sufficient for planning.
 
 If `Authorization Outcome` is not `READY_FOR_MAINLINE_IMPLEMENTATION`, say so explicitly and make the constraint impossible to miss.
 
-If `ECI Level = NO_ECI`, explain clearly why the trigger appears stale or misrouted and direct the operator back to `/speckit.readiness`.
+If `ECI Level = NO_ECI`, explain clearly why the trigger appears stale or misrouted and direct the operator back to `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`.
 
 ---
 
@@ -349,7 +370,7 @@ After writing files, report:
 - Authorization Outcome
 - Files written
 - Why this governance result is correct
-- Recommended next step: re-run `/speckit.readiness`
+- Recommended next step: re-run `/speckit.readiness -FeatureDir "<FEATURE_DIR>"`
 
 Example:
 
@@ -366,7 +387,7 @@ Reason:
 The feature depends on a real external capability that materially affects architecture and control boundaries, but the current dossier only authorizes sandbox work.
 
 Recommended next step:
-Re-run /speckit.readiness and let readiness decide the next blocker. In this case the next blocker should normally shift to validation, access, or a real owner decision rather than repeating ROUTE_TO_ECI.
+Re-run /speckit.readiness -FeatureDir "<FEATURE_DIR>" and let readiness decide the next blocker. In this case the next blocker should normally shift to validation, access, or a real owner decision rather than repeating ROUTE_TO_ECI.
 ```
 
 ---

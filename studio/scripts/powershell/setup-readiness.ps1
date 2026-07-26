@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Stage entry gate for /speckit.readiness.
@@ -52,22 +54,6 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        $readinessDir = Join-Path $resolved 'readiness'
-        return [PSCustomObject]@{
-            FEATURE_DIR          = $resolved
-            FEATURE_SPEC         = Join-Path $resolved 'spec.md'
-            READINESS_DIR        = $readinessDir
-            READINESS_ASSESSMENT = Join-Path $readinessDir 'readiness-assessment.md'
-            ECI_DIR              = Join-Path $readinessDir 'eci'
-        }
-    }
-    return Get-FeaturePathsEnv
-}
-
 function Get-NeedsClarificationMarkers {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return @() }
@@ -77,7 +63,12 @@ function Get-NeedsClarificationMarkers {
     return @($rxMatches | ForEach-Object { $_.Value })
 }
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.READINESS_DIR -MessagePrefix 'READINESS_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.READINESS_ASSESSMENT -MessagePrefix 'READINESS_ASSESSMENT escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.ECI_DIR -MessagePrefix 'ECI_DIR escapes project root'
+
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]
 

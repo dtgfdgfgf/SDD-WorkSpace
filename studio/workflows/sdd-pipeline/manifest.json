@@ -1,0 +1,25 @@
+{
+  "id": "sdd-pipeline",
+  "version": "1.1.0",
+  "title": "SDD Seven-Stage Pipeline",
+  "description": "Studio-first executable representation of the SDD seven-stage flow with replay-safe validator-sourced readiness routing across all 8 primary statuses and four-value ECI authorization; three bounded outcomes re-enter Readiness and NOT_READY fails closed.",
+  "kind": "workflow",
+  "status": "active",
+  "owner": "studio",
+  "tags": ["sdd", "studio-first", "wave-3"],
+  "capabilities": [
+    "stage-orchestration",
+    "readiness-status-routing",
+    "eci-authorization-re-entry"
+  ],
+  "runtimeScopes": ["agents", "docs"],
+  "compatibility": {
+    "mode": "studio-first"
+  },
+  "entryPoints": {
+    "docs": [
+      "docs/README.md"
+    ]
+  },
+  "notes": "Wave-3 baseline. Step types in scope: command/gate/if/switch. Agent steps halt with exit 42; gates halt with exit 43. Execution goes through the shared runner studio/scripts/powershell/run-workflow.ps1, which is workspace infrastructure, not a workflow-owned entry point."
+}

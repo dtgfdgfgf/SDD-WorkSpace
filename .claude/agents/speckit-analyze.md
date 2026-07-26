@@ -1,11 +1,11 @@
-﻿---
+---
 name: speckit-analyze
 description: "Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, readiness artifacts, plan.md, and tasks.md after task generation."
 model: claude-opus-4-7
 ---
 
-<!-- Seeded from .github/agents/speckit.analyze.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. The workspace root /.claude/agents directory is the Claude shared runtime authority after generation. -->
-<!-- WARNING: This file is a seeded copy from .github/agents/speckit.analyze.agent.md. Direct edits will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit the source file and re-seed. -->
+<!-- Seeded from canonical source .github/agents/speckit.analyze.agent.md via studio/scripts/powershell/seed-claude-agents.ps1. This file is a deterministic Claude-consumable dependent mirror. -->
+<!-- WARNING: Direct edits to this dependent mirror will be overwritten on the next seed-claude-agents.ps1 run. To make permanent changes, edit canonical source .github/agents/speckit.analyze.agent.md and re-seed. -->
 
 ## Output Language
 
@@ -19,13 +19,20 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+When `$ARGUMENTS` contains `-FeatureDir <path>`, treat that named option as the authoritative
+feature context. Pass it to the first feature-context script, then preserve the returned absolute
+`FEATURE_DIR` in every recommended remediation or implementation command. Do not rebind from the
+branch, environment, or free-form user text.
+
 ## Goal
 
 Identify inconsistencies, duplications, ambiguities, underspecified items, readiness-gate violations, intent drift, and document drift across the core execution artifacts (`spec.md`, `intent-ledger.md`, `readiness/*.md`, `readiness/eci/*.md`, `plan.md`, `tasks.md`) and any available supporting design artifacts (`data-model.md`, `contracts/`, `research.md`, `quickstart.md`, `README.md`) before implementation. This command MUST run only after `/speckit.tasks` has successfully produced a complete `tasks.md`.
 
 ## Operating Constraints
 
-**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
+**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report plus the exact machine-result JSON described below. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually). The operator or workflow orchestration, not this agent, persists that exact JSON as `FEATURE_DIR/analysis-result.json`.
+
+**MACHINE AUTHORIZATION SOURCE**: `analysis-result.json`, validated against `studio/runtime/analysis-result.schema.json`, is the only Analyze artifact that can authorize `/speckit.implement`. `analysis-checklist.md` may be used as human review notes, but its status or findings table is never authorization evidence.
 
 **Constitution Authority**: The dual-layer constitution system is **non-negotiable** within this analysis scope:
 - **Studio Constitution** (`studio/constitution/constitution.md`): Highest authority, always applies
@@ -36,7 +43,7 @@ Constitution conflicts are automatically CRITICAL and require adjustment of the 
 
 ### 1. Initialize Analysis Context
 
-Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` once from repo root and parse JSON for REPO_ROOT, FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. Derive absolute paths:
+Run `studio/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` once from repo root, or `studio/scripts/powershell/check-prerequisites.ps1 -FeatureDir <path> -Json -RequireTasks -IncludeTasks` when the named option is present, and parse JSON for REPO_ROOT, FEATURE_DIR, AVAILABLE_DOCS, STUDIO_ROOT, and CONSTITUTIONS. Derive absolute paths:
 
 - SPEC = FEATURE_DIR/spec.md
 - INTENT_LEDGER = FEATURE_DIR/intent-ledger.md
@@ -290,15 +297,118 @@ Output a Markdown report (no file writes) with the following structure:
 - Duplication Count
 - Critical Issues Count
 
+**Mainline-Bound Shared-Layer Reconciliation:** (if applicable)
+
+When the analyzed feature touches workspace-level shared-layer surfaces — `studio/constitution/`,
+`studio/runtime/`, `studio/templates/sdd-docs/`, `.githooks/`, `studio/scripts/powershell/`,
+`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/agents/`, `.claude/agents/`,
+or `studio/QUICKSTART.md` / `studio/SDD-QUICKSTART-GUIDE.md` / `WORKSPACE_STRUCTURE.md` — the
+report MUST include a one-line prompt:
+
+> Mainline-bound shared-layer change detected. Author a mainline-update note from
+> `studio/templates/sdd-docs/mainline-update-note-template.md`, complete its aggregate branch-diff
+> Impact Reconciliation, and close every `must_update` route before merging to `main`
+> (constitution §12 and merge CI).
+
+This is advisory only; analyze does not write files. Skip the prompt entirely when the change is
+purely consumer-project (`projects/`, `learning/`).
+
+### 6.1 Emit the Deterministic Machine Result
+
+After the Markdown report, emit one fenced `json` block containing the complete content that the
+operator must save unchanged as `FEATURE_DIR/analysis-result.json`. Do not write the file yourself.
+Do not add a timestamp, prose fields, comments, or properties not defined by
+`studio/runtime/analysis-result.schema.json`.
+
+Use these exact rules:
+
+- `schemaVersion` is `1.0.0`.
+- `featureId` is the leaf directory name of `FEATURE_DIR`.
+- `outcome` is `IMPLEMENTATION_READY` only when readiness is `READY_FOR_PLAN`, every Critical
+  finding is resolved, the Intent Drift Check passes, and every retained intent obligation is
+  accounted for. Otherwise it is `BLOCKED`.
+- `eciRequired` is `true` when `readiness/eci-trigger.md` or any of the four canonical ECI dossier
+  files exists, or readiness still reports `ROUTE_TO_ECI`. Once true, this durable machine result
+  prevents later deletion of the ECI evidence from silently downgrading the Implement gate.
+- `criticalFindings` contains every Critical finding, including resolved ones. Each entry uses
+  `OPEN` or `RESOLVED` and includes a non-empty resolution statement.
+- `intentDriftCheck.status` is `PASS` or `FAIL` and includes a non-empty summary.
+- When `intent-ledger.md` is absent, `intentObligations.status` is `NOT_REQUIRED` and `items` is
+  empty. When it exists, emit one item per ledger row; use overall status `ACCOUNTED` only when no
+  item is `BLOCKING`, otherwise use `BLOCKED`.
+- Hashes are lowercase SHA-256. Use raw file bytes for `spec.md`,
+  `readiness/readiness-assessment.md`, optional `intent-ledger.md`, `plan.md`, and all five ECI
+  artifacts. When `eciRequired` is true, `readiness/eci-trigger.md` plus
+  `readiness/eci/eci-assessment.md`, `source-manifest.md`, `adoption-record.md`, and
+  `authorization-record.md` MUST all exist and carry their current hashes. When it is false, all
+  five ECI hash properties MUST be JSON `null`.
+- For `tasks.md`, hash task definitions rather than progress: decode UTF-8 strictly, normalize only
+  canonical task checkbox prefixes `[ ]`, `[x]`, and `[X]` before `T###` to `[ ]`, encode UTF-8
+  without BOM, then hash. Checkbox progress therefore does not stale Analyze evidence; any task ID,
+  metadata, description, or canonical-line change does.
+- Set the `intent-ledger.md` hash to JSON `null` when the file is absent.
+
+Use this exact PowerShell algorithm when computing the task-definition hash; it is identical to the
+consumer in `setup-implement.ps1`:
+
+```powershell
+$content = [System.IO.File]::ReadAllText($TASKS, [System.Text.UTF8Encoding]::new($false, $true))
+$normalized = [regex]::Replace(
+    $content,
+    '(?m)^(- )\[(?: |x|X)\](\s+T\d{3}\b)',
+    '$1[ ]$2'
+)
+$bytes = [System.Text.UTF8Encoding]::new($false).GetBytes($normalized)
+$tasksDefinitionHash = ([System.Convert]::ToHexString(
+    [System.Security.Cryptography.SHA256]::HashData($bytes)
+)).ToLowerInvariant()
+```
+
+Emit properties in this order:
+
+```json
+{
+  "schemaVersion": "1.0.0",
+  "featureId": "<FEATURE_DIR leaf>",
+  "outcome": "IMPLEMENTATION_READY or BLOCKED",
+  "eciRequired": false,
+  "artifactHashes": {
+    "spec.md": "<lowercase sha256>",
+    "readiness/readiness-assessment.md": "<lowercase sha256>",
+    "readiness/eci-trigger.md": null,
+    "readiness/eci/eci-assessment.md": null,
+    "readiness/eci/source-manifest.md": null,
+    "readiness/eci/adoption-record.md": null,
+    "readiness/eci/authorization-record.md": null,
+    "intent-ledger.md": null,
+    "plan.md": "<lowercase sha256>",
+    "tasks.md": "<lowercase normalized task-definition sha256>"
+  },
+  "criticalFindings": [],
+  "intentDriftCheck": {
+    "status": "PASS or FAIL",
+    "summary": "<non-empty evidence summary>"
+  },
+  "intentObligations": {
+    "status": "NOT_REQUIRED, ACCOUNTED, or BLOCKED",
+    "items": []
+  }
+}
+```
+
+After the block, state exactly which absolute path must receive the unchanged JSON and that
+`/speckit.implement` will reject missing, schema-invalid, blocked, or stale results. The fenced block
+must contain actual values, never the angle-bracket placeholders shown above.
+
 ### 7. Provide Next Actions
 
 At end of report, output a concise Next Actions block:
 
-- If CRITICAL issues exist: Recommend resolving before `/speckit.implement`
-- If readiness gate issues exist: Recommend re-running `/speckit.readiness` or completing the required remediation packet before touching plan/tasks/implementation
-- If intent drift issues exist: Recommend reconciling `intent-ledger.md`, `plan.md`, README / quickstart disclosure, and then rerun `/speckit.analyze`
+- If CRITICAL issues exist: Recommend resolving before `/speckit.implement -FeatureDir "<FEATURE_DIR>"`
+- If readiness gate issues exist: Recommend re-running `/speckit.readiness -FeatureDir "<FEATURE_DIR>"` or completing the required remediation packet before touching plan/tasks/implementation
+- If intent drift issues exist: Recommend reconciling `intent-ledger.md`, `plan.md`, README / quickstart disclosure, and then rerun `/speckit.analyze -FeatureDir "<FEATURE_DIR>"`
 - If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
-- Provide explicit command suggestions: e.g., "Run /speckit.specify with refinement", "Run /speckit.eci to complete external capability governance", "Run /speckit.readiness to refresh gate status", "Run /speckit.plan to adjust architecture after gate clearance", "Manually edit tasks.md to add coverage for 'performance-metrics'", "Align data-model.md / contracts/ with task assumptions"
+- Provide explicit command suggestions that retain `-FeatureDir "<FEATURE_DIR>"` for every feature-bound command, including `/speckit.eci`, `/speckit.readiness`, `/speckit.plan`, and `/speckit.implement`
 
 ### 8. Offer Remediation
 

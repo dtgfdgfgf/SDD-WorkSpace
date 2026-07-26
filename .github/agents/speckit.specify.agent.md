@@ -5,11 +5,7 @@ infer: true
 handoffs: 
   - label: Clarify Spec Requirements
     agent: speckit.clarify
-    prompt: Clarify specification requirements
-    send: true
-  - label: Assess Implementation Readiness
-    agent: speckit.readiness
-    prompt: Assess whether the current spec is ready for planning.
+    prompt: Clarify specification requirements with -FeatureDir <FEATURE_DIR>, where FEATURE_DIR is the directory containing SPEC_FILE.
     send: true
 ---
 
@@ -82,24 +78,28 @@ Given that feature description, do this:
     2. Extract key concepts from description
        Identify: actors, actions, data, constraints
     3. For unclear aspects:
-       - Make informed guesses based on context and industry standards
-       - Only mark with [NEEDS CLARIFICATION: specific question] if:
-         - The choice significantly impacts feature scope or user experience
-         - Multiple reasonable interpretations exist with different implications
-         - No reasonable default exists
-       - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
+       - Do NOT invent requirements. Studio Constitution Section 10 forbids assuming missing
+         requirements. Mark [NEEDS CLARIFICATION: specific question] for any unclear aspect that
+         materially defines the feature — scope, actors, functional/non-functional requirements,
+         primary scenarios, success criteria, or a named capability.
+       - A conventional default MAY be used ONLY for a purely local, non-scope-defining detail, and
+         then it MUST be recorded in the Assumptions section as a provisional assumption to be
+         confirmed in /speckit.clarify (never silently baked in).
+       - Do not cap the number of markers for material unknowns; record every material unknown.
        - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
     4. Fill User Scenarios & Testing section
        If no clear user flow: ERROR "Cannot determine user scenarios"
     5. Generate Functional Requirements
        Each requirement must be testable
-       Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
+       Mark unspecified scope-defining details with [NEEDS CLARIFICATION]; use conventional
+       defaults only for purely local details, recorded as provisional assumptions in the
+       Assumptions section
     6. Define Success Criteria
        Create measurable, technology-agnostic outcomes
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
        Each criterion must be verifiable without implementation details
     7. Identify Key Entities (if data involved)
-    8. Return: SUCCESS (spec ready for clarification and subsequent readiness triage)
+    8. Return: SUCCESS (spec ready for `/speckit.clarify`)
 
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
 
@@ -141,7 +141,7 @@ Given that feature description, do this:
       
       ## Notes
       
-       - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.readiness`
+       - Items marked incomplete require spec updates before `/speckit.clarify`; Specify does not route directly to `/speckit.readiness`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
@@ -160,8 +160,8 @@ Given that feature description, do this:
 
       - **If [NEEDS CLARIFICATION] markers remain**:
         1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
-        2. **LIMIT CHECK**: If more than 3 markers exist, keep only the 3 most critical (by scope/security/UX impact) and make informed guesses for the rest
-        3. For each clarification needed (max 3), present options to user in this format:
+        2. Every material marker MUST remain in the specification and MUST be presented for user resolution; do not cap, discard, or answer any marker by guessing.
+        3. For each clarification needed, present options to user in this format:
 
            ```markdown
            ## Question [N]: [Topic]
@@ -187,7 +187,7 @@ Given that feature description, do this:
            - Each cell should have spaces around content: `| Content |` not `|Content|`
            - Header separator must have at least 3 dashes: `|--------|`
            - Test that the table renders correctly in markdown preview
-        5. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
+        5. Number every question sequentially (Q1, Q2, Q3, and so on)
         6. Present all questions together before waiting for responses
         7. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
@@ -195,7 +195,7 @@ Given that feature description, do this:
 
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.readiness`).
+7. Report completion with branch name, spec file path, checklist results, and the exact `/speckit.clarify -FeatureDir "<FEATURE_DIR>"` handoff, where `FEATURE_DIR` is the directory containing `SPEC_FILE`. `/speckit.clarify` is the only next-phase handoff from Specify; do not route directly to `/speckit.readiness`.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 
@@ -218,26 +218,32 @@ Given that feature description, do this:
 
 When creating this spec from a user prompt:
 
-1. **Make informed guesses**: Use context, industry standards, and common patterns to fill gaps
-2. **Document assumptions**: Record reasonable defaults in the Assumptions section
-3. **Limit clarifications**: Maximum 3 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
+1. **Do not invent requirements**: Studio Constitution Section 10 forbids assuming missing
+   requirements. For scope-defining gaps, mark [NEEDS CLARIFICATION] instead of guessing.
+2. **Provisional assumptions only for local details**: A conventional default MAY fill a purely
+   local, non-scope-defining detail, but it MUST be recorded in the Assumptions section as
+   provisional and confirmed in /speckit.clarify — never silently baked into the spec.
+3. **Mark every material unknown**: Do not cap markers for scope-defining unknowns. Use
+   [NEEDS CLARIFICATION] for decisions that:
    - Significantly impact feature scope or user experience
    - Have multiple reasonable interpretations with different implications
-   - Lack any reasonable default
+   - Affect security, privacy, compliance, retention, authentication, or integration boundaries
 4. **Prioritize clarifications**: scope > security/privacy > user experience > technical details
 5. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
-6. **Common areas needing clarification** (only if no reasonable default exists):
+6. **Common areas that usually need clarification** (mark rather than assume):
    - Feature scope and boundaries (include/exclude specific use cases)
-   - User types and permissions (if multiple conflicting interpretations possible)
-   - Security/compliance requirements (when legally/financially significant)
+   - User types and permissions
+   - Security/compliance requirements
 
-**Examples of reasonable defaults** (don't ask about these):
+**Areas that MUST NOT be silently defaulted** (they materially define the feature — mark them):
 
-- Data retention: Industry-standard practices for the domain
-- Performance targets: Standard web/mobile app expectations unless specified
-- Error handling: User-friendly messages with appropriate fallbacks
-- Authentication method: Standard session-based or OAuth2 for web apps
-- Integration patterns: RESTful APIs unless specified otherwise
+- Data retention (legal/compliance impact)
+- Authentication method (security impact)
+- Performance/availability targets (define success criteria)
+- Integration patterns and external dependencies (scope-defining)
+
+Purely presentational or internal-only details (e.g. default error-message wording) MAY use a
+conventional default, recorded as a provisional assumption.
 
 ### Success Criteria Guidelines
 

@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Setup Git hooks for the SDD workspace or a consumer project repository.

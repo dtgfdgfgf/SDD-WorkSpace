@@ -137,6 +137,12 @@ Description: [PROJECT_DESCRIPTION]
 Created: [CREATED_DATE]
 "@ -Encoding utf8
 
+        foreach ($policyFile in @('.gitignore', '.gitattributes', '.editorconfig')) {
+            Copy-Item `
+                -LiteralPath (Join-Path $WorkspaceRoot "studio/templates/project-init/$policyFile") `
+                -Destination (Join-Path $script:studio "templates/project-init/$policyFile")
+        }
+
         # Stray .git in template (M21) — must NOT propagate
         $strayGitDir = Join-Path $script:studio 'templates/project-init/.git'
         New-Item -ItemType Directory -Path $strayGitDir -Force | Out-Null
@@ -194,6 +200,70 @@ exit 0
         $readme | Should -Match 'A custom desc'
     }
 
+    It 'copies repository hygiene policies into each independent project' {
+        $target = Join-Path $script:workspace 'projects/policies'
+        Initialize-ProjectFromTemplate `
+            -Name 'policies' `
+            -TargetDir $target `
+            -Type 'Internal' `
+            -TemplateDir (Join-Path $script:studio 'templates/project-init') `
+            -StudioRoot $script:studio `
+            -WorkspaceRoot $script:workspace | Out-Null
+
+        foreach ($policyFile in @('.gitignore', '.gitattributes', '.editorconfig')) {
+            Test-Path -LiteralPath (Join-Path $target $policyFile) | Should -BeTrue
+        }
+
+        $ignore = Get-Content -LiteralPath (Join-Path $target '.gitignore') -Raw
+        $attributes = Get-Content -LiteralPath (Join-Path $target '.gitattributes') -Raw
+        $editorConfig = Get-Content -LiteralPath (Join-Path $target '.editorconfig') -Raw
+        $ignore | Should -Match '(?m)^/packages/$'
+        $ignore | Should -Match '(?m)^\.claude/settings\.local\.json$'
+        $ignore | Should -Match '(?m)^\.claude/\.agent-\*-backup/$'
+        $ignore | Should -Match '(?m)^/\.github/agents/$'
+        $ignore | Should -Match '(?m)^/\.claude/agents/$'
+        $attributes | Should -Match '(?m)^\*\.ps1 text eol=lf$'
+        $editorConfig | Should -Match '(?m)^charset = utf-8$'
+        $editorConfig | Should -Match '(?m)^end_of_line = lf$'
+    }
+
+    It 'keeps shared junction contents out of fresh status and git add dot' {
+        Set-Content `
+            -LiteralPath (Join-Path $script:workspace '.github/agents/shared-fixture.agent.md') `
+            -Value '# shared Copilot agent' `
+            -Encoding utf8
+        Set-Content `
+            -LiteralPath (Join-Path $script:workspace '.claude/agents/shared-fixture.md') `
+            -Value '# shared Claude agent' `
+            -Encoding utf8
+
+        $target = Join-Path $script:workspace 'projects/junction-isolation'
+        Initialize-ProjectFromTemplate `
+            -Name 'junction-isolation' `
+            -TargetDir $target `
+            -Type 'Internal' `
+            -TemplateDir (Join-Path $script:studio 'templates/project-init') `
+            -StudioRoot $script:studio `
+            -WorkspaceRoot $script:workspace | Out-Null
+
+        (Get-Item -LiteralPath (Join-Path $target '.github/agents') -Force).LinkType |
+            Should -Be 'Junction'
+        (Get-Item -LiteralPath (Join-Path $target '.claude/agents') -Force).LinkType |
+            Should -Be 'Junction'
+
+        $status = @(git -C $target status --porcelain=v1 --untracked-files=all)
+        $LASTEXITCODE | Should -Be 0
+        ($status -join "`n") | Should -Not -Match '(?i)\.github/agents/'
+        ($status -join "`n") | Should -Not -Match '(?i)\.claude/agents/'
+
+        git -C $target add .
+        $LASTEXITCODE | Should -Be 0
+        $stagedPaths = @(git -C $target diff --cached --name-only)
+        $LASTEXITCODE | Should -Be 0
+        ($stagedPaths -join "`n") | Should -Not -Match '(?i)^\.github/agents/'
+        ($stagedPaths -join "`n") | Should -Not -Match '(?i)^\.claude/agents/'
+    }
+
     It 'creates retrospective.md for Internal projects' {
         $target = Join-Path $script:workspace 'projects/withretro'
         Initialize-ProjectFromTemplate `
@@ -234,6 +304,32 @@ exit 0
         Test-Path -LiteralPath $wsPath | Should -BeTrue
         $obj = Get-Content -LiteralPath $wsPath -Raw | ConvertFrom-Json
         $obj.folders[0].name | Should -Be 'wsfile'
+        $bytes = [System.IO.File]::ReadAllBytes($wsPath)
+        ([Array]::IndexOf($bytes, [byte]0x0D) -ge 0) | Should -BeFalse
+        $bytes[-1] | Should -Be 0x0A
+    }
+
+    It 'writes initialized governed documents with LF and no BOM' {
+        $target = Join-Path $script:workspace 'projects/lfdocs'
+        Initialize-ProjectFromTemplate `
+            -Name 'lfdocs' `
+            -TargetDir $target `
+            -Type 'Internal' `
+            -TemplateDir (Join-Path $script:studio 'templates/project-init') `
+            -StudioRoot $script:studio `
+            -WorkspaceRoot $script:workspace | Out-Null
+
+        foreach ($relativePath in @(
+            'README.md',
+            'retrospective.md',
+            '.specify/memory/constitution.md',
+            'lfdocs.code-workspace'
+        )) {
+            $bytes = [System.IO.File]::ReadAllBytes((Join-Path $target $relativePath))
+            ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) | Should -BeFalse -Because $relativePath
+            ([Array]::IndexOf($bytes, [byte]0x0D) -ge 0) | Should -BeFalse -Because $relativePath
+            $bytes[-1] | Should -Be 0x0A -Because $relativePath
+        }
     }
 
     It 'initializes an independent Git repo with workspace hooksPath' {

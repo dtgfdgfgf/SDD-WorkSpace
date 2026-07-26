@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Stage entry gate for /speckit.tasks.
@@ -48,21 +50,10 @@ if ($Help) {
 
 . "$PSScriptRoot/common.ps1"
 
-function Resolve-FeatureContext {
-    param([string]$Override)
-    if ($Override) {
-        $resolved = Resolve-AbsolutePath -Path $Override
-        return [PSCustomObject]@{
-            FEATURE_DIR  = $resolved
-            FEATURE_SPEC = Join-Path $resolved 'spec.md'
-            IMPL_PLAN    = Join-Path $resolved 'plan.md'
-            TASKS        = Join-Path $resolved 'tasks.md'
-        }
-    }
-    return Get-FeaturePathsEnv
-}
+$paths = Resolve-FeatureContext -FeatureDir $FeatureDir
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes project root'
+Assert-PathInsideRoot -Root $paths.REPO_ROOT -Candidate $paths.TASKS -MessagePrefix 'TASKS escapes project root'
 
-$paths = Resolve-FeatureContext -Override $FeatureDir
 $blockers = New-Object System.Collections.Generic.List[string]
 $messages = New-Object System.Collections.Generic.List[string]
 

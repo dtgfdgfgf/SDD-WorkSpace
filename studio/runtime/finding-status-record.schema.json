@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dtgfdgfgf/SDD-WorkSpace/studio/runtime/finding-status-record.schema.json",
+  "title": "Finding status ledger record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "revision",
+    "recordType",
+    "recordedDate",
+    "ledgerVersion",
+    "statuses",
+    "inventoryCount",
+    "severityCounts",
+    "statusCounts"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "recordType": {
+      "type": "string",
+      "enum": [
+        "snapshot",
+        "delta"
+      ]
+    },
+    "recordedDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "ledgerVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "statuses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^R-[A-Z][0-9]{2,}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "COMPLETED",
+              "OPEN",
+              "DECIDED",
+              "IN_PROGRESS",
+              "DISPOSITIONED"
+            ]
+          },
+          "reentryTrigger": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "DISPOSITIONED"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "required": [
+                "reentryTrigger"
+              ]
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "reentryTrigger"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "inventoryCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "severityCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "Critical",
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "properties": {
+        "Critical": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "High": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "Medium": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "Low": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "statusCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "COMPLETED",
+        "OPEN",
+        "DECIDED",
+        "IN_PROGRESS",
+        "DISPOSITIONED"
+      ],
+      "properties": {
+        "COMPLETED": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "OPEN": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "DECIDED": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "IN_PROGRESS": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "DISPOSITIONED": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

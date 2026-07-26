@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "updated": "2026-03-08T15:47:12.8652979+08:00",
+  "version": "1.2.0",
+  "updated": "2026-07-22T17:56:16+08:00",
   "policy": {
     "mode": "studio-first",
     "curatedOnly": true,
@@ -19,8 +19,7 @@
     ],
     "stateSources": [
       "default",
-      "manual",
-      "sync"
+      "manual"
     ]
   },
   "extensions": [
@@ -29,12 +28,14 @@
       "version": "1.0.0",
       "title": "Extension Smoke",
       "sourcePath": "extensions/extension-smoke",
-      "reviewStatus": "approved",
-      "trustLevel": "curated",
+      "reviewStatus": "draft",
+      "trustLevel": "experimental",
       "defaultEnabled": false,
       "owner": "studio",
-      "approvedBy": "studio",
-      "approvedAt": "2026-03-08T00:00:00+08:00",
+      "approvedBy": null,
+      "approvedAt": null,
+      "contentSha256": "205795720b72ea3e8b4a40641e742578e5a27bc07a9f57a59637ab082666b991",
+      "approvedContentSha256": null,
       "runtimeScopes": [
         "scripts",
         "docs"

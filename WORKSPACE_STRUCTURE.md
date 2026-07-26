@@ -1,8 +1,8 @@
 # Workspace Structure Design
 
-**Version:** 1.8.0
+**Version:** 1.10.0
 **Created:** 2025-12-08  
-**Updated:** 2026-04-30
+**Updated:** 2026-07-22
 **Owner:** Solo AI Engineer  
 **Methodology:** Specification-Driven Development (SDD)
 
@@ -14,7 +14,7 @@ shared assets without turning each repo into a fully self-contained upstream Spe
 
 Design priorities:
 
-- Single source of truth for governance and runtime agents
+- Canonical governance and agent sources with deterministic dependent runtime mirrors
 - Dual-layer constitutions with additive project rules
 - Predictable initialization for Practice, Internal, and Client projects
 - Controlled template customization without losing studio defaults
@@ -24,20 +24,20 @@ Design priorities:
 
 | Path | Purpose |
 |------|---------|
+| `.githooks/` | Shared machine-enforced Git hooks used by the workspace and consumer repositories |
+| `.vscode/` | Workspace-level editor tasks and settings |
 | `.github/copilot-instructions.md` | Workspace-level Copilot rules |
-| `.github/agents/` | Runtime source for shared SDD agents |
-| `.claude/agents/` | Runtime source for shared Claude agents |
+| `.github/agents/` | Mixed-authority agent surface: declared canonical definitions plus one dependent Copilot adapter |
+| `.claude/agents/` | Deterministic dependent mirrors generated from `.github/agents/` for Claude runtime consumption |
 | `.github/prompts/` | Runtime source for shared prompt assets |
 | `learning/<project>/` | Practice projects |
 | `projects/<project>/` | Internal, Client, and historical sample projects |
 | `docs/project-governance-status.md` | Central governance compatibility ledger for consumer projects |
 | `docs/project-worktree-parity-governance.md` | Canonical governance policy for consumer-project derived worktree parity |
 | `docs/mainline-updates/` | Centralized explanation notes for main-bound shared-layer update batches |
-| `archive/` | Archived or deprecated items |
 | `resources/` | Shared resources |
 | `resources/agent-skill-packs/` | Generated AI skill packs exported from shared runtime sources |
 | `WORKSPACE_STRUCTURE.md` | This document |
-| `features.txt` | Current development goals |
 
 ## Studio Canonical Sources
 
@@ -46,6 +46,7 @@ Design priorities:
 | `studio/constitution/constitution.md` | Highest-authority studio governance |
 | `studio/runtime/shared-runtime-contract.json` | Machine-verifiable shared runtime contract for studio-only convergence |
 | `studio/extensions/` | Canonical shared extension source, manifest schema, catalog, and state |
+| `studio/workflows/` | Canonical shared workflow runtime: schemas, catalog, state, POLICY, and built-in `sdd-pipeline/` |
 | `studio/templates/project-init/` | Project bootstrap skeleton |
 | `studio/templates/sdd-docs/` | Canonical document templates |
 | `studio/knowledge-base/learnings.md` | Cross-project learning capture |
@@ -99,13 +100,16 @@ Notes:
 
 ### 2. Runtime Agent Source
 
-The runtime source of truth is:
+The canonical runtime sources are:
 
-- `.github/agents/`
-- `.claude/agents/`
+- `.github/agents/*.agent.md`
+- `.github/agents/async-python-reviewer.md`
 - `.github/prompts/`
 
-Agent definitions live in `.github/agents/` (source of truth) and `.claude/agents/` (seeded copy with Claude-specific format).
+`.github/agents/copilot-instructions.md` is a dependent adapter and is excluded from Claude
+generation. The generator deterministically transforms the declared canonical agent inputs into
+Claude-consumable files under `.claude/agents/`; those files are dependent mirrors used directly
+at runtime and must be regenerated rather than edited as an authority source.
 
 Project-local Claude agents are not supported in this workspace model.
 
@@ -125,10 +129,10 @@ Rules:
 ### 4. Generated Skill Packs
 
 `resources/agent-skill-packs/<agent>/` stores generated skill pack exports for skill-based agent
-ecosystems. These exports are mirrors built from `.github/agents/` and `.github/prompts/`; they are
+ecosystems. These exports are mirrors built from canonical agent inputs and `.github/prompts/`; they are
 not a new source of truth and should be regenerated rather than edited by hand. Claude skills
-install roots are a separate install/export layer and do not replace workspace `/.claude/agents/`
-authority.
+install roots are a separate install/export layer and do not replace the declared canonical agent
+inputs or the generated `/.claude/agents/` consumption path.
 
 `readiness-assessment.md` remains the latest authoritative gate state for each feature. The
 `readiness/eci/` dossier is supporting governance input during post-ECI re-entry and does not
@@ -233,7 +237,10 @@ guarantee derived worktree parity. Derived worktree parity is a separate obligat
 `docs/project-worktree-parity-governance.md`.
 
 Derived worktree bootstrap uses `studio/scripts/powershell/new-project-worktree.ps1` to preserve
-the same shared junction model for Copilot and Claude runtime agents.
+the same shared junction model for Copilot and Claude runtime agents. The script enables Git
+worktree config and writes each depth-specific `core.hooksPath` with `git config --worktree`;
+creating one derived worktree therefore does not replace the hooks path used by the source or
+another worktree.
 
 ## Naming Conventions
 
@@ -258,12 +265,14 @@ the same shared junction model for Copilot and Claude runtime agents.
 | `.github/copilot-instructions.md` | Workspace AI collaboration rules |
 | `studio/QUICKSTART.md` | Fast-start instructions |
 | `studio/SDD-QUICKSTART-GUIDE.md` | Full workflow guide |
-| `spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |
+| `docs/0308upstreams/spec-kit-upstream-wave2-transition-guide.md` | Wave 2 upstream alignment execution guide |
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.10.0 | 2026-07-22 | Reconcile canonical agent sources with generated Claude mirrors, document root hooks and editor configuration, and repair the Wave 2 guide path |
+| 1.9.0 | 2026-07-20 | Isolate derived-worktree hook paths in worktree config and keep shared agent junction contents outside consumer Git snapshots |
 | 1.8.0 | 2026-04-30 | Make new consumer projects independent Git repos with workspace hook configuration and machine-enforced staged governance gates |
 | 1.7.0 | 2026-04-04 | Add workspace-level Claude shared junction runtime, project init support, and derived worktree bootstrap for `.claude/agents/` |
 | 1.6.0 | 2026-04-02 | Add canonical consumer-project derived worktree parity governance and clarify that project initialization bootstrap does not automatically satisfy derived worktree parity |

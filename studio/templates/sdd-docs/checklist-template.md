@@ -70,6 +70,19 @@
 
 ---
 
+## Analyze Review Notes
+
+<!--
+  Human-facing review aid only. This checklist does not authorize /speckit.implement.
+  Machine authorization comes exclusively from a schema-valid analysis-result.json whose
+  artifact hashes, implementation outcome, Critical findings, Intent Drift Check, and intent
+  obligations are validated by setup-implement.ps1.
+-->
+
+**Review Status**: DRAFT
+
+---
+
 ## Notes
 
 - Check items off as completed: `[x]`

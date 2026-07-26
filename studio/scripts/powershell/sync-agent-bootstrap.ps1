@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#
 .SYNOPSIS
 Create or synchronize the three runtime agent bootstrap adapters for one project root.
@@ -171,7 +173,8 @@ Hard rules:
 - Studio Constitution has highest authority.
 - Project Constitution can only add stricter rules.
 - Agent context files are adapters, not constitutions.
-- Governed delivery work follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- Project and consumer-feature delivery follows: specify, clarify, readiness, plan, tasks, analyze, implement.
+- The canonical workspace governance repository may enter Constitution Section 2.1 only after every entry prerequisite is proven and must remain Draft until every closure prerequisite is proven.
 - If documents conflict, flag drift instead of silently choosing.
 $script:EndMarker
 "@.Trim()
@@ -225,6 +228,7 @@ This file is the default runtime adapter for Codex and Copilot CLI.
 
 $Block
 
+<!-- governance-anchor: agents-tool-notes -->
 ## Tool Notes
 
 - Read the governance bootstrap before planning, editing, or running implementation work.
@@ -251,12 +255,14 @@ function New-ClaudeContent {
 
 This file is the Claude Code runtime adapter for $($Context.ProjectName).
 
+<!-- governance-anchor: claude-direct-imports -->
 ## Direct Imports
 
-$($imports -join [Environment]::NewLine)
+$($imports -join "`n")
 
 $Block
 
+<!-- governance-anchor: claude-tool-notes -->
 ## Tool Notes
 
 - Claude Code should use the direct imports plus the generated bootstrap before planning, editing, or running implementation work.
@@ -296,16 +302,20 @@ function Set-TextFileIfChanged {
         [switch]$Write
     )
 
+    $canonicalContent = ConvertTo-LfText -Content $Content
+    if (-not $canonicalContent.EndsWith("`n", [System.StringComparison]::Ordinal)) {
+        $canonicalContent += "`n"
+    }
     $exists = Test-Path -LiteralPath $Path
     $oldContent = if ($exists) { Get-Content -LiteralPath $Path -Raw } else { $null }
-    $changed = (-not $exists) -or ($oldContent -ne $Content)
+    $changed = (-not $exists) -or ($oldContent -ne $canonicalContent)
 
     if ($changed -and $Write) {
         $parent = Split-Path -Parent $Path
         if ($parent -and -not (Test-Path -LiteralPath $parent)) {
             New-Item -ItemType Directory -Path $parent -Force | Out-Null
         }
-        Set-Content -LiteralPath $Path -Value $Content -NoNewline -Encoding utf8
+        Write-Utf8NoBomLfFile -Path $Path -Content $canonicalContent
     }
 
     return $changed
@@ -313,6 +323,13 @@ function Set-TextFileIfChanged {
 
 $context = Get-AgentBootstrapContext -Root $ProjectRoot
 $adapterPaths = Get-AdapterPaths -ProjectRootPath $context.ProjectRoot
+
+# Path boundary defense: every adapter target file must resolve inside $context.ProjectRoot.
+# Get-AdapterPaths uses hardcoded leaf names so this is paranoid, but it locks the contract
+# and rejects any future code path that constructs adapter targets from tainted input.
+foreach ($adapterKey in $adapterPaths.Keys) {
+    Assert-PathInsideRoot -Root $context.ProjectRoot -Candidate $adapterPaths[$adapterKey] -MessagePrefix "$adapterKey adapter path escapes project root"
+}
 
 $block = $null
 if ($From) {

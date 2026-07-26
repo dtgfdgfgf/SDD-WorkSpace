@@ -53,7 +53,16 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 | `analyze` | 分析報告 |
 | `implement` | `src/` 與 `tests/` |
 
-**關鍵規則**：每個階段必須完成後才能進入下一階段，不可跳過。
+**關鍵規則**：project 與 consumer feature 的每個階段必須完成後才能進入下一階段，
+不可跳過。
+
+Studio Constitution 2.1 另定義 canonical workspace governance repo 的等效證據路徑。它
+只適用 shared-layer 維護，並以實作前存在 owner 授權的日期化計畫與 ledger IDs 作為
+entry prerequisites。進入後仍須維持 `Draft` 與 `NOT READY`，直到判別性 negative tests、
+canonical audit、完整 governance suite，以及 `Ready`、`Closed` 的 Batch note 等 closure
+prerequisites 全部成立。此路徑不是七階段 waiver；`projects/`、`learning/`、外部 repo 與
+一般 feature 一律維持完整七階段。Batch Ready 不能取代 contract 指定的 Aggregate note、
+promotion gate 或 R6 fresh-fixture E2E。
 
 `intent-ledger.md` 不是新 stage，而是只有在核心 spec 項目被 represented、deferred 或正式 dropped 時才建立的 secondary artifact。
 
@@ -71,13 +80,18 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 
 ## 2. 開始之前：環境準備
 
-### 2.1 VS Code 環境確認
+### 2.1 Runtime 與 VS Code 環境確認
 
 | 項目 | 要求 | 檢查方式 |
 |------|------|----------|
+| PowerShell | 7 或更新版本；命令名稱為 `pwsh` | `pwsh --version` |
+| powershell-yaml | 0.4.12 | `pwsh -NoProfile -Command "Get-Module powershell-yaml -ListAvailable"` |
+| Pester | 5.7.1 | `pwsh -NoProfile -Command "Get-Module Pester -ListAvailable"` |
 | VS Code 版本 | 1.107+ | Help > About |
 | GitHub Copilot Chat | 已安裝並登入 | Extensions 面板 |
 | Custom Agents | 已載入 | Chat 中輸入 `@` 查看 agent 列表 |
+
+本工作區的 shared PowerShell 腳本不支援 Windows PowerShell 5.1。可執行範例應以 `pwsh ./studio/scripts/powershell/<script>.ps1` 形式呼叫，讓版本不符時在腳本進入點立即失敗。
 
 ### 2.2 啟用 SDD 優化設定
 
@@ -135,10 +149,14 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 主要機器驗證入口是：
 
 ```powershell
-.\studio\scripts\powershell\check-speckit-runtime.ps1 -Json
+pwsh ./studio/scripts/powershell/check-speckit-runtime.ps1 -Json
 ```
 
-另外，`.claude/agents/` 是 shared Claude runtime authority，`<project>/.claude/agents` 是 direct junction consumption path。Claude skills install root 與 workspace shared agents runtime 是不同層。
+另外，`.claude/agents/` 是從 `.github/agents/*.agent.md` 與
+`.github/agents/async-python-reviewer.md` 確定性產生的 dependent mirror，
+`<project>/.claude/agents` 是 Claude runtime 的 direct junction consumption path，而不是另一個
+authority source。dependent `.github/agents/copilot-instructions.md` 不會進入 generator。
+Claude skills install root 與 workspace shared agents runtime 是不同層。
 
 **為何這麼做**：Constitution 定義了「什麼可以做、什麼不能做」。不了解規則就開始，會導致後續大量返工。
 
@@ -193,7 +211,7 @@ Specification-Driven Development (SDD) 是一種以規格文件為核心的開�
 |------|------|------|
 | Studio Constitution | `studio/constitution/constitution.md` | 所有專案都必須遵守的最高權限規則 |
 | Project Constitution | `<project>/.specify/memory/constitution.md` | 專案層級補充規則，只能加嚴不能放寬 |
-| Shared Claude Runtime | `.claude/agents/` | workspace 級 Claude shared runtime authority |
+| Shared Claude Runtime | `.claude/agents/` | 從宣告的 canonical GitHub agent inputs 產生、供 workspace Claude runtime 使用的 dependent mirror |
 | Runtime Agent Adapters | `<project>/AGENTS.md`、`<project>/CLAUDE.md`、`<project>/.github/copilot-instructions.md` | AI 啟動 adapter，共用 generated governance bootstrap，不是 constitution |
 
 **合併邏輯**：
@@ -737,6 +755,19 @@ Constitution 要求至少 3 個 edge cases：
 
 ---
 
+## 補充：可選的 Workflow Runtime（Wave 3）
+
+七階段流程的 canonical 驅動方式仍然是 agent prompt + setup-*.ps1 entry gate。Wave 3 引入額外的可選編排層 `studio/workflows/sdd-pipeline/`，把這條鏈寫成單一可宣告 / 可驗證 / 可恢復的 yaml workflow。
+
+它**不取代**七階段：
+
+- 七階段語意仍由 constitution Section 2、agent prompt、stage-entry gate 強制。
+- workflow runtime 只做 orchestration：順序、readiness 8 種 status 的 switch 路由、ECI 3 種 authorization outcome 的 nested switch、gate halt、agent halt 的 RunState persistence。
+
+進階使用見 `studio/QUICKSTART.md` 的「Optional: Workflow Runtime」段、`studio/workflows/POLICY.md` 與 `studio/workflows/sdd-pipeline/docs/README.md`。
+
+---
+
 ## 12. Git 工作流程
 
 ### 12.1 Branch Naming
@@ -1239,5 +1270,3 @@ project-root/
 ---
 
 > **注意**：本指南會隨著 SDD 實踐經驗持續更新。如有建議或發現問題，請更新 `studio/knowledge-base/learnings.md`。
-
-

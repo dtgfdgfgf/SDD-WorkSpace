@@ -1,0 +1,275 @@
+schema_version: "1.0.0"
+workflow:
+  id: sdd-pipeline
+  name: SDD Seven-Stage Pipeline
+  version: "1.1.0"
+  integration: studio-first
+  description: |
+    Executable representation of the SDD seven-stage flow.
+    The latest Readiness assessment routes all 8 primary statuses through one switch.
+    ECI validates the intake trigger plus the four-file dossier and exactly one of 4 authorization outcomes.
+    Mainline, sandbox-only, and spike-only outcomes re-enter Readiness; NOT_READY fails closed.
+
+inputs:
+  - name: feature
+    type: feature-id
+    required: true
+    description: Feature id, e.g. 001-foo. Must match the directory under specs/.
+
+steps:
+  # 1. Specify ----------------------------------------------------------------
+  - id: stage-specify
+    type: command
+    dispatch: agent
+    agent_command: /speckit.specify
+    expected_artifact: "specs/{{ inputs.feature }}/spec.md"
+    operator_message: "Run /speckit.specify in your agent IDE, produce spec.md, then resume."
+
+  # 2. Clarify ----------------------------------------------------------------
+  - id: stage-clarify-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-clarify.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-clarify
+    type: command
+    dispatch: agent
+    agent_command: /speckit.clarify
+    expected_artifact: "specs/{{ inputs.feature }}/spec.md"
+    operator_message: "Run /speckit.clarify -FeatureDir specs/{{ inputs.feature }} to resolve every [NEEDS CLARIFICATION] marker in spec.md, then resume."
+
+  # 3. Readiness --------------------------------------------------------------
+  - id: stage-readiness-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-readiness.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-readiness
+    type: command
+    dispatch: agent
+    agent_command: /speckit.readiness
+    expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
+    operator_message: "Run /speckit.readiness -FeatureDir specs/{{ inputs.feature }} to produce readiness-assessment.md with one of the 8 primary statuses set, then resume."
+
+  - id: stage-readiness-routing-validation
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-DeferEciDossier", "-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+
+  # 4. Complete ECI when the initial Readiness route requires it ---------------
+  - id: branch-readiness-eci
+    type: if
+    condition: "vars.steps.stage-readiness-routing-validation.json.READINESS_PRIMARY_STATUS == 'ROUTE_TO_ECI'"
+    then:
+      - id: stage-eci-entry-gate
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/setup-eci.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+        capture: { json: true }
+
+      - id: stage-eci
+        type: command
+        dispatch: agent
+        agent_command: /speckit.eci
+        expected_artifact: "specs/{{ inputs.feature }}/readiness/eci/authorization-record.md"
+        operator_message: "Run /speckit.eci -FeatureDir specs/{{ inputs.feature }} to produce all four canonical dossier files, then resume."
+
+      - id: stage-eci-dossier-validation
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/validate-feature-structure.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciDossier", "-Json"]
+        capture: { json: true }
+        revalidate_on_resume: true
+
+      - id: branch-eci-authorization
+        type: switch
+        subject: "{{ vars.steps.stage-eci-dossier-validation.json.ECI_AUTHORIZATION_OUTCOME | default('NOT_READY') }}"
+        cases:
+          READY_FOR_MAINLINE_IMPLEMENTATION:
+            - id: validate-eci-mainline-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+          READY_FOR_SANDBOX_ONLY:
+            - id: validate-eci-sandbox-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+          READY_FOR_SPIKE_ONLY:
+            - id: validate-eci-spike-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+          NOT_READY:
+            - id: deny-eci-not-ready-reentry
+              type: command
+              dispatch: script
+              script: studio/scripts/powershell/validate-feature-structure.ps1
+              args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+              capture: { json: true }
+              revalidate_on_resume: true
+        default:
+          - id: deny-eci-unknown-reentry
+            type: command
+            dispatch: script
+            script: studio/scripts/powershell/validate-feature-structure.ps1
+            args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciReentry", "-Json"]
+            capture: { json: true }
+            revalidate_on_resume: true
+
+      - id: stage-readiness-reentry-prep
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/setup-readiness.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+        capture: { json: true }
+
+      - id: stage-readiness-reentry
+        type: command
+        dispatch: agent
+        agent_command: /speckit.readiness
+        expected_artifact: "specs/{{ inputs.feature }}/readiness/readiness-assessment.md"
+        operator_message: "Re-run /speckit.readiness -FeatureDir specs/{{ inputs.feature }} against the complete ECI dossier, replace the prior assessment with one latest primary status, then resume."
+
+      - id: stage-readiness-reentry-validation
+        type: command
+        dispatch: script
+        script: studio/scripts/powershell/validate-feature-structure.ps1
+        args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-RequireEciDossier", "-Json"]
+        capture: { json: true }
+        revalidate_on_resume: true
+
+  # 5. Route the latest Readiness assessment across all 8 statuses -------------
+  - id: stage-latest-readiness-routing-validation
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/validate-feature-structure.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+    revalidate_on_resume: true
+
+  - id: branch-readiness-status
+    type: switch
+    subject: "{{ vars.steps.stage-latest-readiness-routing-validation.json.READINESS_PRIMARY_STATUS | default('NOT_READY') }}"
+    cases:
+      READY_FOR_PLAN:
+        - id: ready-confirm
+          type: gate
+          prompt: "Readiness is READY_FOR_PLAN. Proceed to /speckit.plan?"
+      ROUTE_TO_ECI:
+        - id: route-eci-repeat-halt
+          type: gate
+          prompt: "Latest Readiness still routes to ECI. The dossier is stale, contradictory, misrouted, or scope-mismatched; restart the governed ECI cycle before Plan."
+      ROUTE_TO_REPO_CONTEXT:
+        - id: route-repo-context-halt
+          type: gate
+          prompt: "Readiness emitted repo-context-packet.md. Resolve, re-run readiness, then resume."
+      ROUTE_TO_DECISION:
+        - id: route-decision-halt
+          type: gate
+          prompt: "Readiness emitted decision-record.md. Owner decision required before resume."
+      ROUTE_TO_VALIDATION:
+        - id: route-validation-halt
+          type: gate
+          prompt: "Readiness emitted validation-contract.md. Define evidence-of-done before resume."
+      ROUTE_TO_ACCESS:
+        - id: route-access-halt
+          type: gate
+          prompt: "Readiness emitted access-setup-checklist.md. Resolve operational prerequisites before resume."
+      EXPLORATORY_ONLY:
+        - id: exploratory-halt
+          type: gate
+          prompt: "Readiness classifies feature as EXPLORATORY_ONLY. Mainline planning not authorized."
+      NOT_READY:
+        - id: not-ready-halt
+          type: gate
+          prompt: "Readiness is NOT_READY. Resolve hard blockers before resume."
+    default:
+      - id: status-default-halt
+        type: gate
+        prompt: "Readiness primary status is unknown. Resolve and resume."
+
+  # 5. Plan -------------------------------------------------------------------
+  - id: stage-plan-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-plan.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-plan
+    type: command
+    dispatch: agent
+    agent_command: /speckit.plan
+    expected_artifact: "specs/{{ inputs.feature }}/plan.md"
+    operator_message: "Run /speckit.plan -FeatureDir specs/{{ inputs.feature }} to produce plan.md with a Version field, then resume."
+
+  # 6. Tasks ------------------------------------------------------------------
+  - id: stage-tasks-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-tasks.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-tasks
+    type: command
+    dispatch: agent
+    agent_command: /speckit.tasks
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    operator_message: "Run /speckit.tasks -FeatureDir specs/{{ inputs.feature }} to produce dependency-ordered tasks.md, then resume."
+
+  # 7. Analyze ----------------------------------------------------------------
+  - id: stage-analyze-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-analyze.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-analyze
+    type: command
+    dispatch: agent
+    agent_command: /speckit.analyze
+    expected_artifact: "specs/{{ inputs.feature }}/analysis-result.json"
+    operator_message: "Run /speckit.analyze -FeatureDir specs/{{ inputs.feature }}, save its exact schema-valid machine-result JSON unchanged as specs/{{ inputs.feature }}/analysis-result.json, then resume. analysis-checklist.md is informational only."
+
+  # 8. Implement --------------------------------------------------------------
+  - id: stage-implement-prep
+    type: command
+    dispatch: script
+    script: studio/scripts/powershell/setup-implement.ps1
+    args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-Json"]
+    capture: { json: true }
+
+  - id: stage-implement
+    type: command
+    dispatch: agent
+    agent_command: /speckit.implement
+    expected_artifact: "specs/{{ inputs.feature }}/tasks.md"
+    terminal: true
+    postcondition:
+      type: no-pending-tasks
+      file: "specs/{{ inputs.feature }}/tasks.md"
+    completion_validation:
+      script: studio/scripts/powershell/setup-implement.ps1
+      args: ["-FeatureDir", "specs/{{ inputs.feature }}", "-CompletionValidation", "-Json"]
+    operator_message: "Run /speckit.implement -FeatureDir specs/{{ inputs.feature }} to execute the task list, then resume. This terminal step completes only when every baseline canonical task remains present in canonical format and is checked off; -AcceptAgent cannot substitute for completion."

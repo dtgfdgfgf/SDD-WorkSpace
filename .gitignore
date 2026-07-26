@@ -16,20 +16,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # ===========================
-# .NET / Visual Studio
-# ===========================
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-.vs/
-*.user
-*.suo
-*.cache
-packages/
-*.nupkg
-
-# ===========================
 # IDE & Editors
 # ===========================
 .idea/
@@ -63,6 +49,7 @@ logs/
 # AI Tools Local Settings
 # ===========================
 .claude/settings.local.json
+.claude/.agent-*-backup/
 
 # ===========================
 # Temporary Files
@@ -77,8 +64,24 @@ logs/
 learning/
 projects/
 
+# External source intake (never vendor a working checkout)
+resources/github-copilot-configs/
+
 # ===========================
 # Test Artifacts
 # ===========================
 testResults.xml
 studio/tests/_artifacts/
+
+# ===========================
+# Workflow RunState (local transient, never tracked)
+# ===========================
+.workflow/
+
+# Extension rollback recovery evidence (local transient, may contain absolute paths)
+/resources/studio-runtime/.extension-transactions/
+
+# ===========================
+# Personal data (never commit)
+# ===========================
+履歷/

@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+
+#Requires -Version 7.0
 <#!
 .SYNOPSIS
 Update agent context files with information from plan.md (PowerShell version)
@@ -14,6 +16,10 @@ Mirrors the behavior of scripts/bash/update-agent-context.sh:
 .PARAMETER AgentType
 Optional agent key to update a single agent. If omitted, updates all existing agent files (creating a default Claude file if none exist).
 
+.PARAMETER FeatureDir
+Optional explicit feature directory. Relative values are resolved from the
+repository root and remain authoritative over branch or SPECIFY_FEATURE state.
+
 .EXAMPLE
 ./update-agent-context.ps1 -AgentType claude
 
@@ -26,7 +32,8 @@ Relies on common helper functions in common.ps1
 param(
     [Parameter(Position=0)]
     [ValidateSet('claude','gemini','copilot','cursor-agent','qwen','opencode','codex','windsurf','kilocode','auggie','roo','codebuddy','amp','shai','q','qodercli','kiro-cli','kiro','agy','bob','jules')]
-    [string]$AgentType
+    [string]$AgentType,
+    [string]$FeatureDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,12 +43,16 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDir 'common.ps1')
 
 # Acquire environment paths
-$envData = Get-FeaturePathsEnv
+$envData = Resolve-FeatureContext -FeatureDir $FeatureDir
 $REPO_ROOT     = $envData.REPO_ROOT
-$CURRENT_BRANCH = $envData.CURRENT_BRANCH
+$CURRENT_BRANCH = $envData.FEATURE_ID
 $HAS_GIT       = $envData.HAS_GIT
 $IMPL_PLAN     = $envData.IMPL_PLAN
 $NEW_PLAN = $IMPL_PLAN
+
+# Path boundary defense: $CURRENT_BRANCH from SPECIFY_FEATURE env var could be tampered to escape REPO_ROOT.
+Assert-PathInsideRoot -Root $REPO_ROOT -Candidate $envData.FEATURE_DIR -MessagePrefix 'FEATURE_DIR escapes REPO_ROOT'
+Assert-PathInsideRoot -Root $REPO_ROOT -Candidate $NEW_PLAN -MessagePrefix 'IMPL_PLAN escapes REPO_ROOT'
 
 # Agent file paths
 $CLAUDE_FILE   = Join-Path $REPO_ROOT 'CLAUDE.md'
@@ -269,11 +280,11 @@ function New-AgentFile {
     
     $content = $content -replace '\[LAST 3 FEATURES AND WHAT THEY ADDED\]',$recentChangesForTemplate
     # Convert literal \n sequences introduced by Escape to real newlines
-    $content = $content -replace '\\n',[Environment]::NewLine
+    $content = $content -replace '\\n',"`n"
 
     $parent = Split-Path -Parent $TargetFile
     if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }
-    Set-Content -LiteralPath $TargetFile -Value $content -NoNewline -Encoding utf8
+    Write-Utf8NoBomLfFile -Path $TargetFile -Content $content
     Remove-Item $temp -Force
     return $true
 }
@@ -347,7 +358,7 @@ function Update-ExistingAgentFile {
         $newTechEntries | ForEach-Object { $output.Add($_) }
     }
 
-    Set-Content -LiteralPath $TargetFile -Value ($output -join [Environment]::NewLine) -Encoding utf8
+    Write-Utf8NoBomLfFile -Path $TargetFile -Content ($output -join "`n")
     return $true
 }
 
@@ -445,7 +456,7 @@ function Print-Summary {
     if ($NEW_FRAMEWORK) { Write-Host "  - Added framework: $NEW_FRAMEWORK" }
     if ($NEW_DB -and $NEW_DB -ne 'N/A') { Write-Host "  - Added database: $NEW_DB" }
     Write-Host ''
-    Write-Info 'Usage: ./update-agent-context.ps1 [-AgentType claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|q|qodercli|kiro-cli|kiro|agy|bob|jules]'
+    Write-Info 'Usage: ./update-agent-context.ps1 [-FeatureDir <path>] [-AgentType claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|codebuddy|amp|shai|q|qodercli|kiro-cli|kiro|agy|bob|jules]'
 }
 
 function Main {
@@ -466,6 +477,3 @@ function Main {
 }
 
 Main
-
-
-
