@@ -3,10 +3,10 @@
 **Date**: 2026-07-26
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Draft
-**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`; finalization `758d1699f4742ef781d36d1f14753f23e9705dc7`; honesty demotion `132a1139467592d19f978c07a0f0bec52afcf9be`; R-A24 plan amendment `43b90622c2b39eeac20d9f00c7ab79a9fe72b25e`; R-A24 registration `7fa4845c5c697f78e3810d4c644e0123e17d5f03`; R-A24 repair `c0744641fb9c7b5edc81e2776c86e50f22fd85c4`; R-A24 accounting `TBD`
+**Status**: Ready
+**Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`; finalization `758d1699f4742ef781d36d1f14753f23e9705dc7`; honesty demotion `132a1139467592d19f978c07a0f0bec52afcf9be`; R-A24 plan amendment `43b90622c2b39eeac20d9f00c7ab79a9fe72b25e`; R-A24 registration `7fa4845c5c697f78e3810d4c644e0123e17d5f03`; R-A24 repair `c0744641fb9c7b5edc81e2776c86e50f22fd85c4`; R-A24 accounting `c510a81db06691a583281adba3c9574e2a493c3a`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Open
+**Reconciliation Status**: Closed
 **Validation Scope**: Batch
 
 ## Consumer-Path Dependency Honesty Demotion (2026-07-26)
@@ -44,6 +44,11 @@ neither consumer directory, which reproduces the CI checkout condition, then rep
 0 failed, 0 skipped, 0 inconclusive and 0 not-run in 2860.5 seconds with an observed exit code of
 0. Revision 13 records R-A24 as `COMPLETED`, leaving the fold at 97 `COMPLETED` / 1 `OPEN` /
 0 `DECIDED` / 1 `IN_PROGRESS` / 35 `DISPOSITIONED` across 134 findings.
+
+This note and the Wave-3 umbrella are therefore Ready/Closed again on the second and final
+permitted finalization. The Draft/Open statement above is historical. Ready still grants no merge
+authority: Section 39 requires independent GitHub Actions success on pull request #3 first, and
+no re-entry remains after this one.
 
 ## Summary
 
