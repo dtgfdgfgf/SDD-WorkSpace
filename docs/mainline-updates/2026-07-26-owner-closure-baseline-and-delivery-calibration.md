@@ -3,11 +3,29 @@
 **Date**: 2026-07-26
 **Source Branch**: `feature/wave-3-security-and-workflows`
 **Target Branch**: `main`
-**Status**: Ready
+**Status**: Draft
 **Related Commits**: Section 38 plan `f428029467f3ba214ee6eef1eb6b4d5983f28aed`; R-A23 registration `3393d9bb5784d9a4e0a2812bde2efbc264b31446`; fixture repair `f8d064c81b592e1c42966a68db6325f1685db089`; CI calibration `742a7fba7cbf088195211f0e35432c4734858b78`; README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb`; R-A23 completion accounting `00424901aa315d708c88c763ca77f52db3b981e5`
 **Related PR**: https://github.com/dtgfdgfgf/SDD-WorkSpace/pull/3
-**Reconciliation Status**: Closed
+**Reconciliation Status**: Open
 **Validation Scope**: Batch
+
+## Consumer-Path Dependency Honesty Demotion (2026-07-26)
+
+GitHub Actions run `30199620889` evaluated finalization
+`758d1699f4742ef781d36d1f14753f23e9705dc7` on pull request #3 and reported 988 passed with 1
+failed in 3077 seconds. Both delivery-surface calibrations from this batch behaved as intended:
+the run finished well inside the calibrated 120-minute timeout, the coverage step was correctly
+skipped for a pull request, and the Aggregate mainline-note reconciliation step succeeded on the
+runner.
+
+The single failure is a real shared-layer defect that this batch did not introduce but must now
+address, because it made every prior local acceptance of the suite a false green.
+`studio/tests/check-speckit-runtime.Tests.ps1` requires nine consumer-space files under
+`learning/` and `projects/` to exist before exercising the R-G01 fixture, yet those directories
+are gitignored and absent from any fresh clone.
+
+This note and the Wave-3 umbrella return to Draft/Open with their index rows. This consumes the
+first of the two finalization re-entries permitted by plan Section 38.
 
 ## Summary
 
