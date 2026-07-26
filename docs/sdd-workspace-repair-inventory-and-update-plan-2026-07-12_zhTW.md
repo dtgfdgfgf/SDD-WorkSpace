@@ -1,6 +1,6 @@
 ---
 title: "SDD-WorkSpace 共享層修復總清單與全面更新計畫（2026-07-12）"
-version: "1.40.0"
+version: "1.41.0"
 date: "2026-07-12"
 last_updated: "2026-07-26"
 language: "zh-TW"
@@ -14,7 +14,7 @@ finding_status_validator: "studio/scripts/powershell/validate-finding-status-led
 finding_status_index: "docs/README.md"
 branch: "feature/wave-3-security-and-workflows"
 base_commit: "c6ee1f1 (main)"
-head_commit: "43b90622c2b39eeac20d9f00c7ab79a9fe72b25e"
+head_commit: "c0744641fb9c7b5edc81e2776c86e50f22fd85c4"
 scope: "Workspace 共享層（studio/、.github/、.claude/、.githooks/、根目錄 adapter 與文件、docs/ 治理文件、遠端設定）。原則上排除 projects/ 與 learning/ 內部 consumer drift；R-D12 為受控例外，只允許完成 shared agent 安全遷移所需的 project-local runtime 檢查。"
 analysis_method: "兩輪多 agent 調查合併：第一輪 32 agents（10 個子系統深讀 + 機器語義稽核 + 18 條論斷對抗驗證，16 確認 2 推翻）；第二輪 4 agents（docs 逐檔盤點、根目錄與設定衛生、studio 層盤點、完整性批判）；第三輪於 2026-07-13 由 Codex 主代理加 3 個獨立驗證代理逐項複核 owner decisions、本機證據與官方外部來源。第三輪以 section-bounded parser 重算第 3 節 findings 與嚴重度，作為取代初版錯誤摘要的 canonical count。第四輪於 2026-07-13 由 Claude 主代理對 R2 partial 做唯讀獨立驗證（5 個對抗驗證代理 + 舊實作 mutation 實測 + 提交前 2 代理對抗 review），發現 R-A15、R-A16、R-B17、R-B18。"
 purpose: "以環境修復角度列出共享層全部已知問題（單一總帳），記錄 18 項 owner 裁定，並排定風險優先的分批更新順序。本檔同時作為 open-findings ledger 的起始版本。"
@@ -478,6 +478,7 @@ Owner 於 2026-07-13 完成裁定。以下是 18 個邏輯決策；原始盤點�
 | 1.38.0 | 2026-07-26 | After committed wave-3 plan Section 38 amendment `f428029467f3ba214ee6eef1eb6b4d5983f28aed`, the owner reproduces the elevated fixture failure in a directly executed canonical pwsh 7.5.4 terminal whose console code page is 950: `Invoke-RuntimeAuditFixture` decodes UTF-8 child audit output with the parent console encoding, corrupting non-ASCII contract text into unparseable JSON while the child audit itself reports the expected ten governed failures. Revision 10 registers new Medium R-A23 as OPEN before the fixture repair begins. Inventory becomes 133 with severity 8/32/54/39 and fold 95 COMPLETED / 2 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED. Revisions 1 through 9 remain immutable. See Section 47. |
 | 1.39.0 | 2026-07-26 | Repair `f8d064c81b592e1c42966a68db6325f1685db089` rewrites the fixture capture with an explicit UTF-8 process-output decoder and adds the discriminating test, which fails against the pre-repair helper grafted into a clean worktree and passes against the repaired helper. The owner then verifies both the previously failing bad-state test and the new test green in the same canonical CP950 pwsh 7.5.4 terminal that reproduced the defect. Revision 11 records R-A23 as COMPLETED; the fold becomes 96 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED across 133 findings. CI calibration `742a7fba7cbf088195211f0e35432c4734858b78` and README truthfulness `b63dff89fda341c3d291e48a57403458d5033deb` land as batch-scoped delivery-surface repairs under plan Section 38 without changing any finding status. See Section 48. |
 | 1.40.0 | 2026-07-26 | GitHub Actions run `30199620889` evaluated pushed finalization `758d169` on a clean checkout and reported 988 passed with 1 failed. The shared-layer suite requires nine gitignored consumer-space files to exist, so every prior local acceptance of that test was a false green and the assertion contradicts the consumer-space acceptance rule. After honesty demotion `132a113` and plan amendment `43b9062`, revision 12 registers new Medium R-A24 as OPEN before any repair. Inventory becomes 134 with severity 8/32/55/39 and fold 96 COMPLETED / 2 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED. Revisions 1 through 11 remain immutable. See Section 49. |
+| 1.41.0 | 2026-07-26 | Repair `c0744641fb9c7b5edc81e2776c86e50f22fd85c4` removes the consumer-space existence precondition and adds a consumer-space independence guard in `studio/tests/repository-hygiene.Tests.ps1`. The guard fails against the pre-repair tree, naming all nine offending consumer paths, and passes after the repair. A clean-worktree run holding no `learning/` or `projects/` directory, which reproduces the CI checkout condition, reports 991 passed with 0 failed and an observed exit code of 0 in 2860.5 seconds. Revision 13 records R-A24 as COMPLETED; the fold becomes 97 COMPLETED / 1 OPEN / 0 DECIDED / 1 IN_PROGRESS / 35 DISPOSITIONED across 134 findings. See Section 50. |
 
 ## 11. 2026-07-13 R0 執行增補
 
@@ -2382,6 +2383,67 @@ resolve PR threads. Both mainline notes remain Draft/Open after honesty demotion
   "statusCounts": {
     "COMPLETED": 96,
     "OPEN": 2,
+    "DECIDED": 0,
+    "IN_PROGRESS": 1,
+    "DISPOSITIONED": 35
+  }
+}
+```
+
+## 50. 2026-07-26 R-A24 completion accounting
+
+Repair `c0744641fb9c7b5edc81e2776c86e50f22fd85c4` removes the nine consumer-space existence
+assertions from the `rejects an R-G01 governance ledger rollback` test while leaving its genuine
+revert-sensitive body unchanged: the test still tampers with the tracked
+`docs/project-governance-status.md` inside an isolated fixture and still requires the audit to
+fail with `r-g01-project-governance-current-surface`.
+
+The same commit adds a consumer-space independence guard to
+`studio/tests/repository-hygiene.Tests.ps1`. The guard asserts that both consumer roots remain
+untracked, then scans every `It` block in the shared-layer suite and fails when a block both
+asserts path existence and names a consumer-space literal that `git ls-files` reports as
+untracked. It lives in a different file from the defect so its own regex cannot match itself, and
+it deliberately permits synthetic consumer strings used as classification inputs, such as the
+`projects/example/...` values in `studio/tests/pre-commit.Tests.ps1`.
+
+Discriminating evidence is complete in both directions. Grafted onto a clean worktree at
+registration commit `7fa4845c5c697f78e3810d4c644e0123e17d5f03`, the guard fails and names all nine
+offending paths. Against the repaired tree it passes.
+
+Independent clean-checkout evidence now exists for the whole suite. A worktree containing no
+`learning/` or `projects/` directory, which is the condition that exposed R-A24 on GitHub Actions,
+reports 991 passed, 0 failed, 0 skipped, 0 inconclusive and 0 not-run in 2860.5 seconds with an
+observed command exit code of 0. The count is the previous 989 plus the two new guard assertions.
+
+Revision 13 records only R-A24 as `COMPLETED`. Inventory and severity remain 134 and Critical 8,
+High 32, Medium 55 and Low 39. The fold becomes 97 `COMPLETED`, 1 `OPEN`, 0 `DECIDED`,
+1 `IN_PROGRESS` and 35 `DISPOSITIONED`; the remaining `OPEN` finding is R-J03 and the remaining
+`IN_PROGRESS` finding is R-E09, both terminal merge items.
+
+This accounting does not complete R-E09 or R-J03 and does not authorize merge or post-merge
+action. Section 39 still requires independent GitHub Actions success on the pull request before
+any merge, and exactly one finalization re-entry remains.
+
+```finding-status-record-v1
+{
+  "schemaVersion": 1,
+  "revision": 13,
+  "recordType": "delta",
+  "recordedDate": "2026-07-26",
+  "ledgerVersion": "1.41.0",
+  "statuses": [
+    {"id":"R-A24","status":"COMPLETED"}
+  ],
+  "inventoryCount": 134,
+  "severityCounts": {
+    "Critical": 8,
+    "High": 32,
+    "Medium": 55,
+    "Low": 39
+  },
+  "statusCounts": {
+    "COMPLETED": 97,
+    "OPEN": 1,
     "DECIDED": 0,
     "IN_PROGRESS": 1,
     "DISPOSITIONED": 35
